@@ -162,10 +162,10 @@ class xyz_functions:
         """
         frame = xyz_frame.copy()
         vectors = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
-        frame.loc[:, ['x', 'y', 'z']] = np.transpose(np.array(matrix) @ np.transpose(vectors))
+        frame.loc[:, ['x', 'y', 'z']] = np.transpose(np.dot(np.array(matrix), np.transpose(vectors)))
         vectors = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
         frame.loc[:, ['x', 'y', 'z']] = vectors + np.array(vector)
-        return frame, np.transpose(np.array(matrix) @ np.transpose(vectors))
+        return frame, np.transpose(np.dot(np.array(matrix), np.transpose(vectors)))
 
 
 
