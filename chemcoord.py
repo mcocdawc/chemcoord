@@ -165,7 +165,7 @@ class xyz_functions:
         frame.loc[:, ['x', 'y', 'z']] = np.transpose(np.dot(np.array(matrix), np.transpose(vectors)))
         vectors = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
         frame.loc[:, ['x', 'y', 'z']] = vectors + np.array(vector)
-        return frame, np.transpose(np.dot(np.array(matrix), np.transpose(vectors)))
+        return frame
 
 
 
@@ -233,7 +233,7 @@ class xyz_functions:
         ba = normalize(BA)
 
         # Is this ok
-        scalar_product = bi @ ba
+        scalar_product = np.dot(bi, ba)
         if  -1.00000000000001 < scalar_product < -1.:
             scalar_product = -1.
 
@@ -276,7 +276,7 @@ class xyz_functions:
             ba = normalize(BA)
 
             # Is this ok
-            scalar_product = bi @ ba
+            scalar_product = np.dot(bi, ba)
             if  -1.00000000000001 < scalar_product < -1.:
                 scalar_product = -1.
 
@@ -309,7 +309,7 @@ class xyz_functions:
         n2 = normalize(np.cross(AB, BI))
 
         # Is this ok
-        scalar_product = n1 @ n2
+        scalar_product = np.dot(n1, n2)
         if  -1.00000000000001 < scalar_product < -1.:
             scalar_product = -1.
 
@@ -320,7 +320,7 @@ class xyz_functions:
         dihedral = np.degrees(dihedral)
 
         if (dihedral != 0):
-            dihedral = dihedral if 0 < AB @ np.cross(n1, n2) else 360 - dihedral
+            dihedral = dihedral if 0 < np.dot(AB, np.cross(n1, n2)) else 360 - dihedral
 
         return dihedral
 
@@ -357,7 +357,7 @@ class xyz_functions:
             n2 = normalize(np.cross(AB, BI))
 
             # Is this ok
-            scalar_product = n1 @ n2
+            scalar_product = np.dot(n1, n2)
             if  -1.00000000000001 < scalar_product < -1.:
                 scalar_product = -1.
 
@@ -368,7 +368,7 @@ class xyz_functions:
             dihedral = np.degrees(dihedral)
 
             if (dihedral != 0):
-                dihedral = dihedral if 0 < AB @ np.cross(n1, n2) else 360 - dihedral
+                dihedral = dihedral if 0 < np.dot(AB, np.cross(n1, n2)) else 360 - dihedral
 
             dihedral_list.append(dihedral)
         return dihedral_list
@@ -1084,7 +1084,7 @@ class zmat_functions:
             d = bond * normalize(BA)
 
             # Rotate d by the angle around the z-axis
-            d = rotation_matrix([0, 0, 1], angle) @ d
+            d = np.dot(rotation_matrix([0, 0, 1], angle), d)
 
             # Add d to the position of q to get the new coordinates of the atom
             p = vb + d
@@ -1117,8 +1117,8 @@ class zmat_functions:
             d = bond * -ab
 
             # Rotate d by the angle around the n1 axis
-            d = rotation_matrix(-n1, angle) @ d
-            d = rotation_matrix(-ab, dihedral) @ d
+            d = np.dot(rotation_matrix(-n1, angle), d)
+            d = np.dot(rotation_matrix(-ab, dihedral), d)
 
             # Add d to the position of q to get the new coordinates of the atom
             p = vb + d
@@ -1209,7 +1209,7 @@ class zmat_functions:
                     n
                     ])
 
-            D = M @ D2 + vC
+            D = np.dot(M, D2) + vC
 
 
             xyz_frame.loc[index] = [atom] + list(D)
