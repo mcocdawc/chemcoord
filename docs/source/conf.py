@@ -24,6 +24,13 @@ sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../..'))
 
+# -- Mock object for being able to import modules that are in e.g. C
+import mock
+ 
+MOCK_MODULES = ['numpy', 'pandas', 'math', 'copy']
+for mod_name in MOCK_MODULES:
+sys.modules[mod_name] = mock.Mock()
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
