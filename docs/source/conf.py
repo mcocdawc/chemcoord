@@ -16,6 +16,7 @@
 import sys
 import os
 import shlex
+from unittest.mock import MagicMock
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -25,11 +26,13 @@ sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Mock object for being able to import modules that are in e.g. C
-import mock
- 
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return Mock()
+
 MOCK_MODULES = ['numpy', 'pandas', 'math', 'copy']
-for mod_name in MOCK_MODULES:
-sys.modules[mod_name] = mock.Mock()
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
 
