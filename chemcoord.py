@@ -1345,6 +1345,8 @@ class write:
     def zmat(zmat, outputfile, reset_numbering=True):
         """
         Writes the zmatrix into a file.
+        If reset_numbering is set the index of the zmat_frame is changed to ascend from zero to the number of atoms.
+        The depending values like bond_with are changed accordingly.
         """
         # The following functions are necessary to deal with the fact, that pandas does not support "NaN" for integers.
         EPSILON = 1e-9
