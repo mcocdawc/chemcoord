@@ -1,0 +1,15 @@
+Thank you for your interest in the python module ChemCoord.
+
+
+If you want to read the documentation, you can get either a html version or a pdf.
+
+For the html version, please go to docs/ and execute (without the dollar sign):
+$ make html
+Afterwards you can open the index.html file in docs/build/html with any browser.
+
+For the pdf version, please go to docs/ and execute (again without the dollar sing):
+$ make latex
+$ make latexpdf
+Afterwards you can open ChemCoord.pdf in docs/build/latex with any pdf reader.
+
+
