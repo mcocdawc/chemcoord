@@ -1,4 +1,15 @@
-Thank you for your interest in the python module ChemCoord.
+## Introduction
+
+With this module you can read cartesian (xyz) and internal (zmat) coordinates into pandas DataFrames.
+Besides it supplies you with a lot of functions to manipulate them and make your workflow more efficient.
+
+
+
+## Documentation
+The official documentation is hosted on PyData.org: http://pandas.pydata.org/
+
+The Sphinx documentation should provide a good starting point for learning how
+to use the library. Expect the docs to continue to expand as time goes on.
 
 
 If you want to read the documentation, you can get either a html version or a pdf.
