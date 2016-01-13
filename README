@@ -1,3 +1,5 @@
+# chemcoord: A python module for coordinates of molecules
+
 ## Introduction
 
 With this module you can read cartesian (xyz) and internal (zmat) coordinates into pandas DataFrames.
@@ -6,21 +8,5 @@ Besides it supplies you with a lot of functions to manipulate them and make your
 
 
 ## Documentation
-The official documentation is hosted on PyData.org: http://pandas.pydata.org/
-
-The Sphinx documentation should provide a good starting point for learning how
-to use the library. Expect the docs to continue to expand as time goes on.
-
-
-If you want to read the documentation, you can get either a html version or a pdf.
-
-For the html version, please go to docs/ and execute (without the dollar sign):
-$ make html
-Afterwards you can open the index.html file in docs/build/html with any browser.
-
-For the pdf version, please go to docs/ and execute (again without the dollar sing):
-$ make latex
-$ make latexpdf
-Afterwards you can open ChemCoord.pdf in docs/build/latex with any pdf reader.
-
+The documentation and website can be found on: http://chemcoord.readthedocs.org/en/latest/
 
