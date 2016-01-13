@@ -26,13 +26,13 @@ from unittest.mock import MagicMock
 sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Mock object for being able to import modules that are in e.g. C
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-            return Mock()
-
-MOCK_MODULES = ['numpy', 'pandas', 'math', 'copy']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+#class Mock(MagicMock):
+#    @classmethod
+#    def __getattr__(cls, name):
+#            return Mock()
+#
+#MOCK_MODULES = ['numpy', 'pandas', 'math', 'copy']
+#sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
 
