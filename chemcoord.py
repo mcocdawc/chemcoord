@@ -1202,7 +1202,6 @@ class zmat_functions:
             ba = (vA - vB)
             n = normalize(np.cross(ba, bc))
 
-
             M = np.array([
                     bc,
                     np.cross(n, bc),
