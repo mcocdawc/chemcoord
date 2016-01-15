@@ -16,7 +16,6 @@
 import sys
 import os
 import shlex
-from unittest.mock import MagicMock
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -25,14 +24,7 @@ from unittest.mock import MagicMock
 # sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../..'))
 
-# -- Mock object for being able to import modules that are in e.g. C
-# class Mock(MagicMock):
-#     @classmethod
-#     def __getattr__(cls, name):
-#             return Mock()
-#
-# MOCK_MODULES = ['numpy', 'pandas', 'math', 'copy']
-# sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
 
 # -- General configuration ------------------------------------------------
 
@@ -44,10 +36,20 @@ sys.path.insert(0, os.path.abspath('../..'))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.todo',
     'sphinx.ext.pngmath',
-    'sphinx.ext.viewcode',
+    'sphinx.ext.viewcode'
 ]
+
+
+# 'numpydoc'
+# Custom settings:
+# autosummary_generate = True
+# numpydoc_show_class_members = True
+
+
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

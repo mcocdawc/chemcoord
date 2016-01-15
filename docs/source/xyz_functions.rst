@@ -5,3 +5,8 @@ Functions for cartesian coordinates
 
 .. autoclass:: xyz_functions
     :members:
+
+.. autosummary::
+    :toctree:
+
+

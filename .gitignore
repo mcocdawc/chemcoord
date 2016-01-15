@@ -34,7 +34,7 @@ nosetests.xml
 .project
 .pydevproject
 
-# Temporary Files
+# Temporary Files vi
 *.swp
 
 # molecule viewer
@@ -42,9 +42,7 @@ nosetests.xml
 
 
 
-# Pdfs and rest from TeX compilation
-*log
-*aux
+# Pdfs
 *pdf
-*out
-*toc
+
+

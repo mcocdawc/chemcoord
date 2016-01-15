@@ -134,10 +134,14 @@ class xyz_functions:
         indexlist = list(xyz_frame.index)
         n_atoms = frame.shape[0]
 
-        masses_dic = constants.elementary_masses
-        masses = pd.Series([ masses_dic[atom] for atom in frame['atom']], name='mass', index=frame.index)
-        total_mass = masses.sum()
-        frame_mass = pd.concat([frame, masses], axis=1, join='inner')
+        if 'mass' in frame.columns:
+            frame_mass = frame
+        else:
+            masses_dic = constants.elementary_masses
+            masses = pd.Series([ masses_dic[atom] for atom in frame['atom']], name='mass', index=frame.index)
+            frame_mass = pd.concat([frame, masses], axis=1, join='outer')
+        
+        total_mass = frame_mass['mass'].sum()
 
         location_array = frame_mass.loc[indexlist, ['x', 'y', 'z']].get_values().astype(float)
 
@@ -715,6 +719,7 @@ class xyz_functions:
         fragments_old = copy.deepcopy(fragments_list)
 
         # preparing the fragments list
+        print('Preparing fragment list')
         fragments_new = []
         for fragment in fragments_old:
             for index in [element[0] for element in fragment[0:3]]:
@@ -734,6 +739,7 @@ class xyz_functions:
         assert set([element[0] for element in buildlist]) <= molecule_without_fragments_set
 
         # first build big molecule
+        print('Build molecule')
         building_order = xyz_functions._order_of_building(
                 xyz_frame.loc[molecule_without_fragments_set, :],
                 already_built = buildlist,
@@ -896,12 +902,94 @@ class xyz_functions:
         return zmat_frame
 
     @staticmethod
+    def inertia(xyz_frame):
+        """
+        Parameters
+        ----------
+        var1 : array_like
+            This is a type.
+        var2 : int
+            This is another var.
+        Long_variable_name : {'hi', 'ho'}, optional
+            Choices in brackets, default first when optional.
+ 
+        Returns
+        -------
+        describe : type
+            Explanation
+        """
+        rotation_matrix = _utilities.rotation_matrix
+        frame_mass, total_mass, baryzentrum, topologic_center = xyz_functions.mass(xyz_frame)
+        frame_mass = xyz_functions.move(frame_mass, vector = -baryzentrum)
+
+        coordinates = ['x', 'y', 'z']
+        
+        def kronecker(i, j):
+            """
+            Please note, that it also compares e.g. strings.
+            """
+            if i == j:
+                return 1
+            else:
+                return 0
+
+        inertia_tensor = np.zeros([3, 3])
+        for row_index, row_coordinate in enumerate(coordinates):
+            for column_index, column_coordinate in enumerate(coordinates):
+                inertia_tensor[row_index, column_index] = (
+                        frame_mass.loc[:, 'mass'] * ( kronecker(row_index, column_index) * (frame_mass.loc[:, coordinates]**2).sum(axis=1)
+                        - (frame_mass.loc[:, row_coordinate] * frame_mass.loc[:, column_coordinate])
+                        )).sum()
+
+        
+        diag_inertia_tensor, eigenvectors = np.linalg.eig(inertia_tensor)
+
+        # Sort ascending
+        sorted_index = np.argsort(diag_inertia_tensor)
+        diag_inertia_tensor = diag_inertia_tensor[sorted_index]
+        eigenvectors = eigenvectors[:, sorted_index]
+
+        v1, v2, v3 = np.transpose(eigenvectors)
+        I1, I2, I3 = diag_inertia_tensor
+        ex, ey, ez = np.identity(3)
+
+        # Map v3 on ez
+        axis = np.cross(ez, v3)
+        angle = _utilities.angle(ez, v3)
+        rotationmatrix = _utilities.rotation_matrix(axis, m.radians(angle))
+        new_axes = rotationmatrix @ eigenvectors
+        frame_mass = xyz_functions.move(frame_mass, matrix = rotationmatrix)
+        v1, v2, v3 = np.transpose(new_axes)
+
+        # Map v1 on ex
+        axis = ez
+        angle = _utilities.angle(ex, v1)
+        if (angle != 0):
+            angle = angle if 0 < np.dot(ez, np.cross(ex, v1)) else 360 - angle
+        rotationmatrix = _utilities.rotation_matrix(axis, m.radians(angle))
+        new_axes = rotationmatrix @ new_axes
+        frame_mass = xyz_functions.move(frame_mass, matrix = rotationmatrix)
+        v1, v2, v3 = np.transpose(new_axes)
+
+        # Assert that new axes is right handed.
+        if new_axes[1, 1] < 0:
+            mirrormatrix = np.array([[1, 0, 0], [0,-1, 0],[0, 0, 1]])
+            new_axes = mirrormatrix @ new_axes
+            frame_mass = xyz_functions.move(frame_mass, matrix = mirrormatrix)
+            v1, v2, v3 = np.transpose(new_axes)
+
+        return frame_mass, diag_inertia_tensor, inertia_tensor, eigenvectors
+
+
+
+    @staticmethod
     def make_similar(xyz_frame1, xyz_frame2):
         """
         Takes two xyz_DataFrames and returns a reindexed copy of xyz_frame2
         which minimizes the necessary movements to get from xyz_frame1 to xyz_frame2.
         """
-        frame1, frame2 = xyz_frame1.copy(), xyz_frame2.copy()
+        frame1 = xyz_functions.inertia(xyz_frame1)[0]
+        frame2 = xyz_functions.inertia(xyz_frame2)[0]
         assert set(frame1['atom']) == set(frame2['atom'])
         atomset = set(frame1['atom'])
         framedic = {}
@@ -913,14 +1001,47 @@ class xyz_functions:
             assert framedic[atom][0].shape[0] == framedic[atom][1].shape[0]
 
         list_of_new_indexed_frames = []
-        for atom in atomset:
-            index_dic = {}
 
-            for index1 in framedic[atom][0].index:
-                location_of_reference = np.array(framedic[atom][0].loc[index1, ['x', 'y', 'z']], dtype=float)
-                new_distance_frame = distance_frame(framedic[atom][1], location_of_reference)
-                index2 = new_distance_frame['distance'].idxmin()
-                index_dic[index2] = index1
+        def _distance(index_on_frame1, vector_3d):
+            v1 = xyz_frame1.loc[index_on_frame1, ['x', 'y', 'z']].get_values().astype(float)
+            length = np.sqrt(np.linalg.norm(v1 - vector_3d))
+            return length
+
+            
+
+
+        for atom in atomset:
+            print('Optimizing atom kind ' + str(atom))
+            index_dic = {}
+            distance_frame_dic = {}
+
+            frame1_indexlist = list(framedic[atom][0].index)
+            for index_on_frame1 in frame1_indexlist:
+                location_atom_frame1 = framedic[atom][0].loc[index_on_frame1, ['x', 'y', 'z']].get_values().astype(float)
+                distances_to_atom_on_frame1 = distance_frame(framedic[atom][1], location_atom_frame1)
+                
+                
+                distances_to_atom_on_frame1 = distances_to_atom_on_frame1.sort_values(by='distance')
+                index_on_frame2 = distances_to_atom_on_frame1.iloc[0].name
+                distance_new = distances_to_atom_on_frame1.at[index_on_frame2, 'distance']
+                location_of_atom2 = distances_to_atom_on_frame1.loc[index_on_frame2, ['x', 'y', 'z']].get_values().astype(float)
+
+                i = 1
+                while True:
+                    if index_on_frame2 in index_dic.keys():
+                        distance_old = _distance(index_dic[index_on_frame2], location_of_atom2)
+                        if distance_new < distance_old:
+                            frame1_indexlist.append(index_dic[index_on_frame2])
+                            index_dic[index_on_frame2] = index_on_frame1
+                            break
+                        else:
+                            index_on_frame2 = distances_to_atom_on_frame1.iloc[i].name
+                            i = i + 1
+                    else:
+                        index_dic[index_on_frame2] = index_on_frame1
+                        break
+
+
 
             new_index = [index_dic[old_index2] for old_index2 in framedic[atom][1].index]
             framedic[atom][1].index = new_index
@@ -1038,19 +1159,7 @@ class zmat_functions:
         already_built = []
 
         normalize = _utilities.normalize
-
-        def rotation_matrix(axis, angle):
-            '''Euler-Rodrigues formula for rotation matrix. Input angle in radians.'''
-            # Normalize the axis
-            axis = normalize(np.array(axis))
-            a = np.cos( angle/2 )
-            b,c,d = - axis * np.sin(angle/2)
-            rot_matrix = np.array( [[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
-                [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
-                [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]]
-                )
-            return rot_matrix
-
+        rotation_matrix = _utilities.rotation_matrix
 
         def add_first_atom():
             index = to_be_built[0]
@@ -1429,15 +1538,59 @@ class _utilities:
     """
     A collection of recurring functions that should not be in the global namespace.
     """
+    @staticmethod
     def distance_frame(xyz_frame, origin):
         origin = np.array(origin, dtype=float)
         frame_distance = xyz_frame.copy()
         frame_distance['distance'] = np.linalg.norm(np.array(frame_distance.loc[:,'x':'z']) - origin, axis =1)
         return frame_distance
 
+    @staticmethod
     def normalize(vector):
         normed_vector = vector / np.linalg.norm(vector)
         return normed_vector
+
+    @staticmethod
+    def rotation_matrix(axis, angle):
+        '''
+        Euler-Rodrigues formula for rotation matrix. 
+        Input angle in radians.
+        Follows the mathematical convention of "left hand rule for rotation"
+        in a "right hand rule" coordinate system.
+        '''
+        # Normalize the axis
+        axis = _utilities.normalize(np.array(axis))
+        a = np.cos( angle/2 )
+        b,c,d = - axis * np.sin(angle/2)
+        rot_matrix = np.array( [[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
+            [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
+            [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]]
+            )
+        return rot_matrix
+    
+    @staticmethod
+    def angle(Vector1, Vector2):
+        '''
+        Calculate the angle in degrees between two vectors.
+        The vectors do not have to be normalized.
+        '''
+        vector1 = _utilities.normalize(Vector1)
+        vector2 = _utilities.normalize(Vector2)
+    
+        # Is this ok
+        scalar_product = np.dot(vector1, vector2)
+        if  -1.00000000000001 < scalar_product < -1.:
+            scalar_product = -1.
+    
+        elif 1.00000000000001 > scalar_product > 1.:
+            scalar_product = 1.
+
+    
+        angle = m.acos(scalar_product)
+        angle = np.degrees(angle)
+
+        return angle
+
 
 
 
