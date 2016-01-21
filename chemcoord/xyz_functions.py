@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import math as m
 import copy
-from . import constants
-from . import utilities
+from chemcoord import constants
+from chemcoord import utilities
 
 
 def sort(xyz_frame, origin=[0, 0, 0]):

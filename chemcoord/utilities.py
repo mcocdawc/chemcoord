@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import math as m
 import copy
-from . import xyz_functions
+from chemcoord import xyz_functions
 
 def distance_frame(xyz_frame, origin):
     origin = np.array(origin, dtype=float)
