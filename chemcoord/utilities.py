@@ -99,7 +99,7 @@ def basistransform(xyz_frame, old_basis, new_basis):
     axis = np.cross(ez, v3)
     angle = give_angle(ez, v3)
     rotationmatrix = rotation_matrix(axis, m.radians(angle))
-    new_axes = rotationmatrix @ old_basis
+    new_axes = np.dot(rotationmatrix, old_basis)
     frame = xyz_functions.move(frame, matrix = rotationmatrix)
     v1, v2, v3 = np.transpose(new_axes)
 
@@ -109,14 +109,14 @@ def basistransform(xyz_frame, old_basis, new_basis):
     if (angle != 0):
         angle = angle if 0 < np.dot(ez, np.cross(ex, v1)) else 360 - angle
     rotationmatrix = rotation_matrix(axis, m.radians(angle))
-    new_axes = rotationmatrix @ new_axes
+    new_axes = np.dot(rotationmatrix, new_axes)
     frame = xyz_functions.move(frame, matrix = rotationmatrix)
     v1, v2, v3 = np.transpose(new_axes)
 
     # Assert that new axes is right handed.
     if new_axes[1, 1] < 0:
         mirrormatrix = np.array([[1, 0, 0], [0,-1, 0],[0, 0, 1]])
-        new_axes = mirrormatrix @ new_axes
+        new_axes = np.dot(mirrormatrix, new_axes)
         frame = xyz_functions.move(frame, matrix = mirrormatrix)
         v1, v2, v3 = np.transpose(new_axes)
 
