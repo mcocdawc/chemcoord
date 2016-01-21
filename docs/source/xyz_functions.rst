@@ -1,12 +1,25 @@
 Functions for cartesian coordinates
 ===================================
 
-.. currentmodule:: chemcoord
 
+.. currentmodule:: chemcoord.xyz_functions
 
-.. toctree::
-    
+.. autosummary::
+    :toctree: XYZ_Functions
+
     sort
+    cutsphere
+    cutcube
+    mass
+    move
+    modify
+    distance
+    angle_degrees
+    dihedral_degrees
+    get_fragment
     to_zmat
     inertia
+    make_similar
+    from_to
+    
 

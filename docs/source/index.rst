@@ -9,6 +9,7 @@ Welcome to ChemCoord's documentation!
 =====================================
 
 
+
 Contents:
 
 .. toctree::
@@ -20,7 +21,4 @@ Contents:
     documentation.rst
     advanced_usage.rst
 
-   
-
-   
 

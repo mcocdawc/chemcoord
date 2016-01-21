@@ -3,9 +3,10 @@ Reading and Writing Coordinates
 
 
 .. currentmodule:: chemcoord
-    
-.. autoclass:: read
+
+.. automodule:: chemcoord.read
     :members:
 
-.. autoclass:: write
+
+.. automodule:: chemcoord.write
     :members:

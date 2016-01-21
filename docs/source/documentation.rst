@@ -1,6 +1,7 @@
 Documentation
 ==================
 
+.. currentmodule:: chemcoord
 
 Contents:
     

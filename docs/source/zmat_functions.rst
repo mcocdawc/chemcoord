@@ -2,7 +2,6 @@ Functions for internal coordinates
 ===================================
 
 
-.. currentmodule:: chemcoord
 
-.. autoclass:: zmat_functions
+.. automodule:: chemcoord.zmat_functions
     :members:
