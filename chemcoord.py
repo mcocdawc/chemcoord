@@ -139,6 +139,7 @@ class xyz_functions:
         else:
             masses_dic = constants.elementary_masses
             masses = pd.Series([ masses_dic[atom] for atom in frame['atom']], name='mass', index=frame.index)
+            # masses = pd.Series([ 5. for atom in frame['atom']], name='mass', index=frame.index)
             frame_mass = pd.concat([frame, masses], axis=1, join='outer')
         
         total_mass = frame_mass['mass'].sum()
@@ -170,6 +171,19 @@ class xyz_functions:
         vectors = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
         frame.loc[:, ['x', 'y', 'z']] = vectors + np.array(vector)
         return frame
+
+    @staticmethod
+    def modify(buildlist, entries):
+        indexlist = [element[0] for element in buildlist]
+        buildlist_modified = copy.deepcopy(buildlist)
+        # changing_index = [element[0] for element in entries]
+        for entry in entries:
+            position = indexlist.index(entry[0])
+            buildlist_modified[position] = entry
+
+        return buildlist_modified
+
+
 
 
 
@@ -240,7 +254,7 @@ class xyz_functions:
         scalar_product = np.dot(bi, ba)
         if  -1.00000000000001 < scalar_product < -1.:
             scalar_product = -1.
-
+    
         elif 1.00000000000001 > scalar_product > 1.:
             scalar_product = 1.
 
@@ -283,9 +297,10 @@ class xyz_functions:
             scalar_product = np.dot(bi, ba)
             if  -1.00000000000001 < scalar_product < -1.:
                 scalar_product = -1.
-
+        
             elif 1.00000000000001 > scalar_product > 1.:
                 scalar_product = 1.
+
 
             angle = m.acos(scalar_product)
             angle = np.degrees(angle)
@@ -314,9 +329,10 @@ class xyz_functions:
 
         # Is this ok
         scalar_product = np.dot(n1, n2)
+
         if  -1.00000000000001 < scalar_product < -1.:
             scalar_product = -1.
-
+        
         elif 1.00000000000001 > scalar_product > 1.:
             scalar_product = 1.
 
@@ -360,11 +376,11 @@ class xyz_functions:
             n1 = normalize(np.cross(DA, AB))
             n2 = normalize(np.cross(AB, BI))
 
-            # Is this ok
             scalar_product = np.dot(n1, n2)
+            # Is this ok
             if  -1.00000000000001 < scalar_product < -1.:
                 scalar_product = -1.
-
+            
             elif 1.00000000000001 > scalar_product > 1.:
                 scalar_product = 1.
 
@@ -487,7 +503,7 @@ class xyz_functions:
                 if (len(already_built) > 1) or mode == 2:
                     index, previous = two_references(index, previous)
                     distance = xyz_functions.distance(frame, index, previous)
-                    if distance > 5:
+                    if distance > 7:
                         index = zero_reference(topologic_center)
                         mode = 1
 
@@ -528,7 +544,7 @@ class xyz_functions:
         already_built = list(already_built)
         return already_built
 
-    def _get_reference(xyz_frame, order_of_building, recursion = True):
+    def _get_reference(xyz_frame, order_of_building, recursion = 1):
 
         buildlist = copy.deepcopy(order_of_building)
         index_of_reference_items = []
@@ -707,8 +723,12 @@ class xyz_functions:
         return zmat_frame.loc[[element[0] for element in buildlist], :]
 
 
+
     @staticmethod
     def to_zmat(xyz_frame, buildlist = None, fragments_list = None, recursion_level = 2):
+        """
+        Takes a xyz_frame and converts to a zmat_frame.
+        """
         assert recursion_level in set([0,1,2])
 
         if buildlist is None:
@@ -719,7 +739,6 @@ class xyz_functions:
         fragments_old = copy.deepcopy(fragments_list)
 
         # preparing the fragments list
-        print('Preparing fragment list')
         fragments_new = []
         for fragment in fragments_old:
             for index in [element[0] for element in fragment[0:3]]:
@@ -739,7 +758,6 @@ class xyz_functions:
         assert set([element[0] for element in buildlist]) <= molecule_without_fragments_set
 
         # first build big molecule
-        print('Build molecule')
         building_order = xyz_functions._order_of_building(
                 xyz_frame.loc[molecule_without_fragments_set, :],
                 already_built = buildlist,
@@ -903,20 +921,17 @@ class xyz_functions:
 
     @staticmethod
     def inertia(xyz_frame):
-        """
-        Parameters
-        ----------
-        var1 : array_like
-            This is a type.
-        var2 : int
-            This is another var.
-        Long_variable_name : {'hi', 'ho'}, optional
-            Choices in brackets, default first when optional.
- 
-        Returns
-        -------
-        describe : type
-            Explanation
+        """Summary line.
+    
+        Extended description of function.
+    
+        Args:
+            arg1 (int): Description of arg1
+            arg2 (str): Description of arg2
+    
+        Returns:
+            bool: Description of return value
+
         """
         rotation_matrix = _utilities.rotation_matrix
         frame_mass, total_mass, baryzentrum, topologic_center = xyz_functions.mass(xyz_frame)
@@ -983,13 +998,18 @@ class xyz_functions:
 
 
     @staticmethod
-    def make_similar(xyz_frame1, xyz_frame2):
+    def make_similar(xyz_frame1, xyz_frame2, prealign = True):
         """
         Takes two xyz_DataFrames and returns a reindexed copy of xyz_frame2
         which minimizes the necessary movements to get from xyz_frame1 to xyz_frame2.
         """
-        frame1 = xyz_functions.inertia(xyz_frame1)[0]
-        frame2 = xyz_functions.inertia(xyz_frame2)[0]
+        if prealign:
+            frame1 = xyz_functions.inertia(xyz_frame1)[0][['atom', 'x', 'y', 'z']]
+            frame2 = xyz_functions.inertia(xyz_frame2)[0][['atom', 'x', 'y', 'z']]
+        else:
+            frame1 = xyz_frame1.copy()
+            frame2 = xyz_frame2.copy()
+
         assert set(frame1['atom']) == set(frame2['atom'])
         atomset = set(frame1['atom'])
         framedic = {}
@@ -1002,16 +1022,12 @@ class xyz_functions:
 
         list_of_new_indexed_frames = []
 
-        def _distance(index_on_frame1, vector_3d):
-            v1 = xyz_frame1.loc[index_on_frame1, ['x', 'y', 'z']].get_values().astype(float)
-            length = np.sqrt(np.linalg.norm(v1 - vector_3d))
+        def _distance(vector1, vector2):
+            length = np.sqrt(np.linalg.norm(vector1 - vector2))
             return length
-
-            
 
 
         for atom in atomset:
-            print('Optimizing atom kind ' + str(atom))
             index_dic = {}
             distance_frame_dic = {}
 
@@ -1026,42 +1042,48 @@ class xyz_functions:
                 distance_new = distances_to_atom_on_frame1.at[index_on_frame2, 'distance']
                 location_of_atom2 = distances_to_atom_on_frame1.loc[index_on_frame2, ['x', 'y', 'z']].get_values().astype(float)
 
+
                 i = 1
                 while True:
                     if index_on_frame2 in index_dic.keys():
-                        distance_old = _distance(index_dic[index_on_frame2], location_of_atom2)
+                        location_of_old_atom1 = framedic[atom][0].loc[index_dic[index_on_frame2], ['x', 'y', 'z']].get_values().astype(float)  
+                        distance_old = _distance(location_of_old_atom1, location_of_atom2)
                         if distance_new < distance_old:
                             frame1_indexlist.append(index_dic[index_on_frame2])
                             index_dic[index_on_frame2] = index_on_frame1
                             break
                         else:
                             index_on_frame2 = distances_to_atom_on_frame1.iloc[i].name
+
+
+                            distance_new = distances_to_atom_on_frame1.at[index_on_frame2, 'distance']
+                            location_of_atom2 = distances_to_atom_on_frame1.loc[index_on_frame2, ['x', 'y', 'z']].get_values().astype(float)
                             i = i + 1
+
                     else:
                         index_dic[index_on_frame2] = index_on_frame1
                         break
 
 
-
             new_index = [index_dic[old_index2] for old_index2 in framedic[atom][1].index]
             framedic[atom][1].index = new_index
             list_of_new_indexed_frames.append(framedic[atom][1])
-
-            xyz_frame3 = pd.concat(list_of_new_indexed_frames)
-
-
+        
+        xyz_frame3 = pd.concat(list_of_new_indexed_frames)
+       
+       
         return xyz_frame3.sort_index()
 
     @staticmethod
-    def changes_from_to_xyz(xyz_frame1, xyz_frame2, step=5):
+    def from_to(xyz_frame1, xyz_frame2, step=5):
         """
         This function returns a list of xyz_frames with the subsequent 
         movement from xyz_frame1 to xyz_frame2.
         The list contains xyz_frame1 as first and xyz_frame2 as last element.
         Please note, that for this reason: len(list) = (step + 1).
         """
-        xyzframe1 = xyzframe1.copy()
-        xyzframe2 = xyzframe2.copy()
+        xyzframe1 = xyz_frame1.copy()
+        xyzframe2 = xyz_frame2.copy()
 
         difference = xyzframe2.copy()
         difference.loc[:, ['x', 'y', 'z']] = xyzframe2.loc[:, ['x', 'y', 'z']] - (
@@ -1074,7 +1096,7 @@ class xyz_functions:
         list_of_xyzframes = []
         temp_xyz = xyzframe1.copy()
 
-        for t in range(steps + 1):
+        for t in range(step + 1):
             temp_xyz.loc[:, ['x', 'y', 'z']] = xyzframe1.loc[:, ['x', 'y', 'z']] + (
                         step_frame.loc[:, ['x', 'y', 'z']] * t
                         )
@@ -1124,28 +1146,32 @@ class zmat_functions:
 
 
     @staticmethod
-    def build_list(zmat_frame):
+    def build_list(zmat_frame, complete=False):
         """
         This functions outputs the buildlist required to reproduce
         building of the zmat_frame.
         """
         zmat = zmat_frame.copy()
         n_atoms = zmat.shape[0]
-
-
         zmat.insert(0, 'temporary_index', zmat.index)
-        array_of_values = zmat.loc[:, ['temporary_index', 'bond_with', 'angle_with', 'dihedral_with']].get_values().astype(int)
 
-        temporary_list1 = [[array_of_values[0, 0]],  list(array_of_values[1, 0:2]), list(array_of_values[2, 0:3])]
-        temporary_list2 = [list(vector) for vector in array_of_values[3:]]
-
-        buildlist = temporary_list1 + temporary_list2
+        if complete:
+            array_of_values = zmat.loc[:, ['temporary_index', 'bond_with', 'angle_with', 'dihedral_with']].get_values().astype(int)
+            buildlist =  [list(vector) for vector in array_of_values]
+            
+        else:
+            array_of_values = zmat.loc[:, ['temporary_index', 'bond_with', 'angle_with', 'dihedral_with']].get_values().astype(int)
+    
+            temporary_list1 = [[array_of_values[0, 0]],  list(array_of_values[1, 0:2]), list(array_of_values[2, 0:3])]
+            temporary_list2 = [list(vector) for vector in array_of_values[3:]]
+    
+            buildlist = temporary_list1 + temporary_list2
 
         return buildlist
 
 
     @staticmethod
-    def zmat_to_xyz(zmat):
+    def to_xyz(zmat):
         """
         The input is a zmat_DataFrame.
         The output is a xyz_DataFrame.
@@ -1211,30 +1237,42 @@ class zmat_functions:
             bond_with, angle_with, dihedral_with = zmat.loc[index, ['bond_with', 'angle_with', 'dihedral_with']]
             bond_with, angle_with, dihedral_with = map(int, (bond_with, angle_with, dihedral_with))
 
+            if (m.radians(179.9999999) < angle < m.radians(180.0000001)):
+                vb = np.array(xyz_frame.loc[bond_with, ['x', 'y', 'z']], dtype=float)
+                va = np.array(xyz_frame.loc[angle_with, ['x', 'y', 'z']], dtype=float)
+    
+                AB = vb - va
+                ab = normalize(AB)
+                d = bond * ab
+    
+                p = vb + d
+                xyz_frame.loc[index] = [atom] + list(p)
+                already_built.append(to_be_built.pop(0))
 
-            vb = np.array(xyz_frame.loc[bond_with, ['x', 'y', 'z']], dtype=float)
-            va = np.array(xyz_frame.loc[angle_with, ['x', 'y', 'z']], dtype=float)
-            vd = np.array(xyz_frame.loc[dihedral_with, ['x', 'y', 'z']], dtype=float)
-
-            AB = vb - va
-            DA = vd - va
-
-            n1 = normalize(np.cross(DA, AB))
-            ab = normalize(AB)
-
-            # Vector of length distance pointing along the x-axis
-            d = bond * -ab
-
-            # Rotate d by the angle around the n1 axis
-            d = np.dot(rotation_matrix(-n1, angle), d)
-            d = np.dot(rotation_matrix(-ab, dihedral), d)
-
-            # Add d to the position of q to get the new coordinates of the atom
-            p = vb + d
-
-            # Change of nonlocal variables
-            xyz_frame.loc[index] = [atom] + list(p)
-            already_built.append(to_be_built.pop(0))
+            else:
+                vb = np.array(xyz_frame.loc[bond_with, ['x', 'y', 'z']], dtype=float)
+                va = np.array(xyz_frame.loc[angle_with, ['x', 'y', 'z']], dtype=float)
+                vd = np.array(xyz_frame.loc[dihedral_with, ['x', 'y', 'z']], dtype=float)
+    
+                AB = vb - va
+                DA = vd - va
+    
+                n1 = normalize(np.cross(DA, AB))
+                ab = normalize(AB)
+    
+                # Vector of length distance pointing along the x-axis
+                d = bond * -ab
+    
+                # Rotate d by the angle around the n1 axis
+                d = np.dot(rotation_matrix(-n1, angle), d)
+                d = np.dot(rotation_matrix(-ab, dihedral), d)
+    
+                # Add d to the position of q to get the new coordinates of the atom
+                p = vb + d
+    
+                # Change of nonlocal variables
+                xyz_frame.loc[index] = [atom] + list(p)
+                already_built.append(to_be_built.pop(0))
 
         if n_atoms == 1:
             add_first_atom()
@@ -1344,6 +1382,9 @@ class zmat_functions:
 
         return xyz_frame
 
+
+
+
     @staticmethod
     def concatenate(fragment_zmat_frame, zmat_frame, reference_atoms, xyz_frame = 'default'):
         """
@@ -1413,7 +1454,7 @@ class zmat_functions:
 
 
     @staticmethod
-    def changes_from_to_zmat(zmat_frame1, zmat_frame2, steps = 5):
+    def from_to(zmat_frame1, zmat_frame2, steps = 5):
         """
         This function returns a list of zmat_frames with the subsequent 
         movement from zmat_frame1 to zmat_frame2.
@@ -1515,24 +1556,64 @@ class write:
 
 
     @staticmethod
-    def xyz(xyz_frame, outputfile, sort = True):
+    def xyz(xyz_frame, outputfile, sort_index = True):
         """
         Writes the xyz_DataFrame into a file.
-        If (sort = True) the DataFrame is sorted by the index.
+        If (sort = True) the DataFrame is sorted by the index and the index is not written
+        since it corresponds to the line.
         """
         frame = xyz_frame[['atom', 'x', 'y','z']].copy()
-        frame = frame.sort_index() if sort else frame
-        n_atoms = frame.shape[0]
-        with open(outputfile, mode='w') as f:
-            f.write(str(n_atoms) + 2 * '\n')
-        frame.to_csv(
-            outputfile,
-            sep=' ',
-            index=False,
-            header=False,
-            mode='a'
-            )
+        if sort_index:
+            frame = frame.sort_index()
+            n_atoms = frame.shape[0]
+            with open(outputfile, mode='w') as f:
+                f.write(str(n_atoms) + 2 * '\n')
+            frame.to_csv(
+                outputfile,
+                sep=' ',
+                index=False,
+                header=False,
+                mode='a'
+                )
+        else:
+            frame = frame.sort_values(by='atom')
+            n_atoms = frame.shape[0]
+            with open(outputfile, mode='w') as f:
+                f.write(str(n_atoms) + 2 * '\n')
+            frame.to_csv(
+                outputfile,
+                sep=' ',
+                index=False,
+                header=False,
+                mode='a'
+                )
 
+
+    @staticmethod
+    def molden(framelist, outputfile):
+        n_frames = len(framelist)
+        n_atoms = framelist[0].shape[0]
+        string ="""[MOLDEN FORMAT]
+[N_GEO]
+        """
+        values = n_frames *'1\n'
+        string = string + str(n_frames) + '\n[GEOCONV]\nenergy\n' + values + 'max-force\n' + values + 'rms-force\n' + values + '[GEOMETRIES] (XYZ)\n'
+
+        with open(outputfile, mode='w') as f:
+            f.write(string)
+
+        for frame in framelist:
+            frame = frame.sort_index()
+            n_atoms = frame.shape[0]
+            with open(outputfile, mode='a') as f:
+                f.write(str(n_atoms) + 2 * '\n')
+            frame.to_csv(
+                outputfile,
+                sep=' ',
+                index=False,
+                header=False,
+                mode='a'
+                )
 
 class _utilities:
     """
@@ -1592,6 +1673,89 @@ class _utilities:
         return angle
 
 
+    @staticmethod
+    def add_dummy(zmat_frame, xyz_frame, index):
+        zmat = zmat_frame.copy()
+        p_list = []
+        xyz = xyz_frame.copy()
+
+        atom, bond, angle, dihedral = zmat.loc[index, ['atom', 'bond', 'angle', 'dihedral']]
+        angle, dihedral = map(m.radians, (angle, dihedral))
+        bond_with, angle_with, dihedral_with = zmat.loc[index, ['bond_with', 'angle_with', 'dihedral_with']]
+        bond_with, angle_with, dihedral_with = map(int, (bond_with, angle_with, dihedral_with))
+        
+        
+        vb = np.array(xyz.loc[bond_with, ['x', 'y', 'z']], dtype=float)
+        va = np.array(xyz.loc[angle_with, ['x', 'y', 'z']], dtype=float)
+        vd = np.array(xyz.loc[dihedral_with, ['x', 'y', 'z']], dtype=float)
+        
+        AB = vb - va
+        DA = vd - va
+        
+        n1 = _utilities.normalize(np.cross(DA, AB))
+        ab = _utilities.normalize(AB)
+        
+        # Vector of length distance pointing along the x-axis
+        d = bond * -ab
+        
+        # Rotate d by the angle around the n1 axis
+        d = np.dot(_utilities.rotation_matrix(-n1, angle), d)
+        d = np.dot(_utilities.rotation_matrix(-ab, dihedral), d)
+        
+        # Add d to the position of q to get the new coordinates of the atom
+        p = vb + d
+        
+        # Change of nonlocal variables
+        p_list.append(list(p))
+        xyz.loc[index] = [atom] + list(p)
+        return xyz
+
+    @staticmethod
+    def basistransform(xyz_frame, old_basis, new_basis):
+        frame = xyz_frame.copy()
+        v1, v2, v3 = old_basis
+        ex, ey, ez = new_basis
+
+        # Map v3 on ez
+        axis = np.cross(ez, v3)
+        angle = _utilities.angle(ez, v3)
+        rotationmatrix = _utilities.rotation_matrix(axis, m.radians(angle))
+        new_axes = rotationmatrix @ old_basis
+        frame = xyz_functions.move(frame, matrix = rotationmatrix)
+        v1, v2, v3 = np.transpose(new_axes)
+
+        # Map v1 on ex
+        axis = ez
+        angle = _utilities.angle(ex, v1)
+        if (angle != 0):
+            angle = angle if 0 < np.dot(ez, np.cross(ex, v1)) else 360 - angle
+        rotationmatrix = _utilities.rotation_matrix(axis, m.radians(angle))
+        new_axes = rotationmatrix @ new_axes
+        frame = xyz_functions.move(frame, matrix = rotationmatrix)
+        v1, v2, v3 = np.transpose(new_axes)
+
+        # Assert that new axes is right handed.
+        if new_axes[1, 1] < 0:
+            mirrormatrix = np.array([[1, 0, 0], [0,-1, 0],[0, 0, 1]])
+            new_axes = mirrormatrix @ new_axes
+            frame = xyz_functions.move(frame, matrix = mirrormatrix)
+            v1, v2, v3 = np.transpose(new_axes)
+
+        return frame
+
+    @staticmethod
+    def location(xyz_frame, index):
+        vector = xyz_frame.ix[index, ['x', 'y', 'z']].get_values().astype(float)
+        return vector
+
+    @staticmethod
+    def orthormalization(basislist):
+        v1, v2 =  basislist[0], basislist[1]
+
+        e1 = _utilities.normalize(v1)
+        e3 = _utilities.normalize(np.cross(e1, v2))
+        e2 = _utilities.normalize(np.cross(e3, e1))
+        return [e1, e2, e3]
 
 
 

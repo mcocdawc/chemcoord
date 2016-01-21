@@ -27,6 +27,11 @@ def read_input():
         help="Number of steps for the movement. The default is 5.",
         default=5
         )
+    parser.add_argument(
+        "--recursion_level", 
+        help="Help text",
+        default=2
+        )
 
     args = parser.parse_args()
     return args
@@ -42,7 +47,7 @@ end = cc.read.xyz(args.endfile)
 similar_end = cc.xyz_functions.make_similar(start, end)
 
 print("Creating zmatrices")
-start_zmat = cc.xyz_functions.to_zmat(start)
+start_zmat = cc.xyz_functions.to_zmat(start, recursion_level = args.recursion_level)
 start_buildlist = cc.zmat_functions.build_list(start_zmat)
 end_zmat = cc.xyz_functions.to_zmat(similar_end, buildlist=start_buildlist)
 

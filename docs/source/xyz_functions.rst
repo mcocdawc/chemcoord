@@ -3,10 +3,10 @@ Functions for cartesian coordinates
 
 .. currentmodule:: chemcoord
 
-.. autoclass:: xyz_functions
-    :members:
 
-.. autosummary::
-    :toctree:
-
+.. toctree::
+    
+    sort
+    to_zmat
+    inertia
 
