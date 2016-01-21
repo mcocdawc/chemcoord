@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 
-import numpy as np
 energy_conversion={
         ('hartree', 'kJ per mole') : 2625.50, 
         ('hartree', 'cm^-1') : 219474.63,
