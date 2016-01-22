@@ -2,25 +2,25 @@ import numpy as np
 import pandas as pd
 import math as m
 import copy
-from chemcoord import xyz_functions
-
-def distance_frame(xyz_frame, origin):
-    origin = np.array(origin, dtype=float)
-    frame_distance = xyz_frame.copy()
-    frame_distance['distance'] = np.linalg.norm(np.array(frame_distance.loc[:,'x':'z']) - origin, axis =1)
-    return frame_distance
 
 def normalize(vector):
+    """Normalizes a vector
+    """
     normed_vector = vector / np.linalg.norm(vector)
     return normed_vector
 
 def rotation_matrix(axis, angle):
-    '''
-    Euler-Rodrigues formula for rotation matrix. 
-    Input angle in radians.
-    Follows the mathematical convention of "left hand rule for rotation"
-    in a "right hand rule" coordinate system.
-    '''
+    """Returns the rotation matrix.
+
+    This function returns a matrix for the counterclockwise rotation around the given axis.
+    The Input angle is in radians.
+    Args:
+        axis (vector): 
+        angle (float): 
+
+    Returns:
+        Rotation matrix (np.array):
+    """
     # Normalize the axis
     axis = normalize(np.array(axis))
     a = np.cos( angle/2 )
@@ -90,44 +90,27 @@ def add_dummy(zmat_frame, xyz_frame, index):
     xyz.loc[index] = [atom] + list(p)
     return xyz
 
-def basistransform(xyz_frame, old_basis, new_basis):
-    frame = xyz_frame.copy()
-    v1, v2, v3 = old_basis
-    ex, ey, ez = new_basis
 
-    # Map v3 on ez
-    axis = np.cross(ez, v3)
-    angle = give_angle(ez, v3)
-    rotationmatrix = rotation_matrix(axis, m.radians(angle))
-    new_axes = np.dot(rotationmatrix, old_basis)
-    frame = xyz_functions.move(frame, matrix = rotationmatrix)
-    v1, v2, v3 = np.transpose(new_axes)
+def orthormalize(basis):
+    """Orthonormalizes a given basis.
 
-    # Map v1 on ex
-    axis = ez
-    angle = give_angle(ex, v1)
-    if (angle != 0):
-        angle = angle if 0 < np.dot(ez, np.cross(ex, v1)) else 360 - angle
-    rotationmatrix = rotation_matrix(axis, m.radians(angle))
-    new_axes = np.dot(rotationmatrix, new_axes)
-    frame = xyz_functions.move(frame, matrix = rotationmatrix)
-    v1, v2, v3 = np.transpose(new_axes)
+    This functions returns a right handed orthormalized basis.
+    Since only the first two vectors in the basis are used, it does not matter
+    if you give two or three vectors.
 
-    # Assert that new axes is right handed.
-    if new_axes[1, 1] < 0:
-        mirrormatrix = np.array([[1, 0, 0], [0,-1, 0],[0, 0, 1]])
-        new_axes = np.dot(mirrormatrix, new_axes)
-        frame = xyz_functions.move(frame, matrix = mirrormatrix)
-        v1, v2, v3 = np.transpose(new_axes)
+    Right handed means, that: 
 
-    return frame
+        np.cross(e1, e2) = e3
+        np.cross(e2, e3) = e1
+        np.cross(e3, e1) = e2
 
-def location(xyz_frame, index):
-    vector = xyz_frame.ix[index, ['x', 'y', 'z']].get_values().astype(float)
-    return vector
+    Args:
+        basis (list): A list of two or three linear independent vectors.
 
-def orthormalization(basislist):
-    v1, v2 =  basislist[0], basislist[1]
+    Returns:
+        new_basis (list): A right handed orthonormalized basis.
+    """
+    v1, v2 =  basis[0], basis[1]
 
     e1 = normalize(v1)
     e3 = normalize(np.cross(e1, v2))
@@ -135,4 +118,8 @@ def orthormalization(basislist):
     return [e1, e2, e3]
 
 
-
+def distance(vector1, vector2):
+    """Calculates the distance between vector1 and vector2
+    """
+    length = np.sqrt(np.linalg.norm(vector1 - vector2))
+    return length

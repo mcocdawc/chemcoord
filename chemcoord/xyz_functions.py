@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import math as m
 import copy
-from chemcoord import constants
-from chemcoord import utilities
+from . import constants
+from . import utilities
 
 
 def sort(xyz_frame, origin=[0, 0, 0]):
@@ -375,7 +375,7 @@ def get_fragment(xyz_frame, list_of_indextuples, threshold = 2.0):
     while not previous_found < fixed:
         fixed |= previous_found
         for index in previous_found:
-            new_center = np.array(frame.loc[index, ['x', 'y', 'z']], dtype = float)
+            new_center = location(xyz_frame, index)
             just_found |= set(cutsphere(frame, radius = threshold, origin = new_center).index)
 
         previous_found = just_found - fixed
@@ -414,20 +414,20 @@ def _order_of_building(xyz_frame, to_be_built = None, already_built = None, recu
 
 
     def zero_reference(topologic_center):
-        frame_distance = utilities.distance_frame(frame.loc[to_be_built, :], topologic_center)
+        frame_distance = distance_frame(frame.loc[to_be_built, :], topologic_center)
         index = frame_distance['distance'].idxmin()
         return index
 
     def one_reference(previous):
         previous_atom = xyz_frame.ix[previous, ['x', 'y', 'z']]
-        frame_distance_previous = utilities.distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
+        frame_distance_previous = distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
         index = frame_distance_previous['distance'].idxmin()
         return index, previous
 
     def two_references(previous, before_previous):
         previous_atom, before_previous_atom = xyz_frame.ix[previous, ['x', 'y', 'z']], xyz_frame.ix[before_previous, ['x', 'y', 'z']]
-        frame_distance_previous = utilities.distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
-        frame_distance_before_previous = utilities.distance_frame(xyz_frame.loc[to_be_built, :], before_previous_atom)
+        frame_distance_previous = distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
+        frame_distance_before_previous = distance_frame(xyz_frame.loc[to_be_built, :], before_previous_atom)
         summed_distance = frame_distance_previous.loc[:, 'distance'] + frame_distance_before_previous.loc[:, 'distance']
         index = summed_distance.idxmin()
         return index, previous
@@ -512,27 +512,27 @@ def _get_reference(xyz_frame, order_of_building, recursion = 1):
             to_be_built.remove(index_of_atom)
 
         def second_atom(index_of_atom):
-            distances_to_other_atoms = utilities.distance_frame(
+            distances_to_other_atoms = distance_frame(
                     xyz_frame.loc[already_built, :],
-                    xyz_frame.loc[index_of_atom, ['x', 'y', 'z']]
+                    location(xyz_frame, index_of_atom)
                     )
             bond_with = distances_to_other_atoms['distance'].idxmin()
             indexlist.append([index_of_atom, bond_with])
             already_built.append(to_be_built.pop(0))
 
         def third_atom(index_of_atom):
-            distances_to_other_atoms = utilities.distance_frame(
+            distances_to_other_atoms = distance_frame(
                     xyz_frame.loc[already_built, :],
-                    xyz_frame.loc[index_of_atom, ['x', 'y', 'z']]
+                    location(xyz_frame, index_of_atom)
                     ).sort_values(by='distance')
             bond_with, angle_with = list(distances_to_other_atoms.iloc[0:2, :].index)
             indexlist.append([index_of_atom, bond_with, angle_with])
             already_built.append(to_be_built.pop(0))
 
         def other_atom(index_of_atom):
-            distances_to_other_atoms = utilities.distance_frame(
+            distances_to_other_atoms = distance_frame(
                     xyz_frame.loc[already_built, :],
-                    xyz_frame.loc[index_of_atom, ['x', 'y', 'z']]
+                    location(xyz_frame, index_of_atom)
                     ).sort_values(by='distance')
             bond_with, angle_with, dihedral_with = list(distances_to_other_atoms.iloc[0:3, :].index)
             indexlist.append([index_of_atom, bond_with, angle_with, dihedral_with])
@@ -738,142 +738,42 @@ def to_zmat(xyz_frame, buildlist = None, fragments_list = None, recursion_level 
     return zmat_big
 
 
-def _xyz_to_zmat2(xyz_frame):
-    """
-    The input is a xyz_DataFrame.
-    The output is a zmat_DataFrame.
-    """
-    n_atoms = xyz_frame.shape[0]
-    zmat_frame = pd.DataFrame(columns=['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'],
-            dtype='float',
-            index=range(n_atoms)
-            )
-    to_be_built = list(range(n_atoms))
-    already_built = []
-
-    # Taking functions from other namespaces
-    distance_frame = utilities.distance_frame
-
-
-    def add_first_atom():
-        topologic_center = mass(xyz_frame)[3]
-        frame_distance = distance_frame(xyz_frame, topologic_center)
-        index = frame_distance['distance'].idxmin()
-        # Change of nonlocal variables
-        zmat_frame.loc[index, 'atom'] = xyz_frame.loc[index, 'atom']
-        already_built.append(index)
-        to_be_built.remove(index)
-        return index, topologic_center
-
-
-    def add_second_atom(previous):
-        # Identification of the index of the new atom; depending on previous atom
-        previous_atom = xyz_frame.ix[previous, ['x', 'y', 'z']]
-        frame_distance_previous = distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
-        index = frame_distance_previous['distance'].idxmin()
-
-        bond_with = previous
-        bond_length = frame_distance_previous.loc[index, 'distance']
-        # Change of nonlocal variables
-        zmat_frame.loc[index, 'atom':'bond'] = [xyz_frame.loc[index, 'atom'], bond_with, bond_length]
-        already_built.append(index)
-        to_be_built.remove(index)
-        return index, previous
-
-    def add_third_atom(previous, before_previous):
-        # Identification of the index of the new atom; depending on previous and before_previous atom
-        previous_atom, before_previous_atom = xyz_frame.ix[previous, ['x', 'y', 'z']], xyz_frame.ix[before_previous, ['x', 'y', 'z']]
-        frame_distance_previous = distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
-        frame_distance_before_previous = distance_frame(xyz_frame.loc[to_be_built, :], before_previous_atom)
-        summed_distance = frame_distance_previous.loc[:, 'distance'] + frame_distance_before_previous.loc[:, 'distance']
-        index = summed_distance.idxmin()
-        distances_to_other_atoms = distance_frame(xyz_frame.loc[already_built, :], xyz_frame.loc[index, ['x', 'y', 'z']]).sort_values(by='distance')
-        bond_with, angle_with = distances_to_other_atoms.iloc[0:2, :].index
-
-        bond_length = distances_to_other_atoms.at[bond_with, 'distance']
-        angle = angle_degrees(xyz_frame, index, bond_with, angle_with)
-        # Change of nonlocal variables
-        zmat_frame.loc[index, 'atom':'angle'] = [
-                xyz_frame.loc[index, 'atom'],
-                bond_with, bond_length,
-                angle_with, angle
-                ]
-        already_built.append(index)
-        to_be_built.remove(index)
-        return index, previous
-
-    def add_atom(previous, before_previous, topologic_center):
-        # Identification of the index of the new atom; depending on previous and before_previous atom
-        previous_atom, before_previous_atom = xyz_frame.ix[previous, ['x', 'y', 'z']], xyz_frame.ix[before_previous, ['x', 'y', 'z']]
-        frame_distance_previous = distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
-        frame_distance_before_previous = distance_frame(xyz_frame.loc[to_be_built, :], before_previous_atom)
-        summed_distance = frame_distance_previous.loc[:, 'distance'] + frame_distance_before_previous.loc[:, 'distance']
-        index = summed_distance.idxmin()
-        distances_to_other_atoms = distance_frame(xyz_frame.loc[already_built, :], xyz_frame.loc[index, ['x', 'y', 'z']]).sort_values(by='distance')
-        # distances_to_other_atoms = distance_frame(xyz_frame.loc[index, ['x', 'y', 'z']], xyz_frame.loc[already_built, :]).sort_values(by='distance')
-        bond_with, angle_with, dihedral_with = distances_to_other_atoms.iloc[0:3, :].index
-
-        # Calculating the variables
-        bond_length = distances_to_other_atoms.loc[bond_with, 'distance']
-        angle = angle_degrees(xyz_frame, index, bond_with, angle_with)
-        dihedral = dihedral_degrees(xyz_frame, index, bond_with, angle_with, dihedral_with)
-
-        # Change of nonlocal variables
-        zmat_frame.loc[index, 'atom':'dihedral'] = [
-                xyz_frame.loc[index, 'atom'],
-                bond_with, bond_length,
-                angle_with, angle,
-                dihedral_with, dihedral
-                ]
-        already_built.append(index)
-        to_be_built.remove(index)
-        return index, previous
-
-
-    if n_atoms == 1:
-        previous, topologic_center = add_first_atom()
-
-    elif n_atoms == 2:
-        previous, topologic_center = add_first_atom()
-        previous, before_previous = add_second_atom(previous)
-
-    elif n_atoms == 3:
-        previous, topologic_center = add_first_atom()
-        previous, before_previous = add_second_atom(previous)
-        previous, before_previous = add_third_atom(previous, before_previous)
-
-    elif n_atoms > 3:
-        previous, topologic_center = add_first_atom()
-        previous, before_previous = add_second_atom(previous)
-        previous, before_previous = add_third_atom(previous, before_previous)
-        for _ in range(n_atoms - 3):
-            previous, before_previous = add_atom(previous, before_previous, topologic_center)
-
-    zmat_frame = zmat_frame.loc[already_built, : ]
-    return zmat_frame
 
 def inertia(xyz_frame):
-    """Summary line.
+    """Calculates the inertia tensor and transforms along rotation axes.
 
-    Extended description of function.
+    This function calculates the inertia tensor and returns a 4-tuple.
+
 
     Args:
-        arg1 (int): Description of arg1
-        arg2 (str): Description of arg2
+        xyz_frame (pd.DataFrame): 
 
     Returns:
-        bool: Description of return value
+        tuple:
 
+        **First element:**
+        A xyz_frame that is transformed to the basis spanned by the eigenvectors 
+        of the inertia tensor. The x-axis is the axis with the lowest inertia moment,
+        the z-axis the one with the highest. Contains also a column for the mass
+    
+        **Second element:**
+        A vector containing the sorted inertia moments after diagonalization.
+
+        **Third element:**
+        The inertia tensor in the old basis.
+    
+        **Fourth element:**
+        The eigenvectors of the inertia tensor in the old basis.
     """
     rotation_matrix = utilities.rotation_matrix
     frame_mass, total_mass, baryzentrum, topologic_center = mass(xyz_frame)
+
     frame_mass = move(frame_mass, vector = -baryzentrum)
 
     coordinates = ['x', 'y', 'z']
     
     def kronecker(i, j):
-        """
-        Please note, that it also compares e.g. strings.
+        """Please note, that it also compares e.g. strings.
         """
         if i == j:
             return 1
@@ -883,10 +783,10 @@ def inertia(xyz_frame):
     inertia_tensor = np.zeros([3, 3])
     for row_index, row_coordinate in enumerate(coordinates):
         for column_index, column_coordinate in enumerate(coordinates):
-            inertia_tensor[row_index, column_index] = (
-                    frame_mass.loc[:, 'mass'] * ( kronecker(row_index, column_index) * (frame_mass.loc[:, coordinates]**2).sum(axis=1)
-                    - (frame_mass.loc[:, row_coordinate] * frame_mass.loc[:, column_coordinate])
-                    )).sum()
+            inertia_tensor[row_index, column_index] = frame_mass.loc[:, 'mass'] * ( 
+                        kronecker(row_index, column_index) * (frame_mass.loc[:, coordinates]**2).sum(axis=1)
+                        - (frame_mass.loc[:, row_coordinate] * frame_mass.loc[:, column_coordinate])
+                        ).sum()
 
     
     diag_inertia_tensor, eigenvectors = np.linalg.eig(inertia_tensor)
@@ -897,33 +797,12 @@ def inertia(xyz_frame):
     eigenvectors = eigenvectors[:, sorted_index]
 
     v1, v2, v3 = np.transpose(eigenvectors)
-    I1, I2, I3 = diag_inertia_tensor
     ex, ey, ez = np.identity(3)
-
-    # Map v3 on ez
-    axis = np.cross(ez, v3)
-    angle = utilities.give_angle(ez, v3)
-    rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
-    new_axes = np.dot(rotationmatrix, eigenvectors)
-    frame_mass = move(frame_mass, matrix = rotationmatrix)
-    v1, v2, v3 = np.transpose(new_axes)
-
-    # Map v1 on ex
-    axis = ez
-    angle = utilities.give_angle(ex, v1)
-    if (angle != 0):
-        angle = angle if 0 < np.dot(ez, np.cross(ex, v1)) else 360 - angle
-    rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
-    new_axes = np.dot(rotationmatrix, new_axes)
-    frame_mass = move(frame_mass, matrix = rotationmatrix)
-    v1, v2, v3 = np.transpose(new_axes)
-
-    # Assert that new axes is right handed.
-    if new_axes[1, 1] < 0:
-        mirrormatrix = np.array([[1, 0, 0], [0,-1, 0],[0, 0, 1]])
-        new_axes = np.dot(mirrormatrix, new_axes)
-        frame_mass = move(frame_mass, matrix = mirrormatrix)
-        v1, v2, v3 = np.transpose(new_axes)
+    old_basis = [ex, ey, ez]
+    new_basis = [v1, v2, v3]
+    new_basis = utilities.orthormalize(new_basis)
+    frame_mass = basistransform(frame_mass, old_basis, new_basis)
+    
 
     return frame_mass, diag_inertia_tensor, inertia_tensor, eigenvectors
 
@@ -945,7 +824,6 @@ def make_similar(xyz_frame1, xyz_frame2, prealign = True):
     atomset = set(frame1['atom'])
     framedic = {}
 
-    distance_frame = utilities.distance_frame
 
     for atom in atomset:
         framedic[atom] = (frame1[frame1['atom'] == atom], frame2[frame2['atom'] == atom])
@@ -978,7 +856,7 @@ def make_similar(xyz_frame1, xyz_frame2, prealign = True):
             while True:
                 if index_on_frame2 in index_dic.keys():
                     location_of_old_atom1 = framedic[atom][0].loc[index_dic[index_on_frame2], ['x', 'y', 'z']].get_values().astype(float)  
-                    distance_old = _distance(location_of_old_atom1, location_of_atom2)
+                    distance_old = utilities.distance(location_of_old_atom1, location_of_atom2)
                     if distance_new < distance_old:
                         frame1_indexlist.append(index_dic[index_on_frame2])
                         index_dic[index_on_frame2] = index_on_frame1
@@ -1034,4 +912,75 @@ def from_to(xyz_frame1, xyz_frame2, step=5):
         list_of_xyzframes.append(appendframe)
     return list_of_xyzframes
 
+
+def basistransform(xyz_frame, old_basis, new_basis):
+    """Transforms the xyz_frame to a new basis.
+
+    This function transforms the cartesian coordinates from an old basis to a new one.
+    Since this is done by an orthogonal transformation, 
+    (the molecule is either rotated or mirrored) it is important, that
+    the old and new basis are both orthonormal and right handed.
+    This may require the function :func:`utilities.orthonormalize` as a previous step.
+
+    Args:
+        xyz_frame (pd.DataFrame): 
+        old_basis (list): An orthormalized basis.
+        new_basis (list): Another orthonormalized basis.
+
+    Returns:
+        pd.DataFrame: The transformed xyz_frame
+    """
+    frame = xyz_frame.copy()
+    v1, v2, v3 = old_basis
+    ex, ey, ez = new_basis
+
+    # Map v3 on ez
+    axis = np.cross(ez, v3)
+    angle = give_angle(ez, v3)
+    rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
+    new_axes = np.dot(rotationmatrix, old_basis)
+    frame = move(frame, matrix = rotationmatrix)
+    v1, v2, v3 = np.transpose(new_axes)
+
+    # Map v1 on ex
+    axis = ez
+    angle = give_angle(ex, v1)
+    if (angle != 0):
+        angle = angle if 0 < np.dot(ez, np.cross(ex, v1)) else 360 - angle
+    rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
+    new_axes = np.dot(rotationmatrix, new_axes)
+    frame = move(frame, matrix = rotationmatrix)
+    v1, v2, v3 = np.transpose(new_axes)
+
+    # Assert that new axes is right handed.
+    if new_axes[1, 1] < 0:
+        mirrormatrix = np.array([[1, 0, 0], [0,-1, 0],[0, 0, 1]])
+        new_axes = np.dot(mirrormatrix, new_axes)
+        frame = move(frame, matrix = mirrormatrix)
+        v1, v2, v3 = np.transpose(new_axes)
+
+    return frame
+
+def location(xyz_frame, index):
+    """Returns the location of an atom.
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        index (int): 
+
+    Returns:
+        np.array: A 3D vector of the location of the atom
+        specified by index.
+    """
+    vector = xyz_frame.ix[index, ['x', 'y', 'z']].get_values().astype(float)
+    return vector
+
+
+def distance_frame(xyz_frame, origin):
+    """Returns a xyz_frame with a column for the distance from origin.
+    """
+    origin = np.array(origin, dtype=float)
+    frame_distance = xyz_frame.copy()
+    frame_distance['distance'] = np.linalg.norm(frame_distance.loc[:, ['x', 'y', 'z']].get_values().astype(float) - origin, axis =1)
+    return frame_distance
 

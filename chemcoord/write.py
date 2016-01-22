@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import math as m
 import copy
-from chemcoord import constants
-from chemcoord import utilities
+from . import constants
+from . import utilities
 
 def zmat(zmat, outputfile, reset_numbering=True):
     """

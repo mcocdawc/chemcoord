@@ -23,9 +23,6 @@ import shlex
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../../'))
-# For Read the Docs
-sys.path.insert(0, '/home/docs/checkouts/readthedocs.org/user_builds/chemcoord/envs/latest/lib/python3.4/site-packages/')
-sys.path.insert(0, '/home/docs/checkouts/readthedocs.org/user_builds/chemcoord/envs/latest/lib/python3.4/site-packages/chemcoord')
 
 
 # -- General configuration ------------------------------------------------
