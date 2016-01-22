@@ -14,6 +14,7 @@ def rotation_matrix(axis, angle):
 
     This function returns a matrix for the counterclockwise rotation around the given axis.
     The Input angle is in radians.
+
     Args:
         axis (vector): 
         angle (float): 
@@ -24,7 +25,7 @@ def rotation_matrix(axis, angle):
     # Normalize the axis
     axis = normalize(np.array(axis))
     a = np.cos( angle/2 )
-    b,c,d = - axis * np.sin(angle/2)
+    b,c,d =  axis * np.sin(angle/2)
     rot_matrix = np.array( [[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
         [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
         [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]]
@@ -79,8 +80,8 @@ def add_dummy(zmat_frame, xyz_frame, index):
     d = bond * -ab
     
     # Rotate d by the angle around the n1 axis
-    d = np.dot(rotation_matrix(-n1, angle), d)
-    d = np.dot(rotation_matrix(-ab, dihedral), d)
+    d = np.dot(rotation_matrix( n1, angle), d)
+    d = np.dot(rotation_matrix( ab, dihedral), d)
     
     # Add d to the position of q to get the new coordinates of the atom
     p = vb + d

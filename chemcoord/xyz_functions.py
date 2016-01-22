@@ -783,10 +783,10 @@ def inertia(xyz_frame):
     inertia_tensor = np.zeros([3, 3])
     for row_index, row_coordinate in enumerate(coordinates):
         for column_index, column_coordinate in enumerate(coordinates):
-            inertia_tensor[row_index, column_index] = frame_mass.loc[:, 'mass'] * ( 
-                        kronecker(row_index, column_index) * (frame_mass.loc[:, coordinates]**2).sum(axis=1)
-                        - (frame_mass.loc[:, row_coordinate] * frame_mass.loc[:, column_coordinate])
-                        ).sum()
+            inertia_tensor[row_index, column_index] = (
+                    frame_mass.loc[:, 'mass'] * ( kronecker(row_index, column_index) * (frame_mass.loc[:, coordinates]**2).sum(axis=1)
+                    - (frame_mass.loc[:, row_coordinate] * frame_mass.loc[:, column_coordinate])
+                    )).sum()
 
     
     diag_inertia_tensor, eigenvectors = np.linalg.eig(inertia_tensor)
@@ -917,8 +917,7 @@ def basistransform(xyz_frame, old_basis, new_basis):
     """Transforms the xyz_frame to a new basis.
 
     This function transforms the cartesian coordinates from an old basis to a new one.
-    Since this is done by an orthogonal transformation, 
-    (the molecule is either rotated or mirrored) it is important, that
+    Since this is done only by rotation it is important, that
     the old and new basis are both orthonormal and right handed.
     This may require the function :func:`utilities.orthonormalize` as a previous step.
 
@@ -931,34 +930,39 @@ def basistransform(xyz_frame, old_basis, new_basis):
         pd.DataFrame: The transformed xyz_frame
     """
     frame = xyz_frame.copy()
+    old_basis = np.array(old_basis)
+    new_basis = np.array(new_basis)
+    # Check orthonormality
+    assert np.isclose(np.dot(old_basis, np.transpose(old_basis)), np.identity(3)).all(), 'old_basis not orthonormal'
+    assert np.isclose(np.dot(new_basis, np.transpose(new_basis)), np.identity(3)).all(), 'new_basis not orthonormal'
     v1, v2, v3 = old_basis
     ex, ey, ez = new_basis
+    # Check right handed
+    assert np.isclose(np.cross(v1, v2), v3).all(), 'old_basis not righthanded'
+    assert np.isclose(np.cross(ex, ey), ez).all(), 'new_basis not righthanded'
 
     # Map v3 on ez
-    axis = np.cross(ez, v3)
-    angle = give_angle(ez, v3)
-    rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
-    new_axes = np.dot(rotationmatrix, old_basis)
-    frame = move(frame, matrix = rotationmatrix)
-    v1, v2, v3 = np.transpose(new_axes)
+    axis = np.cross(v3, ez)
+    if np.isclose(axis, np.zeros(3)).all():
+        pass
+    else:
+        angle = utilities.give_angle(v3, ez)
+        if (angle != 0):
+            angle = angle if 0 < np.dot(ez, np.cross(v2, ey)) else 360. - angle
+        rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
+        new_basis = np.dot(rotationmatrix, new_basis)
+        frame = move(frame, matrix = rotationmatrix)
 
     # Map v1 on ex
     axis = ez
-    angle = give_angle(ex, v1)
+    angle = utilities.give_angle(v1, ex)
     if (angle != 0):
-        angle = angle if 0 < np.dot(ez, np.cross(ex, v1)) else 360 - angle
+        angle = angle if 0 < np.dot(ez, np.cross(v2, ey)) else 360. - angle
     rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
-    new_axes = np.dot(rotationmatrix, new_axes)
+    new_basis = np.dot(rotationmatrix, new_basis)
     frame = move(frame, matrix = rotationmatrix)
-    v1, v2, v3 = np.transpose(new_axes)
 
-    # Assert that new axes is right handed.
-    if new_axes[1, 1] < 0:
-        mirrormatrix = np.array([[1, 0, 0], [0,-1, 0],[0, 0, 1]])
-        new_axes = np.dot(mirrormatrix, new_axes)
-        frame = move(frame, matrix = mirrormatrix)
-        v1, v2, v3 = np.transpose(new_axes)
-
+    assert np.isclose(new_basis, np.identity(3)).all(), 'transformation did not work'
     return frame
 
 def location(xyz_frame, index):
