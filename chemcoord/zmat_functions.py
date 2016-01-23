@@ -62,15 +62,16 @@ def build_list(zmat_frame, complete=False):
     return buildlist
 
 
-def to_xyz(zmat):
+def to_xyz(zmat, SN_NeRF=False):
     """
     The input is a zmat_DataFrame.
     The output is a xyz_DataFrame.
+    If SN_NeRF is True the algorithm is used.
     """
     n_atoms = zmat.shape[0]
     xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
             dtype='float',
-            index=range(n_atoms)
+            index=zmat.index
             )
     to_be_built = list(zmat.index)
     already_built = []
@@ -99,6 +100,8 @@ def to_xyz(zmat):
         bond_with, angle_with = zmat.loc[index, ['bond_with', 'angle_with']]
         bond_with, angle_with = map(int, (bond_with, angle_with))
 
+        # vb is the vector of the atom bonding to, 
+        # va is the vector of the angle defining atom,
         vb, va = xyz_functions.location(xyz_frame, [bond_with, angle_with])
 
         # Vector pointing from vb to va
@@ -125,6 +128,9 @@ def to_xyz(zmat):
         bond_with, angle_with, dihedral_with = zmat.loc[index, ['bond_with', 'angle_with', 'dihedral_with']]
         bond_with, angle_with, dihedral_with = map(int, (bond_with, angle_with, dihedral_with))
 
+        # vb is the vector of the atom bonding to, 
+        # va is the vector of the angle defining atom,
+        # vd is the vector of the dihedral defining atom
         vb, va, vd = xyz_functions.location(xyz_frame, [bond_with, angle_with, dihedral_with])
 
         if (m.radians(179.9999999) < angle < m.radians(180.0000001)):
@@ -147,8 +153,8 @@ def to_xyz(zmat):
             d = bond * -ab
 
             # Rotate d by the angle around the n1 axis
-            d = np.dot(rotation_matrix(-n1, angle), d)
-            d = np.dot(rotation_matrix(-ab, dihedral), d)
+            d = np.dot(rotation_matrix(n1, angle), d)
+            d = np.dot(rotation_matrix(ab, dihedral), d)
 
             # Add d to the position of q to get the new coordinates of the atom
             p = vb + d
@@ -157,59 +163,7 @@ def to_xyz(zmat):
             xyz_frame.loc[index] = [atom] + list(p)
             already_built.append(to_be_built.pop(0))
 
-    if n_atoms == 1:
-        add_first_atom()
-
-    elif n_atoms == 2:
-        add_first_atom()
-        add_second_atom()
-
-    elif n_atoms == 3:
-        add_first_atom()
-        add_second_atom()
-        add_third_atom()
-
-    elif n_atoms > 3:
-        add_first_atom()
-        add_second_atom()
-        add_third_atom()
-        for _ in range(n_atoms - 3):
-            add_atom()
-
-    return xyz_frame
-
-def _zmat_to_xyz_experimental(zmat):
-    n_atoms = zmat.shape[0]
-    xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
-            dtype='float',
-            index=range(n_atoms)
-            )
-    to_be_built = list(zmat.index)
-    already_built = []
-
-    def add_first_atom():
-        index = to_be_built[0]
-        # Change of nonlocal variables
-        xyz_frame.loc[index] = [zmat.at[index, 'atom'], 0., 0., 0.]
-        already_built.append(to_be_built.pop(0))
-
-    def add_second_atom():
-        index = to_be_built[0]
-        # Change of nonlocal variables
-        xyz_frame.loc[index] = [zmat.at[index, 'atom'], zmat.at[index, 'bond'], 0., 0. ]
-        already_built.append(to_be_built.pop(0))
-
-
-    def add_third_atom():
-        index = to_be_built[0]
-        atom, bond, angle = zmat.loc[index, ['atom', 'bond', 'angle']]
-        angle = m.radians(angle)
-        x_projection, y_projection = np.cos(angle) * bond, np.sin(angle) * bond
-        # Change of nonlocal variables
-        xyz_frame.loc[index] = [atom, x_projection, y_projection, 0.]
-        already_built.append(to_be_built.pop(0))
-
-    def add_atom():
+    def add_atom_SN_NeRF():
         normalize = utilities.normalize
 
         index = to_be_built[0]
@@ -218,33 +172,37 @@ def _zmat_to_xyz_experimental(zmat):
         bond_with, angle_with, dihedral_with = zmat.loc[index, ['bond_with', 'angle_with', 'dihedral_with']]
         bond_with, angle_with, dihedral_with = map(int, (bond_with, angle_with, dihedral_with))
 
-        D2 = np.array([
-            bond * np.cos(angle),
-            bond * np.cos(dihedral) * np.sin(angle),
-            bond * np.sin(dihedral) * np.sin(angle)
-            ], dtype= float)
+        vb, va, vd = xyz_functions.location(xyz_frame, [bond_with, angle_with, dihedral_with])
 
-        vA = np.array(xyz_frame.loc[dihedral_with, ['x', 'y', 'z']], dtype=float)
-        vB = np.array(xyz_frame.loc[angle_with, ['x', 'y', 'z']], dtype=float)
-        vC = np.array(xyz_frame.loc[bond_with, ['x', 'y', 'z']], dtype=float)
+        # The next steps implements the so called SN-NeRF algorithm. 
+        # In their paper they use a different definition of the angle.
+        # This means, that I use sometimes cos instead of sin and other minor changes
+        # Compare with the paper:
+        # Parsons J, Holmes JB, Rojas JM, Tsai J, Strauss CE.: 
+        # Practical conversion from torsion space to Cartesian space for in silico protein synthesis. 
+        # J Comput Chem.  2005 Jul 30;26(10):1063-8. 
+        # PubMed PMID: 15898109
 
-        bc = normalize(vC - vB)
-        ba = (vA - vB)
-        n = normalize(np.cross(ba, bc))
+
+        D2 = bond * np.array([
+                - np.cos(angle),
+                np.cos(dihedral) * np.sin(angle),
+                np.sin(dihedral) * np.sin(angle)
+                ], dtype= float)
+
+        ab = normalize(vb - va)
+        da = (va - vd)
+        n = normalize(np.cross(da, ab))
 
         M = np.array([
-                bc,
-                np.cross(n, bc),
+                ab,
+                np.cross(n, ab),
                 n
                 ])
-
-        D = np.dot(M, D2) + vC
-
+        D = np.dot(np.transpose(M), D2) + vb
 
         xyz_frame.loc[index] = [atom] + list(D)
         already_built.append(to_be_built.pop(0))
-        return M , np.linalg.norm(np.array([bc, ba, n]), axis = 1)
-
 
     if n_atoms == 1:
         add_first_atom()
@@ -262,10 +220,14 @@ def _zmat_to_xyz_experimental(zmat):
         add_first_atom()
         add_second_atom()
         add_third_atom()
+        if SN_NeRF:
+            for _ in range(n_atoms - 3):
+                add_atom_SN_NeRF()
+        else:
+            for _ in range(n_atoms - 3):
+                add_atom()
 
     return xyz_frame
-
-
 
 
 def concatenate(fragment_zmat_frame, zmat_frame, reference_atoms, xyz_frame = 'default'):

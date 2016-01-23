@@ -8,74 +8,69 @@ from . import utilities
 from . import zmat_functions
 
 
-def sort(xyz_frame, origin=[0, 0, 0]):
+
+def cutsphere(xyz_frame, radius=15., origin=[0., 0., 0.], outside_sliced=True):
+    """Cuts a sphere specified by origin and radius.
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        radius (float): 
+        origin (list):
+        outside_sliced (bool): Atoms outside/inside the sphere are cut out.
+
+    Returns:
+        pd.dataframe: Sliced xyz_frame
     """
-    The required input is a xyz_frame.
-    The optional input is a list or np.array with length=3
-    for the location of the desired origin. (default=[0, 0, 0])
-    The output is a xyz_DataFrame with a column for the distance of each atom
-    from the origin.
-    The DataFrame is sorted by the values of the distance.
-    """
-    origin = dict(zip(['x', 'y', 'z'], list(origin)))
-    xyz_frame['distance'] = np.sqrt(
-        (xyz_frame['x'] - origin['x'])**2 +
-        (xyz_frame['y'] - origin['y'])**2 +
-        (xyz_frame['z'] - origin['z'])**2
-        )
-    sortedxyz_frame = xyz_frame.sort_values(by='distance')   #.reset_index(drop=True)
-    return sortedxyz_frame
+    frame = distance_frame(xyz_frame, origin)
+    if outside_sliced:
+        sliced_xyz_frame = frame[frame['distance'] < radius]
+    else:
+        sliced_xyz_frame = frame[frame['distance'] > radius]
+    return sliced_xyz_frame
 
 
-def cutsphere(xyz_frame, radius=15, origin=[0, 0, 0], outside_sliced = True):
-    """
-    The required input is a xyz_frame.
-    The optional input is a number for the radius (default=15) and
-    a list or np.array with length=3 for the location of the desired origin (default=[0, 0, 0]).
-    The output is a xyz_DataFrame where all atoms outside/inside the sphere defined by radius
-    and origin are sliced out.
+def cutcube(xyz_frame, edge=20, origin=[0, 0, 0], outside_sliced = True):
+    """Cuts a cube specified by edge and radius.
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        edge (float): 
+        origin (list):
+        outside_sliced (bool): Atoms outside/inside the sphere are cut out.
+
+    Returns:
+        pd.dataframe: Sliced xyz_frame
     """
     # Next line changes from ordinary python list to dictionary for easy access of the origin values
     origin = dict(zip(['x', 'y', 'z'], list(origin)))
     if outside_sliced:
         sliced_xyz_frame = xyz_frame[
-             ((xyz_frame['x'] - origin['x'])**2 +
-              (xyz_frame['y'] - origin['y'])**2 +
-              (xyz_frame['z'] - origin['z'])**2
-             ) < radius**2
-            ]
+               (np.abs((xyz_frame['x'] - origin['x'])) < edge / 2)
+             & (np.abs((xyz_frame['y'] - origin['y'])) < edge / 2)
+             & (np.abs((xyz_frame['z'] - origin['z'])) < edge / 2)
+            ].copy()
     else:
         sliced_xyz_frame = xyz_frame[
-             ((xyz_frame['x'] - origin['x'])**2 +
-              (xyz_frame['y'] - origin['y'])**2 +
-              (xyz_frame['z'] - origin['z'])**2
-             ) > radius**2
-            ]
-    sliced_xyz_frame = sliced_xyz_frame
+               (np.abs((xyz_frame['x'] - origin['x'])) > edge / 2)
+             & (np.abs((xyz_frame['y'] - origin['y'])) > edge / 2)
+             & (np.abs((xyz_frame['z'] - origin['z'])) > edge / 2)
+            ].copy()
     return sliced_xyz_frame
 
 
-def cutcube(xyz_frame, edge=20, origin=[0, 0, 0]):
-    """
-    The required input is a xyz_frame.
-    The optional input is a number for the edge (default=20) and
-    a list or np.array with length=3 for the location of the desired origin (default=[0, 0, 0]).
-    The output is a xyz_DataFrame where all atoms outside the cube defined by edge
-    and origin are sliced out.
-    """
-    # Next line changes from ordinary python list to dictionary for easy access of the origin values
-    origin = dict(zip(['x', 'y', 'z'], list(origin)))
-    sliced_xyz_frame = xyz_frame[
-           (np.abs((xyz_frame['x'] - origin['x'])) < edge / 2)
-         & (np.abs((xyz_frame['y'] - origin['y'])) < edge / 2)
-         & (np.abs((xyz_frame['z'] - origin['z'])) < edge / 2)
-        ]
-    sliced_xyz_frame = sliced_xyz_frame
-    return sliced_xyz_frame
-
-
+# TODO: ask Steven if tuple return is good style and complete Docstring
 def mass(xyz_frame):
-    """
+    """Gives several properties related to mass.
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        edge (float): 
+        origin (list):
+        outside_sliced (bool): Atoms outside/inside the sphere are cut out.
+
+    Returns:
+        pd.dataframe: Sliced xyz_frame
+
     The input is a xyz_DataFrame.
     Returns a tuple of four values.
     The first one is the zmat_DataFrame with an additional column for the masses of each atom.
@@ -110,12 +105,19 @@ def mass(xyz_frame):
     return frame_mass, total_mass, baryzentrum, topologic_center
 
 
-def move(xyz_frame, vector = [0, 0, 0], matrix = np.identity(3)):
-    """
-    The required input is a xyz_DataFrame.
-    Optional input is a vector (default=[0, 0, 0]) and a matrix (default=np.identity(3))
-    Returns a xyz_DataFrame that is first rotated, mirrored... by the matrix
-    and afterwards moved by the vector
+def move(xyz_frame, vector=[0, 0, 0], matrix=np.identity(3)):
+    """Move an xyz_frame.
+
+    The xyz_frame is first rotated, mirrored... by the matrix
+    and afterwards translated by the vector
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        vector (np.array): default is np.zeros(3)
+        matrix (np.array): default is np.identity(3)
+
+    Returns:
+        pd.dataframe: Moved xyz_frame
     """
     frame = xyz_frame.copy()
     vectors = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
@@ -125,25 +127,47 @@ def move(xyz_frame, vector = [0, 0, 0], matrix = np.identity(3)):
     return frame
 
 def modify(buildlist, entries):
+    """Modify a buildlist for constructing zmatrices.
+   
+    In order to know about the meaning of the buildlist, go to :func:`to_zmat`.
+
+    Here is an example::
+
+        In: buildlist_test = [[1], [2, 1], [3, 2, 1], [4, 3, 2, 1]]
+        In: modify(buildlist_test, [4, 1, 2, 3])
+        Out: [[1], [2, 1], [3, 2, 1], [4, 1, 2, 3]]
+
+    Args:
+        buildlist (list): 
+        entries (list): Entries you want to change.
+
+    Returns:
+        list: Modified buildlist. 
+    """
     indexlist = [element[0] for element in buildlist]
     buildlist_modified = copy.deepcopy(buildlist)
     # changing_index = [element[0] for element in entries]
     for entry in entries:
         position = indexlist.index(entry[0])
         buildlist_modified[position] = entry
-
     return buildlist_modified
 
 
 
 
 
-def distance(frame, index, bond_with):
+def distance(xyz_frame, index, bond_with):
+    """Return the distance between two atoms.
+   
+    Args:
+        xyz_frame (pd.dataframe): 
+        index (int): 
+        bond_with (int): Index of atom bonding with.
+
+    Returns:
+        float: distance
     """
-    The input is the own index, the index of the atom bonding to and a xyz_DataFrame.
-    Returns the distance between these atoms.
-    """
-    vi, vb = frame.ix[[index, bond_with], ['x', 'y', 'z']].get_values().astype(float)
+    vi, vb = location(xyz_frame, [index, bond_with])
     q = vb - vi
     distance = np.linalg.norm(q)
     return distance
@@ -964,8 +988,8 @@ def location(xyz_frame, indexlist):
         index (list): 
 
     Returns:
-        np.array: A matrix of 3D vector of the location of the atom
-        specified by indexlist. Or only one 3D vector if only one index was given.
+        np.array: A matrix of 3D rowvectors of the location of the atoms
+        specified by indexlist. In the case of one index given a 3D vector is returned one index.
     """
     matrix = xyz_frame.ix[indexlist, ['x', 'y', 'z']].get_values().astype(float)
     return matrix
@@ -978,4 +1002,18 @@ def distance_frame(xyz_frame, origin):
     frame_distance = xyz_frame.copy()
     frame_distance['distance'] = np.linalg.norm(frame_distance.loc[:, ['x', 'y', 'z']].get_values().astype(float) - origin, axis =1)
     return frame_distance
+
+
+def test_conversion(xyz_frame, steps=10, **kwargs):
+    temp_xyz = xyz_frame.copy()
+    framelist = [temp_xyz]
+    for _ in range(steps):
+        temp_zmat = to_zmat(temp_xyz)
+        temp_xyz = zmat_functions.to_xyz(temp_zmat, **kwargs)
+        framelist.append(temp_xyz)
+    return framelist
+
+
+
+
 

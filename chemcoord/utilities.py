@@ -101,15 +101,15 @@ def orthormalize(basis):
 
     Right handed means, that: 
 
-        np.cross(e1, e2) = e3
-        np.cross(e2, e3) = e1
-        np.cross(e3, e1) = e2
+        - np.cross(e1, e2) = e3
+        - np.cross(e2, e3) = e1
+        - np.cross(e3, e1) = e2
 
     Args:
-        basis (list): A list of two or three linear independent vectors.
+        basis (np.array): An array of shape = (3,2) or (3,3) 
 
     Returns:
-        new_basis (list): A right handed orthonormalized basis.
+        new_basis (np.array): A right handed orthonormalized basis.
     """
     def local_orthonormalize(basis):
         v1, v2 =  basis[:, 0], basis[:, 1]

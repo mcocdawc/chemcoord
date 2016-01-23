@@ -5,5 +5,3 @@ chemcoord.xyz_functions.cutcube
 
 .. autofunction:: cutcube
 
-
-And pew pew pew
