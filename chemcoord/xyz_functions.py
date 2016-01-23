@@ -5,6 +5,7 @@ import math as m
 import copy
 from . import constants
 from . import utilities
+from . import zmat_functions
 
 
 def sort(xyz_frame, origin=[0, 0, 0]):
@@ -444,8 +445,8 @@ def _order_of_building(xyz_frame, to_be_built = None, already_built = None, recu
         for _ in range(number_of_atoms_to_add):
             if (len(already_built) > 1) or mode == 2:
                 index, previous = two_references(index, previous)
-                distance = distance(frame, index, previous)
-                if distance > 7:
+                bond_length = distance(frame, index, previous)
+                if bond_length > 7:
                     index = zero_reference(topologic_center)
                     mode = 1
 
@@ -464,8 +465,8 @@ def _order_of_building(xyz_frame, to_be_built = None, already_built = None, recu
         for _ in range(number_of_atoms_to_add):
             if len(already_built) > 0:
                 index, previous = one_reference(index)
-                distance = distance(frame, index, previous)
-                if distance > 5:
+                bond_length = distance(frame, index, previous)
+                if bond_length > 5:
                     index = zero_reference(topologic_center)
 
             elif already_built == []:
@@ -765,7 +766,6 @@ def inertia(xyz_frame):
         **Fourth element:**
         The eigenvectors of the inertia tensor in the old basis.
     """
-    rotation_matrix = utilities.rotation_matrix
     frame_mass, total_mass, baryzentrum, topologic_center = mass(xyz_frame)
 
     frame_mass = move(frame_mass, vector = -baryzentrum)
@@ -796,14 +796,10 @@ def inertia(xyz_frame):
     diag_inertia_tensor = diag_inertia_tensor[sorted_index]
     eigenvectors = eigenvectors[:, sorted_index]
 
-    v1, v2, v3 = np.transpose(eigenvectors)
-    ex, ey, ez = np.identity(3)
-    old_basis = [ex, ey, ez]
-    new_basis = [v1, v2, v3]
+    new_basis = eigenvectors
     new_basis = utilities.orthormalize(new_basis)
+    old_basis = np.identity(3)
     frame_mass = basistransform(frame_mass, old_basis, new_basis)
-    
-
     return frame_mass, diag_inertia_tensor, inertia_tensor, eigenvectors
 
 
@@ -913,18 +909,21 @@ def from_to(xyz_frame1, xyz_frame2, step=5):
     return list_of_xyzframes
 
 
-def basistransform(xyz_frame, old_basis, new_basis):
+def basistransform(xyz_frame, old_basis, new_basis, rotate_only=True):
     """Transforms the xyz_frame to a new basis.
 
     This function transforms the cartesian coordinates from an old basis to a new one.
-    Since this is done only by rotation it is important, that
-    the old and new basis are both orthonormal and right handed.
-    This may require the function :func:`utilities.orthonormalize` as a previous step.
+    Please note that old_basis and new_basis are supposed to have full Rank and consist of 
+    three linear independent vectors.
+    If rotate_only is True, it is asserted, that both bases are orthonormal and right handed.
+    Besides all involved matrices are transposed instead of inverted.
+    In some applications this may require the function :func:`utilities.orthonormalize` as a previous step.
 
     Args:
         xyz_frame (pd.DataFrame): 
-        old_basis (list): An orthormalized basis.
-        new_basis (list): Another orthonormalized basis.
+        old_basis (np.array):  
+        new_basis (np.array): 
+        rotate_only (bool): 
 
     Returns:
         pd.DataFrame: The transformed xyz_frame
@@ -932,52 +931,44 @@ def basistransform(xyz_frame, old_basis, new_basis):
     frame = xyz_frame.copy()
     old_basis = np.array(old_basis)
     new_basis = np.array(new_basis)
-    # Check orthonormality
-    assert np.isclose(np.dot(old_basis, np.transpose(old_basis)), np.identity(3)).all(), 'old_basis not orthonormal'
-    assert np.isclose(np.dot(new_basis, np.transpose(new_basis)), np.identity(3)).all(), 'new_basis not orthonormal'
-    v1, v2, v3 = old_basis
-    ex, ey, ez = new_basis
-    # Check right handed
-    assert np.isclose(np.cross(v1, v2), v3).all(), 'old_basis not righthanded'
-    assert np.isclose(np.cross(ex, ey), ez).all(), 'new_basis not righthanded'
+    # tuples are extracted row wise
+    # For this reason you need to transpose e.g. ex is the first column from new_basis
+    if rotate_only:
+        ex, ey, ez = np.transpose(old_basis)
+        v1, v2, v3 = np.transpose(new_basis)
+        assert np.allclose(np.dot(old_basis, np.transpose(old_basis)), np.identity(3)), 'old basis not orthonormal'
+        assert np.allclose(np.dot(new_basis, np.transpose(new_basis)), np.identity(3)), 'new_basis not orthonormal'
+        assert np.allclose(np.cross(ex, ey), ez), 'old_basis not righthanded'
+        assert np.allclose(np.cross(v1, v2), v3), 'new_basis not righthanded'
 
-    # Map v3 on ez
-    axis = np.cross(v3, ez)
-    if np.isclose(axis, np.zeros(3)).all():
-        pass
+        basistransformation = np.dot(new_basis, np.transpose(old_basis))
+        frame = move(frame, matrix=np.transpose(basistransformation))
+        test_basis = np.dot(np.transpose(basistransformation), new_basis)
     else:
-        angle = utilities.give_angle(v3, ez)
-        if (angle != 0):
-            angle = angle if 0 < np.dot(ez, np.cross(v2, ey)) else 360. - angle
-        rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
-        new_basis = np.dot(rotationmatrix, new_basis)
-        frame = move(frame, matrix = rotationmatrix)
+        basistransformation = np.dot(new_basis, np.linalg.inv(old_basis))
+        frame = move(frame, matrix=np.linalg.inv(basistransformation))
+        test_basis = np.dot(np.linalg.inv(basistransformation), new_basis)
 
-    # Map v1 on ex
-    axis = ez
-    angle = utilities.give_angle(v1, ex)
-    if (angle != 0):
-        angle = angle if 0 < np.dot(ez, np.cross(v2, ey)) else 360. - angle
-    rotationmatrix = utilities.rotation_matrix(axis, m.radians(angle))
-    new_basis = np.dot(rotationmatrix, new_basis)
-    frame = move(frame, matrix = rotationmatrix)
-
-    assert np.isclose(new_basis, np.identity(3)).all(), 'transformation did not work'
+    assert np.isclose(test_basis, old_basis).all(), 'transformation did not work'
     return frame
 
-def location(xyz_frame, index):
+
+
+def location(xyz_frame, indexlist):
     """Returns the location of an atom.
+
+    You can pass an indexlist or an index.
 
     Args:
         xyz_frame (pd.dataframe): 
-        index (int): 
+        index (list): 
 
     Returns:
-        np.array: A 3D vector of the location of the atom
-        specified by index.
+        np.array: A matrix of 3D vector of the location of the atom
+        specified by indexlist. Or only one 3D vector if only one index was given.
     """
-    vector = xyz_frame.ix[index, ['x', 'y', 'z']].get_values().astype(float)
-    return vector
+    matrix = xyz_frame.ix[indexlist, ['x', 'y', 'z']].get_values().astype(float)
+    return matrix
 
 
 def distance_frame(xyz_frame, origin):

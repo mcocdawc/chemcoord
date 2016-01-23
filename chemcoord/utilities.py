@@ -22,14 +22,14 @@ def rotation_matrix(axis, angle):
     Returns:
         Rotation matrix (np.array):
     """
-    # Normalize the axis
     axis = normalize(np.array(axis))
     a = np.cos( angle/2 )
     b,c,d =  axis * np.sin(angle/2)
-    rot_matrix = np.array( [[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
+    rot_matrix = np.array([
+        [a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
         [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
-        [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]]
-        )
+        [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]
+        ])
     return rot_matrix
 
 def give_angle(Vector1, Vector2):
@@ -111,12 +111,17 @@ def orthormalize(basis):
     Returns:
         new_basis (list): A right handed orthonormalized basis.
     """
-    v1, v2 =  basis[0], basis[1]
+    def local_orthonormalize(basis):
+        v1, v2 =  basis[:, 0], basis[:, 1]
+        e1 = normalize(v1)
+        e3 = normalize(np.cross(e1, v2))
+        e2 = normalize(np.cross(e3, e1))
+        basis = np.transpose(np.array([e1, e2, e3]))
+        return basis
 
-    e1 = normalize(v1)
-    e3 = normalize(np.cross(e1, v2))
-    e2 = normalize(np.cross(e3, e1))
-    return [e1, e2, e3]
+    for _ in range(3):
+        basis = local_orthonormalize(basis)
+    return basis
 
 
 def distance(vector1, vector2):

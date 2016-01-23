@@ -4,6 +4,7 @@ import math as m
 import copy
 from . import constants
 from . import utilities
+from . import xyz_functions
 
 def mass(frame):
     """
@@ -98,14 +99,12 @@ def to_xyz(zmat):
         bond_with, angle_with = zmat.loc[index, ['bond_with', 'angle_with']]
         bond_with, angle_with = map(int, (bond_with, angle_with))
 
-
-        vb = np.array(xyz_frame.loc[bond_with, ['x', 'y', 'z']], dtype=float)
-        va = np.array(xyz_frame.loc[angle_with, ['x', 'y', 'z']], dtype=float)
+        vb, va = xyz_functions.location(xyz_frame, [bond_with, angle_with])
 
         # Vector pointing from vb to va
         BA = va - vb
 
-        # Vector of length distance pointing along the x-axis
+        # Vector of length distance 
         d = bond * normalize(BA)
 
         # Rotate d by the angle around the z-axis
@@ -120,17 +119,15 @@ def to_xyz(zmat):
 
 
     def add_atom():
-
         index = to_be_built[0]
         atom, bond, angle, dihedral = zmat.loc[index, ['atom', 'bond', 'angle', 'dihedral']]
         angle, dihedral = map(m.radians, (angle, dihedral))
         bond_with, angle_with, dihedral_with = zmat.loc[index, ['bond_with', 'angle_with', 'dihedral_with']]
         bond_with, angle_with, dihedral_with = map(int, (bond_with, angle_with, dihedral_with))
 
-        if (m.radians(179.9999999) < angle < m.radians(180.0000001)):
-            vb = np.array(xyz_frame.loc[bond_with, ['x', 'y', 'z']], dtype=float)
-            va = np.array(xyz_frame.loc[angle_with, ['x', 'y', 'z']], dtype=float)
+        vb, va, vd = xyz_functions.location(xyz_frame, [bond_with, angle_with, dihedral_with])
 
+        if (m.radians(179.9999999) < angle < m.radians(180.0000001)):
             AB = vb - va
             ab = normalize(AB)
             d = bond * ab
@@ -140,10 +137,6 @@ def to_xyz(zmat):
             already_built.append(to_be_built.pop(0))
 
         else:
-            vb = np.array(xyz_frame.loc[bond_with, ['x', 'y', 'z']], dtype=float)
-            va = np.array(xyz_frame.loc[angle_with, ['x', 'y', 'z']], dtype=float)
-            vd = np.array(xyz_frame.loc[dihedral_with, ['x', 'y', 'z']], dtype=float)
-
             AB = vb - va
             DA = vd - va
 
