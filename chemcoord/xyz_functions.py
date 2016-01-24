@@ -131,11 +131,14 @@ def modify(buildlist, entries):
    
     In order to know about the meaning of the buildlist, go to :func:`to_zmat`.
 
+    .. warning:: The user has to make sure himself that the modified buildlist is still valid. 
+        This means that atoms use only other atoms as reference, that are in previous rows of the buildlist.
+
     Here is an example::
 
         In: buildlist_test = [[1], [2, 1], [3, 2, 1], [4, 3, 2, 1]]
-        In: modify(buildlist_test, [4, 1, 2, 3])
-        Out: [[1], [2, 1], [3, 2, 1], [4, 1, 2, 3]]
+        In: modify(buildlist_test, [[3, 1, 2], [4, 1, 2, 3]])
+        Out: [[1], [2, 1], [3, 1, 2], [4, 1, 2, 3]]
 
     Args:
         buildlist (list): 
@@ -144,12 +147,15 @@ def modify(buildlist, entries):
     Returns:
         list: Modified buildlist. 
     """
-    indexlist = [element[0] for element in buildlist]
     buildlist_modified = copy.deepcopy(buildlist)
-    # changing_index = [element[0] for element in entries]
-    for entry in entries:
-        position = indexlist.index(entry[0])
-        buildlist_modified[position] = entry
+    if type(entries[0]) == list:
+        indexlist = [element[0] for element in buildlist]
+        for entry in entries:
+            position = indexlist.index(entry[0])
+            buildlist_modified[position] = entry
+    elif type(entries[0]) == int:
+        position = indexlist.index(entries[0])
+        buildlist_modified[position] = entries
     return buildlist_modified
 
 
@@ -174,14 +180,19 @@ def distance(xyz_frame, index, bond_with):
 
 
 def _distance_optimized(location_array, buildlist, indexlist = None, exclude_first = True):
-    """
-    The input is a np.array with three columns for the x, y and z coordinates and an arbitrary number of rows.
-    Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
-    pass an indexlist with which the location_array was created.
-    Usually this is something like: location_array = xyz_frame.ix[indexlist, ['x', 'y', 'z']].get_values().astype(float).
-    If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
-    The exclude_first options excludes the first row of the buildlist from calculation.
-    Returns a list of the distance between the first and second atom of every entry in the buildlist. 
+    """Return the distances between given atoms.
+   
+    Args:
+        location_array (np.array):  This is an array with three columns for 
+        the x, y and z coordinates and an arbitrary number of rows.
+        buildlist (list): 
+        indexlist (list): Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
+        pass the indexlist with which the location_array was created.
+        If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
+        exclude_first (bool): The exclude_first option excludes the first row of the buildlist from calculation.
+
+    Returns:
+        list: List of the distance between the first and second atom of every entry in the buildlist. 
     """
     if indexlist is None:
         indexlist = [element[0] for element in buildlist]
@@ -204,48 +215,41 @@ def _distance_optimized(location_array, buildlist, indexlist = None, exclude_fir
             q = vb - vi
             distance = np.linalg.norm(q)
             distance_list.append(distance)
-
     return distance_list
 
 def angle_degrees(frame, index, bond_with, angle_with):
+    """Return the angle in dregrees between three atoms.
+   
+    Args:
+        xyz_frame (pd.dataframe): 
+        index (int): 
+        bond_with (int): Index of atom bonding with.
+        angle_with (int): Index of angle defining atom. 
+
+    Returns:
+        float: Angle in degrees.
     """
-    The input is the own index, the index of the atom bonding to,
-    the index of the angle defining atom and a xyz_DataFrame.
-    Returns the angle between these atoms in degrees.
-    """
-    normalize = utilities.normalize
-
-    vi, vb, va = frame.ix[[index, bond_with, angle_with], ['x', 'y', 'z']].get_values().astype(float)
-
-    BI = vi - vb
-    BA = va - vb
-    bi = normalize(BI)
-    ba = normalize(BA)
-
-    # Is this ok
-    scalar_product = np.dot(bi, ba)
-    if  -1.00000000000001 < scalar_product < -1.:
-        scalar_product = -1.
-
-    elif 1.00000000000001 > scalar_product > 1.:
-        scalar_product = 1.
-
-    angle = m.acos(scalar_product)
-    angle = np.degrees(angle)
+    vi, vb, va = location(frame, [index, bond_with, angle_with])
+    BI, BA = vi - vb, va - vb
+    angle = utilities.give_angle(BI, BA)
     return angle
 
 
 def _angle_degrees_optimized(location_array, buildlist, indexlist = None, exclude_first = True):
+    """Return the angles between given atoms.
+   
+    Args:
+        location_array (np.array):  This is an array with three columns for 
+        the x, y and z coordinates and an arbitrary number of rows.
+        buildlist (list): 
+        indexlist (list): Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
+        pass the indexlist with which the location_array was created.
+        If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
+        exclude_first (bool): The exclude_first option excludes the first row of the buildlist from calculation.
+
+    Returns:
+        list: List of the angle between the first, second and third atom of every entry in the buildlist. 
     """
-    The input is a np.array with three columns for the x, y and z coordinates and an arbitrary number of rows.
-    Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
-    pass an indexlist with which the location_array was created.
-    Usually this is something like: location_array = xyz_frame.ix[indexlist, ['x', 'y', 'z']].get_values().astype(float).
-    If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
-    The exclude_first options excludes the first two row of the buildlist from calculation.
-    Returns a list of the angle between the first, second and third atom of every entry in the buildlist. 
-    """
-    normalize = utilities.normalize
     if indexlist is None:
         indexlist = [element[0] for element in buildlist]
     n_atoms = len(indexlist)
@@ -253,39 +257,29 @@ def _angle_degrees_optimized(location_array, buildlist, indexlist = None, exclud
     converted_buildlist = [[convert_index[number] for number in listelement] for listelement in buildlist]
     converted_buildlist = converted_buildlist[2:] if exclude_first else converted_buildlist
 
-
     angle_list = []
 
     for atom in converted_buildlist:
-        vi, vb, va = location_array[atom][:3]
-
-        BI = vi - vb
-        BA = va - vb
-        bi = normalize(BI)
-        ba = normalize(BA)
-
-        # Is this ok
-        scalar_product = np.dot(bi, ba)
-        if  -1.00000000000001 < scalar_product < -1.:
-            scalar_product = -1.
-    
-        elif 1.00000000000001 > scalar_product > 1.:
-            scalar_product = 1.
-
-
-        angle = m.acos(scalar_product)
-        angle = np.degrees(angle)
-
+        vi, vb, va = location(frame, [index, bond_with, angle_with])
+        BI, BA = vi - vb, va - vb
+        angle = utilities.give_angle(BI, BA)
         angle_list.append(angle)
 
     return angle_list
 
 
 def dihedral_degrees(frame, index, bond_with, angle_with, dihedral_with):
-    """
-    The input is the own index, the index of the atom bonding to,
-    the index of the angle defining atom, the index of the dihedral defining atom and a xyz_DataFrame.
-    Returns the dihedral between these atoms in degrees.
+    """Return the angle in dregrees between three atoms.
+   
+    Args:
+        xyz_frame (pd.dataframe): 
+        index (int): 
+        bond_with (int): Index of atom bonding with.
+        angle_with (int): Index of angle defining atom. 
+        dihedral_with (int): Index of dihedral defining atom. 
+
+    Returns:
+        float: dihedral in degrees.
     """
     normalize = utilities.normalize
     vi, vb, va, vd = frame.ix[[index, bond_with, angle_with, dihedral_with], ['x', 'y', 'z']].get_values().astype(float)
@@ -316,14 +310,19 @@ def dihedral_degrees(frame, index, bond_with, angle_with, dihedral_with):
 
 
 def _dihedral_degrees_optimized(location_array, buildlist, indexlist = None, exclude_first = True):
-    """
-    The input is a np.array with three columns for the x, y and z coordinates and an arbitrary number of rows.
-    Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
-    pass an indexlist with which the location_array was created.
-    Usually this is something like: location_array = xyz_frame.ix[indexlist, ['x', 'y', 'z']].get_values().astype(float).
-    If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
-    The exclude_first options excludes the first three row of the buildlist from calculation.
-    Returns a list of the dihedral between the first, second, third and fourth atom of every entry in the buildlist. 
+    """Return the angles between given atoms.
+   
+    Args:
+        location_array (np.array):  This is an array with three columns for 
+        the x, y and z coordinates and an arbitrary number of rows.
+        buildlist (list): 
+        indexlist (list): Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
+        pass the indexlist with which the location_array was created.
+        If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
+        exclude_first (bool): The exclude_first option excludes the first row of the buildlist from calculation.
+
+    Returns:
+        list: List of the dihedral between the first, second, third and fourth atom of every entry in the buildlist. 
     """
     normalize = utilities.normalize
     if indexlist is None:
