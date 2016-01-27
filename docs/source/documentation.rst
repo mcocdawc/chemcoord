@@ -8,9 +8,10 @@ Contents:
 .. toctree::
     :maxdepth: 1
 
-    IO_functions
+    read
     xyz_functions
     utilities
     zmat_functions
+    write
 
 

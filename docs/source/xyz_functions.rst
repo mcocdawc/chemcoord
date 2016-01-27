@@ -24,5 +24,8 @@ Functions for cartesian coordinates
     ~xyz_functions.cutcube
     ~xyz_functions.make_similar
     ~xyz_functions.from_to
+    ~xyz_functions._distance_optimized
+    ~xyz_functions._angle_degrees_optimized
+    ~xyz_functions._dihedral_degrees_optimized
     
 

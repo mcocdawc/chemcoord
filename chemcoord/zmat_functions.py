@@ -7,18 +7,25 @@ from . import utilities
 from . import xyz_functions
 
 def mass(frame):
-    """
-    The input is a zmat_DataFrame.
-    Returns a tuple of two values.
-    The first one is the zmat_DataFrame with an additional column for the masses of each atom.
-    The second value is the total mass.
+    """Gives several properties related to mass.
+
+    Args:
+        zmat_frame (pd.dataframe): 
+
+    Returns:
+        dic: The returned dictionary has four possible keys:
+        
+        ``frame_mass``: zmat_DataFrame with an additional column for the masses of each atom.
+    
+        ``total_mass``: The total mass.
     """
     zmat_frame = frame.copy()
     masses_dic = constants.elementary_masses
     masses = pd.Series([ masses_dic[atom] for atom in zmat_frame['atom']], name='masses')
     total_mass = masses.sum()
-    zmat_frame_mass = pd.concat([zmat_frame, masses], axis=1, join='inner')
-    return zmat_frame_mass, total_mass
+    frame_mass = pd.concat([zmat_frame, masses], axis=1, join='inner')
+    dic_of_values = dict(zip(['frame_mass', 'total_mass'], [frame_mass, total_mass]))
+    return dic_of_values
 
 
 def change_numbering(frame, new_index = None):
@@ -30,7 +37,7 @@ def change_numbering(frame, new_index = None):
     """
     zmat_frame = frame.copy()
     old_index = list(zmat_frame.index)
-    new_index = list(range(zmat_frame.shape[0])) if (new_index == None) else list(new_index)
+    new_index = list(range(1, zmat_frame.shape[0]+1)) if (new_index == None) else list(new_index)
     assert len(new_index) == len(old_index)
     zmat_frame.index = new_index
     zmat_frame.loc[:, ['bond_with', 'angle_with', 'dihedral_with']] = zmat_frame.loc[
@@ -230,7 +237,7 @@ def to_xyz(zmat, SN_NeRF=False):
     return xyz_frame
 
 
-def concatenate(fragment_zmat_frame, zmat_frame, reference_atoms, xyz_frame = 'default'):
+def concatenate(fragment_zmat_frame, zmat_frame, reference_atoms, xyz_frame=None):
     """
     This function binds the fragment_zmat_frame onto the molecule defined by zmat_frame.
     The reference atoms is a list/matrix of three rows and four columns and contains the
@@ -258,30 +265,25 @@ def concatenate(fragment_zmat_frame, zmat_frame, reference_atoms, xyz_frame = 'd
     dihedral_with_list = [element[3] for element in reference_atoms]
 
 
-    if type(xyz_frame) == str:
+    if xyz_frame is None:
         bond = 1
         angle_list = [90 for _ in range(2)]
         dihedral_list = [90 for _ in range(3)]
 
     else:
-        location_array = xyz_frame.loc[all_reference_atoms, ['x', 'y', 'z']].get_values().astype(float)
-
         bond_list = xyz_functions._distance_optimized(
-                location_array,
-                buildlist = reference_atoms,
-                indexlist = all_reference_atoms,
+                xyz_frame,
+                buildlist=reference_atoms,
                 exclude_first = False
                 )
         angle_list = xyz_functions._angle_degrees_optimized(
-                location_array,
-                reference_atoms,
-                indexlist = all_reference_atoms,
+                xyz_frame,
+                buildlist=reference_atoms,
                 exclude_first = False
                 )
         dihedral_list = xyz_functions._dihedral_degrees_optimized(
-                location_array,
-                reference_atoms,
-                indexlist = all_reference_atoms,
+                xyz_frame,
+                buildlist=reference_atoms,
                 exclude_first = False
                 )
 

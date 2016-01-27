@@ -6,33 +6,48 @@ import copy
 from . import constants
 from . import utilities
 
-def zmat(inputfile, pythonic_index=False):
-    """
-    The input is a filename.
-    The output is a zmat_DataFrame.
-    """
+def zmat(inputfile, implicit_index=True):
+    """Reads a zmat file.
+    
+    Lines beginning with ``#`` are ignored.
 
-    zmat_frame = pd.read_table(
-        inputfile,
-        comment='#',
-        delim_whitespace=True,
-        names=['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'],
-        )
-    n_atoms = zmat_frame.shape[0]
-    zmat_frame.index = range(1, n_atoms+1)
-    # Changing to pythonic indexing
-    if python_index:
-        zmat_frame.index = range(n_atoms)
-        zmat_frame['bond_with'] = zmat_frame['bond_with'] - 1
-        zmat_frame['angle_with'] = zmat_frame['angle_with'] - 1
-        zmat_frame['dihedral_with'] = zmat_frame['dihedral_with'] - 1
+    Args:
+        inputfile (str): 
+        implicit_index (bool): If this option is true the first column has to be the element symbols for the atoms.
+            The row number is used to determine the index.
+
+    Returns:
+        pd.DataFrame: 
+    """
+    if implicit_index:
+        zmat_frame = pd.read_table(
+            inputfile,
+            comment='#',
+            delim_whitespace=True,
+            names=['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'],
+            )
+        n_atoms = zmat_frame.shape[0]
+        zmat_frame.index = range(1, n_atoms+1)
+    else:
+        zmat_frame = pd.read_table(
+            inputfile,
+            comment='#',
+            delim_whitespace=True,
+            names=['temp_index', 'atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'],
+            )
+        zmat_frame.set_index('temp_index', drop=True)
     return zmat_frame
 
 
 def xyz(inputfile, pythonic_index=False):
-    """
-    The input is a filename.
-    The output is a xyz_DataFrame.
+    """Reads a xyz file.
+
+    Args:
+        inputfile (str): 
+        pythonic_index (bool):
+
+    Returns:
+        pd.DataFrame: 
     """
     xyz_frame = pd.read_table(
         inputfile,

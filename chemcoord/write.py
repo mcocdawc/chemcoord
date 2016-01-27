@@ -5,18 +5,31 @@ import math as m
 import copy
 from . import constants
 from . import utilities
+from . import zmat_functions
 
-def zmat(zmat, outputfile, reset_numbering=True):
+
+# TODO look for indexing
+def zmat(zmat, outputfile, implicit_numbering=True):
+    """Writes the zmatrix into a file.
+
+    .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
+        The frame to be written is of course not changed.
+
+    Args:
+        zmat (pd.dataframe): 
+        outputfile (str): 
+        implicit_numbering (bool): If implicit_numbering is set, the zmat indexing is changed to range(1, number_atoms+1)
+            Besides the index is omitted while writing which means, that the index is given implicitly by the row number.
+
+    Returns:
+        None: None
     """
-    Writes the zmatrix into a file.
-    If reset_numbering is set, the index of the zmat_frame is changed to ascend from zero to the number of atoms.
-    The depending values like bond_with are changed accordingly.
-    Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
-    The zmat_frame is of course not changed.
-    """
+
     # The following functions are necessary to deal with the fact, that pandas does not support "NaN" for integers.
+    # It was written by the user LondonRob at StackExchange:
+    # http://stackoverflow.com/questions/25789354/exporting-ints-with-missing-values-to-csv-in-pandas/31208873#31208873
+    # Begin of the copied code snippet
     EPSILON = 1e-9
-
     def _lost_precision(s):
         """
         The total amount of precision lost over Series `s`
@@ -52,9 +65,10 @@ def zmat(zmat, outputfile, reset_numbering=True):
         fields in the resulting csv.
         """
         df.apply(_nansafe_integer_convert).to_csv(*args, **kwargs)
+    # End of the copied code snippet
 
 
-    if reset_numbering:
+    if implicit_numbering:
         zmat_frame = zmat_functions.change_numbering(zmat)
         nansafe_to_csv(zmat_frame.loc[:, 'atom':], outputfile,
             sep=' ',
@@ -65,19 +79,27 @@ def zmat(zmat, outputfile, reset_numbering=True):
     else:
         nansafe_to_csv(zmat, outputfile,
             sep=' ',
-            index=False,
+            index=True,
             header=False,
             mode='w'
             )
 
 
-def xyz(xyz_frame, outputfile, sort_index = True):
-    """
-    Writes the xyz_DataFrame into a file.
-    If (sort = True) the DataFrame is sorted by the index and the index is not written
-    since it corresponds to the line.
-    Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
-    The xyz_frame is of course not changed.
+def xyz(xyz_frame, outputfile, sort_index=True):
+    """Writes the xyz_frame into a file.
+
+    If sort_index is true, the frame is sorted by the index before writing. 
+
+    .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
+        The frame to be written is of course not changed.
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        outputfile (str): 
+        sort_index (bool):
+
+    Returns:
+        None: None
     """
     frame = xyz_frame[['atom', 'x', 'y','z']].copy()
     if sort_index:
@@ -107,6 +129,18 @@ def xyz(xyz_frame, outputfile, sort_index = True):
 
 
 def molden(framelist, outputfile):
+    """Writes a list of xyz_frames into a molden file.
+
+    .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
+        The frame to be written is of course not changed.
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        outputfile (str): 
+
+    Returns:
+        None: None
+    """
     n_frames = len(framelist)
     n_atoms = framelist[0].shape[0]
     string ="""[MOLDEN FORMAT]

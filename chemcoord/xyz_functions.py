@@ -58,25 +58,22 @@ def cutcube(xyz_frame, edge=20, origin=[0, 0, 0], outside_sliced = True):
     return sliced_xyz_frame
 
 
-# TODO: ask Steven if tuple return is good style and complete Docstring
 def mass(xyz_frame):
     """Gives several properties related to mass.
 
     Args:
         xyz_frame (pd.dataframe): 
-        edge (float): 
-        origin (list):
-        outside_sliced (bool): Atoms outside/inside the sphere are cut out.
 
     Returns:
-        pd.dataframe: Sliced xyz_frame
+        dic: The returned dictionary has four possible keys:
+        
+        ``frame_mass``: xyz_DataFrame with an additional column for the masses of each atom.
+    
+        ``total_mass``: The total mass.
 
-    The input is a xyz_DataFrame.
-    Returns a tuple of four values.
-    The first one is the zmat_DataFrame with an additional column for the masses of each atom.
-    The second value is the total mass.
-    The third value is the location of the barycentrum.
-    The forth value is the location of the topologic center.
+        ``barycenter``: The mass weighted average location.
+    
+        ``topologic_center``: The average location.
     """
     frame = xyz_frame.copy()
     indexlist = list(xyz_frame.index)
@@ -94,15 +91,17 @@ def mass(xyz_frame):
 
     location_array = frame_mass.loc[indexlist, ['x', 'y', 'z']].get_values().astype(float)
 
-    baryzentrum = np.zeros([3])
+    barycenter = np.zeros([3])
     topologic_center = np.zeros([3])
 
     for row, index in enumerate(indexlist):
-        baryzentrum = baryzentrum + location_array[row] * frame_mass.at[index, 'mass']
+        barycenter = barycenter + location_array[row] * frame_mass.at[index, 'mass']
         topologic_center = topologic_center + location_array[row]
-    baryzentrum = baryzentrum / total_mass
+    barycenter = barycenter / total_mass
     topologic_center = topologic_center / n_atoms
-    return frame_mass, total_mass, baryzentrum, topologic_center
+    
+    dic_of_values = dict(zip(['frame_mass', 'total_mass', 'barycenter', 'topologic_center'], [frame_mass, total_mass, barycenter, topologic_center]))
+    return dic_of_values
 
 
 def move(xyz_frame, vector=[0, 0, 0], matrix=np.identity(3)):
@@ -179,42 +178,39 @@ def distance(xyz_frame, index, bond_with):
     return distance
 
 
-def _distance_optimized(location_array, buildlist, indexlist = None, exclude_first = True):
+
+def _distance_optimized(xyz_frame, buildlist, exclude_first = True):
     """Return the distances between given atoms.
+
+    In order to know more about the buildlist, go to :func:`to_zmat`.
    
     Args:
-        location_array (np.array):  This is an array with three columns for 
-        the x, y and z coordinates and an arbitrary number of rows.
+        xyz_frame (pd.dataframe): 
         buildlist (list): 
-        indexlist (list): Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
-        pass the indexlist with which the location_array was created.
-        If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
         exclude_first (bool): The exclude_first option excludes the first row of the buildlist from calculation.
 
     Returns:
         list: List of the distance between the first and second atom of every entry in the buildlist. 
     """
-    if indexlist is None:
-        indexlist = [element[0] for element in buildlist]
+    if exclude_first:
+        temp_buildlist = copy.deepcopy(buildlist[1:])
+    else:
+        temp_buildlist = copy.deepcopy(buildlist)
 
-    n_atoms = len(indexlist)
-    convert_index = dict(zip(indexlist, range(n_atoms)))
-    converted_buildlist = [[convert_index[number] for number in listelement] for listelement in buildlist]
-    converted_buildlist = converted_buildlist[1:] if exclude_first else converted_buildlist
+    index_set = set([])
+    for listelement in temp_buildlist:
+        index_set |= set(listelement[:2])
+    index_list = list(index_set)
+    convert = dict(zip(index_list, range(len(index_list))))
+    location_array = location(xyz_frame, index_list)
 
     distance_list = []
-    if exclude_first:
-        for atom in converted_buildlist:
-            vi, vb = location_array[atom][:2]
-            q = vb - vi
-            distance = np.linalg.norm(q)
-            distance_list.append(distance)
-    else:
-        for atom in converted_buildlist:
-            vi, vb = location_array[atom][:2]
-            q = vb - vi
-            distance = np.linalg.norm(q)
-            distance_list.append(distance)
+    for listelement in temp_buildlist:
+        index, bond_with = listelement[:2]
+        vi, vb = location_array[[convert[index], convert[bond_with]], :]
+        q = vb - vi
+        distance = np.linalg.norm(q)
+        distance_list.append(distance)
     return distance_list
 
 def angle_degrees(frame, index, bond_with, angle_with):
@@ -235,36 +231,38 @@ def angle_degrees(frame, index, bond_with, angle_with):
     return angle
 
 
-def _angle_degrees_optimized(location_array, buildlist, indexlist = None, exclude_first = True):
+def _angle_degrees_optimized(xyz_frame, buildlist, exclude_first = True):
     """Return the angles between given atoms.
+
+    In order to know more about the buildlist, go to :func:`to_zmat`.
    
     Args:
-        location_array (np.array):  This is an array with three columns for 
-        the x, y and z coordinates and an arbitrary number of rows.
+        xyz_frame (pd.dataframe): 
         buildlist (list): 
-        indexlist (list): Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
-        pass the indexlist with which the location_array was created.
-        If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
-        exclude_first (bool): The exclude_first option excludes the first row of the buildlist from calculation.
+        exclude_first (bool): The exclude_first option excludes the first two rows of the buildlist from calculation.
 
     Returns:
         list: List of the angle between the first, second and third atom of every entry in the buildlist. 
     """
-    if indexlist is None:
-        indexlist = [element[0] for element in buildlist]
-    n_atoms = len(indexlist)
-    convert_index = dict(zip(indexlist, range(n_atoms)))
-    converted_buildlist = [[convert_index[number] for number in listelement] for listelement in buildlist]
-    converted_buildlist = converted_buildlist[2:] if exclude_first else converted_buildlist
+    if exclude_first:
+        temp_buildlist = copy.deepcopy(buildlist[2:])
+    else:
+        temp_buildlist = copy.deepcopy(buildlist)
+
+    index_set = set([])
+    for listelement in temp_buildlist:
+        index_set |= set(listelement[:3])
+    index_list = list(index_set)
+    convert = dict(zip(index_list, range(len(index_list))))
+    location_array = location(xyz_frame, index_list)
 
     angle_list = []
-
-    for atom in converted_buildlist:
-        vi, vb, va = location(frame, [index, bond_with, angle_with])
+    for listelement in temp_buildlist:
+        index, bond_with, angle_with = listelement[:3]
+        vi, vb, va = location_array[[convert[index], convert[bond_with], convert[angle_with]], :]
         BI, BA = vi - vb, va - vb
         angle = utilities.give_angle(BI, BA)
         angle_list.append(angle)
-
     return angle_list
 
 
@@ -282,7 +280,7 @@ def dihedral_degrees(frame, index, bond_with, angle_with, dihedral_with):
         float: dihedral in degrees.
     """
     normalize = utilities.normalize
-    vi, vb, va, vd = frame.ix[[index, bond_with, angle_with, dihedral_with], ['x', 'y', 'z']].get_values().astype(float)
+    vi, vb, va, vd = location(frame, [index, bond_with, angle_with, dihedral_with])
 
     DA = va - vd
     AB = vb - va
@@ -291,90 +289,74 @@ def dihedral_degrees(frame, index, bond_with, angle_with, dihedral_with):
     n1 = normalize(np.cross(DA, AB))
     n2 = normalize(np.cross(AB, BI))
 
-    # Is this ok
-    scalar_product = np.dot(n1, n2)
-
-    if  -1.00000000000001 < scalar_product < -1.:
-        scalar_product = -1.
-    
-    elif 1.00000000000001 > scalar_product > 1.:
-        scalar_product = 1.
-
-    dihedral = m.acos(scalar_product)
-    dihedral = np.degrees(dihedral)
-
+    dihedral = utilities.give_angle(n1, n2)
     if (dihedral != 0):
         dihedral = dihedral if 0 < np.dot(AB, np.cross(n1, n2)) else 360 - dihedral
 
     return dihedral
 
 
-def _dihedral_degrees_optimized(location_array, buildlist, indexlist = None, exclude_first = True):
+def _dihedral_degrees_optimized(xyz_frame, buildlist, exclude_first = True):
     """Return the angles between given atoms.
    
+    In order to know more about the buildlist, go to :func:`to_zmat`.
+
     Args:
-        location_array (np.array):  This is an array with three columns for 
-        the x, y and z coordinates and an arbitrary number of rows.
+        xyz_frame (pd.dataframe): 
         buildlist (list): 
-        indexlist (list): Since the np.array does not contain the indices of the pd.DataFrame anymore it is necessary to 
-        pass the indexlist with which the location_array was created.
-        If the indices contained in the buildlist are the same as the indexlist (default) the indexlist can be omitted.
-        exclude_first (bool): The exclude_first option excludes the first row of the buildlist from calculation.
+        exclude_first (bool): The exclude_first option excludes the first three rows of the buildlist from calculation.
 
     Returns:
         list: List of the dihedral between the first, second, third and fourth atom of every entry in the buildlist. 
     """
-    normalize = utilities.normalize
-    if indexlist is None:
-        indexlist = [element[0] for element in buildlist]
-    n_atoms = len(indexlist)
-    convert_index = dict(zip(indexlist, range(n_atoms)))
-    converted_buildlist = [[convert_index[number] for number in listelement] for listelement in buildlist]
-    converted_buildlist = converted_buildlist[3:] if exclude_first else converted_buildlist
+    if exclude_first:
+        temp_buildlist = copy.deepcopy(buildlist[3:])
+    else:
+        temp_buildlist = copy.deepcopy(buildlist)
+
+    index_set = set([])
+    for listelement in temp_buildlist:
+        index_set |= set(listelement[:4])
+    index_list = list(index_set)
+    convert = dict(zip(index_list, range(len(index_list))))
+    location_array = location(xyz_frame, index_list)
 
     dihedral_list = []
-
-    for atom in converted_buildlist:
-        vi, vb, va, vd = location_array[atom]
+    for listelement in temp_buildlist:
+        index, bond_with, angle_with, dihedral_with = listelement[:4]
+        vi, vb, va, vd = location_array[[convert[index], convert[bond_with], convert[angle_with], convert[dihedral_with]], :]
 
         DA = va - vd
         AB = vb - va
         BI = vi - vb
-
-        n1 = normalize(np.cross(DA, AB))
-        n2 = normalize(np.cross(AB, BI))
-
-        scalar_product = np.dot(n1, n2)
-        # Is this ok
-        if  -1.00000000000001 < scalar_product < -1.:
-            scalar_product = -1.
-        
-        elif 1.00000000000001 > scalar_product > 1.:
-            scalar_product = 1.
-
-        dihedral = m.acos(scalar_product)
-        dihedral = np.degrees(dihedral)
-
+    
+        n1 = utilities.normalize(np.cross(DA, AB))
+        n2 = utilities.normalize(np.cross(AB, BI))
+    
+        dihedral = utilities.give_angle(n1, n2)
         if (dihedral != 0):
             dihedral = dihedral if 0 < np.dot(AB, np.cross(n1, n2)) else 360 - dihedral
-
         dihedral_list.append(dihedral)
     return dihedral_list
 
 
-
-
-
-def get_fragment(xyz_frame, list_of_indextuples, threshold = 2.0):
-    """
-    The input is the xyz_frame of the molecule to be fragmented.
+def get_fragment(xyz_frame, list_of_indextuples, threshold=2.0):
+    """Get the indices of the atoms in a fragment.
+   
     The list_of_indextuples contains all bondings from the molecule to the fragment.
-    [(1,3), (2,4)] means for example that the fragment is connected over two bonds.
+    ``[(1,3), (2,4)]`` means for example that the fragment is connected over two bonds.
     The first bond is from atom 1 in the molecule to atom 3 in the fragment.
     The second bond is from atom 2 in the molecule to atom 4 in the fragment.
     The threshold defines the maximum distance between two atoms in order to 
     be considered as connected.
-    Returns a list of the indices of the fragment.
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        list_of_indextuples (list): 
+        threshold (float): 
+
+    Returns:
+        list: A list of the indices of the fragment.
     """
     frame = xyz_frame.copy()
     frame_index = frame.index
@@ -409,7 +391,7 @@ def get_fragment(xyz_frame, list_of_indextuples, threshold = 2.0):
 
     return index_of_fragment_list
 
-def _order_of_building(xyz_frame, to_be_built = None, already_built = None, recursion = 2):
+def _order_of_building(xyz_frame, to_be_built=None, already_built=None, recursion=2):
     frame = xyz_frame.copy()
     n_atoms = frame.shape[0]
 
@@ -431,7 +413,7 @@ def _order_of_building(xyz_frame, to_be_built = None, already_built = None, recu
         to_be_built.remove(element)
     number_of_atoms_to_add = len(to_be_built)
     already_built = list(already_built)
-    topologic_center = mass(frame)[3]
+    topologic_center = mass(frame)['topologic_center']
 
     assert recursion in set([0, 1, 2])
     assert (set(to_be_built) & set(already_built)) == set([])
@@ -510,6 +492,9 @@ def _order_of_building(xyz_frame, to_be_built = None, already_built = None, recu
     already_built = list(already_built)
     return already_built
 
+
+# TODO Dont repeat if full building list is given
+# TODO Check for linearity and insert dummy atoms
 def _get_reference(xyz_frame, order_of_building, recursion = 1):
 
     buildlist = copy.deepcopy(order_of_building)
@@ -652,10 +637,9 @@ def _build_zmat(xyz_frame, buildlist):
 
 
     def add_atoms():
-        location_array = xyz_frame.ix[indexlist, ['x', 'y', 'z']].get_values().astype(float)
-        distance_list = _distance_optimized(location_array, buildlist)
-        angle_list = _angle_degrees_optimized(location_array, buildlist)
-        dihedral_list = _dihedral_degrees_optimized(location_array, buildlist)
+        distance_list = _distance_optimized(xyz_frame, buildlist)
+        angle_list = _angle_degrees_optimized(xyz_frame, buildlist)
+        dihedral_list = _dihedral_degrees_optimized(xyz_frame, buildlist)
 
         zmat_frame.loc[indexlist, 'atom'] = xyz_frame.loc[indexlist, 'atom']
         zmat_frame.loc[indexlist[1:], 'bond_with'] = bond_with_list
@@ -685,10 +669,10 @@ def _build_zmat(xyz_frame, buildlist):
     return zmat_frame.loc[[element[0] for element in buildlist], :]
 
 
-
+# TODO Write Docstring and Tutorial
+# TODO Extract columns with additional information and append in the end again
 def to_zmat(xyz_frame, buildlist = None, fragments_list = None, recursion_level = 2):
-    """
-    Takes a xyz_frame and converts to a zmat_frame.
+    """Convert xyz_frame to zmat_frame.
     """
     assert recursion_level in set([0,1,2])
 
@@ -752,6 +736,7 @@ def to_zmat(xyz_frame, buildlist = None, fragments_list = None, recursion_level 
                 order_of_building = building_order,
                 recursion = recursion_level
                 )
+
         zmat_fragment = _build_zmat(xyz_frame, buildlist_for_fragment)
 
         list_of_fragment_zmat.append((fragment[0:3], zmat_fragment))
@@ -762,36 +747,36 @@ def to_zmat(xyz_frame, buildlist = None, fragments_list = None, recursion_level 
     return zmat_big
 
 
-
 def inertia(xyz_frame):
     """Calculates the inertia tensor and transforms along rotation axes.
 
     This function calculates the inertia tensor and returns a 4-tuple.
 
-
     Args:
         xyz_frame (pd.DataFrame): 
 
     Returns:
-        tuple:
-
-        **First element:**
+        dic: The returned dictionary has four possible keys:
+        
+        ``transformed_frame``:
         A xyz_frame that is transformed to the basis spanned by the eigenvectors 
         of the inertia tensor. The x-axis is the axis with the lowest inertia moment,
         the z-axis the one with the highest. Contains also a column for the mass
     
-        **Second element:**
+        ``diag_inertia_tensor``:
         A vector containing the sorted inertia moments after diagonalization.
 
-        **Third element:**
+        ``inertia_tensor``:
         The inertia tensor in the old basis.
     
-        **Fourth element:**
+        ``eigenvectors``:
         The eigenvectors of the inertia tensor in the old basis.
     """
-    frame_mass, total_mass, baryzentrum, topologic_center = mass(xyz_frame)
+    my_keys = ['frame_mass', 'total_mass', 'barycenter', 'topologic_center']
+    my_dic = mass(xyz_frame)
+    frame_mass, total_mass, barycenter, topologic_center = [my_dic[key] for key in my_keys]
 
-    frame_mass = move(frame_mass, vector = -baryzentrum)
+    frame_mass = move(frame_mass, vector = -barycenter)
 
     coordinates = ['x', 'y', 'z']
     
@@ -822,19 +807,34 @@ def inertia(xyz_frame):
     new_basis = eigenvectors
     new_basis = utilities.orthormalize(new_basis)
     old_basis = np.identity(3)
-    frame_mass = basistransform(frame_mass, old_basis, new_basis)
-    return frame_mass, diag_inertia_tensor, inertia_tensor, eigenvectors
+    frame_mass = basistransform(frame_mass, new_basis, old_basis)
+    
+    dic_of_values =  dict(zip(['transformed_frame', 'diag_inertia_tensor', 'inertia_tensor', 'eigenvectors'], [frame_mass, diag_inertia_tensor, inertia_tensor, eigenvectors]))
+    return dic_of_values
 
 
 
 def make_similar(xyz_frame1, xyz_frame2, prealign = True):
-    """
-    Takes two xyz_DataFrames and returns a reindexed copy of xyz_frame2
-    which minimizes the necessary movements to get from xyz_frame1 to xyz_frame2.
+    """Similarizes two xyz_frames.
+
+    Returns a reindexed copy of xyz_frame2 that minimizes the distance 
+    for each atom from xyz_frame1 to itself on xyz_frame2.
+
+    .. warning:: The algorithm is still very basic, so it is important, to have a good
+        prealignment and quite similar frames.
+
+    Args:
+        xyz_frame1 (pd.DataFrame): 
+        xyz_frame2 (pd.DataFrame): 
+        prealign (bool): If True both frames are moved to their barycenters and aligned along 
+            their principal axes of inertia before reindexing.
+
+    Returns:
+        pd.DataFrame: Reindexed copy of xyz_frame2.
     """
     if prealign:
-        frame1 = inertia(xyz_frame1)[0][['atom', 'x', 'y', 'z']]
-        frame2 = inertia(xyz_frame2)[0][['atom', 'x', 'y', 'z']]
+        frame1 = inertia(xyz_frame1)['transformed_frame']
+        frame2 = inertia(xyz_frame2)['transformed_frame']
     else:
         frame1 = xyz_frame1.copy()
         frame2 = xyz_frame2.copy()
@@ -851,7 +851,7 @@ def make_similar(xyz_frame1, xyz_frame2, prealign = True):
     list_of_new_indexed_frames = []
 
     def _distance(vector1, vector2):
-        length = np.sqrt(np.linalg.norm(vector1 - vector2))
+        length = np.linalg.norm(vector1 - vector2)
         return length
 
 
@@ -903,11 +903,17 @@ def make_similar(xyz_frame1, xyz_frame2, prealign = True):
     return xyz_frame3.sort_index()
 
 def from_to(xyz_frame1, xyz_frame2, step=5):
-    """
-    This function returns a list of xyz_frames with the subsequent 
-    movement from xyz_frame1 to xyz_frame2.
-    The list contains xyz_frame1 as first and xyz_frame2 as last element.
-    Please note, that for this reason: len(list) = (step + 1).
+    """Returns list of xyz_frames for the movement from xyz_frame1 to xyz_frame2.
+
+    Args:
+        xyz_frame1 (pd.DataFrame): 
+        xyz_frame2 (pd.DataFrame): 
+        step (int): 
+
+    Returns:
+        list: The list contains xyz_frame1 as first and xyz_frame2 as last element.
+        The number of intermediate frames is defined by step.
+        Please note, that for this reason: len(list) = (step + 1).
     """
     xyzframe1 = xyz_frame1.copy()
     xyzframe2 = xyz_frame2.copy()
@@ -932,7 +938,7 @@ def from_to(xyz_frame1, xyz_frame2, step=5):
     return list_of_xyzframes
 
 
-def basistransform(xyz_frame, old_basis, new_basis, rotate_only=True):
+def basistransform(xyz_frame, new_basis, old_basis=np.identity(3), rotate_only=True):
     """Transforms the xyz_frame to a new basis.
 
     This function transforms the cartesian coordinates from an old basis to a new one.
@@ -1001,6 +1007,25 @@ def distance_frame(xyz_frame, origin):
     frame_distance = xyz_frame.copy()
     frame_distance['distance'] = np.linalg.norm(frame_distance.loc[:, ['x', 'y', 'z']].get_values().astype(float) - origin, axis =1)
     return frame_distance
+
+def change_numbering(xyz_frame, rename_dic):
+    """Returns the reindexed version of xyz_frame.
+
+    Args:
+        xyz_frame (pd.dataframe): 
+        rename_dic (dic): A dictionary mapping integers on integers.
+
+    Returns:
+        pd.dataframe: 
+    """
+    frame = xyz_frame.copy()
+    replace_list = list(rename_dic.keys())
+    with_list = [rename_dic[key] for key in replace_list]
+    frame['temporary_column'] = frame.index
+    frame.loc[:, 'temporary_column'].replace(replace_list, with_list, inplace=True)
+    frame.set_index('temporary_column', drop=True, inplace=True)
+    frame.index.name = None
+    return frame
 
 
 def test_conversion(xyz_frame, steps=10, **kwargs):
