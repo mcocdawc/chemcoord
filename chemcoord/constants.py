@@ -9,118 +9,229 @@ energy_conversion={
 
 
 atom_properties = { 
-    'X': 0,
-    'Ac': 227.028,
-    'Al': 26.981539,
-    'Am': 243,
-    'Sb': 121.757,
-    'Ar': 39.948,
-    'As': 74.92159,
-    'At': 210,
-    'Ba': 137.327,
-    'Bk': 247,
-    'Be': 9.012182,
-    'Bi': 208.98037,
-    'Bh': 262,
-    'B': 10.811,
-    'Br': 79.904,
-    'Cd': 112.411,
-    'Ca': 40.078,
-    'Cf': 251,
-    'C': 12.011,
-    'Ce': 140.115,
-    'Cs': 132.90543,
-    'Cl': 35.4527,
-    'Cr': 51.9961,
-    'Co': 58.9332,
-    'Cu': 63.546,
-    'Cm': 247,
-    'Db': 262,
-    'Dy': 162.5,
-    'Es': 252,
-    'Er': 167.26,
-    'Eu': 151.965,
-    'Fm': 257,
-    'F': 18.9984032,
-    'Fr': 223,
-    'Gd': 157.25,
-    'Ga': 69.723,
-    'Ge': 72.61,
-    'Au': 196.96654,
-    'Hf': 178.49,
-    'Hs': 265,
-    'He': 4.002602,
-    'Ho': 164.93032,
-    'H': 1.00794,
-    'In': 114.82,
-    'I': 126.90447,
-    'Ir': 192.22,
-    'Fe': 55.847,
-    'Kr': 83.8,
-    'La': 138.9055,
-    'Lr': 262,
-    'Pb': 207.2,
-    'Li': 6.941,
-    'Lu': 174.967,
-    'Mg': 24.305,
-    'Mn': 54.93805,
-    'Mt': 266,
-    'Md': 258,
-    'Hg': 200.59,
-    'Mo': 95.94,
-    'Nd': 144.24,
-    'Ne': 20.1797,
-    'Np': 237.048,
-    'Ni': 58.6934,
-    'Nb': 92.90638,
-    'N': 14.00674,
-    'No': 259,
-    'Os': 190.2,
-    'O': 15.9994,
-    'Pd': 106.42,
-    'P': 30.973762,
-    'Pt': 195.08,
-    'Pu': 244,
-    'Po': 209,
-    'K': 39.0983,
-    'Pr': 140.90765,
-    'Pm': 145,
-    'Pa': 231.0359,
-    'Ra': 226.025,
-    'Rn': 222,
-    'Re': 186.207,
-    'Rh': 102.9055,
-    'Rb': 85.4678,
-    'Ru': 101.07,
-    'Rf': 261,
-    'Sm': 150.36,
-    'Sc': 44.95591,
-    'Sg': 263,
-    'Se': 78.96,
-    'Si': 28.0855,
-    'Ag': 107.8682,
-    'Na': 22.989768,
-    'Sr': 87.62,
-    'S': 32.066,
-    'Ta': 180.9479,
-    'Tc': 98,
-    'Te': 127.6,
-    'Tb': 158.92534,
-    'Tl': 204.3833,
-    'Th': 232.0381,
-    'Tm': 168.93421,
-    'Sn': 118.71,
-    'Ti': 47.88,
-    'W': 183.85,
-    'U': 238.0289,
-    'V': 50.9415,
-    'Xe': 131.29,
-    'Yb': 173.04,
-    'Y': 88.90585,
-    'Zn': 65.39,
-    'Zr': 91.224 
+    'X':   X_dic
+    'Ac':  Ac_dic
+    'Al':  Al_dic
+    'Am':  Am_dic
+    'Sb':  Sb_dic
+    'Ar':  Ar_dic
+    'As':  As_dic
+    'At':  At_dic
+    'Ba':  Ba_dic
+    'Bk':  Bk_dic
+    'Be':  Be_dic
+    'Bi':  Bi_dic
+    'Bh':  Bh_dic
+    'B':   B_dic
+    'Br':  Br_dic
+    'Cd':  Cd_dic
+    'Ca':  Ca_dic
+    'Cf':  Cf_dic
+    'C':   C_dic
+    'Ce':  Ce_dic
+    'Cs':  Cs_dic
+    'Cl':  Cl_dic
+    'Cr':  Cr_dic
+    'Co':  Co_dic
+    'Cu':  Cu_dic
+    'Cm':  Cm_dic
+    'Db':  Db_dic
+    'Dy':  Dy_dic
+    'Es':  Es_dic
+    'Er':  Er_dic
+    'Eu':  Eu_dic
+    'Fm':  Fm_dic
+    'F':   F_dic
+    'Fr':  Fr_dic
+    'Gd':  Gd_dic
+    'Ga':  Ga_dic
+    'Ge':  Ge_dic
+    'Au':  Au_dic
+    'Hf':  Hf_dic
+    'Hs':  Hs_dic
+    'He':  He_dic
+    'Ho':  Ho_dic
+    'H':   H_dic
+    'In':  In_dic
+    'I':   I_dic
+    'Ir':  Ir_dic
+    'Fe':  Fe_dic
+    'Kr':  Kr_dic
+    'La':  La_dic
+    'Lr':  Lr_dic
+    'Pb':  Pb_dic
+    'Li':  Li_dic
+    'Lu':  Lu_dic
+    'Mg':  Mg_dic
+    'Mn':  Mn_dic
+    'Mt':  Mt_dic
+    'Md':  Md_dic
+    'Hg':  Hg_dic
+    'Mo':  Mo_dic
+    'Nd':  Nd_dic
+    'Ne':  Ne_dic
+    'Np':  Np_dic
+    'Ni':  Ni_dic
+    'Nb':  Nb_dic
+    'N':   N_dic
+    'No':  No_dic
+    'Os':  Os_dic
+    'O':   O_dic
+    'Pd':  Pd_dic
+    'P':   P_dic
+    'Pt':  Pt_dic
+    'Pu':  Pu_dic
+    'Po':  Po_dic
+    'K':   K_dic
+    'Pr':  Pr_dic
+    'Pm':  Pm_dic
+    'Pa':  Pa_dic
+    'Ra':  Ra_dic
+    'Rn':  Rn_dic
+    'Re':  Re_dic
+    'Rh':  Rh_dic
+    'Rb':  Rb_dic
+    'Ru':  Ru_dic
+    'Rf':  Rf_dic
+    'Sm':  Sm_dic
+    'Sc':  Sc_dic
+    'Sg':  Sg_dic
+    'Se':  Se_dic
+    'Si':  Si_dic
+    'Ag':  Ag_dic
+    'Na':  Na_dic
+    'Sr':  Sr_dic
+    'S':   S_dic
+    'Ta':  Ta_dic
+    'Tc':  Tc_dic
+    'Te':  Te_dic
+    'Tb':  Tb_dic
+    'Tl':  Tl_dic
+    'Th':  Th_dic
+    'Tm':  Tm_dic
+    'Sn':  Sn_dic
+    'Ti':  Ti_dic
+    'W':   W_dic
+    'U':   U_dic
+    'V':   V_dic
+    'Xe':  Xe_dic
+    'Yb':  Yb_dic
+    'Y':   Y_dic
+    'Zn':  Zn_dic
+    'Zr':  Zr_dic
     }
 
+
+X_dic = {'mass' :
+Ac_dic = {'mass' :
+Al_dic = {'mass' :
+Am_dic = {'mass' :
+Sb_dic = {'mass' :
+Ar_dic = {'mass' :
+As_dic = {'mass' :
+At_dic = {'mass' :
+Ba_dic = {'mass' :
+Bk_dic = {'mass' :
+Be_dic = {'mass' :
+Bi_dic = {'mass' :
+Bh_dic = {'mass' :
+B_dic = {'mass' :
+Br_dic = {'mass' :
+Cd_dic = {'mass' :
+Ca_dic = {'mass' :
+Cf_dic = {'mass' :
+C_dic = {'mass' :
+Ce_dic = {'mass' :
+Cs_dic = {'mass' :
+Cl_dic = {'mass' :
+Cr_dic = {'mass' :
+Co_dic = {'mass' :
+Cu_dic = {'mass' :
+Cm_dic = {'mass' :
+Db_dic = {'mass' :
+Dy_dic = {'mass' :
+Es_dic = {'mass' :
+Er_dic = {'mass' :
+Eu_dic = {'mass' :
+Fm_dic = {'mass' :
+F_dic = {'mass' :
+Fr_dic = {'mass' :
+Gd_dic = {'mass' :
+Ga_dic = {'mass' :
+Ge_dic = {'mass' :
+Au_dic = {'mass' :
+Hf_dic = {'mass' :
+Hs_dic = {'mass' :
+He_dic = {'mass' :
+Ho_dic = {'mass' :
+H_dic = {'mass' :
+In_dic = {'mass' :
+I_dic = {'mass' :
+Ir_dic = {'mass' :
+Fe_dic = {'mass' :
+Kr_dic = {'mass' :
+La_dic = {'mass' :
+Lr_dic = {'mass' :
+Pb_dic = {'mass' :
+Li_dic = {'mass' :
+Lu_dic = {'mass' :
+Mg_dic = {'mass' :
+Mn_dic = {'mass' :
+Mt_dic = {'mass' :
+Md_dic = {'mass' :
+Hg_dic = {'mass' :
+Mo_dic = {'mass' :
+Nd_dic = {'mass' :
+Ne_dic = {'mass' :
+Np_dic = {'mass' :
+Ni_dic = {'mass' :
+Nb_dic = {'mass' :
+N_dic = {'mass' :
+No_dic = {'mass' :
+Os_dic = {'mass' :
+O_dic = {'mass' :
+Pd_dic = {'mass' :
+P_dic = {'mass' :
+Pt_dic = {'mass' :
+Pu_dic = {'mass' :
+Po_dic = {'mass' :
+K_dic = {'mass' :
+Pr_dic = {'mass' :
+Pm_dic = {'mass' :
+Pa_dic = {'mass' :
+Ra_dic = {'mass' :
+Rn_dic = {'mass' :
+Re_dic = {'mass' :
+Rh_dic = {'mass' :
+Rb_dic = {'mass' :
+Ru_dic = {'mass' :
+Rf_dic = {'mass' :
+Sm_dic = {'mass' :
+Sc_dic = {'mass' :
+Sg_dic = {'mass' :
+Se_dic = {'mass' :
+Si_dic = {'mass' :
+Ag_dic = {'mass' :
+Na_dic = {'mass' :
+Sr_dic = {'mass' :
+S_dic = {'mass' :
+Ta_dic = {'mass' :
+Tc_dic = {'mass' :
+Te_dic = {'mass' :
+Tb_dic = {'mass' :
+Tl_dic = {'mass' :
+Th_dic = {'mass' :
+Tm_dic = {'mass' :
+Sn_dic = {'mass' :
+Ti_dic = {'mass' :
+W_dic = {'mass' :
+U_dic = {'mass' :
+V_dic = {'mass' :
+Xe_dic = {'mass' :
+Yb_dic = {'mass' :
+Y_dic = {'mass' :
+Zn_dic = {'mass' :
+Zr_dic = {'mass' :
 
 
 " "   0.000   0.000   0.000   0.320   1.100    6
