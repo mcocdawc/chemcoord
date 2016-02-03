@@ -190,26 +190,35 @@ def to_xyz(zmat, SN_NeRF=False):
         # J Comput Chem.  2005 Jul 30;26(10):1063-8. 
         # PubMed PMID: 15898109
 
+        if (m.radians(179.9999999) < angle < m.radians(180.0000001)):
+            AB = vb - va
+            ab = normalize(AB)
+            d = bond * ab
 
-        D2 = bond * np.array([
-                - np.cos(angle),
-                np.cos(dihedral) * np.sin(angle),
-                np.sin(dihedral) * np.sin(angle)
-                ], dtype= float)
+            p = vb + d
+            xyz_frame.loc[index] = [atom] + list(p)
+            already_built.append(to_be_built.pop(0))
 
-        ab = normalize(vb - va)
-        da = (va - vd)
-        n = normalize(np.cross(da, ab))
-
-        M = np.array([
-                ab,
-                np.cross(n, ab),
-                n
-                ])
-        D = np.dot(np.transpose(M), D2) + vb
-
-        xyz_frame.loc[index] = [atom] + list(D)
-        already_built.append(to_be_built.pop(0))
+        else:
+            D2 = bond * np.array([
+                    - np.cos(angle),
+                    np.cos(dihedral) * np.sin(angle),
+                    np.sin(dihedral) * np.sin(angle)
+                    ], dtype= float)
+    
+            ab = normalize(vb - va)
+            da = (va - vd)
+            n = normalize(np.cross(da, ab))
+    
+            M = np.array([
+                    ab,
+                    np.cross(n, ab),
+                    n
+                    ])
+            D = np.dot(np.transpose(M), D2) + vb
+    
+            xyz_frame.loc[index] = [atom] + list(D)
+            already_built.append(to_be_built.pop(0))
 
     if n_atoms == 1:
         add_first_atom()

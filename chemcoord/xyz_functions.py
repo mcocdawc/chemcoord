@@ -497,55 +497,66 @@ def _order_of_building(xyz_frame, to_be_built=None, already_built=None, recursio
 # TODO Check for linearity and insert dummy atoms
 def _get_reference(xyz_frame, order_of_building, recursion = 1):
 
-    buildlist = copy.deepcopy(order_of_building)
-    index_of_reference_items = []
+    buildlist_given = copy.deepcopy(order_of_building)
+    defined_entries = {}
     order_of_building = []
 
-    for index, element in enumerate(buildlist):
+    for element in buildlist_given:
         if type(element) is list:
+            defined_entries[element[0]] = element
             order_of_building.append(element[0])
-            index_of_reference_items.append(index)
         else:
             order_of_building.append(element)
 
-    indexlist = []
+    reference_list = []
 
     n_atoms = len(order_of_building)
     to_be_built, already_built = list(order_of_building), []
 
     if recursion > 0:
-
         def first_atom(index_of_atom):
-            indexlist.append([index_of_atom])
+            reference_list.append([index_of_atom])
             already_built.append(index_of_atom)
             to_be_built.remove(index_of_atom)
 
         def second_atom(index_of_atom):
-            distances_to_other_atoms = distance_frame(
-                    xyz_frame.loc[already_built, :],
-                    location(xyz_frame, index_of_atom)
-                    )
-            bond_with = distances_to_other_atoms['distance'].idxmin()
-            indexlist.append([index_of_atom, bond_with])
-            already_built.append(to_be_built.pop(0))
+            try:
+                reference_list.append(defined_entries[index_of_atom])
+                already_built.append(to_be_built.pop(0))
+            except KeyError:
+                distances_to_other_atoms = distance_frame(
+                        xyz_frame.loc[already_built, :],
+                        location(xyz_frame, index_of_atom)
+                        )
+                bond_with = distances_to_other_atoms['distance'].idxmin()
+                reference_list.append([index_of_atom, bond_with])
+                already_built.append(to_be_built.pop(0))
 
         def third_atom(index_of_atom):
-            distances_to_other_atoms = distance_frame(
-                    xyz_frame.loc[already_built, :],
-                    location(xyz_frame, index_of_atom)
-                    ).sort_values(by='distance')
-            bond_with, angle_with = list(distances_to_other_atoms.iloc[0:2, :].index)
-            indexlist.append([index_of_atom, bond_with, angle_with])
-            already_built.append(to_be_built.pop(0))
+            try:
+                reference_list.append(defined_entries[index_of_atom])
+                already_built.append(to_be_built.pop(0))
+            except KeyError:
+                distances_to_other_atoms = distance_frame(
+                        xyz_frame.loc[already_built, :],
+                        location(xyz_frame, index_of_atom)
+                        ).sort_values(by='distance')
+                bond_with, angle_with = list(distances_to_other_atoms.iloc[0:2, :].index)
+                reference_list.append([index_of_atom, bond_with, angle_with])
+                already_built.append(to_be_built.pop(0))
 
         def other_atom(index_of_atom):
-            distances_to_other_atoms = distance_frame(
-                    xyz_frame.loc[already_built, :],
-                    location(xyz_frame, index_of_atom)
-                    ).sort_values(by='distance')
-            bond_with, angle_with, dihedral_with = list(distances_to_other_atoms.iloc[0:3, :].index)
-            indexlist.append([index_of_atom, bond_with, angle_with, dihedral_with])
-            already_built.append(to_be_built.pop(0))
+            try:
+                reference_list.append(defined_entries[index_of_atom])
+                already_built.append(to_be_built.pop(0))
+            except KeyError:
+                distances_to_other_atoms = distance_frame(
+                        xyz_frame.loc[already_built, :],
+                        location(xyz_frame, index_of_atom)
+                        ).sort_values(by='distance')
+                bond_with, angle_with, dihedral_with = list(distances_to_other_atoms.iloc[0:3, :].index)
+                reference_list.append([index_of_atom, bond_with, angle_with, dihedral_with])
+                already_built.append(to_be_built.pop(0))
 
         if n_atoms == 1:
             first_atom(to_be_built[0])
@@ -571,34 +582,93 @@ def _get_reference(xyz_frame, order_of_building, recursion = 1):
 
     else:
         if n_atoms == 1:
-            indexlist.append([order_of_building[0]])
+            reference_list.append([order_of_building[0]])
 
         elif n_atoms == 2:
-            indexlist.append([order_of_building[0]])
-            indexlist.append([order_of_building[1], order_of_building[0]])
+            reference_list.append([order_of_building[0]])
+            reference_list.append([order_of_building[1], order_of_building[0]])
 
         elif n_atoms == 3:
-            indexlist.append([order_of_building[0]])
-            indexlist.append([order_of_building[1], order_of_building[0]])
-            indexlist.append([order_of_building[2], order_of_building[1], order_of_building[0]])
+            reference_list.append([order_of_building[0]])
+            reference_list.append([order_of_building[1], order_of_building[0]])
+            reference_list.append([order_of_building[2], order_of_building[1], order_of_building[0]])
 
         elif n_atoms > 3:
-            indexlist.append([order_of_building[0]])
-            indexlist.append([order_of_building[1], order_of_building[0]])
-            indexlist.append([order_of_building[2], order_of_building[1], order_of_building[0]])
+            reference_list.append([order_of_building[0]])
+            reference_list.append([order_of_building[1], order_of_building[0]])
+            reference_list.append([order_of_building[2], order_of_building[1], order_of_building[0]])
             for i in range(3, n_atoms):
-                indexlist.append([
+                reference_list.append([
                     order_of_building[i],
                     order_of_building[i-1],
                     order_of_building[i-2],
                     order_of_building[i-3]
                     ])
 
+    return reference_list
 
-    for index in index_of_reference_items:
-            indexlist[index] = buildlist[index]
+#def _insert_dummies(xyz_frame, buildlist)
+#    temp_buildlist = copy.deepcopy(buildlist)
+#    frame_with_dummies = xyz_frame.copy()
+#    index_set = set([])
+#    for listelement in temp_buildlist:
+#        index_set |= set(listelement)
+#    index_list = list(index_set)
+#    convert = dict(zip(index_list, range(len(index_list))))
+#    location_array = location(xyz_frame, index_list)
+#
+#    def _colinear_DAB(listelement):
+#        index, bond_with, angle_with, dihedral_with = listelement[:4]
+#        vi, vb, va, vd = location_array[[convert[index], convert[bond_with], convert[angle_with], convert[dihedral_with]], :]
+#        DA, AB, BI = (va - vd), (vb - va), (vi - vb)
+#        n1 = utilities.normalize(np.cross(DA, AB))
+#        return np.allclose(n1, np.zeros(3))
+#
+#    problematic_indices = []
+#    problematic_entries_dic = {}
+#    for listelement in temp_buildlist[3:]:
+#        if _colinear_DAB(listelement):
+#            index = listelement[0]
+#            problematic_indices.append(index)
+#            problematic_entries_dic[index] = listelement
+#
+#    for index_of_atom in problematics_index:
+#        insert_dummy = True
+#        for i in range(4, 14):
+#            distances_to_other_atoms = distance_frame(
+#                    frame_with_dummies.loc[already_built, :],
+#                    location(xyz_frame, index_of_atom)
+#                    ).sort_values(by='distance')
+#            new_dihedral_with = list(distances_to_other_atoms.iloc[i, :].index)
+#
+#            if not _colinear_DAB(problematic_entries_dic[index][:3].append(new_dihedral_with)):
+#                temp_buildlist = modify(temp_buildlist, problematic_entries_dic[index][:3].append(new_dihedral_with))
+#                insert_dummy = False
+#                break
+#
+#        if insert_dummy:
+#                
+#
+#            reference_list.append([index_of_atom, bond_with, angle_with, dihedral_with])
+#            already_built.append(to_be_built.pop(0))
+#
+#
+#        def other_atom(index_of_atom):
+#            try:
+#                reference_list.append(defined_entries[index_of_atom])
+#                already_built.append(to_be_built.pop(0))
+#            except KeyError:
+#
+#   
+#       
+#
+#    return_dic = dic(zip(['frame_with_dummies', 'dummies_inserted', 'new_buidlist'], [frame_with_dummies, dummies_inserted, new_buidlist]))
+#    return return_dic
+#
+#    if exclude_first:
+#    else:
+#        temp_buildlist = copy.deepcopy(buildlist)
 
-    return indexlist
 
 
 
@@ -902,18 +972,21 @@ def make_similar(xyz_frame1, xyz_frame2, prealign = True):
    
     return xyz_frame3.sort_index()
 
-def from_to(xyz_frame1, xyz_frame2, step=5):
+def from_to(xyz_frame1, xyz_frame2, step=5, extrapolate=(0,0)):
     """Returns list of xyz_frames for the movement from xyz_frame1 to xyz_frame2.
-
+    
     Args:
         xyz_frame1 (pd.DataFrame): 
         xyz_frame2 (pd.DataFrame): 
         step (int): 
+        extrapolate (tuple):
 
     Returns:
         list: The list contains xyz_frame1 as first and xyz_frame2 as last element.
         The number of intermediate frames is defined by step.
         Please note, that for this reason: len(list) = (step + 1).
+        The numbers in extrapolate define how many frames are appended to the left and right of the list
+        continuing the movement.
     """
     xyzframe1 = xyz_frame1.copy()
     xyzframe2 = xyz_frame2.copy()
@@ -929,7 +1002,7 @@ def from_to(xyz_frame1, xyz_frame2, step=5):
     list_of_xyzframes = []
     temp_xyz = xyzframe1.copy()
 
-    for t in range(step + 1):
+    for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
         temp_xyz.loc[:, ['x', 'y', 'z']] = xyzframe1.loc[:, ['x', 'y', 'z']] + (
                     step_frame.loc[:, ['x', 'y', 'z']] * t
                     )
