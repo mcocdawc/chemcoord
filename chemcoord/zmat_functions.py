@@ -20,7 +20,10 @@ def mass(frame):
         ``total_mass``: The total mass.
     """
     zmat_frame = frame.copy()
-    masses_dic = constants.elementary_masses
+    masses_dic = dict(zip(
+            constants.atom_properties.keys(), 
+            [constants.atom_properties[atom]['mass'] for atom in constants.atom_properties.keys()]
+            ))
     masses = pd.Series([ masses_dic[atom] for atom in zmat_frame['atom']], name='masses')
     total_mass = masses.sum()
     frame_mass = pd.concat([zmat_frame, masses], axis=1, join='inner')

@@ -82,7 +82,10 @@ def mass(xyz_frame):
     if 'mass' in frame.columns:
         frame_mass = frame
     else:
-        masses_dic = constants.elementary_masses
+        masses_dic = dict(zip(
+                constants.atom_properties.keys(), 
+                [constants.atom_properties[atom]['mass'] for atom in constants.atom_properties.keys()]
+                ))
         masses = pd.Series([ masses_dic[atom] for atom in frame['atom']], name='mass', index=frame.index)
         # masses = pd.Series([ 5. for atom in frame['atom']], name='mass', index=frame.index)
         frame_mass = pd.concat([frame, masses], axis=1, join='outer')
