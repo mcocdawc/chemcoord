@@ -245,12 +245,13 @@ class Cartesian:
         return cube_dic
 
 
-    def connected_to(self, index_of_atom, exclude=None):
+    @staticmethod
+    def _connected_to(index_of_atom, bond_dic, exclude=None):
+        """No object overhead.
+        """
         exclude = set([]) if (exclude is None) else set(exclude)
-        frame = self.xyz_frame
-        bond_dic = self.get_bonds(use_lookup=True)
-
-        included_atoms_set = set(bond_dic[index_of_atom]) - exclude
+    
+        included_atoms_set = (set([index_of_atom]) | set(bond_dic[index_of_atom])) - exclude
         included_atoms_list = list(included_atoms_set)
         
         for index in included_atoms_list:
@@ -258,8 +259,12 @@ class Cartesian:
             included_atoms_set = new_atoms | included_atoms_set
             for atom in new_atoms:
                 included_atoms_list.append(atom)
+        return set(included_atoms_list)
 
-        return Cartesian(frame.loc[included_atoms_list, :])
+    def connected_to(self, index_of_atom, exclude=None):
+        bond_dic = self.get_bonds(use_lookup=True)
+        fragment_index = self._connected_to(index_of_atom, bond_dic, exclude=None)
+        return Cartesian(self.xyz_frame.loc[fragment_index, :])
 
     def cutsphere(self, radius=15., origin=[0., 0., 0.], outside_sliced=True, preserve_bonds=False):
         """Cuts a sphere specified by origin and radius.
@@ -284,23 +289,28 @@ class Cartesian:
         else:
             sliced_xyz_frame = frame[frame['distance'] > radius]
         
+
         if preserve_bonds:
-            bond_dic = self.get_bonds()
             included_atoms_set = set(sliced_xyz_frame.index)
-            included_atoms_list = list(sliced_xyz_frame.index)
-            
+            included_atoms_list = list(included_atoms_set)
+
+            bond_dic = self.get_bonds(use_lookup=True)
+
             new_atoms = set([])
-            for index in included_atoms_list:
-                new_atoms = bond_dic[index] - included_atoms_set
-    
+            for atom in included_atoms_set:
+                new_atoms = new_atoms | bond_dic[atom]
+            new_atoms = new_atoms - included_atoms_set
+
             while not new_atoms == set([]):
                 index_of_interest = new_atoms.pop()
-                fragment = self.connected_to(index_of_interest, exclude=included_atoms_set)
-                included_atoms_set = included_atoms_set | set([index_of_interest]) | set(fragment.xyz_frame.index)
+                included_atoms_set = included_atoms_set | self._connected_to(index_of_interest, bond_dic, exclude=included_atoms_set)
                 new_atoms = new_atoms - included_atoms_set
 
             sliced_xyz_frame = self.xyz_frame.loc[included_atoms_set, :]
+
         return self.__class__(sliced_xyz_frame)
+
+
 
 
     def cutcube(self, a=20, b=None, c=None, origin=[0, 0, 0], outside_sliced = True):
