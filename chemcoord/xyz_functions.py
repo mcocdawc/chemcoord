@@ -89,13 +89,12 @@ class Cartesian:
 
 
 # TODO replace by c function
-# TODO make functional
     def get_bonds(
                 self, 
                 modified_properties=None,
                 maximum_edge_length=8,
                 difference_edge=4,
-                use_lookup=True,
+                use_lookup=False,
                 set_lookup=True
                 ):
         """Returns a dictionary representing the bonds.
@@ -113,17 +112,16 @@ class Cartesian:
 
         """
         def get_bonds_local(self, 
+                bond_dic,
+                valency_dic,
+                bond_size_dic,
                 index_of_small_cube=self.xyz_frame.index,
                 index_of_big_cube=self.xyz_frame.index
                 ):
             assert set(index_of_small_cube).issubset(set(index_of_big_cube))
-            convert = dict(zip(self.xyz_frame.index, range(len(self.xyz_frame.index))))
             
             for index_of_atom in index_of_small_cube:
                 overlap_molecule = self.overlap(index_of_atom, index_of_big_cube, bond_size_dic)
-#                temp_array = overlap_molecule.xyz_frame.loc[:, 'overlap'].get_values().astype(float)
-#                overlap_array[convert[index_of_atom], :] = temp_array
-#                overlap_array[:, convert[index_of_atom]] = temp_array
                 sorted_overlap_frame = overlap_molecule.xyz_frame.sort_values(by='overlap', ascending=False)
 
                 row = 1
@@ -133,53 +131,60 @@ class Cartesian:
                     atom_to_add = sorted_overlap_frame.iloc[row].name 
                     if sorted_overlap_frame.at[atom_to_add, 'overlap'] <= 0. :
                         break
-                    # TODO Here you can make something better
+                    # TODO Here you can make something better. Perhaps a warning if necessary
                     if len(bond_dic[atom_to_add]) == valency_dic[atom_to_add]:
                         pass
                     else:
                         bond_dic[atom_to_add] = bond_dic[atom_to_add] | set([index_of_atom])
                         bond_dic[index_of_atom] = bond_dic[index_of_atom] | set([atom_to_add])
                     row = row + 1
+
+        def preparation_of_variables(modified_properties):
+            bond_dic = dict.fromkeys(self.xyz_frame.index, set([]))
+            
+            valency_dic = dict(zip(
+                    self.xyz_frame.index, 
+                    [constants.atom_properties[self.xyz_frame.at[index, 'atom']]['valency'] for index in self.xyz_frame.index]
+                    ))
+            bond_size_dic = dict(zip(
+                    constants.atom_properties.keys(), 
+                    [constants.atom_properties[atom]['bond_size'] for atom in constants.atom_properties.keys()]
+                    ))
+            try:
+                for key in modified_properties.keys():
+                    try:
+                        valency_dic[key] = modified_properties[key]['valency']
+                    except KeyError:
+                        pass
+                    try:
+                        bond_size_dic[key] = modified_properties[key]['bond_size']
+                    except KeyError:
+                        pass
+            except AttributeError:
+                pass
+            return bond_dic, valency_dic, bond_size_dic
        
         def complete_calculation():
+            bond_dic, valency_dic, bond_size_dic = preparation_of_variables(modified_properties)
             cuboid_dic = self.divide_and_conquer_cuboid(maximum_edge_length, difference_edge)
             for number, key in enumerate(cuboid_dic):
-                get_bonds_local(self, cuboid_dic[key][0], cuboid_dic[key][1])
+                get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, cuboid_dic[key][0], cuboid_dic[key][1])
             return bond_dic
-    
 
-# TODO make functional
         if use_lookup:
             try:
                 bond_dic = self.__bond_dic
             except AttributeError:
-                bond_dic = dict.fromkeys(self.xyz_frame.index, set([]))
-            
-                valency_dic = dict(zip(
-                        self.xyz_frame.index, 
-                        [constants.atom_properties[self.xyz_frame.at[index, 'atom']]['valency'] for index in self.xyz_frame.index]
-                        ))
-                bond_size_dic = dict(zip(
-                        constants.atom_properties.keys(), 
-                        [constants.atom_properties[atom]['bond_size'] for atom in constants.atom_properties.keys()]
-                        ))
-                try:
-                    for key in modified_properties.keys():
-                        try:
-                            valency_dic[key] = modified_properties[key]['valency']
-                        except KeyError:
-                            pass
-                        try:
-                            bond_size_dic[key] = modified_properties[key]['bond_size']
-                        except KeyError:
-                            pass
-                except AttributeError:
-                    pass
                 bond_dic = complete_calculation()
                 if set_lookup:
                     self.__bond_dic = bond_dic
+        else:
+            bond_dic = complete_calculation()
+            if set_lookup:
+                self.__bond_dic = bond_dic
         return bond_dic
-            
+
+    # TODO docstring
     def divide_and_conquer_cuboid(self, maximum_edge_length=15, difference_edge=6):
         list_of_cuboid_tuples = []
         minimum_index = [self.xyz_frame['x'].idxmin(), self.xyz_frame['y'].idxmin(), self.xyz_frame['z'].idxmin()]
@@ -239,7 +244,24 @@ class Cartesian:
                         cube_dic[(x_counter, y_counter, z_counter)] = (small_cube_index, big_cube_index) 
         return cube_dic
 
-    def cutsphere(self, radius=15., origin=[0., 0., 0.], outside_sliced=True):
+
+    def connected_to(self, index_of_atom, exclude=None):
+        exclude = set([]) if (exclude is None) else set(exclude)
+        frame = self.xyz_frame
+        bond_dic = self.get_bonds(use_lookup=True)
+
+        included_atoms_set = set(bond_dic[index_of_atom]) - exclude
+        included_atoms_list = list(included_atoms_set)
+        
+        for index in included_atoms_list:
+            new_atoms = (bond_dic[index] - included_atoms_set) - exclude
+            included_atoms_set = new_atoms | included_atoms_set
+            for atom in new_atoms:
+                included_atoms_list.append(atom)
+
+        return Cartesian(frame.loc[included_atoms_list, :])
+
+    def cutsphere(self, radius=15., origin=[0., 0., 0.], outside_sliced=True, preserve_bonds=False):
         """Cuts a sphere specified by origin and radius.
     
         Args:
@@ -250,12 +272,34 @@ class Cartesian:
         Returns:
             pd.dataframe: Sliced xyz_frame
         """
+        try:
+            origin[0]
+        except (TypeError, IndexError):
+            origin = self.location(int(origin))
+
         ordered_molecule = self.distance_frame(origin)
         frame = ordered_molecule.xyz_frame
         if outside_sliced:
             sliced_xyz_frame = frame[frame['distance'] < radius]
         else:
             sliced_xyz_frame = frame[frame['distance'] > radius]
+        
+        if preserve_bonds:
+            bond_dic = self.get_bonds()
+            included_atoms_set = set(sliced_xyz_frame.index)
+            included_atoms_list = list(sliced_xyz_frame.index)
+            
+            new_atoms = set([])
+            for index in included_atoms_list:
+                new_atoms = bond_dic[index] - included_atoms_set
+    
+            while not new_atoms == set([]):
+                index_of_interest = new_atoms.pop()
+                fragment = self.connected_to(index_of_interest, exclude=included_atoms_set)
+                included_atoms_set = included_atoms_set | set([index_of_interest]) | set(fragment.xyz_frame.index)
+                new_atoms = new_atoms - included_atoms_set
+
+            sliced_xyz_frame = self.xyz_frame.loc[included_atoms_set, :]
         return self.__class__(sliced_xyz_frame)
 
 
@@ -594,7 +638,7 @@ class Cartesian:
         return index_of_fragment_list
 
 
-
+# TODO from here on write into object methods using get_bonds
     def _order_of_building(self, to_be_built=None, already_built=None, recursion=2):
         frame = self.xyz_frame.copy()
         n_atoms = frame.shape[0]
@@ -1131,3 +1175,46 @@ class Cartesian:
         frame.set_index('temporary_column', drop=True, inplace=True)
         frame.index.name = None
         return self.__class__(frame)
+
+
+    def write(self, outputfile, sort_index=True):
+        """Writes the xyz_frame into a file.
+    
+        If sort_index is true, the frame is sorted by the index before writing. 
+    
+        .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
+            The frame to be written is of course not changed.
+    
+        Args:
+            xyz_frame (pd.dataframe): 
+            outputfile (str): 
+            sort_index (bool):
+    
+        Returns:
+            None: None
+        """
+        frame = self.xyz_frame[['atom', 'x', 'y','z']].copy()
+        if sort_index:
+            frame = frame.sort_index()
+            n_atoms = frame.shape[0]
+            with open(outputfile, mode='w') as f:
+                f.write(str(n_atoms) + 2 * '\n')
+            frame.to_csv(
+                outputfile,
+                sep=' ',
+                index=False,
+                header=False,
+                mode='a'
+                )
+        else:
+            frame = frame.sort_values(by='atom')
+            n_atoms = frame.shape[0]
+            with open(outputfile, mode='w') as f:
+                f.write(str(n_atoms) + 2 * '\n')
+            frame.to_csv(
+                outputfile,
+                sep=' ',
+                index=False,
+                header=False,
+                mode='a'
+                )
