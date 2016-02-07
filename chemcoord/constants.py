@@ -1,4 +1,12 @@
-
+######################################################################################################
+# If you are editing this file please consider commiting the change 
+# and sending a pull request to my Github account 'mcocdawc'.
+# Normal dictionaries "cost" nearly nothing to be kept in RAM. 
+# Besides you don't introduce bugs by defining keys that are unused lateron.
+# So there is no harm in having a key like e.g. 'first_discovery_of_element' which is hardly used in everyday work.
+# But if there is only one other person in the world which does not have to repeat your steps,
+# typing in those values by hand, it is already a win.
+######################################################################################################
 
 energy_conversion={
         ('hartree', 'kJ per mole') : 2625.50, 

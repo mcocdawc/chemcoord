@@ -5,6 +5,7 @@ import math as m
 import copy
 from . import constants
 from . import utilities
+from . import xyz_functions
 
 def zmat(inputfile, implicit_index=True):
     """Reads a zmat file.
@@ -39,7 +40,7 @@ def zmat(inputfile, implicit_index=True):
     return zmat_frame
 
 
-def xyz(inputfile, pythonic_index=False):
+def xyz(inputfile, pythonic_index=False, get_bonds=True):
     """Reads a xyz file.
 
     Args:
@@ -59,4 +60,7 @@ def xyz(inputfile, pythonic_index=False):
     if not pythonic_index:
         n_atoms = xyz_frame.shape[0]
         xyz_frame.index = range(1, n_atoms+1)
-    return xyz_frame
+    molecule = xyz_functions.Cartesian(xyz_frame)
+    if get_bonds:
+        molecule.get_bonds()
+    return molecule

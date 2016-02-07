@@ -1,0 +1,6 @@
+http://stackoverflow.com/questions/34748831/when-subclassing-dataframe-how-to-write-a-wrapper-method-for-loc
+
+http://stackoverflow.com/questions/29459186/building-class-that-inherits-pandas-dataframe
+
+http://stackoverflow.com/questions/24504756/pandas-dataframe-object-inheritance-or-object-use
+
