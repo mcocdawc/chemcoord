@@ -6,6 +6,7 @@ import copy
 from . import constants
 from . import utilities
 from . import zmat_functions
+from . import settings
 
 
 class Cartesian:
@@ -40,7 +41,9 @@ class Cartesian:
 # end of pandas wrapper definition
 ############################################################################
 
-    def overlap(self, own_index, indices_of_other_atoms=None, modified_properties=None):
+
+    @staticmethod 
+    def _overlap(frame, bond_size_dic):
         """Calculates the overlap of van der Vaals radii.
 
         Args:
@@ -56,46 +59,37 @@ class Cartesian:
             dic: Dictionary mapping from an atom index to the indices of atoms bonded to.
 
         """
-        if indices_of_other_atoms is None:
-            indices_of_other_atoms = self.xyz_frame.index
-        else:
-            if own_index in indices_of_other_atoms:
-                pass
-            else:
-                indices_of_other_atoms = [own_index] + indices_of_other_atoms
+        convert_to = {
+                'frame' : dict(zip(range(len(frame.index)), frame.index)),
+                'array' : dict(zip(frame.index, range(len(frame.index))))
+                }
+        location_array = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
 
+        def summed_bond_size_array(bond_size_dic):
+            """Returns a xyz_frame with a column for the distance from origin.
+            """
+            bond_size_vector = np.array([bond_size_dic[key] for key in frame.index])
+            A = np.expand_dims(bond_size_vector, axis=1)
+            B = np.expand_dims(bond_size_vector, axis=0)
+            C = A + B
+            return C
 
+        bond_size_array = summed_bond_size_array(bond_size_dic)
+        distance_array = utilities.give_distance_array(location_array)
 
-        origin = self.location(own_index) 
-        frame_distance = self.distance_frame(origin, indices_of_other_atoms).xyz_frame.copy()
+        overlap_array = bond_size_array - distance_array
 
-        bond_size_dic = dict(zip(
-                constants.atom_properties.keys(), 
-                [constants.atom_properties[atom]['bond_size'] for atom in constants.atom_properties.keys()]
-                ))
-        try:
-            for key in modified_properties.keys():
-                bond_size_dic[key] = modified_properties[key]
-        except AttributeError:
-            pass
+        return overlap_array, convert_to
 
-        frame_distance.loc[:, 'bond_size'] = [bond_size_dic[atom] for atom in frame_distance['atom']]
-        own_bond_size = frame_distance.loc[own_index, 'bond_size']
-        frame_distance.loc[:, 'overlap'] = (frame_distance.loc[:, 'bond_size'] + own_bond_size) - frame_distance.loc[:, 'distance']
-        frame_distance.at[own_index, 'overlap'] = 10**6
-        # TODO necessary?
-        outputframe = frame_distance.drop('bond_size', axis=1).copy()
-        return Cartesian(outputframe)
-
-
-# TODO replace by c function
     def get_bonds(
                 self, 
                 modified_properties=None,
-                maximum_edge_length=8,
-                difference_edge=4,
+                maximum_edge_length=25,
+                difference_edge=6,
+                use_valency=False,
                 use_lookup=False,
-                set_lookup=True
+                set_lookup=True,
+                divide_et_impera=True
                 ):
         """Returns a dictionary representing the bonds.
 
@@ -111,140 +105,191 @@ class Cartesian:
             dic: Dictionary mapping from an atom index to the indices of atoms bonded to.
 
         """
-        def get_bonds_local(self, 
-                bond_dic,
-                valency_dic,
-                bond_size_dic,
-                index_of_small_cube=self.xyz_frame.index,
-                index_of_big_cube=self.xyz_frame.index
-                ):
-            assert set(index_of_small_cube).issubset(set(index_of_big_cube))
-            
-            for index_of_atom in index_of_small_cube:
-                overlap_molecule = self.overlap(index_of_atom, index_of_big_cube, bond_size_dic)
-                sorted_overlap_frame = overlap_molecule.xyz_frame.sort_values(by='overlap', ascending=False)
-
-                row = 1
-                while True:
-                    if len(bond_dic[index_of_atom]) == valency_dic[index_of_atom]:
-                        break
-                    atom_to_add = sorted_overlap_frame.iloc[row].name 
-                    if sorted_overlap_frame.at[atom_to_add, 'overlap'] <= 0. :
-                        break
-                    # TODO Here you can make something better. Perhaps a warning if necessary
-                    if len(bond_dic[atom_to_add]) == valency_dic[atom_to_add]:
-                        pass
-                    else:
-                        bond_dic[atom_to_add] = bond_dic[atom_to_add] | set([index_of_atom])
-                        bond_dic[index_of_atom] = bond_dic[index_of_atom] | set([atom_to_add])
-                    row = row + 1
-
         def preparation_of_variables(modified_properties):
-            bond_dic = dict.fromkeys(self.xyz_frame.index, set([]))
-            
+            bond_dic = dict(zip(self.xyz_frame.index, [set([]) for _ in range(self.n_atoms)]))
+
+            # TODO ask Steven and make more efficient 
             valency_dic = dict(zip(
                     self.xyz_frame.index, 
                     [constants.atom_properties[self.xyz_frame.at[index, 'atom']]['valency'] for index in self.xyz_frame.index]
                     ))
             bond_size_dic = dict(zip(
-                    constants.atom_properties.keys(), 
-                    [constants.atom_properties[atom]['bond_size'] for atom in constants.atom_properties.keys()]
+                    self.xyz_frame.index, 
+                    [constants.atom_properties[self.xyz_frame.at[index, 'atom']]['bond_size'] for index in self.xyz_frame.index]
                     ))
-            try:
-                for key in modified_properties.keys():
-                    try:
-                        valency_dic[key] = modified_properties[key]['valency']
-                    except KeyError:
-                        pass
-                    try:
-                        bond_size_dic[key] = modified_properties[key]['bond_size']
-                    except KeyError:
-                        pass
-            except AttributeError:
+            if modified_properties is None:
                 pass
+            else:
+                for key in modified_properties:
+                    valency_dic[key] = modified_properties[key]['valency']
+                    bond_size_dic[key] = modified_properties[key]['bond_size']
             return bond_dic, valency_dic, bond_size_dic
-       
-        def complete_calculation():
+
+
+        def get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency, index_of_cube=self.xyz_frame.index):
+            overlap_array, convert_to = self._overlap(self.xyz_frame.loc[index_of_cube, :], bond_size_dic)
+            np.fill_diagonal(overlap_array, -1.)
+            bin_overlap_array = overlap_array > 0
+            actual_valency = np.sum(bin_overlap_array, axis=1)
+            theoretical_valency = np.array([valency_dic[key] for key in index_of_cube])
+            excess_valency = (actual_valency - theoretical_valency)
+            indices_of_oversaturated_atoms = np.nonzero(excess_valency > 0)[0]
+            oversaturated_converted = [convert_to['frame'][index] for index in indices_of_oversaturated_atoms]
+
+            if use_valency & (len(indices_of_oversaturated_atoms) > 0):
+                if settings.show_warnings['valency']:
+                    warning_string = """Warning: You specified use_valency=True and provided a geometry with over saturated atoms. 
+This means that the bonds with lowest overlap will be cut, although the van der Waals radii overlap.
+If you don't want to see this warning go to settings.py and edit the dictionary.
+The problematic indices are:\n""" + oversaturated_converted.__repr__()
+                    print(warning_string)
+                select = np.nonzero(overlap_array[indices_of_oversaturated_atoms, :])
+                for index in indices_of_oversaturated_atoms:
+                    atoms_bonded_to = np.nonzero(bin_overlap_array[index, :])[0]
+                    temp_frame = pd.Series(overlap_array[index, atoms_bonded_to], index=atoms_bonded_to)
+                    temp_frame.sort_values(inplace=True, ascending=False)
+                    cut_bonds_to = temp_frame.iloc[(theoretical_valency[index]) : ].index
+                    overlap_array[index, [cut_bonds_to]] = -1
+                    overlap_array[[cut_bonds_to], index] = -1
+                    bin_overlap_array = overlap_array > 0
+
+            if (not use_valency) & (len(indices_of_oversaturated_atoms) > 0):
+                if settings.show_warnings['valency']:
+                    warning_string = """Warning: You specified use_valency=False (or used the default) 
+and provided a geometry with over saturated atoms. 
+This means that bonds are not cut even if their number exceeds the valency.
+If you don't want to see this warning go to settings.py and edit the dictionary.
+The problematic indices are:\n""" + oversaturated_converted.__repr__()
+                    print(warning_string)
+            
+            def update_dic(bin_overlap_array):
+                a,b = np.nonzero(bin_overlap_array)
+                a, b = [convert_to['frame'][key] for key in a], [convert_to['frame'][key] for key in b]
+                for row, index in enumerate(a):
+                    bond_dic[index] |= set([b[row]])
+                return bond_dic
+
+            update_dic(bin_overlap_array)
+            return bond_dic
+
+
+
+
+        def complete_calculation(divide_et_impera):
             bond_dic, valency_dic, bond_size_dic = preparation_of_variables(modified_properties)
-            cuboid_dic = self.divide_and_conquer_cuboid(maximum_edge_length, difference_edge)
-            for number, key in enumerate(cuboid_dic):
-                get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, cuboid_dic[key][0], cuboid_dic[key][1])
+            if divide_et_impera:
+                cuboid_dic = self._divide_et_impera(maximum_edge_length, difference_edge)
+                for number, key in enumerate(cuboid_dic):
+                    get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency, index_of_cube=cuboid_dic[key][0])
+            else:
+                get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency)
             return bond_dic
 
         if use_lookup:
             try:
                 bond_dic = self.__bond_dic
             except AttributeError:
-                bond_dic = complete_calculation()
+                bond_dic = complete_calculation(divide_et_impera)
                 if set_lookup:
                     self.__bond_dic = bond_dic
         else:
-            bond_dic = complete_calculation()
+            bond_dic = complete_calculation(divide_et_impera)
             if set_lookup:
                 self.__bond_dic = bond_dic
+
         return bond_dic
 
-    # TODO docstring
-    def divide_and_conquer_cuboid(self, maximum_edge_length=15, difference_edge=6):
+    def _divide_et_impera(self, maximum_edge_length=25, difference_edge=6):
+        """Returns a molecule split into cuboids.
+       
+         
+        Args:
+            maximum_edge_length (float): 
+            difference_edge (float): 
+    
+        Returns:
+            dict: A dictionary mapping from a 3 tuple of integers to a 2 tuple of sets.
+                The 3 tuple gives the integer numbered coordinates of cuboids.
+                The first set contains the indices of atoms lying in the cube with an edge length of ``maximum_edge_length``.
+                The second set contains the indices of atoms lying in the cube with ``maximum_edge_length + difference_edge``
+        """
+        coordinates = ['x', 'y', 'z']
+        sorted_series = dict(zip(
+                coordinates, 
+                [self.xyz_frame[axis].sort_values().copy() for axis in coordinates]
+                ))
+        convert = {axis : dict(zip(range(self.n_atoms), sorted_series[axis].index)) for axis in coordinates}
+        sorted_arrays = {key : sorted_series[key].get_values().astype(float) for key in coordinates}
+
         list_of_cuboid_tuples = []
-        minimum_index = [self.xyz_frame['x'].idxmin(), self.xyz_frame['y'].idxmin(), self.xyz_frame['z'].idxmin()]
-        maximum_index = [self.xyz_frame['x'].idxmax(), self.xyz_frame['y'].idxmax(), self.xyz_frame['z'].idxmax()]
-        minimum = np.diag(self.location(minimum_index))
-        maximum = np.diag(self.location(maximum_index)) + np.array([0.01, 0.01, 0.01])
+        minimum = np.array([sorted_arrays[key][ 0] for key in coordinates]) - np.array([0.01, 0.01, 0.01])
+        maximum = np.array([sorted_arrays[key][-1] for key in coordinates]) + np.array([0.01, 0.01, 0.01])
         extent = maximum - minimum
         steps = np.ceil(extent / maximum_edge_length).astype(int)
         cube_dic = {}
+
         if np.array_equal(steps, np.array([1, 1, 1])):
             small_cube_index = self.xyz_frame.index
             big_cube_index = small_cube_index
             cube_dic[(0, 0, 0)] = [small_cube_index, big_cube_index]
         else:
-            x_steps, y_steps, z_steps = steps
             cuboid_diagonal = extent / steps
-            a, b, c = cuboid_diagonal
-            a_big, b_big, c_big = [element + difference_edge for element in (a, b, c)]
-            x_sorted, y_sorted, z_sorted = (
-                    self.xyz_frame['x'].sort_values().copy(), 
-                    self.xyz_frame['y'].sort_values().copy(), 
-                    self.xyz_frame['z'].sort_values().copy()
-                    )
-            x_dict, y_dict, z_dict = {}, {}, {}
-            origin_array = np.empty((x_steps, y_steps, z_steps, 3))
-            for x_counter in range(x_steps):
-                for y_counter in range(y_steps):
-                    for z_counter in range(z_steps):
+            steps = {axis : steps[number] for number, axis in enumerate(coordinates)}
+            edge_small = {axis : cuboid_diagonal[number] for number, axis in enumerate(coordinates)}
+            edge_big = {axis : (edge_small[axis] + difference_edge) for axis in coordinates}
+            origin_array = np.empty((steps['x'], steps['y'], steps['z'], 3))
+
+
+            for x_counter in range(steps['x']):
+                for y_counter in range(steps['y']):
+                    for z_counter in range(steps['z']):
                         origin_array[x_counter, y_counter, z_counter] = (
                                   minimum + cuboid_diagonal / 2 
                                 + np.dot(np.diag([x_counter, y_counter, z_counter]), cuboid_diagonal)
                                 )
 
-            for x_step in range(x_steps):
-                x0 = origin_array[x_step, 0, 0, 0]
-                small_index = set(x_sorted[float(x0 - a/2) <= x_sorted].index) & set(x_sorted[x_sorted < float(x0 + a/2) ].index)
-                big_index = set(x_sorted[float(x0 - a_big/2) <= x_sorted].index) & set(x_sorted[x_sorted < float(x0 + a_big/2) ].index)
-                x_dict[x_step] = [small_index, big_index]
 
-            for y_step in range(y_steps):
-                y0 = origin_array[0, y_step, 0, 1]
-                small_index = set(y_sorted[float(y0 - b/2) <= y_sorted].index) & set(y_sorted[y_sorted < float(y0 + b/2) ].index)
-                big_index = set(y_sorted[float(y0 - b_big/2) <= y_sorted].index) & set(y_sorted[y_sorted < float(y0 + b_big/2) ].index)
-                y_dict[y_step] = [small_index, big_index]
+            origin1D = {}
+            origin1D['x'] = {counter : origin_array[counter, 0, 0, 0] for counter in range(steps['x'])}
+            origin1D['y'] = {counter : origin_array[0, counter, 0, 1] for counter in range(steps['y'])}
+            origin1D['z'] = {counter : origin_array[0, 0, counter, 2] for counter in range(steps['z'])}
 
-            for z_step in range(z_steps):
-                z0 = origin_array[0, 0, z_step, 2]
-                small_index = set(z_sorted[float(z0 - c/2) <= z_sorted].index) & set(z_sorted[z_sorted < float(z0 + c/2) ].index)
-                big_index = set(z_sorted[float(z0 - c_big/2) <= z_sorted].index) & set(z_sorted[z_sorted < float(z0 + c_big/2) ].index)
-                z_dict[z_step] = [small_index, big_index]
+            indices = dict(zip(coordinates, [{}, {}, {}]))
+            for axis in coordinates:
+                for counter in range(steps[axis]):
+                    intervall_small = [origin1D[axis][counter] - edge_small[axis] / 2, origin1D[axis][counter] + edge_small[axis] / 2]
+                    intervall_big = [origin1D[axis][counter] - edge_big[axis] / 2, origin1D[axis][counter] + edge_big[axis] / 2]
+                    bool_vec_small = np.logical_and(intervall_small[0] <= sorted_arrays[axis], sorted_arrays[axis] < intervall_small[1])
+                    bool_vec_big = np.logical_and(intervall_big[0] <= sorted_arrays[axis], sorted_arrays[axis] < intervall_big[1])
+                    index_small = set(np.nonzero(bool_vec_small)[0])
+                    index_small = {convert[axis][index] for index in index_small}
+                    index_big = set(np.nonzero(bool_vec_big)[0])
+                    index_big = {convert[axis][index] for index in index_big}
+                    indices[axis][counter] = [index_small, index_big]
 
-            for x_counter in range(x_steps):
-                for y_counter in range(y_steps):
-                    for z_counter in range(z_steps):
-                        small_cube_index = x_dict[x_counter][0] & y_dict[y_counter][0] & z_dict[z_counter][0]
-                        big_cube_index = x_dict[x_counter][1] & y_dict[y_counter][1] & z_dict[z_counter][1]
+            for x_counter in range(steps['x']):
+                for y_counter in range(steps['y']):
+                    for z_counter in range(steps['z']):
+                        small_cube_index = indices['x'][x_counter][0] & indices['y'][y_counter][0] & indices['z'][z_counter][0]
+                        big_cube_index = indices['x'][x_counter][1] & indices['y'][y_counter][1] & indices['z'][z_counter][1]
                         cube_dic[(x_counter, y_counter, z_counter)] = (small_cube_index, big_cube_index) 
+
+            def test_output(cube_dic):
+                for key in cube_dic.keys():
+                    try:
+                        assert cube_dic[key][0] & cube_dic[previous_key][0] == set([]), 'I am sorry Dave. I made a mistake. Report a bug please.'
+                    except UnboundLocalError:
+                        pass
+                    finally:
+                        previous_key = key
+
+# slows down performance too much
+#            test_output(cube_dic) 
         return cube_dic
 
 
+
+# TODO can be deleted
     @staticmethod
     def _connected_to(index_of_atom, bond_dic, exclude=None):
         """No object overhead.
@@ -261,6 +306,9 @@ class Cartesian:
                 included_atoms_list.append(atom)
         return set(included_atoms_list)
 
+
+
+# TODO can be deleted
     def connected_to(self, index_of_atom, exclude=None):
         bond_dic = self.get_bonds(use_lookup=True)
         fragment_index = self._connected_to(index_of_atom, bond_dic, exclude=None)
@@ -1228,3 +1276,16 @@ class Cartesian:
                 header=False,
                 mode='a'
                 )
+
+
+#    @staticmethod
+#    def _distance_frame(frame, origin, indices_of_other_atoms=None):
+#        """Returns a xyz_frame with a column for the distance from origin.
+#        """
+#        if indices_of_other_atoms is None:
+#            indices_of_other_atoms = self.xyz_frame.index
+#        frame_distance = frame.copy()
+#        origin = np.array(origin, dtype=float)
+#        frame_distance['distance'] = np.linalg.norm(frame_distance.loc[:, ['x', 'y', 'z']].get_values().astype(float) - origin, axis =1)
+#        return frame_distance
+

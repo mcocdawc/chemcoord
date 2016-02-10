@@ -129,3 +129,13 @@ def distance(vector1, vector2):
     """
     length = np.sqrt(np.linalg.norm(vector1 - vector2))
     return length
+
+
+def give_distance_array(location_array):
+    """Returns a xyz_frame with a column for the distance from origin.
+    """
+    A = np.expand_dims(location_array, axis=1)
+    B = np.expand_dims(location_array, axis=0)
+    C = A - B
+    return_array = np.linalg.norm(C, axis=2)
+    return return_array
