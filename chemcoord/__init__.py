@@ -1,5 +1,6 @@
 __all__ = []
 
+# TODO export decorator not working
 def export(defn):
     globals()[defn.__name__] = defn
     __all__.append(defn.__name__)
@@ -9,4 +10,5 @@ from . import read
 from . import write
 from . import xyz_functions
 from . import zmat_functions
-
+from . import utilities
+from . import constants

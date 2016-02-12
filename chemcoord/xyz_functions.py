@@ -9,6 +9,14 @@ from . import zmat_functions
 from . import settings
 
 
+
+def pick(my_set):
+    """Returns one element from a set.
+    """
+    x = my_set.pop()
+    my_set.add(x)
+    return x
+
 class Cartesian:
     def __init__(self, xyz_frame):
         self.xyz_frame = xyz_frame
@@ -22,63 +30,68 @@ class Cartesian:
 
 # TODO provide wrappers for heavily used pd.DataFrame methods
 ############################################################################
-# From here till shown end panda wrappers are defined.
+# From here till shown end pandas wrappers are defined.
 ############################################################################
-    def give_index(self):
-        """This function returns the index of the underlying pd.DataFrame.
-        Please note that you can't assign a new index. 
-        Instead you need to write::
-
-            cartesian_object.xyz_frame.index = new_index
-
-        """ 
-        return self.xyz_frame.index
-
+#    def give_index(self):
+#        """This function returns the index of the underlying pd.DataFrame.
+#        Please note that you can't assign a new index. 
+#        Instead you need to write::
+#
+#            cartesian_object.xyz_frame.index = new_index
+#
+#        """ 
+#        return self.xyz_frame.index
+#
 #    def loc(self, row, column):
 #        return Cartesian(self.xyz_frame.loc[row, column])
-
+#
 ############################################################################
 # end of pandas wrapper definition
 ############################################################################
 
-
-    @staticmethod 
-    def _overlap(frame, bond_size_dic):
-        """Calculates the overlap of van der Vaals radii.
-
-        Args:
-            indices_of_other_atoms (list): The indices of atoms for which the overlap should be calculated.
-            modified_properties (dic): If you want to change the van der Vaals 
-                radius of one or more specific atoms, pass a dictionary that looks like::
-
-                    modified_properties = {index1 : 1.5}
-
-                For global changes use the constants.py module.
-    
-        Returns:
-            dic: Dictionary mapping from an atom index to the indices of atoms bonded to.
-
+    def _give_distance_array(self, include):
+        """Returns a xyz_frame with a column for the distance from origin.
         """
+        frame = self.xyz_frame.loc[include, :]
         convert_to = {
                 'frame' : dict(zip(range(len(frame.index)), frame.index)),
                 'array' : dict(zip(frame.index, range(len(frame.index))))
                 }
         location_array = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
+        A = np.expand_dims(location_array, axis=1)
+        B = np.expand_dims(location_array, axis=0)
+        C = A - B
+        return_array = np.linalg.norm(C, axis=2)
+        return return_array, convert_to
 
+    def _overlap(self, bond_size_dic, include=None):
+        """Calculates the overlap of van der Vaals radii.
+
+        Args:
+            frame (pd.DataFrame): The indices of atoms for which the overlap should be calculated.
+            bond_size_dic (dic): A dictionary mapping from the indices of atoms (integers) to their 
+                van der Vaals radius.
+    
+        Returns:
+            tuple: **First element**: overlap_array:
+                A (n_atoms, n_atoms) array that contains the overlap between every atom given in the frame.
+
+                **Second element**: convert_to: A nested dictionary that gives the possibility to convert the indices 
+                from the frame to the overlap_array and back.
+        """
+        include = self.xyz_frame.index if (include is None) else include
         def summed_bond_size_array(bond_size_dic):
             """Returns a xyz_frame with a column for the distance from origin.
             """
-            bond_size_vector = np.array([bond_size_dic[key] for key in frame.index])
+            bond_size_vector = np.array([bond_size_dic[key] for key in include])
             A = np.expand_dims(bond_size_vector, axis=1)
             B = np.expand_dims(bond_size_vector, axis=0)
             C = A + B
             return C
 
         bond_size_array = summed_bond_size_array(bond_size_dic)
-        distance_array = utilities.give_distance_array(location_array)
-
+        distance_array, convert_to = self._give_distance_array(include)
         overlap_array = bond_size_array - distance_array
-
         return overlap_array, convert_to
 
     def get_bonds(
@@ -93,6 +106,23 @@ class Cartesian:
                 ):
         """Returns a dictionary representing the bonds.
 
+        .. warning:: This function is **not sideeffect free**, since it assigns the output to 
+            a variable ``self.__bond_dic`` if ``set_lookup`` is ``True`` (which is the default). 
+            This is necessary for performance reasons.
+
+        The Cartesian().get_bonds() method will use or not use a lookup depending on ``use_lookup``.
+        Greatly increases performance if True, but could introduce bugs in certain situations.
+
+        Just imagine a situation where the ``Cartesian().xyz_frame`` is changed manually. 
+        If you apply lateron a method e.g. ``to_zmat()`` that makes use of 
+        ``get_bonds()`` the dictionary of the bonds
+        may not represent the actual situation anymore.
+
+        You have two possibilities to cope with this problem. 
+        Either you just re-execute ``get_bonds`` on your specific instance,
+        or you change the ``internally_use_lookup`` option in the settings submodule.
+        Please note that the internal use of the lookup variable greatly improves performance.
+
         Args:
             modified_properties (dic): If you want to change the van der Vaals 
                 radius or valency of one or more specific atoms, pass a dictionary that looks like::
@@ -100,6 +130,18 @@ class Cartesian:
                     modified_properties = {index1 : {'bond_size' : 1.5, 'valency' : 8}, ...}
 
                 For global changes use the constants.py module.
+            maximum_edge_length (float): Maximum length of one edge of a cuboid if ``divide_et_impera`` is ``True``.
+            difference_edge (float): 
+            use_valency (bool): If ``True`` atoms can't have more bonds than their valency.
+                This means that the bonds, exceeding the number of valency, with lowest overlap will be cut, although the van der Waals radii overlap.
+            use_lookup (bool):
+            set_lookup (bool):
+            divide_et_impera (bool): Since the calculation of overlaps or distances between atoms scale with :math:`O(n^2)`,
+                it is recommended to split the molecule in smaller cuboids and calculate the bonds in each cuboid.
+                The scaling becomes then :math:`O(n\log(n))`.
+                This approach can lead to problems if ``use_valency`` is ``True``. 
+                Bonds from one cuboid to another can not be counted for the valency..
+                This means that in certain situations some atoms can be oversaturated, although ``use_valency`` is ``True``.
     
         Returns:
             dic: Dictionary mapping from an atom index to the indices of atoms bonded to.
@@ -127,7 +169,7 @@ class Cartesian:
 
 
         def get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency, index_of_cube=self.xyz_frame.index):
-            overlap_array, convert_to = self._overlap(self.xyz_frame.loc[index_of_cube, :], bond_size_dic)
+            overlap_array, convert_to = self._overlap(bond_size_dic, index_of_cube)
             np.fill_diagonal(overlap_array, -1.)
             bin_overlap_array = overlap_array > 0
             actual_valency = np.sum(bin_overlap_array, axis=1)
@@ -172,15 +214,12 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             update_dic(bin_overlap_array)
             return bond_dic
 
-
-
-
         def complete_calculation(divide_et_impera):
             bond_dic, valency_dic, bond_size_dic = preparation_of_variables(modified_properties)
             if divide_et_impera:
                 cuboid_dic = self._divide_et_impera(maximum_edge_length, difference_edge)
                 for number, key in enumerate(cuboid_dic):
-                    get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency, index_of_cube=cuboid_dic[key][0])
+                    get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency, index_of_cube=cuboid_dic[key][1])
             else:
                 get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency)
             return bond_dic
@@ -199,19 +238,20 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
         return bond_dic
 
-    def _divide_et_impera(self, maximum_edge_length=25, difference_edge=6):
+    def _divide_et_impera(self, maximum_edge_length=25., difference_edge=6.):
         """Returns a molecule split into cuboids.
-       
          
         Args:
-            maximum_edge_length (float): 
+            maximum_edge_length (float): Maximum length of one edge of a cuboid. 
             difference_edge (float): 
     
         Returns:
             dict: A dictionary mapping from a 3 tuple of integers to a 2 tuple of sets.
-                The 3 tuple gives the integer numbered coordinates of cuboids.
-                The first set contains the indices of atoms lying in the cube with an edge length of ``maximum_edge_length``.
-                The second set contains the indices of atoms lying in the cube with ``maximum_edge_length + difference_edge``
+                The 3 tuple gives the integer numbered coordinates of the cuboids.
+                The first set contains the indices of atoms lying in the cube with a maximum edge length of ``maximum_edge_length``.
+                They are pairwise disjunct and are referred to as small cuboids.
+                The second set contains the indices of atoms lying in the cube with ``maximum_edge_length + difference_edge``.
+                They are a bit larger than the small cuboids and overlap with ``difference_edge / 2``.
         """
         coordinates = ['x', 'y', 'z']
         sorted_series = dict(zip(
@@ -239,7 +279,6 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             edge_big = {axis : (edge_small[axis] + difference_edge) for axis in coordinates}
             origin_array = np.empty((steps['x'], steps['y'], steps['z'], 3))
 
-
             for x_counter in range(steps['x']):
                 for y_counter in range(steps['y']):
                     for z_counter in range(steps['z']):
@@ -247,7 +286,6 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                                   minimum + cuboid_diagonal / 2 
                                 + np.dot(np.diag([x_counter, y_counter, z_counter]), cuboid_diagonal)
                                 )
-
 
             origin1D = {}
             origin1D['x'] = {counter : origin_array[counter, 0, 0, 0] for counter in range(steps['x'])}
@@ -282,17 +320,14 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                         pass
                     finally:
                         previous_key = key
-
 # slows down performance too much
 #            test_output(cube_dic) 
         return cube_dic
 
 
-
-# TODO can be deleted
     @staticmethod
     def _connected_to(index_of_atom, bond_dic, exclude=None):
-        """No object overhead.
+        """Gives a set of indices of atoms connected to the specified one.
         """
         exclude = set([]) if (exclude is None) else set(exclude)
     
@@ -308,22 +343,52 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
 
 
-# TODO can be deleted
     def connected_to(self, index_of_atom, exclude=None):
+        """Returns a Cartesian of atoms connected the specified one.
+
+        Connected means that a path along covalent bonds exists.
+    
+        Args:
+            index_of_atom (int):
+            exclude (list): Indices in this list are omitted.
+    
+        Returns:
+            Cartesian: 
+        """
         bond_dic = self.get_bonds(use_lookup=True)
         fragment_index = self._connected_to(index_of_atom, bond_dic, exclude=None)
         return Cartesian(self.xyz_frame.loc[fragment_index, :])
+
+
+
+    def _preserve_bonds(self, sliced_xyz_frame):
+        included_atoms_set = set(sliced_xyz_frame.index)
+        assert included_atoms_set.issubset(set(self.xyz_frame.index)), 'The sliced frame has to be a subset of the bigger frame'
+        included_atoms_list = list(included_atoms_set)
+        bond_dic = self.get_bonds(use_lookup=True)
+        new_atoms = set([])
+        for atom in included_atoms_set:
+            new_atoms = new_atoms | bond_dic[atom]
+        new_atoms = new_atoms - included_atoms_set
+        while not new_atoms == set([]):
+            index_of_interest = new_atoms.pop()
+            included_atoms_set = included_atoms_set | self._connected_to(index_of_interest, bond_dic, exclude=included_atoms_set)
+            new_atoms = new_atoms - included_atoms_set
+        chemical_xyz_frame = self.xyz_frame.loc[included_atoms_set, :].copy()
+        return chemical_xyz_frame
 
     def cutsphere(self, radius=15., origin=[0., 0., 0.], outside_sliced=True, preserve_bonds=False):
         """Cuts a sphere specified by origin and radius.
     
         Args:
             radius (float): 
-            origin (list):
+            origin (list): Please note that you can also pass an integer. 
+                In this case it is interpreted as the index of the atom which is taken as origin.
             outside_sliced (bool): Atoms outside/inside the sphere are cut out.
+            preserve_bonds (bool): Do not cut covalent bonds.
     
         Returns:
-            pd.dataframe: Sliced xyz_frame
+            Cartesian: 
         """
         try:
             origin[0]
@@ -336,48 +401,33 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             sliced_xyz_frame = frame[frame['distance'] < radius]
         else:
             sliced_xyz_frame = frame[frame['distance'] > radius]
-        
 
         if preserve_bonds:
-            included_atoms_set = set(sliced_xyz_frame.index)
-            included_atoms_list = list(included_atoms_set)
-
-            bond_dic = self.get_bonds(use_lookup=True)
-
-            new_atoms = set([])
-            for atom in included_atoms_set:
-                new_atoms = new_atoms | bond_dic[atom]
-            new_atoms = new_atoms - included_atoms_set
-
-            while not new_atoms == set([]):
-                index_of_interest = new_atoms.pop()
-                included_atoms_set = included_atoms_set | self._connected_to(index_of_interest, bond_dic, exclude=included_atoms_set)
-                new_atoms = new_atoms - included_atoms_set
-
-            sliced_xyz_frame = self.xyz_frame.loc[included_atoms_set, :]
-
+            sliced_xyz_frame = self._preserve_bonds(sliced_xyz_frame)
         return self.__class__(sliced_xyz_frame)
 
-
-
-
-    def cutcube(self, a=20, b=None, c=None, origin=[0, 0, 0], outside_sliced = True):
-        """Cuts a cube specified by edge and radius.
+    def cutcuboid(self, a=20, b=None, c=None, origin=[0, 0, 0], outside_sliced = True, preserve_bonds=False):
+        """Cuts a cuboid specified by edge and radius.
     
         Args:
             a (float): Value of the a edge.
             b (float): Value of the b edge. Takes value of a if None.
             c (float): Value of the c edge. Takes value of a if None.
-            origin (list):
+            origin (list): Please note that you can also pass an integer. 
+                In this case it is interpreted as the index of the atom which is taken as origin.
             outside_sliced (bool): Atoms outside/inside the sphere are cut out.
+            preserve_bonds (bool): Do not cut covalent bonds.
     
         Returns:
             pd.dataframe: Sliced xyz_frame
         """
+        try:
+            origin[0]
+        except (TypeError, IndexError):
+            origin = self.location(int(origin))
         b = a if b is None else b
         c = a if c is None else c
         xyz_frame = self.xyz_frame.copy()
-        # Next line changes from python list to dictionary for easy access of the origin values
         origin = dict(zip(['x', 'y', 'z'], list(origin)))
         if outside_sliced:
             sliced_xyz_frame = xyz_frame[
@@ -391,6 +441,10 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                  & (np.abs((xyz_frame['y'] - origin['y'])) > b / 2)
                  & (np.abs((xyz_frame['z'] - origin['z'])) > c / 2)
                 ].copy()
+
+        if preserve_bonds:
+            sliced_xyz_frame = self._preserve_bonds(sliced_xyz_frame)
+
         return self.__class__(sliced_xyz_frame)
 
 
@@ -398,12 +452,11 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         """Gives several properties related to mass.
     
         Args:
-            xyz_frame (pd.dataframe): 
     
         Returns:
             dic: The returned dictionary has four possible keys:
             
-            ``frame_mass``: xyz_DataFrame with an additional column for the masses of each atom.
+            ``Cartesian_mass``: Cartesian with an additional column for the masses of each atom.
         
             ``total_mass``: The total mass.
     
@@ -439,38 +492,49 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         topologic_center = topologic_center / n_atoms
         
         dic_of_values = dict(zip(
-            ['xyz_frame_mass', 'total_mass', 'barycenter', 'topologic_center'], 
+            ['Cartesian_mass', 'total_mass', 'barycenter', 'topologic_center'], 
             [Cartesian(xyz_frame_mass), total_mass, barycenter, topologic_center]
             ))
         return dic_of_values
 
 
-    def move(self, vector=[0, 0, 0], matrix=np.identity(3)):
+    def move(self, vector=[0, 0, 0], matrix=np.identity(3), indices=None, copy=False):
         """Move an xyz_frame.
     
         The xyz_frame is first rotated, mirrored... by the matrix
         and afterwards translated by the vector
     
         Args:
-            xyz_frame (pd.dataframe): 
             vector (np.array): default is np.zeros(3)
             matrix (np.array): default is np.identity(3)
+            indices (list): Indices to be moved.
+            copy (bool): Atoms are copied to the new location or not.
     
         Returns:
-            pd.dataframe: Moved xyz_frame
+            Cartesian: 
         """
+        indices = self.xyz_frame.index if (indices is None) else indices
+        indices = list(indices)
         frame = self.xyz_frame.copy()
-        vectors = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
-        frame.loc[:, ['x', 'y', 'z']] = np.transpose(np.dot(np.array(matrix), np.transpose(vectors)))
-        vectors = frame.loc[:, ['x', 'y', 'z']].get_values().astype(float)
-        frame.loc[:, ['x', 'y', 'z']] = vectors + np.array(vector)
-        return self.__class__(frame)
+        vectors = frame.loc[indices, ['x', 'y', 'z']].get_values().astype(float)
+        vectors = np.transpose(np.dot(np.array(matrix), np.transpose(vectors)))
+        vectors = vectors + np.array(vector)
+        if copy:
+            max_index = frame.index.max()
+            index_for_copied_atoms = range(max_index + 1, max_index + len(indices) + 1)
+            temp_frame = frame.loc[indices, :].copy()
+            temp_frame.index = index_for_copied_atoms
+            temp_frame.loc[:, ['x', 'y', 'z']] = vectors
+            frame = frame.append(temp_frame) 
+            
+        else:
+            frame.loc[indices, ['x', 'y', 'z']] = vectors
+        return Cartesian(frame)
 
     def distance(self, index, bond_with):
         """Return the distance between two atoms.
        
         Args:
-            xyz_frame (pd.dataframe): 
             index (int): 
             bond_with (int): Index of atom bonding with.
     
@@ -482,6 +546,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         distance = np.linalg.norm(q)
         return distance
 
+# TODO express in tensor algebra
     def _distance_optimized(self, buildlist, exclude_first = True):
         """Return the distances between given atoms.
     
@@ -535,6 +600,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return angle
 
 
+# TODO express in tensor algebra
     def _angle_degrees_optimized(self, buildlist, exclude_first = True):
         """Return the angles between given atoms.
     
@@ -598,6 +664,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return dihedral
 
 
+# TODO express in tensor algebra and time performance
     def _dihedral_degrees_optimized(self, buildlist, exclude_first = True):
         """Return the angles between given atoms.
        
@@ -642,64 +709,90 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return dihedral_list
 
 
-    def get_fragment(self, list_of_indextuples, threshold=2.0):
+    def get_fragment(self, list_of_indextuples, give_only_index=False):
         """Get the indices of the atoms in a fragment.
        
         The list_of_indextuples contains all bondings from the molecule to the fragment.
         ``[(1,3), (2,4)]`` means for example that the fragment is connected over two bonds.
         The first bond is from atom 1 in the molecule to atom 3 in the fragment.
         The second bond is from atom 2 in the molecule to atom 4 in the fragment.
-        The threshold defines the maximum distance between two atoms in order to 
-        be considered as connected.
     
         Args:
             xyz_frame (pd.dataframe): 
             list_of_indextuples (list): 
-            threshold (float): 
+            give_only_index (bool): If ``True`` a set of indices is returned. 
+                Otherwise a new Cartesian instance.
     
         Returns:
-            list: A list of the indices of the fragment.
+            A set of indices or a new Cartesian instance.
         """
-        # Preparation of frame
-        prepared_molecule = self
-        for tuple in list_of_indextuples:
-            va, vb = self.location(tuple[0:2])
-    
-            BA = va - vb
-            bond = np.linalg.norm(BA)
-            new_center = vb + 2. * BA
-            prepared_molecule = prepared_molecule.cutsphere(
-                    radius = (1.5 * bond ),
-                    origin= new_center,
-                    outside_sliced = False
-                    )
-    
-        fixed = set([])
-        previous_found = set([tuple[1] for tuple in list_of_indextuples])
-        just_found = set([])
-        
-        # Please note that "not ... < ... " indicates "previous_found is not a real subset of fixed". 
-        # Because of perhaps disjoint elements there is not the possibility to just write:
-        # previous_found > fixed
-        # Mathematically speaking: sets only define partial ordering (subset relationships)
-        while not previous_found < fixed:
-            fixed |= previous_found
-            for index in previous_found:
-                new_center = self.location(index)
-                # TODO perhaps use pd Wrapper for index
-                just_found |= set(prepared_molecule.cutsphere(radius = threshold, origin = new_center).xyz_frame.index)
-    
-            previous_found = just_found - fixed
-            just_found = set([])
-    
-        index_of_fragment_list = list(fixed)
-        return index_of_fragment_list
+        exclude = [tuple[0] for tuple in list_of_indextuples]
+        index_of_atom = list_of_indextuples[0][1]
+        fragment_index = self._connected_to(index_of_atom, self.get_bonds(use_lookup=True), exclude=exclude)
+
+        if give_only_index:
+            value_to_return = fragment_index
+        else:
+            value_to_return = self.__class__(self.xyz_frame.loc[fragment_index, :])
+        return value_to_return
 
 
 # TODO from here on write into object methods using get_bonds
-    def _order_of_building(self, to_be_built=None, already_built=None, recursion=2):
+    def _get_buildlist(self, already_known=None):
+        buildlist = np.empty((self.n_atoms, 4))
+        bond_dic = self.get_bonds(use_lookup=True)
+        topologic_center = self.mass()['topologic_center']
+        frame_distance = self.distance_frame(topologic_center)
+        to_be_built = set(self.xyz_frame.index)
+        convert_to = {'array_index' : {}, 'frame_index' : {}}
+        if not already_known is None:
+            buildlist[: (already_known.shape[0]), :] = already_known
+            already_built = set(already_known[:, 0])
+            to_be_built = to_be_built - already_built
+        else:
+            already_built = set([])
+        
+
+        def pick_new_atom(self, index, bond_dic, already_built, to_be_built, convert_to):
+            try: 
+                new_atom = pick(bond_dic[index] - already_built)
+            except KeyError:
+                new_atom = frame_distance.loc[to_be_built, : ].iloc[0, :].name
+            finally:
+                already_built.add(new_atom)
+                to_be_built.remove(new_atom)
+            # check sanity of output
+            assert (already_built & to_be_built) == set([])
+            assert (already_built | to_be_built) == set(self.xyz_frame.index)
+            convert_to['array_index'][new_atom] = row
+            convert_to['frame_index'][row] = new_atom
+            return new_atom, already_built, to_be_built
+
+        def pick_references(self, bond_dic, index, already_built, buidllist, convert_to, number=3):
+            reference_list = [index]
+            for _ in range(number):
+                try:
+                    index = pick((bond_dic[index] & already_built) - set(reference_list))
+                    reference_list.append(index)
+                except KeyError:
+                    convert_to[
+                    reference_list.append(index)
+                else:
+
+            return reference_list
+
+        def pick_atoms(self, index, bond_dic, already_built, to_be_built):
+            try:
+                new_atom, already_built, to_be_built = pick_new_atom(self, index, bond_dic, already_built, to_be_built)
+            finally:
+                pick_references(self, bond_dic, index, already_built, number=3)
+
+
+
+            return A
+
+    def _order_of_building(self, to_be_built=None, already_built=None):
         frame = self.xyz_frame.copy()
-        n_atoms = frame.shape[0]
     
         if already_built is None:
             already_built = []
@@ -1069,12 +1162,11 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         This function calculates the inertia tensor and returns a 4-tuple.
     
         Args:
-            xyz_frame (pd.DataFrame): 
     
         Returns:
             dic: The returned dictionary has four possible keys:
             
-            ``transformed_frame``:
+            ``transformed_Cartesian``:
             A xyz_frame that is transformed to the basis spanned by the eigenvectors 
             of the inertia tensor. The x-axis is the axis with the lowest inertia moment,
             the z-axis the one with the highest. Contains also a column for the mass
@@ -1089,11 +1181,12 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             The eigenvectors of the inertia tensor in the old basis.
         """
         xyz_frame = self.xyz_frame
-        my_keys = ['frame_mass', 'total_mass', 'barycenter', 'topologic_center']
-        my_dic = self.mass()
-        frame_mass, total_mass, barycenter, topologic_center = [my_dic[key] for key in my_keys]
+        keys = ['Cartesian_mass', 'total_mass', 'barycenter', 'topologic_center']
+        temp_dict = self.mass()
+        Cartesian_mass, total_mass, barycenter, topologic_center = [temp_dict[key] for key in keys]
     
-        frame_mass = frame_mass.move(vector = -barycenter)
+        Cartesian_mass = Cartesian_mass.move(vector = -barycenter)
+        frame_mass = Cartesian_mass.xyz_frame
     
         coordinates = ['x', 'y', 'z']
         
@@ -1124,17 +1217,13 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         new_basis = eigenvectors
         new_basis = utilities.orthormalize(new_basis)
         old_basis = np.identity(3)
-        frame_mass = self.basistransform(frame_mass, new_basis, old_basis)
+        Cartesian_mass = self.basistransform(new_basis, old_basis)
         
         dic_of_values =  dict(zip(
-            ['transformed_frame', 'diag_inertia_tensor', 'inertia_tensor', 'eigenvectors'],
-            [frame_mass, diag_inertia_tensor, inertia_tensor, eigenvectors]
+            ['transformed_Cartesian', 'diag_inertia_tensor', 'inertia_tensor', 'eigenvectors'],
+            [Cartesian_mass, diag_inertia_tensor, inertia_tensor, eigenvectors]
             ))
         return dic_of_values
-
-
-
-
 
     def basistransform(self, new_basis, old_basis=np.identity(3), rotate_only=True):
         """Transforms the xyz_frame to a new basis.
@@ -1147,7 +1236,6 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         In some applications this may require the function :func:`utilities.orthonormalize` as a previous step.
     
         Args:
-            xyz_frame (pd.DataFrame): 
             old_basis (np.array):  
             new_basis (np.array): 
             rotate_only (bool): 
@@ -1169,15 +1257,15 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             assert np.allclose(np.cross(v1, v2), v3), 'new_basis not righthanded'
     
             basistransformation = np.dot(new_basis, np.transpose(old_basis))
-            frame = move(frame, matrix=np.transpose(basistransformation))
             test_basis = np.dot(np.transpose(basistransformation), new_basis)
+            new_cartesian = self.move(matrix=np.transpose(basistransformation))
         else:
             basistransformation = np.dot(new_basis, np.linalg.inv(old_basis))
-            frame = move(frame, matrix=np.linalg.inv(basistransformation))
             test_basis = np.dot(np.linalg.inv(basistransformation), new_basis)
+            new_cartesian = self.move(matrix=np.linalg.inv(basistransformation))
     
         assert np.isclose(test_basis, old_basis).all(), 'transformation did not work'
-        return self.__class__(frame)
+        return new_cartesian
 
 
 
@@ -1212,7 +1300,8 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             indices_of_other_atoms = self.xyz_frame.index
         frame_distance = self.xyz_frame.loc[indices_of_other_atoms, :].copy()
         origin = np.array(origin, dtype=float)
-        frame_distance['distance'] = np.linalg.norm(frame_distance.loc[:, ['x', 'y', 'z']].get_values().astype(float) - origin, axis =1)
+        locations = frame_distance.loc[:, ['x', 'y', 'z']].get_values().astype(float)
+        frame_distance['distance'] = np.linalg.norm(locations - origin, axis =1)
         return self.__class__(frame_distance)
 
     def change_numbering(self, rename_dic):

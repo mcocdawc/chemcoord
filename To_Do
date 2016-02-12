@@ -1,9 +1,5 @@
-assert statements
+export decorator
 
-references
+{1, 2}.pick() vs pick({1, 2})
 
-Nerf algorithm
-
-installation guide
-
-tutorial
+functions operating on several cartesian instances as staticmethods or own namespace?
