@@ -81,8 +81,6 @@ class Cartesian:
         """
         include = self.xyz_frame.index if (include is None) else include
         def summed_bond_size_array(bond_size_dic):
-            """Returns a xyz_frame with a column for the distance from origin.
-            """
             bond_size_vector = np.array([bond_size_dic[key] for key in include])
             A = np.expand_dims(bond_size_vector, axis=1)
             B = np.expand_dims(bond_size_vector, axis=0)
@@ -395,7 +393,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         except (TypeError, IndexError):
             origin = self.location(int(origin))
 
-        ordered_molecule = self.distance_frame(origin)
+        ordered_molecule = self.distance_to(origin)
         frame = ordered_molecule.xyz_frame
         if outside_sliced:
             sliced_xyz_frame = frame[frame['distance'] < radius]
@@ -464,19 +462,16 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         
             ``topologic_center``: The average location.
         """
-        xyz_frame = self.xyz_frame
-        indexlist = list(xyz_frame.index)
-        n_atoms = xyz_frame.shape[0]
+        xyz_frame_mass = self.xyz_frame.copy()
+        indexlist = list(xyz_frame_mass.index)
+        n_atoms = xyz_frame_mass.shape[0]
     
-        if 'mass' in xyz_frame.columns:
-            xyz_frame_mass = xyz_frame
-        else:
-            masses_dic = dict(zip(
-                    constants.atom_properties.keys(), 
-                    [constants.atom_properties[atom]['mass'] for atom in constants.atom_properties.keys()]
-                    ))
-            masses = pd.Series([ masses_dic[atom] for atom in xyz_frame['atom']], name='mass', index=xyz_frame.index)
-            xyz_frame_mass = pd.concat([xyz_frame, masses], axis=1, join='outer')
+        masses_dic = dict(zip(
+                constants.atom_properties.keys(), 
+                [constants.atom_properties[atom]['mass'] for atom in constants.atom_properties.keys()]
+                ))
+        masses = [masses_dic[atom] for atom in xyz_frame_mass['atom']]
+        xyz_frame_mass['mass'] = masses
         
         total_mass = xyz_frame_mass['mass'].sum()
     
@@ -531,77 +526,35 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             frame.loc[indices, ['x', 'y', 'z']] = vectors
         return Cartesian(frame)
 
-    def distance(self, index, bond_with):
-        """Return the distance between two atoms.
-       
-        Args:
-            index (int): 
-            bond_with (int): Index of atom bonding with.
-    
-        Returns:
-            float: distance
-        """
-        vi, vb = self.location([index, bond_with])
-        q = vb - vi
-        distance = np.linalg.norm(q)
-        return distance
-
-# TODO express in tensor algebra
-    def _distance_optimized(self, buildlist, exclude_first = True):
+    def bond_lengths(self, buildlist, start_row=0):
         """Return the distances between given atoms.
     
         In order to know more about the buildlist, go to :func:`to_zmat`.
        
         Args:
-            xyz_frame (pd.dataframe): 
-            buildlist (list): 
-            exclude_first (bool): The exclude_first option excludes the first row of the buildlist from calculation.
+            buildlist (np.array): 
     
         Returns:
-            list: List of the distance between the first and second atom of every entry in the buildlist. 
+            list: Vector of the distances between the first and second atom of every entry in the buildlist. 
         """
-        if exclude_first:
-            temp_buildlist = copy.deepcopy(buildlist[1:])
+        # check sanity of input
+        buildlist = np.array(buildlist)
+        try:
+            buildlist.shape[1]
+        except IndexError:
+            buildlist = buildlist[None, :]
         else:
-            temp_buildlist = copy.deepcopy(buildlist)
-    
-        index_set = set([])
-        for listelement in temp_buildlist:
-            index_set |= set(listelement[:2])
-        index_list = list(index_set)
-        convert = dict(zip(index_list, range(len(index_list))))
+            pass
 
-        location_array = self.location(index_list)
-    
-        distance_list = []
-        for listelement in temp_buildlist:
-            index, bond_with = listelement[:2]
-            vi, vb = location_array[[convert[index], convert[bond_with]], :]
-            q = vb - vi
-            distance = np.linalg.norm(q)
-            distance_list.append(distance)
+        buildlist = np.array(buildlist)
+        own_location = self.location(buildlist[start_row:,0])
+        bond_with_location = self.location(buildlist[start_row:,1])
+        distance_vector = own_location - bond_with_location
+        distance_list = np.linalg.norm(distance_vector, axis=1)
         return distance_list
-
-    def angle_degrees(self, index, bond_with, angle_with):
-        """Return the angle in dregrees between three atoms.
-       
-        Args:
-            xyz_frame (pd.dataframe): 
-            index (int): 
-            bond_with (int): Index of atom bonding with.
-            angle_with (int): Index of angle defining atom. 
     
-        Returns:
-            float: Angle in degrees.
-        """
-        vi, vb, va = self.location([index, bond_with, angle_with])
-        BI, BA = vi - vb, va - vb
-        angle = utilities.give_angle(BI, BA)
-        return angle
 
-
-# TODO express in tensor algebra
-    def _angle_degrees_optimized(self, buildlist, exclude_first = True):
+    def angle_degrees(self, buildlist, start_row=0):
         """Return the angles between given atoms.
     
         In order to know more about the buildlist, go to :func:`to_zmat`.
@@ -614,58 +567,28 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         Returns:
             list: List of the angle between the first, second and third atom of every entry in the buildlist. 
         """
-        if exclude_first:
-            temp_buildlist = copy.deepcopy(buildlist[2:])
+        # check sanity of input
+        buildlist = np.array(buildlist)
+        try:
+            buildlist.shape[1]
+        except IndexError:
+            buildlist = buildlist[None, :]
         else:
-            temp_buildlist = copy.deepcopy(buildlist)
-    
-        index_set = set([])
-        for listelement in temp_buildlist:
-            index_set |= set(listelement[:3])
-        index_list = list(index_set)
-        convert = dict(zip(index_list, range(len(index_list))))
-        location_array = self.location(index_list)
-    
-        angle_list = []
-        for listelement in temp_buildlist:
-            index, bond_with, angle_with = listelement[:3]
-            vi, vb, va = location_array[[convert[index], convert[bond_with], convert[angle_with]], :]
-            BI, BA = vi - vb, va - vb
-            angle = utilities.give_angle(BI, BA)
-            angle_list.append(angle)
-        return angle_list
+            pass
+
+        buildlist = np.array(buildlist)
+        own_location = self.location(buildlist[start_row:,0])
+        bond_with_location = self.location(buildlist[start_row:,1])
+        angle_with_location = self.location(buildlist[start_row:,2])
+
+        BI, BA = own_location - bond_with_location, angle_with_location - bond_with_location
+        bi, ba = BI / np.linalg.norm(BI, axis=1)[:, None], BA / np.linalg.norm(BA, axis=1)[:, None]
+        dot_product = np.sum(bi * ba, axis=1)
+        angles = np.degrees(np.arccos(dot_product))
+        return angles
 
 
-    def dihedral_degrees(self, index, bond_with, angle_with, dihedral_with):
-        """Return the angle in dregrees between three atoms.
-       
-        Args:
-            xyz_frame (pd.dataframe): 
-            index (int): 
-            bond_with (int): Index of atom bonding with.
-            angle_with (int): Index of angle defining atom. 
-            dihedral_with (int): Index of dihedral defining atom. 
-    
-        Returns:
-            float: dihedral in degrees.
-        """
-        vi, vb, va, vd = self.location([index, bond_with, angle_with, dihedral_with])
-    
-        DA = va - vd
-        AB = vb - va
-        BI = vi - vb
-    
-        n1 = utilities.normalize(np.cross(DA, AB))
-        n2 = utilities.normalize(np.cross(AB, BI))
-    
-        dihedral = utilities.give_angle(n1, n2)
-        if (dihedral != 0):
-            dihedral = dihedral if 0 < np.dot(AB, np.cross(n1, n2)) else 360 - dihedral
-        return dihedral
-
-
-# TODO express in tensor algebra and time performance
-    def _dihedral_degrees_optimized(self, buildlist, exclude_first = True):
+    def dihedral_degrees(self, buildlist, start_row=0):
         """Return the angles between given atoms.
        
         In order to know more about the buildlist, go to :func:`to_zmat`.
@@ -678,35 +601,46 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         Returns:
             list: List of the dihedral between the first, second, third and fourth atom of every entry in the buildlist. 
         """
-        if exclude_first:
-            temp_buildlist = copy.deepcopy(buildlist[3:])
+        # check sanity of input
+        buildlist = np.array(buildlist)
+        try:
+            buildlist.shape[1]
+        except IndexError:
+            buildlist = buildlist[None, :]
         else:
-            temp_buildlist = copy.deepcopy(buildlist)
-    
-        index_set = set([])
-        for listelement in temp_buildlist:
-            index_set |= set(listelement[:4])
-        index_list = list(index_set)
-        convert = dict(zip(index_list, range(len(index_list))))
-        location_array = self.location(index_list)
-    
-        dihedral_list = []
-        for listelement in temp_buildlist:
-            index, bond_with, angle_with, dihedral_with = listelement[:4]
-            vi, vb, va, vd = location_array[[convert[index], convert[bond_with], convert[angle_with], convert[dihedral_with]], :]
-    
-            DA = va - vd
-            AB = vb - va
-            BI = vi - vb
+            pass
+
+        own_location = self.location(buildlist[start_row:,0])
+        bond_with_location = self.location(buildlist[start_row:,1])
+        angle_with_location = self.location(buildlist[start_row:,2])
+        dihedral_with_location = self.location(buildlist[start_row:,3])
+        length = buildlist[start_row:].shape[0]
         
-            n1 = utilities.normalize(np.cross(DA, AB))
-            n2 = utilities.normalize(np.cross(AB, BI))
-        
-            dihedral = utilities.give_angle(n1, n2)
-            if (dihedral != 0):
-                dihedral = dihedral if 0 < np.dot(AB, np.cross(n1, n2)) else 360 - dihedral
-            dihedral_list.append(dihedral)
-        return dihedral_list
+        DA = dihedral_with_location - angle_with_location
+        AB = angle_with_location - bond_with_location
+        BI = bond_with_location - own_location
+
+        N1 = np.cross(DA, AB, axis=1)
+        N2 = np.cross(AB, BI, axis=1)
+
+        n1 = N1 / np.linalg.norm(N1, axis=1)[:, None]
+        n2 = N2 / np.linalg.norm(N2, axis=1)[:, None]
+
+        dot_product = np.sum(n1 * n2, axis=1)
+        dihedrals = np.degrees(np.arccos(dot_product))
+
+        # the next lines are to test the direction of rotation. 
+        # is a dihedral really 90 or 270 degrees?
+        test_where_to_modify = (np.sum(AB * np.cross(n1, n2, axis=1), axis=1) > 0)
+        where_to_modify = np.nonzero(test_where_to_modify)[0]
+
+        sign = np.full(length, 1, dtype='float64')
+        sign[where_to_modify] = -1
+        to_add = np.full(length, 0, dtype='float64')
+        to_add[where_to_modify] = 360
+
+        dihedrals = to_add + sign * dihedrals
+        return dihedrals
 
 
     def get_fragment(self, list_of_indextuples, give_only_index=False):
@@ -736,425 +670,256 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             value_to_return = self.__class__(self.xyz_frame.loc[fragment_index, :])
         return value_to_return
 
+    def _get_buildlist(self, fixed_buildlist=None):
+        """Create a buildlist for a Zmatrix.
+        
+        Args:
+            fixed_buildlist (np.array): It is possible to provide the beginning of the buildlist.
+                The rest is "figured" out automatically.
+        
+        Returns:
+            np.array: buildlist
+        """
+        buildlist = np.zeros((self.n_atoms, 4)).astype('int64')
+        if not fixed_buildlist is None:
+            buildlist[:fixed_buildlist.shape[0], :] = fixed_buildlist
+            start_row = fixed_buildlist.shape[0]
+            already_built = set(fixed_buildlist[:, 0])
+            to_be_built = set(self.xyz_frame.index) - already_built
+            convert_index = dict(zip(buildlist[:, 0], range(start_row)))
+        else:
+            start_row = 0
+            already_built, to_be_built = set([]), set(self.xyz_frame.index)
+            convert_index = {}
 
-# TODO from here on write into object methods using get_bonds
-    def _get_buildlist(self, already_known=None):
-        buildlist = np.empty((self.n_atoms, 4))
         bond_dic = self.get_bonds(use_lookup=True)
         topologic_center = self.mass()['topologic_center']
-        frame_distance = self.distance_frame(topologic_center)
-        to_be_built = set(self.xyz_frame.index)
-        convert_to = {'array_index' : {}, 'frame_index' : {}}
-        if not already_known is None:
-            buildlist[: (already_known.shape[0]), :] = already_known
-            already_built = set(already_known[:, 0])
-            to_be_built = to_be_built - already_built
-        else:
-            already_built = set([])
+        distance_to_topologic_center = self.distance_to(topologic_center).xyz_frame.copy()
         
-
-        def pick_new_atom(self, index, bond_dic, already_built, to_be_built, convert_to):
-            try: 
-                new_atom = pick(bond_dic[index] - already_built)
-            except KeyError:
-                new_atom = frame_distance.loc[to_be_built, : ].iloc[0, :].name
-            finally:
-                already_built.add(new_atom)
-                to_be_built.remove(new_atom)
-            # check sanity of output
-            assert (already_built & to_be_built) == set([])
-            assert (already_built | to_be_built) == set(self.xyz_frame.index)
-            convert_to['array_index'][new_atom] = row
-            convert_to['frame_index'][row] = new_atom
-            return new_atom, already_built, to_be_built
-
-        def pick_references(self, bond_dic, index, already_built, buidllist, convert_to, number=3):
-            reference_list = [index]
-            for _ in range(number):
-                try:
-                    index = pick((bond_dic[index] & already_built) - set(reference_list))
-                    reference_list.append(index)
-                except KeyError:
-                    convert_to[
-                    reference_list.append(index)
-                else:
-
-            return reference_list
-
-        def pick_atoms(self, index, bond_dic, already_built, to_be_built):
-            try:
-                new_atom, already_built, to_be_built = pick_new_atom(self, index, bond_dic, already_built, to_be_built)
-            finally:
-                pick_references(self, bond_dic, index, already_built, number=3)
-
-
-
-            return A
-
-    def _order_of_building(self, to_be_built=None, already_built=None):
-        frame = self.xyz_frame.copy()
-    
-        if already_built is None:
-            already_built = []
-    
-        if to_be_built is None:
-            to_be_built = list(frame.index)
-        else:
-            to_be_built = list(to_be_built)
-    
-        try:
-            buildlist = copy.deepcopy(already_built)
-            already_built = [element[0] for element in already_built]
-        except:
-            pass
-    
-        for element in already_built:
-            to_be_built.remove(element)
-        number_of_atoms_to_add = len(to_be_built)
-        already_built = list(already_built)
-        topologic_center = mass(frame)['topologic_center']
-    
-        assert recursion in set([0, 1, 2])
-        assert (set(to_be_built) & set(already_built)) == set([])
-    
-    
-        def zero_reference(topologic_center):
-            frame_distance = distance_frame(frame.loc[to_be_built, :], topologic_center)
-            index = frame_distance['distance'].idxmin()
-            return index
-    
-        def one_reference(previous):
-            previous_atom = xyz_frame.ix[previous, ['x', 'y', 'z']]
-            frame_distance_previous = distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
-            index = frame_distance_previous['distance'].idxmin()
-            return index, previous
-    
-        def two_references(previous, before_previous):
-            previous_atom, before_previous_atom = xyz_frame.ix[previous, ['x', 'y', 'z']], xyz_frame.ix[before_previous, ['x', 'y', 'z']]
-            frame_distance_previous = distance_frame(xyz_frame.loc[to_be_built, :], previous_atom)
-            frame_distance_before_previous = distance_frame(xyz_frame.loc[to_be_built, :], before_previous_atom)
-            summed_distance = frame_distance_previous.loc[:, 'distance'] + frame_distance_before_previous.loc[:, 'distance']
-            index = summed_distance.idxmin()
-            return index, previous
-    
-    
-        if len(already_built) > 1:
-            previous, index = already_built[-2:]
-    
-        elif len(already_built) == 1:
-            index = already_built[-1:]
-    
-        if recursion == 2:
-            mode = 0
-            for _ in range(number_of_atoms_to_add):
-                if (len(already_built) > 1) or mode == 2:
-                    index, previous = two_references(index, previous)
-                    bond_length = distance(frame, index, previous)
-                    if bond_length > 7:
-                        index = zero_reference(topologic_center)
-                        mode = 1
-    
-                elif (len(already_built) == 1) or mode == 1:
-                    index, previous = one_reference(index)
-                    mode = 2
-    
-                elif already_built == []:
-                    index = zero_reference(topologic_center)
-                    mode = 1
-    
-                already_built.append(index)
+        def update(already_built, to_be_built, new_atoms_set):
+            """NOT SIDEEFFECT FREE
+            """
+            for index in new_atoms_set:
+                already_built.add(index)
                 to_be_built.remove(index)
-    
-        if recursion == 1:
-            for _ in range(number_of_atoms_to_add):
-                if len(already_built) > 0:
-                    index, previous = one_reference(index)
-                    bond_length = distance(frame, index, previous)
-                    if bond_length > 5:
-                        index = zero_reference(topologic_center)
-    
-                elif already_built == []:
-                    index = zero_reference(topologic_center)
-    
-                already_built.append(index)
-                to_be_built.remove(index)
-    
-        elif recursion == 0:
-            already_built = already_built + to_be_built
-    
-        try:
-            for index, element in enumerate(buildlist):
-                already_built[index] = element
-        except:
-            pass
-    
-        already_built = list(already_built)
-        return already_built
+            return already_built, to_be_built
 
+        def from_topologic_center(self, row_in_buildlist, already_built, to_be_built, first_time=False):
+            index_of_new_atom = distance_to_topologic_center.loc[to_be_built, 'distance'].idxmin()
+            buildlist[row_in_buildlist, 0] = index_of_new_atom
+            convert_index[index_of_new_atom] = row_in_buildlist
+            if not first_time:
+                bond_with = self.distance_to(index_of_new_atom, already_built).xyz_frame['distance'].idxmin()
+                angle_with = self.distance_to(bond_with, already_built - {bond_with}).xyz_frame['distance'].idxmin()
+                dihedral_with = self.distance_to(bond_with, already_built - {bond_with, angle_with}).xyz_frame['distance'].idxmin()
+                buildlist[row_in_buildlist, 1:] = [bond_with, angle_with, dihedral_with]
+            new_row_to_modify = row_in_buildlist + 1
+            already_built.add(index_of_new_atom)
+            to_be_built.remove(index_of_new_atom)
+            return new_row_to_modify, already_built, to_be_built
 
-    # TODO Check for linearity and insert dummy atoms
-    def _get_reference(xyz_frame, order_of_building, recursion = 1):
-        xyz_frame = self.xyz_frame.copy()
-    
-        buildlist_given = copy.deepcopy(order_of_building)
-        defined_entries = {}
-        order_of_building = []
-    
-        for element in buildlist_given:
-            if type(element) is list:
-                defined_entries[element[0]] = element
-                order_of_building.append(element[0])
+        def second_atom(self, already_built, to_be_built):
+            new_atoms_set = bond_dic[buildlist[0, 0]] - already_built
+            if new_atoms_set != set([]):
+                index_of_new_atom = pick(new_atoms_set)
+                convert_index[index_of_new_atom] = 1
+                buildlist[1, 0] = index_of_new_atom
+                buildlist[1, 1] = pick(already_built)
             else:
-                order_of_building.append(element)
+                new_row_to_modify, already_built, to_be_built = from_topologic_center(self, row_in_buildlist, already_built, to_be_built)
+            if len(new_atoms_set) > 1:
+                use_index = buildlist[0, 0]
+            else:
+                use_index = buildlist[1, 0]
+            new_row_to_modify = 2
+            already_built.add(index_of_new_atom)
+            to_be_built.remove(index_of_new_atom)
+            return new_row_to_modify, already_built, to_be_built, use_index
+
+        def third_atom(self, already_built, to_be_built, use_index):
+            new_atoms_set = bond_dic[use_index] - already_built
+            if new_atoms_set != set([]):
+                index_of_new_atom = pick(new_atoms_set)
+                convert_index[index_of_new_atom] = 2
+                buildlist[2, 0] = index_of_new_atom
+                buildlist[2, 1] = use_index
+                buildlist[2, 2] = pick(already_built - {use_index})
+            else:
+                new_row_to_modify, already_built, to_be_built = from_topologic_center(self, row_in_buildlist, already_built, to_be_built)
+            if len(new_atoms_set) > 1:
+                use_index = use_index
+            else:
+                use_index = buildlist[2, 0]
+            new_row_to_modify = 3
+            already_built.add(index_of_new_atom)
+            to_be_built.remove(index_of_new_atom)
+            return new_row_to_modify, already_built, to_be_built, use_index
+
+        def pick_new_atoms(self, row_in_buildlist, already_built, to_be_built, use_given_index=None):
+            """Get the indices of new atoms to be put in buildlist.
+            
+            Tries to get the atoms bonded to the one, that was last inserted into the buildlist.
+            If the last atom is the end of a branch, it looks for the index of an atom that is
+            the nearest atom to the topologic center and not built in yet.
     
-        reference_list = []
+            .. note:: It modifies the buildlist array which is global to this function.
     
-        n_atoms = len(order_of_building)
-        to_be_built, already_built = list(order_of_building), []
-    
-        if recursion > 0:
-            def first_atom(index_of_atom):
-                reference_list.append([index_of_atom])
-                already_built.append(index_of_atom)
-                to_be_built.remove(index_of_atom)
-    
-            def second_atom(index_of_atom):
-                try:
-                    reference_list.append(defined_entries[index_of_atom])
-                    already_built.append(to_be_built.pop(0))
-                except KeyError:
-                    distances_to_other_atoms = distance_frame(
-                            xyz_frame.loc[already_built, :],
-                            self.location(index_of_atom)
-                            )
-                    bond_with = distances_to_other_atoms['distance'].idxmin()
-                    reference_list.append([index_of_atom, bond_with])
-                    already_built.append(to_be_built.pop(0))
-    
-            def third_atom(index_of_atom):
-                try:
-                    reference_list.append(defined_entries[index_of_atom])
-                    already_built.append(to_be_built.pop(0))
-                except KeyError:
-                    distances_to_other_atoms = distance_frame(
-                            xyz_frame.loc[already_built, :],
-                            self.location(index_of_atom)
-                            ).sort_values(by='distance')
-                    bond_with, angle_with = list(distances_to_other_atoms.iloc[0:2, :].index)
-                    reference_list.append([index_of_atom, bond_with, angle_with])
-                    already_built.append(to_be_built.pop(0))
-    
-            def other_atom(index_of_atom):
-                try:
-                    reference_list.append(defined_entries[index_of_atom])
-                    already_built.append(to_be_built.pop(0))
-                except KeyError:
-                    distances_to_other_atoms = distance_frame(
-                            xyz_frame.loc[already_built, :],
-                            self.location(index_of_atom)
-                            ).sort_values(by='distance')
-                    bond_with, angle_with, dihedral_with = list(distances_to_other_atoms.iloc[0:3, :].index)
-                    reference_list.append([index_of_atom, bond_with, angle_with, dihedral_with])
-                    already_built.append(to_be_built.pop(0))
-    
-            if n_atoms == 1:
-                first_atom(to_be_built[0])
-                second_atom(to_be_built[0])
-                third_atom(to_be_built[0])
-    
-            elif n_atoms == 2:
-                first_atom(to_be_built[0])
-                second_atom(to_be_built[0])
-    
-            elif n_atoms == 3:
-                first_atom(to_be_built[0])
-                second_atom(to_be_built[0])
-                third_atom(to_be_built[0])
-    
-            elif n_atoms > 3:
-                first_atom(to_be_built[0])
-                second_atom(to_be_built[0])
-                third_atom(to_be_built[0])
-    
-                for _ in range(3, n_atoms):
-                    other_atom(to_be_built[0])
-    
-        else:
-            if n_atoms == 1:
-                reference_list.append([order_of_building[0]])
-    
-            elif n_atoms == 2:
-                reference_list.append([order_of_building[0]])
-                reference_list.append([order_of_building[1], order_of_building[0]])
-    
-            elif n_atoms == 3:
-                reference_list.append([order_of_building[0]])
-                reference_list.append([order_of_building[1], order_of_building[0]])
-                reference_list.append([order_of_building[2], order_of_building[1], order_of_building[0]])
-    
-            elif n_atoms > 3:
-                reference_list.append([order_of_building[0]])
-                reference_list.append([order_of_building[1], order_of_building[0]])
-                reference_list.append([order_of_building[2], order_of_building[1], order_of_building[0]])
-                for i in range(3, n_atoms):
-                    reference_list.append([
-                        order_of_building[i],
-                        order_of_building[i-1],
-                        order_of_building[i-2],
-                        order_of_building[i-3]
-                        ])
-    
-        return reference_list
+            Args:
+                row_in_buildlist (int): The row which has to be filled at least.
+        
+            Returns:
+                list: List of modified rows.
+            """
+            if use_given_index is None:
+                new_atoms_set = bond_dic[buildlist[row_in_buildlist-1, 0]] - already_built
+
+                if new_atoms_set != set([]):
+                    update(already_built, to_be_built, new_atoms_set)
+                    new_row_to_modify = row_in_buildlist + len(new_atoms_set)
+                    new_atoms_list = list(new_atoms_set)
+                    bond_with = buildlist[row_in_buildlist - 1, 0]
+                    angle_with = buildlist[convert_index[bond_with], 1]
+                    dihedral_with = buildlist[convert_index[bond_with], 2]
+                    buildlist[row_in_buildlist : new_row_to_modify, 0 ] = new_atoms_list
+                    buildlist[row_in_buildlist : new_row_to_modify, 1 ] = bond_with
+                    buildlist[row_in_buildlist : new_row_to_modify, 2 ] = angle_with
+                    buildlist[row_in_buildlist : new_row_to_modify, 3 ] = dihedral_with
+                    for key, value in zip(new_atoms_list, range(row_in_buildlist, new_row_to_modify)):
+                        convert_index[key] = value
+                else:
+                    new_row_to_modify, already_built, to_be_built = from_topologic_center(self, row_in_buildlist, already_built, to_be_built)
+
+            else:
+                new_atoms_set = bond_dic[use_given_index] - already_built
+                new_row_to_modify = row_in_buildlist + len(new_atoms_set)
+                new_atoms_list = list(new_atoms_set)
+                bond_with = use_given_index
+                angle_with, dihedral_with = (already_built - set([use_given_index]))
+                buildlist[row_in_buildlist : new_row_to_modify, 0 ] = new_atoms_list
+                buildlist[row_in_buildlist : new_row_to_modify, 1 ] = bond_with
+                buildlist[row_in_buildlist : new_row_to_modify, 2 ] = angle_with
+                buildlist[row_in_buildlist : new_row_to_modify, 3 ] = dihedral_with
+                update(already_built, to_be_built, new_atoms_set)
+                for key, value in zip(new_atoms_list, range(row_in_buildlist, new_row_to_modify)):
+                    convert_index[key] = value
 
 
+            return new_row_to_modify, already_built, to_be_built
+
+        row = start_row
+        if 0 <= row <= 2:
+            if row == 0 & 0 < buildlist.shape[0]:
+                row, already_built, to_be_built = from_topologic_center(
+                        self,
+                        row,
+                        already_built,
+                        to_be_built,
+                        first_time=True
+                        )
+            if row == 1 & 1 < buildlist.shape[0]:
+                row, already_built, to_be_built, use_index = second_atom(self, already_built, to_be_built)
+            if row == 2 & 2 < buildlist.shape[0]:
+                row, already_built, to_be_built, use_index = third_atom(self, already_built, to_be_built, use_index)
+            if row < buildlist.shape[0]:
+                row, already_built, to_be_built = pick_new_atoms(self, row, already_built, to_be_built, use_index)
+
+           
+        while row < buildlist.shape[0]:
+            row, already_built, to_be_built = pick_new_atoms(self, row, already_built, to_be_built)
+
+        return buildlist
+
+    def clean_dihedral(self, buildlist_to_check):
+        """Reindexes the dihedral defining atom if colinear.
+
+        Args:
+            buildlist (np.array): 
+        
+        Returns:
+            np.array: modified_buildlist
+        """
+        buildlist = buildlist_to_check.copy()
+
+        bond_dic = self.get_bonds(use_lookup = True)
+
+        own_location = self.location(buildlist[3:,0])
+        bond_with_location = self.location(buildlist[3:,1])
+        angle_with_location = self.location(buildlist[3:,2])
+        dihedral_with_location = self.location(buildlist[3:,3])
+        
+        DA = dihedral_with_location - angle_with_location
+        AB = angle_with_location - bond_with_location
+        BI = bond_with_location - own_location
+
+#        self.angle_degrees(
+
+        N1 = np.cross(DA, AB, axis=1)
+
+        test_vector = np.all(np.isclose(N1, np.zeros(3)), axis=1)  
+        problematic_indices = np.nonzero(test_vector)[0]
+
+        for index in problematic_indices: 
+            try:
+                buildlist[index, 3] = pick(bond_dic[buildlist[index, 2]] - {buildlist[index, 3]})
+            except KeyError:
+                index = index + 3
+                
+                origin = buildlist[index, 2]
+                could_be_reference = set(buildlist[:index, 0]) - set(buildlist[index, :3])
+                sorted_Cartesian = self.distance_to(origin, could_be_reference)
+                sorted_Cartesian.xyz_frame = sorted_Cartesian.xyz_frame.sort_values(by='distance')
+                
+                vector1 = self.location(buildlist[index, 1]) - self.location(buildlist[index, 2])
+                vectors2 = sorted_Cartesian.location(sorted_Cartesian.xyz_frame.index) - self.location(buildlist[index, 2])
+    
+                newN1 = np.cross(vector1, vectors2)
+            
+                test_vector = np.logical_not(np.all(np.isclose(N1, np.zeros(3)), axis=1))
+                index_to_use = buildlist[np.nonzero(test_vector)[0][0], 0]
+                print(index_to_use)
+    
+                buildlist[index, 3] = index_to_use
+        return buildlist
 
 
 
     def _build_zmat(self, buildlist):
-        # not necessary
-        xyz_frame = self.xyz_frame
-        n_atoms = len(buildlist)
-        # Taking functions from other namespaces
-        indexlist = [element[0] for element in buildlist]
-        zmat_frame = pd.DataFrame(columns=['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'],
+        indexlist = buildlist[:, 0]
+
+        default_columns = ['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'] 
+        additional_columns = list(set(self.xyz_frame.columns) - set(['atom', 'x', 'y', 'z']))
+
+        zmat_frame = pd.DataFrame(columns= default_columns + additional_columns,
                 dtype='float',
                 index=indexlist
                 )
-        indexlist = [element[0] for element in buildlist]
-        bond_with_list = [element[1] for element in buildlist[1:]]
-        angle_with_list = [element[2] for element in buildlist[2:]]
-        dihedral_with_list = [element[3] for element in buildlist[3:]]
-    
-        def add_first_atom():
-            index = indexlist[0]
-            zmat_frame.loc[index, 'atom'] = xyz_frame.loc[index, 'atom']
-    
-        def add_second_atom():
-            index, bond_with = buildlist[1]
-            bond_length = distance(xyz_frame, index, bond_with)
-            zmat_frame.loc[index, 'atom':'bond'] = [xyz_frame.loc[index, 'atom'], bond_with, bond_length]
-    
-        def add_third_atom():
-            index, bond_with, angle_with = buildlist[2]
-            bond_length = distance(xyz_frame, index, bond_with)
-            angle = angle_degrees(xyz_frame, index, bond_with, angle_with)
-            zmat_frame.loc[index, 'atom':'angle'] = [
-                    xyz_frame.loc[index, 'atom'],
-                    bond_with, bond_length,
-                    angle_with, angle
-                    ]
-    
-    
-        def add_atoms():
-            distance_list = _distance_optimized(xyz_frame, buildlist)
-            angle_list = _angle_degrees_optimized(xyz_frame, buildlist)
-            dihedral_list = _dihedral_degrees_optimized(xyz_frame, buildlist)
-    
-            zmat_frame.loc[indexlist, 'atom'] = xyz_frame.loc[indexlist, 'atom']
-            zmat_frame.loc[indexlist[1:], 'bond_with'] = bond_with_list
-            zmat_frame.loc[indexlist[1:], 'bond'] = distance_list
-            zmat_frame.loc[indexlist[2:], 'angle_with'] = angle_with_list
-            zmat_frame.loc[indexlist[2:], 'angle'] = angle_list
-            zmat_frame.loc[indexlist[3:], 'dihedral_with'] = dihedral_with_list
-            zmat_frame.loc[indexlist[3:], 'dihedral'] = dihedral_list
-    
-    
-        if n_atoms > 3:
-            add_atoms()
-    
-        elif n_atoms == 1:
-            add_first_atom()
-    
-        elif n_atoms == 2:
-            add_first_atom()
-            add_second_atom()
-    
-        elif n_atoms == 3:
-            add_first_atom()
-            add_second_atom()
-            add_third_atom()
-    
-    
-        return zmat_frame.loc[[element[0] for element in buildlist], :]
+
+        zmat_frame.loc[:, additional_columns] = self.xyz_frame.loc[indexlist, additional_columns]
+
+        bonds = self.bond_lengths(buildlist, start_row=1)
+        angles = self.angle_degrees(buildlist, start_row=2)
+        dihedrals = self.dihedral_degrees(buildlist, start_row=3)
+
+        zmat_frame.loc[indexlist, 'atom'] = self.xyz_frame.loc[indexlist, 'atom']
+        zmat_frame.loc[indexlist[1:], 'bond_with'] = buildlist[1:, 1]
+        zmat_frame.loc[indexlist[1:], 'bond'] = bonds 
+        zmat_frame.loc[indexlist[2:], 'angle_with'] = buildlist[2:, 2]
+        zmat_frame.loc[indexlist[2:], 'angle'] = angles
+        zmat_frame.loc[indexlist[3:], 'dihedral_with'] = buildlist[3:, 3]
+        zmat_frame.loc[indexlist[3:], 'dihedral'] = dihedrals
+        return zmat_frame
 
 
-    # TODO Write Docstring and Tutorial
-    # TODO Extract columns with additional information and append in the end again
-    def to_zmat(xyz_frame, buildlist = None, fragments_list = None, recursion_level = 2):
-        """Convert xyz_frame to zmat_frame.
-        """
-        assert recursion_level in set([0,1,2])
-    
-        if buildlist is None:
-            buildlist = []
-        if fragments_list is None:
-            fragments_list = []
-    
-        fragments_old = copy.deepcopy(fragments_list)
-    
-        # preparing the fragments list
-        fragments_new = []
-        for fragment in fragments_old:
-            for index in [element[0] for element in fragment[0:3]]:
-                fragment.remove(index)
-            fragment = fragment[0:3] + [[number] for number in fragment[3:]]
-            fragments_new.append(fragment)
-        fragments = fragments_new
-    
-        fragment_index_set = set([])
-        for fragment in fragments:
-            fragment_index = set([element[0] for element in fragment])
-            assert fragment_index < set(xyz_frame.index)
-            fragment_index_set |= fragment_index
-    
-        molecule_without_fragments_set = set(xyz_frame.index) - fragment_index_set
-    
-        assert set([element[0] for element in buildlist]) <= molecule_without_fragments_set
-    
-        # first build big molecule
-        building_order = _order_of_building(
-                xyz_frame.loc[molecule_without_fragments_set, :],
-                already_built = buildlist,
-                recursion = recursion_level
-                )
-        buildlist_for_big_molecule = _get_reference(
-                xyz_frame.loc[molecule_without_fragments_set, :],
-                order_of_building = building_order,
-                recursion = recursion_level
-                )
-    
-        zmat_big = _build_zmat(
-                xyz_frame,
-                buildlist_for_big_molecule
-                )
-    
-    
-    
-        list_of_fragment_zmat = []
-        for fragment in fragments:
-            temp_buildlist = [fragment[0][:1], fragment[1][:2], fragment[2][:3]]
-            fragment_index = [element[0] for element in fragment]
-    
-            building_order = _order_of_building(
-                    xyz_frame.loc[fragment_index, :],
-                    already_built = temp_buildlist,
-                    recursion = recursion_level
-                    )
-            buildlist_for_fragment = _get_reference(
-                    xyz_frame.loc[fragment_index, :],
-                    order_of_building = building_order,
-                    recursion = recursion_level
-                    )
-    
-            zmat_fragment = _build_zmat(xyz_frame, buildlist_for_fragment)
-    
-            list_of_fragment_zmat.append((fragment[0:3], zmat_fragment))
-    
-        for reference_atoms, fragment_zmat in list_of_fragment_zmat:
-            zmat_big = zmat_functions.concatenate(fragment_zmat, zmat_big, reference_atoms, xyz_frame)
-    
-        return zmat_big
+    def to_zmat(self, buildlist=None, fragment_list=None, check_linearity=True):
+        if (buildlist is None):
+            if (fragment_list is None):
+                buildlist = self._get_buildlist()
+                buildlist = self.clean_dihedral(buildlist) if check_linearity else buildlist
+            else:
+                pass
 
+        zmat = self._build_zmat(buildlist)
+        return zmat_functions.Zmat(zmat)
 
     def inertia(self):
         """Calculates the inertia tensor and transforms along rotation axes.
@@ -1293,9 +1058,13 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return array
     
     
-    def distance_frame(self, origin, indices_of_other_atoms=None):
+    def distance_to(self, origin, indices_of_other_atoms=None):
         """Returns a xyz_frame with a column for the distance from origin.
         """
+        try:
+            origin[0]
+        except (TypeError, IndexError):
+            origin = self.location(int(origin))
         if indices_of_other_atoms is None:
             indices_of_other_atoms = self.xyz_frame.index
         frame_distance = self.xyz_frame.loc[indices_of_other_atoms, :].copy()
@@ -1365,16 +1134,3 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                 header=False,
                 mode='a'
                 )
-
-
-#    @staticmethod
-#    def _distance_frame(frame, origin, indices_of_other_atoms=None):
-#        """Returns a xyz_frame with a column for the distance from origin.
-#        """
-#        if indices_of_other_atoms is None:
-#            indices_of_other_atoms = self.xyz_frame.index
-#        frame_distance = frame.copy()
-#        origin = np.array(origin, dtype=float)
-#        frame_distance['distance'] = np.linalg.norm(frame_distance.loc[:, ['x', 'y', 'z']].get_values().astype(float) - origin, axis =1)
-#        return frame_distance
-
