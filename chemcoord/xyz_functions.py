@@ -842,44 +842,38 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
         bond_dic = self.get_bonds(use_lookup = True)
 
-        own_location = self.location(buildlist[3:,0])
-        bond_with_location = self.location(buildlist[3:,1])
-        angle_with_location = self.location(buildlist[3:,2])
-        dihedral_with_location = self.location(buildlist[3:,3])
-        
-        DA = dihedral_with_location - angle_with_location
-        AB = angle_with_location - bond_with_location
-        BI = bond_with_location - own_location
+        angles = self.angle_degrees(buildlist[3:,1:])
 
-#        self.angle_degrees(
-
-        N1 = np.cross(DA, AB, axis=1)
-
-        test_vector = np.all(np.isclose(N1, np.zeros(3)), axis=1)  
+        test_vector = np.logical_or(170 < angles, angles < 10)
         problematic_indices = np.nonzero(test_vector)[0]
 
+        converged = True if len(problematic_indices) == 0 else False
+
         for index in problematic_indices: 
+            index = index + 3
             try:
-                buildlist[index, 3] = pick(bond_dic[buildlist[index, 2]] - {buildlist[index, 3]})
+                buildlist[index, 3] = pick(bond_dic[buildlist[index, 2]] - set(buildlist[index, [1, 3]]))
             except KeyError:
-                index = index + 3
-                
                 origin = buildlist[index, 2]
                 could_be_reference = set(buildlist[:index, 0]) - set(buildlist[index, :3])
+        
                 sorted_Cartesian = self.distance_to(origin, could_be_reference)
                 sorted_Cartesian.xyz_frame = sorted_Cartesian.xyz_frame.sort_values(by='distance')
                 
-                vector1 = self.location(buildlist[index, 1]) - self.location(buildlist[index, 2])
-                vectors2 = sorted_Cartesian.location(sorted_Cartesian.xyz_frame.index) - self.location(buildlist[index, 2])
-    
-                newN1 = np.cross(vector1, vectors2)
-            
-                test_vector = np.logical_not(np.all(np.isclose(N1, np.zeros(3)), axis=1))
+                bond_with, angle_with = buildlist[index, [1, 2]]
+                dihedral_with = np.array(sorted_Cartesian.xyz_frame.index).astype('int64')
+                buildlist_for_new_dihedral_with = np.empty((len(could_be_reference), 3), dtype='int64')
+                buildlist_for_new_dihedral_with[:, 0]  = bond_with
+                buildlist_for_new_dihedral_with[:, 1]  = angle_with
+                buildlist_for_new_dihedral_with[:, 2]  = dihedral_with
+                angles = self.angle_degrees(buildlist_for_new_dihedral_with)
+        
+        
+                test_vector = np.logical_or(170 > angles, angles > 10)
                 index_to_use = buildlist[np.nonzero(test_vector)[0][0], 0]
-                print(index_to_use)
-    
+            
                 buildlist[index, 3] = index_to_use
-        return buildlist
+        return buildlist, converged
 
 
 
@@ -914,7 +908,13 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         if (buildlist is None):
             if (fragment_list is None):
                 buildlist = self._get_buildlist()
-                buildlist = self.clean_dihedral(buildlist) if check_linearity else buildlist
+                if check_linearity:
+                    buildlist, converged = self.clean_dihedral(buildlist) 
+                    i, max_iter = 0, 5
+                    while (not converged) & (i == max_iter):
+                        buildlist, converged = self.clean_dihedral(buildlist) 
+                        print('iteration', i)
+                        i = i + 1
             else:
                 pass
 
@@ -1134,3 +1134,29 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                 header=False,
                 mode='a'
                 )
+
+    @classmethod
+    def read(cls, inputfile, pythonic_index=False, get_bonds=True):
+        """Reads a xyz file.
+    
+        Args:
+            inputfile (str): 
+            pythonic_index (bool):
+    
+        Returns:
+            pd.DataFrame: 
+        """
+        xyz_frame = pd.read_table(
+            inputfile,
+            skiprows=2,
+            comment='#',
+            delim_whitespace=True,
+            names=['atom', 'x', 'y', 'z']
+            )
+        if not pythonic_index:
+            n_atoms = xyz_frame.shape[0]
+            xyz_frame.index = range(1, n_atoms+1)
+        molecule = cls(xyz_frame)
+        if get_bonds:
+            molecule.get_bonds()
+        return molecule

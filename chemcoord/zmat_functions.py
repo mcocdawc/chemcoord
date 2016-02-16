@@ -127,6 +127,7 @@ class Zmat:
     
         normalize = utilities.normalize
         rotation_matrix = utilities.rotation_matrix
+        tolerance_for_linearity=1e-04
     
         def add_first_atom():
             index = to_be_built[0]
@@ -183,8 +184,7 @@ class Zmat:
             # va is the vector of the angle defining atom,
             # vd is the vector of the dihedral defining atom
             vb, va, vd = molecule.location([bond_with, angle_with, dihedral_with])
-    
-            if np.isclose(angle, m.radians(180.)):
+            if np.isclose(m.degrees(angle), 180., atol=tolerance_for_linearity):
                 AB = vb - va
                 ab = normalize(AB)
                 d = bond * ab
@@ -239,7 +239,7 @@ class Zmat:
             # Since the python overhead is the limiting step, you won't see any difference.
             # But it is more elegant ;).
 
-            if np.isclose(angle, m.radians(180.)):
+            if np.isclose(m.degrees(angle), 180., atol=tolerance_for_linearity):
                 AB = vb - va
                 ab = normalize(AB)
                 d = bond * ab
