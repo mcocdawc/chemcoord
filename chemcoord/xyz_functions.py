@@ -6,6 +6,7 @@ import copy
 from . import constants
 from . import utilities
 from . import zmat_functions
+from . import export
 from . import settings
 
 
@@ -19,6 +20,8 @@ def pick(my_set):
 
 @export
 class Cartesian:
+    """The main class for dealing with cartesian Coordinates.
+    """
     def __init__(self, xyz_frame):
         self.xyz_frame = xyz_frame
         self.n_atoms = xyz_frame.shape[0]

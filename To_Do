@@ -1,5 +1,2 @@
 export decorator
 
-{1, 2}.pick() vs pick({1, 2})
-
-functions operating on several cartesian instances as staticmethods or own namespace?

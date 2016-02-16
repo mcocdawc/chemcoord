@@ -2,10 +2,12 @@ import numpy as np
 import pandas as pd
 import math as m
 import copy
+from . import export
 from . import constants
 from . import utilities
 from . import xyz_functions
 
+@export
 class Zmat:
     def __init__(self, zmat_frame):
         self.zmat_frame = zmat_frame.copy()
@@ -42,9 +44,12 @@ class Zmat:
 
 
     def build_list(self):
-        """
-        This functions outputs the buildlist required to reproduce
-        building of the zmat_frame.
+        """Return the buildlist which is necessary to create this Zmat
+    
+        Args:
+    
+        Returns:
+            np.array: Buildlist
         """
         zmat = self.zmat_frame.copy()
         n_atoms = zmat.shape[0]
