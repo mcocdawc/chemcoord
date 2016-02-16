@@ -17,6 +17,7 @@ def pick(my_set):
     my_set.add(x)
     return x
 
+@export
 class Cartesian:
     def __init__(self, xyz_frame):
         self.xyz_frame = xyz_frame
@@ -1160,3 +1161,42 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         if get_bonds:
             molecule.get_bonds()
         return molecule
+
+    @staticmethod
+    def molden(cartesian_list, outputfile):
+        """Writes a list of xyz_frames into a molden file.
+    
+        .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
+            The frame to be written is of course not changed.
+    
+        Args:
+            xyz_frame (pd.dataframe): 
+            outputfile (str): 
+    
+        Returns:
+            None: None
+        """
+        framelist = [molecule.xyz_frame for molecule in cartesian_list]
+        n_frames = len(framelist)
+        n_atoms = framelist[0].shape[0]
+        string ="""[MOLDEN FORMAT]
+    [N_GEO]
+        """
+        values = n_frames *'1\n'
+        string = string + str(n_frames) + '\n[GEOCONV]\nenergy\n' + values + 'max-force\n' + values + 'rms-force\n' + values + '[GEOMETRIES] (XYZ)\n'
+    
+        with open(outputfile, mode='w') as f:
+            f.write(string)
+    
+        for frame in framelist:
+            frame = frame.sort_index()
+            n_atoms = frame.shape[0]
+            with open(outputfile, mode='a') as f:
+                f.write(str(n_atoms) + 2 * '\n')
+            frame.to_csv(
+                outputfile,
+                sep=' ',
+                index=False,
+                header=False,
+                mode='a'
+                )
