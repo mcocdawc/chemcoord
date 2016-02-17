@@ -588,6 +588,8 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         BI, BA = own_location - bond_with_location, angle_with_location - bond_with_location
         bi, ba = BI / np.linalg.norm(BI, axis=1)[:, None], BA / np.linalg.norm(BA, axis=1)[:, None]
         dot_product = np.sum(bi * ba, axis=1)
+        dot_product[np.isclose(dot_product, 1)] = 1
+        dot_product[np.isclose(dot_product, -1)] = -1
         angles = np.degrees(np.arccos(dot_product))
         return angles
 
@@ -631,8 +633,10 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         n2 = N2 / np.linalg.norm(N2, axis=1)[:, None]
 
         dot_product = np.sum(n1 * n2, axis=1)
+        dot_product[np.isclose(dot_product, 1)] = 1
+        dot_product[np.isclose(dot_product, -1)] = -1
         dihedrals = np.degrees(np.arccos(dot_product))
-
+        
         # the next lines are to test the direction of rotation. 
         # is a dihedral really 90 or 270 degrees?
         test_where_to_modify = (np.sum(AB * np.cross(n1, n2, axis=1), axis=1) > 0)
@@ -748,6 +752,17 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                 buildlist[2, 0] = index_of_new_atom
                 buildlist[2, 1] = use_index
                 buildlist[2, 2] = pick(already_built - {use_index})
+                if self.angle_degrees(buildlist[2, :]) < 10 or self.angle_degrees(buildlist[2, :]) > 170:
+                    try:
+                        index_of_new_atom = pick(new_atoms_set - {index_of_new_atom})
+                        convert_index[index_of_new_atom] = 2
+                        buildlist[2, 0] = index_of_new_atom
+                        buildlist[2, 1] = use_index
+                        buildlist[2, 2] = pick(already_built - {use_index})
+                    except KeyError:
+                        # TODO implement
+                        pass
+
             else:
                 new_row_to_modify, already_built, to_be_built = from_topologic_center(self, row_in_buildlist, already_built, to_be_built)
             if len(new_atoms_set) > 1:
@@ -912,15 +927,41 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         if (buildlist is None):
             if (fragment_list is None):
                 buildlist = self._get_buildlist()
-                if check_linearity:
-                    buildlist, converged = self.clean_dihedral(buildlist) 
-                    i, max_iter = 0, 5
-                    while (not converged) & (i == max_iter):
-                        buildlist, converged = self.clean_dihedral(buildlist) 
-                        print('iteration', i)
-                        i = i + 1
             else:
-                pass
+                def create_big_molecule(self, fragment_list):
+                    def prepare_variables(self, fragment_list):
+                        buildlist = np.empty((self.n_atoms, 4), dtype='int64')
+                        fragment_index = set([])
+                        for fragment_tpl in fragment_list:
+                            fragment_index |= set(fragment_tpl[0].xyz_frame.index)
+                        big_molecule_index = set(self.xyz_frame.index) - fragment_index
+                        return buildlist, big_molecule_index
+                    buildlist, big_molecule_index = prepare_variables(self, fragment_list)
+                    big_molecule = Cartesian(self.xyz_frame.loc[big_molecule_index, :])
+                    row = big_molecule.n_atoms
+                    buildlist[: row, :] = big_molecule._get_buildlist()
+                    return buildlist, big_molecule, row
+
+                def add_fragment(self, fragment_tpl, big_molecule, buildlist, row):
+                    next_row = row + fragment_tpl[0].n_atoms
+                    buildlist[row : next_row, :] = fragment_tpl[0]._get_buildlist(fragment_tpl[1])
+                    return buildlist, big_molecule, row
+
+
+
+                buildlist, big_molecule, row = create_big_molecule(self, fragment_list) 
+
+
+                for fragment_tpl in fragment_list:
+                    buildlist, big_molecule, row = add_fragment(self, fragment_tpl, big_molecule, buildlist, row)
+
+        if check_linearity:
+            buildlist, converged = self.clean_dihedral(buildlist) 
+            i, max_iter = 0, 10
+            while (not converged) & (i == max_iter):
+                buildlist, converged = self.clean_dihedral(buildlist) 
+                print('iteration', i)
+                i = i + 1
 
         zmat = self._build_zmat(buildlist)
         return zmat_functions.Zmat(zmat)
@@ -1097,6 +1138,96 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return self.__class__(frame)
 
 
+    def make_similar(self, Cartesian2, prealign = True):
+        """Similarizes two xyz_frames.
+    
+        Returns a reindexed copy of xyz_frame2 that minimizes the distance 
+        for each atom from xyz_frame1 to itself on xyz_frame2.
+    
+        .. warning:: The algorithm is still very basic, so it is important, to have a good
+            prealignment and quite similar frames.
+    
+        Args:
+            xyz_frame1 (pd.DataFrame): 
+            xyz_frame2 (pd.DataFrame): 
+            prealign (bool): If True both frames are moved to their barycenters and aligned along 
+                their principal axes of inertia before reindexing.
+    
+        Returns:
+            pd.DataFrame: Reindexed copy of xyz_frame2.
+        """
+        if prealign:
+            molecule1 = self.inertia()['transformed_Cartesian']
+            molecule2 = Cartesian2.inertia()['transformed_Cartesian']
+        else:
+            molecule1 = self
+            molecule2 = Cartesian2
+            
+    
+        assert set(molecule1.xyz_frame['atom']) == set(molecule1.xyz_frame['atom'])
+        atomset = set(frame1['atom'])
+        framedic = {}
+    
+    
+        for atom in atomset:
+            framedic[atom] = (frame1[frame1['atom'] == atom], frame2[frame2['atom'] == atom])
+            assert framedic[atom][0].shape[0] == framedic[atom][1].shape[0]
+    
+        list_of_new_indexed_frames = []
+    
+        def _distance(vector1, vector2):
+            length = np.linalg.norm(vector1 - vector2)
+            return length
+    
+    
+        for atom in atomset:
+            index_dic = {}
+            distance_frame_dic = {}
+    
+            frame1_indexlist = list(framedic[atom][0].index)
+            for index_on_frame1 in frame1_indexlist:
+                location_atom_frame1 = framedic[atom][0].loc[index_on_frame1, ['x', 'y', 'z']].get_values().astype(float)
+                distances_to_atom_on_frame1 = distance_frame(framedic[atom][1], location_atom_frame1)
+                
+                
+                distances_to_atom_on_frame1 = distances_to_atom_on_frame1.sort_values(by='distance')
+                index_on_frame2 = distances_to_atom_on_frame1.iloc[0].name
+                distance_new = distances_to_atom_on_frame1.at[index_on_frame2, 'distance']
+                location_of_atom2 = distances_to_atom_on_frame1.loc[index_on_frame2, ['x', 'y', 'z']].get_values().astype(float)
+    
+    
+                i = 1
+                while True:
+                    if index_on_frame2 in index_dic.keys():
+                        location_of_old_atom1 = framedic[atom][0].loc[index_dic[index_on_frame2], ['x', 'y', 'z']].get_values().astype(float)  
+                        distance_old = utilities.distance(location_of_old_atom1, location_of_atom2)
+                        if distance_new < distance_old:
+                            frame1_indexlist.append(index_dic[index_on_frame2])
+                            index_dic[index_on_frame2] = index_on_frame1
+                            break
+                        else:
+                            index_on_frame2 = distances_to_atom_on_frame1.iloc[i].name
+    
+    
+                            distance_new = distances_to_atom_on_frame1.at[index_on_frame2, 'distance']
+                            location_of_atom2 = distances_to_atom_on_frame1.loc[index_on_frame2, ['x', 'y', 'z']].get_values().astype(float)
+                            i = i + 1
+    
+                    else:
+                        index_dic[index_on_frame2] = index_on_frame1
+                        break
+    
+    
+            new_index = [index_dic[old_index2] for old_index2 in framedic[atom][1].index]
+            framedic[atom][1].index = new_index
+            list_of_new_indexed_frames.append(framedic[atom][1])
+        
+        xyz_frame3 = pd.concat(list_of_new_indexed_frames)
+       
+       
+        return xyz_frame3.sort_index()
+
+
     def write(self, outputfile, sort_index=True):
         """Writes the xyz_frame into a file.
     
@@ -1140,7 +1271,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                 )
 
     @classmethod
-    def read(cls, inputfile, pythonic_index=False, get_bonds=True):
+    def read_xyz(cls, inputfile, pythonic_index=False, get_bonds=True):
         """Reads a xyz file.
     
         Args:

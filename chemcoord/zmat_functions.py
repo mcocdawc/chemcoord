@@ -299,7 +299,7 @@ class Zmat:
         return molecule
 
     @classmethod
-    def read(cls, inputfile, implicit_index=True):
+    def read_zmat(cls, inputfile, implicit_index=True):
         """Reads a zmat file.
         
         Lines beginning with ``#`` are ignored.
