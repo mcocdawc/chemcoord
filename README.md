@@ -6,6 +6,9 @@ With this module you can read cartesian (xyz) and internal (zmat) coordinates in
 Besides it supplies you with a lot of functions to manipulate them and make your workflow more efficient.
 
 
+## Still in development
+
+Even the master branch can change daily.
 
 ## Documentation
 The documentation and website can be found on: http://chemcoord.readthedocs.org/en/latest/
