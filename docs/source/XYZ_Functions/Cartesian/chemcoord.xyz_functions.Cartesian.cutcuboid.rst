@@ -1,4 +1,4 @@
-Cutcuboid
+cutcuboid
 ===========================================
 
 .. currentmodule:: chemcoord.xyz_functions

@@ -16,7 +16,7 @@ chemcoord.zmat_functions.Zmat
         ~Zmat.change_numbering
         ~Zmat.mass
         ~Zmat.movement_to
-        ~Zmat.read
+        ~Zmat.read_zmat
         ~Zmat.to_xyz
         ~Zmat.write
 

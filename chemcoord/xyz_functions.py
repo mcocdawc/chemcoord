@@ -129,7 +129,7 @@ class Cartesian:
             modified_properties (dic): If you want to change the van der Vaals 
                 radius or valency of one or more specific atoms, pass a dictionary that looks like::
 
-                    modified_properties = {index1 : {'bond_size' : 1.5, 'valency' : 8}, ...}
+                    modified_properties = {index1 : {'atomic_radius' : 1.5, 'valency' : 8}, ...}
 
                 For global changes use the constants.py module.
             maximum_edge_length (float): Maximum length of one edge of a cuboid if ``divide_et_impera`` is ``True``.
@@ -152,26 +152,21 @@ class Cartesian:
         def preparation_of_variables(modified_properties):
             bond_dic = dict(zip(self.xyz_frame.index, [set([]) for _ in range(self.n_atoms)]))
 
-            # TODO ask Steven and make more efficient 
-            valency_dic = dict(zip(
-                    self.xyz_frame.index, 
-                    [constants.atom_properties[self.xyz_frame.at[index, 'atom']]['valency'] for index in self.xyz_frame.index]
-                    ))
-            bond_size_dic = dict(zip(
-                    self.xyz_frame.index, 
-                    [constants.atom_properties[self.xyz_frame.at[index, 'atom']]['bond_size'] for index in self.xyz_frame.index]
-                    ))
+            molecule2 = self.add_data(['valency', 'atomic_radius_gv'])
+            valency_dic = dict(zip(molecule2.xyz_frame.index, molecule2.xyz_frame['valency'].get_values().astype('int64')))
+            atomic_radius_dic = dict(zip(molecule2.xyz_frame.index, molecule2.xyz_frame['atomic_radius_gv']))
+
             if modified_properties is None:
                 pass
             else:
                 for key in modified_properties:
                     valency_dic[key] = modified_properties[key]['valency']
-                    bond_size_dic[key] = modified_properties[key]['bond_size']
-            return bond_dic, valency_dic, bond_size_dic
+                    atomic_radius_dic[key] = modified_properties[key]['atomic_radius']
+            return bond_dic, valency_dic, atomic_radius_dic
 
 
-        def get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency, index_of_cube=self.xyz_frame.index):
-            overlap_array, convert_to = self._overlap(bond_size_dic, index_of_cube)
+        def get_bonds_local(self, bond_dic, valency_dic, atomic_radius_dic, use_valency, index_of_cube=self.xyz_frame.index):
+            overlap_array, convert_to = self._overlap(atomic_radius_dic, index_of_cube)
             np.fill_diagonal(overlap_array, -1.)
             bin_overlap_array = overlap_array > 0
             actual_valency = np.sum(bin_overlap_array, axis=1)
@@ -217,13 +212,13 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             return bond_dic
 
         def complete_calculation(divide_et_impera):
-            bond_dic, valency_dic, bond_size_dic = preparation_of_variables(modified_properties)
+            bond_dic, valency_dic, atomic_radius_dic = preparation_of_variables(modified_properties)
             if divide_et_impera:
                 cuboid_dic = self._divide_et_impera(maximum_edge_length, difference_edge)
                 for number, key in enumerate(cuboid_dic):
-                    get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency, index_of_cube=cuboid_dic[key][1])
+                    get_bonds_local(self, bond_dic, valency_dic, atomic_radius_dic, use_valency, index_of_cube=cuboid_dic[key][1])
             else:
-                get_bonds_local(self, bond_dic, valency_dic, bond_size_dic, use_valency)
+                get_bonds_local(self, bond_dic, valency_dic, atomic_radius_dic, use_valency)
             return bond_dic
 
         if use_lookup:
@@ -450,51 +445,46 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return self.__class__(sliced_xyz_frame)
 
 
-    def mass(self):
-        """Gives several properties related to mass.
+    def topologic_center(self):
+        """Returns the average location.
     
         Args:
+            None
     
         Returns:
-            dic: The returned dictionary has four possible keys:
-            
-            ``Cartesian_mass``: Cartesian with an additional column for the masses of each atom.
-        
-            ``total_mass``: The total mass.
-    
-            ``barycenter``: The mass weighted average location.
-        
-            ``topologic_center``: The average location.
+            np.array: 
         """
-        xyz_frame_mass = self.xyz_frame.copy()
-        indexlist = list(xyz_frame_mass.index)
-        n_atoms = xyz_frame_mass.shape[0]
+        location_array = self.location()
+        return np.mean(location_array, axis=0)
+
+
+    def barycenter(self):
+        """Returns the mass weighted average location.
     
-        masses_dic = dict(zip(
-                constants.atom_properties.keys(), 
-                [constants.atom_properties[atom]['mass'] for atom in constants.atom_properties.keys()]
-                ))
-        masses = [masses_dic[atom] for atom in xyz_frame_mass['atom']]
-        xyz_frame_mass['mass'] = masses
-        
-        total_mass = xyz_frame_mass['mass'].sum()
+        Args:
+            None
+
+        Returns:
+            np.array: 
+        """
+        mass_molecule = self.add_data('mass')
+        mass_vector = mass_molecule.xyz_frame['mass'].get_values().astype('float64')
+        location_array = mass_molecule.location()
+        barycenter = np.mean(location_array * mass_vector[:, None], axis=0)
+        return barycenter
+
+    def total_mass(self):
+        """Returns the total mass.
     
-        location_array = self.location(indexlist)
-    
-        barycenter = np.zeros([3])
-        topologic_center = np.zeros([3])
-    
-        for row, index in enumerate(indexlist):
-            barycenter = barycenter + location_array[row] * xyz_frame_mass.at[index, 'mass']
-            topologic_center = topologic_center + location_array[row]
-        barycenter = barycenter / total_mass
-        topologic_center = topologic_center / n_atoms
-        
-        dic_of_values = dict(zip(
-            ['Cartesian_mass', 'total_mass', 'barycenter', 'topologic_center'], 
-            [Cartesian(xyz_frame_mass), total_mass, barycenter, topologic_center]
-            ))
-        return dic_of_values
+        Args:
+            None
+
+        Returns:
+            float: 
+        """
+        mass_molecule = self.add_data('mass')
+        mass = mass_molecule.xyz_frame['mass'].sum()
+        return mass
 
 
     def move(self, vector=[0, 0, 0], matrix=np.identity(3), indices=None, copy=False):
@@ -701,7 +691,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             convert_index = {}
 
         bond_dic = self.get_bonds(use_lookup=True)
-        topologic_center = self.mass()['topologic_center']
+        topologic_center = self.topologic_center()
         distance_to_topologic_center = self.distance_to(topologic_center).xyz_frame.copy()
         
         def update(already_built, to_be_built, new_atoms_set):
@@ -972,6 +962,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         This function calculates the inertia tensor and returns a 4-tuple.
     
         Args:
+            None
     
         Returns:
             dic: The returned dictionary has four possible keys:
@@ -990,12 +981,9 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             ``eigenvectors``:
             The eigenvectors of the inertia tensor in the old basis.
         """
-        xyz_frame = self.xyz_frame
-        keys = ['Cartesian_mass', 'total_mass', 'barycenter', 'topologic_center']
-        temp_dict = self.mass()
-        Cartesian_mass, total_mass, barycenter, topologic_center = [temp_dict[key] for key in keys]
+        Cartesian_mass = self.add_data('mass')
     
-        Cartesian_mass = Cartesian_mass.move(vector = -barycenter)
+        Cartesian_mass = Cartesian_mass.move(vector = - self.barycenter())
         frame_mass = Cartesian_mass.xyz_frame
     
         coordinates = ['x', 'y', 'z']
@@ -1079,20 +1067,21 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
 
 
-    def location(self, indexlist):
+    def location(self, indexlist=None):
         """Returns the location of an atom.
     
         You can pass an indexlist or an index.
     
         Args:
             xyz_frame (pd.dataframe): 
-            index (list): 
+            indexlist (list): If indexlist is None, the complete index is used.
     
         Returns:
             np.array: A matrix of 3D rowvectors of the location of the atoms
             specified by indexlist. In the case of one index given a 3D vector is returned one index.
         """
         xyz_frame = self.xyz_frame.copy()
+        indexlist = xyz_frame.index if indexlist is None else indexlist
         try:
             if not set(indexlist).issubset(set(xyz_frame.index)):
                 raise KeyError('One or more indices in the indexlist are not in the xyz_frame')
@@ -1279,7 +1268,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             pythonic_index (bool):
     
         Returns:
-            pd.DataFrame: 
+            Cartesian:
         """
         xyz_frame = pd.read_table(
             inputfile,
@@ -1295,6 +1284,55 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         if get_bonds:
             molecule.get_bonds()
         return molecule
+
+    def add_data(self, list_of_columns=None, in_place=False):
+        """Adds a column with the requested data.
+
+        If you want to see for example the mass, the colormap used in jmol and the block of the element, just use::
+
+            ['mass', 'jmol_color', 'block']
+
+        The underlying ``pd.DataFrame`` can be accessed with ``cc.constants.elements``.
+        To see all available keys use ``cc.constants.elements.info()``.
+
+        The data comes from the module `mendeleev <http://mendeleev.readthedocs.org/en/latest/>`_ written by Lukasz Mentel.
+
+        Please note that I added three columns to the mendeleev data::
+
+            ['atomic_radius_gv', 'gv_color', 'valency']
+
+        These are taken from the MOLCAS grid viewer written by Valera Veryazov. 
+    
+        Args:
+            list_of_columns (str): You can pass also just one value. E.g. ``'mass'`` is equivalent to ``['mass']``. 
+                If ``list_of_columns`` is ``None`` all available data is returned.
+            in_place (bool):
+    
+        Returns:
+            Cartesian:
+        """
+        data = constants.elements
+        if in_place:
+            frame = self.xyz_frame
+        else:
+            frame = self.xyz_frame.copy()
+
+        list_of_columns = data.columns if (list_of_columns is None) else list_of_columns
+
+        list_of_columns = [list_of_columns] if isinstance(list_of_columns, str) else list_of_columns
+
+        for name in list_of_columns:
+            assert (name in data.columns), 'You request data that is not available.'
+            local_dict = dict(zip(data['symbol'], data[name]))
+            frame[name] = [local_dict.get(symbol) for symbol in frame['atom']]
+
+        if in_place:
+            to_return = self
+        else:
+            to_return = Cartesian(frame)
+        return to_return
+
+
 
     @staticmethod
     def molden(cartesian_list, outputfile):

@@ -1,4 +1,4 @@
-chemcoord.xyz_functions.Cartesian
+Cartesian
 =================================
 
 .. currentmodule:: chemcoord.xyz_functions
@@ -26,12 +26,14 @@ chemcoord.xyz_functions.Cartesian
          ~Cartesian.get_fragment
          ~Cartesian.inertia
          ~Cartesian.location
-         ~Cartesian.mass
+         ~Cartesian.topologic_center
+         ~Cartesian.barycenter
          ~Cartesian.molden
          ~Cartesian.move
-         ~Cartesian.read
+         ~Cartesian.read_xyz
          ~Cartesian.to_zmat
          ~Cartesian.write
+         ~Cartesian.add_data
        
        
     
