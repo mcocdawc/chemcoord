@@ -1126,8 +1126,68 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         frame.index.name = None
         return self.__class__(frame)
 
+    def make_similar(self, Cartesian2, max_follow_bonds=4, prealign = True):
+        """Similarizes two xyz_frames.
+    
+        Returns a reindexed copy of ``Cartesian2`` that minimizes the distance 
+        for each atom in the same chemical environemt from ``self`` to ``Cartesian2``.
+    
+        .. warning:: The algorithm is still very basic, so it is important, to have a good
+            prealignment and quite similar frames. 
+            It is probably necessary to use the function :func:`Cartesian.change_numbering()`
 
-    def make_similar(self, Cartesian2, prealign = True):
+        A chemical environment is specified by the number of surrounding atoms with a certain atomic number and
+        represented by a frozenset of tuples. 
+        The ``max_follow_bonds`` option determines how many branches the algorithm follows to determine the chemical environment.
+
+        Example:
+        A carbon atom in ethane has bonds with three hydrogen (atomic number 1) and one carbon atom (atomic number 6).
+        If ``follow_bonds=1`` these are the only atoms we are interested in and the chemical environment is::
+
+            frozenset([(1, 3), (6, 1)])
+
+        If ``follow_bonds=2`` we follow every atom in the chemical enviromment of ``follow_bonds=1`` to their direct neighbours.
+        In the case of ethane this gives::
+
+            frozenset([(1, 6), (6, 1)])
+
+        In the special case of ethane this is the whole molecule; 
+        in other cases you can apply this operation recursively and stop after ``max_follow_bonds`` or after reaching the end of branches.
+
+    
+        Args:
+            Cartesian2 (Cartesian): 
+            max_follow_bonds (int):
+            prealign (bool): If True both molecules are moved to their barycenters and aligned along 
+                their principal axes of inertia before reindexing.
+    
+        Returns:
+            Cartesian: Reindexed version of Cartesian2.
+        """
+        if prealign:
+            molecule1 = self.inertia()['transformed_Cartesian']
+            molecule2 = Cartesian2.inertia()['transformed_Cartesian']
+        else:
+            molecule1 = self
+            molecule2 = Cartesian2
+            
+    
+        assert set(molecule1.xyz_frame['atom']) == set(molecule1.xyz_frame['atom']), 'You have different atoms in the molecules.'
+        # TODO time and assert same chemical environment
+        
+        atomset = set(frame1['atom'])
+        framedic = {}
+
+        def partition_chem_env(self, follow_bonds=3):
+
+            # dict_set = { (atomic_number, frozenset([]))  : set([indices]) }
+            return dict_set
+    
+    
+       
+        return xyz_frame3.sort_index()
+
+    def make_similar_old(self, Cartesian2, prealign = True):
         """Similarizes two xyz_frames.
     
         Returns a reindexed copy of xyz_frame2 that minimizes the distance 
@@ -1318,13 +1378,13 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             frame = self.xyz_frame.copy()
 
         list_of_columns = data.columns if (list_of_columns is None) else list_of_columns
+        
+        atom_symbols = frame['atom']
+        new_columns = data.loc[atom_symbols, list_of_columns]
+        new_column.index = frame.index
 
-        list_of_columns = [list_of_columns] if isinstance(list_of_columns, str) else list_of_columns
 
-        for name in list_of_columns:
-            assert (name in data.columns), 'You request data that is not available.'
-            local_dict = dict(zip(data['symbol'], data[name]))
-            frame[name] = [local_dict.get(symbol) for symbol in frame['atom']]
+        frame = pd.concat([frame, new_column], axis=1)
 
         if in_place:
             to_return = self
@@ -1333,20 +1393,19 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return to_return
 
 
-
     @staticmethod
     def molden(cartesian_list, outputfile):
-        """Writes a list of xyz_frames into a molden file.
+        """Writes a list of Cartesians into a molden file.
     
         .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
             The frame to be written is of course not changed.
     
         Args:
-            xyz_frame (pd.dataframe): 
+            cartesian_list (list): 
             outputfile (str): 
     
         Returns:
-            None: None
+            None: 
         """
         framelist = [molecule.xyz_frame for molecule in cartesian_list]
         n_frames = len(framelist)

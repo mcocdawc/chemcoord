@@ -7,454 +7,142 @@
 # But if there is only one other person in the world which does not have to repeat your steps,
 # typing in those values by hand, it is already a win.
 ######################################################################################################
-import mendeleev
-
-energy_conversion={
-        ('hartree', 'kJ per mole') : 2625.50, 
-        ('hartree', 'cm^-1') : 219474.63,
-        ('bohr', 'angstroem'): 0.529177249,
-        ('angstroem', 'bohr'): 1/0.529177249
-        }
-
-atomic_radius_gv = {
- 'Ac': 1.95,
- 'Ag': 1.53,
- 'Al': 1.18,
- 'Am': 1.75,
- 'Ar': 0.97,
- 'As': 1.19,
- 'At': 1.9,
- 'Au': 1.44,
- 'B': 0.82,
- 'Ba': 1.98,
- 'Be': 0.9,
- 'Bi': 1.46,
- 'Bk': 1.75,
- 'Br': 1.14,
- 'C': 0.77,
- 'Ca': 1.74,
- 'Cd': 1.48,
- 'Ce': 1.85,
- 'Cf': 1.75,
- 'Cl': 0.99,
- 'Cm': 1.75,
- 'Co': 1.26,
- 'Cr': 1.27,
- 'Cs': 2.25,
- 'Cu': 1.38,
- 'D': 0.25,
- 'Dy': 1.75,
- 'Er': 1.75,
- 'Es': 1.75,
- 'Eu': 1.85,
- 'F': 0.71,
- 'Fe': 1.25,
- 'Fm': 1.75,
- 'Fr': 2.6,
- 'Ga': 1.26,
- 'Gd': 1.8,
- 'Ge': 1.22,
- 'H': 0.37,
- 'He': 0.32,
- 'Hf': 1.5,
- 'Hg': 1.49,
- 'Ho': 1.75,
- 'I': 1.33,
- 'In': 1.44,
- 'Ir': 1.37,
- 'K': 1.96,
- 'Kr': 1.1,
- 'L': 0.25,
- 'La': 1.69,
- 'Li': 1.34,
- 'Lr': 1.75,
- 'Lu': 1.6,
- 'Md': 1.75,
- 'Mg': 1.3,
- 'Mn': 1.39,
- 'Mo': 1.45,
- 'N': 0.75,
- 'Na': 1.54,
- 'Nb': 1.37,
- 'Nd': 1.85,
- 'Ne': 0.69,
- 'Ni': 1.21,
- 'No': 1.75,
- 'Np': 1.75,
- 'O': 0.73,
- 'Os': 1.28,
- 'P': 1.06,
- 'Pa': 1.75,
- 'Pb': 1.47,
- 'Pd': 1.31,
- 'Pm': 1.85,
- 'Po': 1.9,
- 'Pr': 1.85,
- 'Pt': 1.28,
- 'Pu': 1.75,
- 'Ra': 2.15,
- 'Rb': 2.11,
- 'Re': 1.59,
- 'Rh': 1.35,
- 'Rn': 1.9,
- 'Ru': 1.26,
- 'S': 1.02,
- 'Sb': 1.38,
- 'Sc': 1.44,
- 'Se': 1.16,
- 'Si': 1.11,
- 'Sm': 1.85,
- 'Sn': 1.41,
- 'Sr': 1.92,
- 'T': 0.25,
- 'Ta': 1.38,
- 'Tb': 1.75,
- 'Tc': 1.56,
- 'Te': 1.35,
- 'Th': 1.8,
- 'Ti': 1.36,
- 'Tl': 1.48,
- 'Tm': 1.75,
- 'U': 1.75,
- 'V': 1.25,
- 'W': 1.46,
- 'X': 1.0,
- 'Xe': 1.3,
- 'Y': 1.62,
- 'Yb': 1.75,
- 'Zn': 1.31,
- 'Zr': 1.48}
-
-valency = {'Ac': 8,
- 'Ag': 8,
- 'Al': 3,
- 'Am': 8,
- 'Ar': 8,
- 'As': 8,
- 'At': 8,
- 'Au': 8,
- 'B': 3,
- 'Ba': 8,
- 'Be': 8,
- 'Bi': 8,
- 'Bk': 8,
- 'Br': 8,
- 'C': 4,
- 'Ca': 8,
- 'Cd': 8,
- 'Ce': 8,
- 'Cf': 8,
- 'Cl': 1,
- 'Cm': 8,
- 'Co': 8,
- 'Cr': 8,
- 'Cs': 8,
- 'Cu': 8,
- 'D': 8,
- 'Dy': 8,
- 'Er': 8,
- 'Es': 8,
- 'Eu': 8,
- 'F': 1,
- 'Fe': 8,
- 'Fm': 8,
- 'Fr': 8,
- 'Ga': 8,
- 'Gd': 8,
- 'Ge': 8,
- 'H': 1,
- 'He': 8,
- 'Hf': 8,
- 'Hg': 8,
- 'Ho': 8,
- 'I': 8,
- 'In': 8,
- 'Ir': 8,
- 'K': 8,
- 'Kr': 8,
- 'L': 8,
- 'La': 8,
- 'Li': 1,
- 'Lr': 8,
- 'Lu': 8,
- 'Md': 8,
- 'Mg': 2,
- 'Mn': 8,
- 'Mo': 8,
- 'N': 5,
- 'Na': 1,
- 'Nb': 8,
- 'Nd': 8,
- 'Ne': 8,
- 'Ni': 8,
- 'No': 8,
- 'Np': 8,
- 'O': 2,
- 'Os': 8,
- 'P': 5,
- 'Pa': 8,
- 'Pb': 8,
- 'Pd': 8,
- 'Pm': 8,
- 'Po': 8,
- 'Pr': 8,
- 'Pt': 8,
- 'Pu': 8,
- 'Ra': 8,
- 'Rb': 8,
- 'Re': 8,
- 'Rh': 8,
- 'Rn': 8,
- 'Ru': 8,
- 'S': 6,
- 'Sb': 8,
- 'Sc': 8,
- 'Se': 8,
- 'Si': 4,
- 'Sm': 8,
- 'Sn': 8,
- 'Sr': 8,
- 'T': 8,
- 'Ta': 8,
- 'Tb': 8,
- 'Tc': 8,
- 'Te': 8,
- 'Th': 8,
- 'Ti': 8,
- 'Tl': 8,
- 'Tm': 8,
- 'U': 8,
- 'V': 8,
- 'W': 8,
- 'X': 6,
- 'Xe': 8,
- 'Y': 8,
- 'Yb': 8,
- 'Zn': 8,
- 'Zr': 8}
-
-size_in_gv={
- 'Ac': 1.136,
- 'Ag': 0.921,
- 'Al': 0.64,
- 'Am': 1.159,
- 'Ar': 0.707,
- 'As': 0.835,
- 'At': 1.111,
- 'Au': 1.091,
- 'B': 0.516,
- 'Ba': 0.986,
- 'Be': 0.493,
- 'Bi': 1.109,
- 'Bk': 1.164,
- 'Br': 0.849,
- 'C': 0.526,
- 'Ca': 0.707,
- 'Cd': 0.932,
- 'Ce': 0.991,
- 'Cf': 1.166,
- 'Cl': 0.683,
- 'Cm': 1.164,
- 'Co': 0.783,
- 'Cr': 0.757,
- 'Cs': 0.977,
- 'Cu': 0.798,
- 'D': 0.362,
- 'Dy': 1.033,
- 'Er': 1.041,
- 'Es': 1.173,
- 'Eu': 1.014,
- 'F': 0.587,
- 'Fe': 0.772,
- 'Fm': 1.171,
- 'Fr': 1.13,
- 'Ga': 0.819,
- 'Gd': 1.024,
- 'Ge': 0.828,
- 'H': 0.32,
- 'He': 0.414,
- 'Hf': 1.06,
- 'Hg': 1.097,
- 'Ho': 1.037,
- 'I': 0.964,
- 'In': 0.938,
- 'Ir': 1.083,
- 'K': 0.703,
- 'Kr': 0.86,
- 'L': 0.32,
- 'La': 0.989,
- 'Li': 0.466,
- 'Lr': 1.177,
- 'Lu': 1.055,
- 'Md': 1.175,
- 'Mg': 0.622,
- 'Mn': 0.769,
- 'Mo': 0.893,
- 'N': 0.545,
- 'Na': 0.615,
- 'Nb': 0.885,
- 'Nd': 0.999,
- 'Ne': 0.595,
- 'Ni': 0.782,
- 'No': 1.173,
- 'Np': 1.15,
- 'O': 0.563,
- 'Os': 1.08,
- 'P': 0.662,
- 'Pa': 1.141,
- 'Pb': 1.107,
- 'Pd': 0.918,
- 'Pm': 1.004,
- 'Po': 1.111,
- 'Pr': 0.993,
- 'Pt': 1.088,
- 'Pu': 1.157,
- 'Ra': 1.135,
- 'Rb': 0.865,
- 'Re': 1.073,
- 'Rh': 0.91,
- 'Rn': 1.129,
- 'Ru': 0.906,
- 'S': 0.668,
- 'Sb': 0.953,
- 'Sc': 0.729,
- 'Se': 0.847,
- 'Si': 0.646,
- 'Sm': 1.011,
- 'Sn': 0.947,
- 'Sr': 0.871,
- 'T': 0.391,
- 'Ta': 1.065,
- 'Tb': 1.026,
- 'Tc': 0.898,
- 'Te': 0.966,
- 'Th': 1.143,
- 'Ti': 0.741,
- 'Tl': 1.103,
- 'Tm': 1.044,
- 'U': 1.151,
- 'V': 0.754,
- 'W': 1.07,
- 'X': 0.1,
- 'Xe': 0.973,
- 'Y': 0.874,
- 'Yb': 1.051,
- 'Zn': 0.804,
- 'Zr': 0.881}
-
-gv_color ={
- 'Ac': '#70ABFA',
- 'Ag': '#C0C0C0',
- 'Al': '#BFA6A6',
- 'Am': '#545CF2',
- 'Ar': '#80D1E3',
- 'As': '#BD80E3',
- 'At': '#754F45',
- 'Au': '#FFD123',
- 'B': '#FFB5B5',
- 'Ba': '#00C900',
- 'Be': '#C2FF00',
- 'Bi': '#9E4FB5',
- 'Bk': '#8A4FE3',
- 'Br': '#A62929',
- 'C': '#555555',
- 'Ca': '#3DFF00',
- 'Cd': '#FFD98F',
- 'Ce': '#FFFFC7',
- 'Cf': '#A136D4',
- 'Cl': '#38B538',
- 'Cm': '#785CE3',
- 'Co': '#F090A0',
- 'Cr': '#8A99C7',
- 'Cs': '#57178F',
- 'Cu': '#C88033',
- 'D': '#F2F2F2',
- 'Dy': '#1FFFC7',
- 'Er': '#00E675',
- 'Es': '#B31FD4',
- 'Eu': '#61FFC7',
- 'F': '#7FD03B',
- 'Fe': '#E06633',
- 'Fm': '#B31FBA',
- 'Fr': '#420066',
- 'Ga': '#C28F8F',
- 'Gd': '#45FFC7',
- 'Ge': '#668F8F',
- 'H': '#F2F2F2',
- 'He': '#D9FFFF',
- 'Hf': '#4DC2FF',
- 'Hg': '#B8B8D0',
- 'Ho': '#00FF9C',
- 'I': '#940094',
- 'In': '#A67573',
- 'Ir': '#175487',
- 'K': '#8F40D4',
- 'Kr': '#5CB8D1',
- 'L': '#F2F2F2',
- 'La': '#70D4FF',
- 'Li': '#CC80FF',
- 'Lr': '#C70066',
- 'Lu': '#00AB24',
- 'Md': '#B30DA6',
- 'Mg': '#8AFF00',
- 'Mn': '#9C7AC7',
- 'Mo': '#54B5B5',
- 'N': '#3753BB',
- 'Na': '#AB5CF2',
- 'Nb': '#73C2C9',
- 'Nd': '#C7FFC7',
- 'Ne': '#B3E3F5',
- 'Ni': '#50D050',
- 'No': '#BD0D87',
- 'Np': '#0080FF',
- 'O': '#F32E42',
- 'Os': '#266696',
- 'P': '#FF8000',
- 'Pa': '#00A1FF',
- 'Pb': '#575961',
- 'Pd': '#006985',
- 'Pm': '#A3FFC7',
- 'Po': '#AB5C00',
- 'Pr': '#D9FFC7',
- 'Pt': '#D0D0E0',
- 'Pu': '#006BFF',
- 'Ra': '#007D00',
- 'Rb': '#702EB0',
- 'Re': '#267DAB',
- 'Rh': '#0A7D8C',
- 'Rn': '#428296',
- 'Ru': '#248F8F',
- 'S': '#FFF529',
- 'Sb': '#9E63B5',
- 'Sc': '#E6E6E6',
- 'Se': '#FFA100',
- 'Si': '#F0C8A0',
- 'Sm': '#8FFFC7',
- 'Sn': '#668080',
- 'Sr': '#00FF00',
- 'T': '#F2F2F2',
- 'Ta': '#4DA6FF',
- 'Tb': '#30FFC7',
- 'Tc': '#3B9E9E',
- 'Te': '#D47A00',
- 'Th': '#00BAFF',
- 'Ti': '#BFC2C7',
- 'Tl': '#A6544D',
- 'Tm': '#00D452',
- 'U': '#008FFF',
- 'V': '#A6A6AB',
- 'W': '#2194D6',
- 'X': '#00FFFF',
- 'Xe': '#429EB0',
- 'Y': '#94FFFF',
- 'Yb': '#00BF38',
- 'Zn': '#7D80B0',
- 'Zr': '#94E0E0'}
+import pandas as pd
+import os
+import sys
+if sys.version_info[0] < 3:
+    from StringIO import StringIO
+else:
+    from io import StringIO
 
 
-elements = mendeleev.get_table('elements')
+#energy_conversion={
+#        ('hartree', 'kJ per mole') : 2625.50, 
+#        ('hartree', 'cm^-1') : 219474.63,
+#        ('bohr', 'angstroem'): 0.529177249,
+#        ('angstroem', 'bohr'): 1/0.529177249
+#        }
 
-elements['atomic_radius_gv'] = [atomic_radius_gv.get(symbol) for symbol in elements['symbol']]
-elements['valency'] = [valency.get(symbol) for symbol in elements['symbol']]
-elements['size_in_gv'] = [size_in_gv.get(symbol) for symbol in elements['symbol']]
-elements['gv_color'] = [gv_color.get(symbol) for symbol in elements['symbol']]
+
+atom_properties=StringIO(
+""",annotation,atomic_number,atomic_radius,atomic_volume,block,boiling_point,density,description,dipole_polarizability,electron_affinity,electronic_configuration,evaporation_heat,fusion_heat,group_id,lattice_constant,lattice_structure,mass,melting_point,name,period,series_id,specific_heat,thermal_conductivity,vdw_radius,covalent_radius_cordero,covalent_radius_pyykko,en_pauling,en_allen,jmol_color,cpk_color,proton_affinity,gas_basicity,heat_of_formation,c6,covalent_radius_bragg,covalent_radius_slater,vdw_radius_bondi,vdw_radius_truhlar,vdw_radius_rt,vdw_radius_batsanov,vdw_radius_dreiding,vdw_radius_uff,vdw_radius_mm3,abundance_crust,abundance_sea,atomic_radius_gv,valency,size_in_gv,gv_color
+H,"density(@ -253C), evaporation_heat(H-H), fusion_heat(H-H), ",1,79.0,14.1,s,20.28,0.0708,"Colourless, odourless gaseous chemical element. Lightest and most abundant element in the universe. Present in water and in all organic compounds. Chemically reacts with most elements. Discovered by Henry Cavendish in 1776.",4.50710742367,0.754195,1s,0.904,0.117,1.0,3.75,HEX,1.00794,14.01,Hydrogen,1,1,,0.1815,110.00000000000001,31.0,32.0,2.2,13.61,#ffffff,#ffffff,,,217.998,6.499026705,,25.0,120.0,,110.00000000000001,,319.5,288.6,162.0,1400.0,108000.0,0.37,1.0,0.32,#F2F2F2
+He,"density(@ -270C), ",2,,31.8,s,4.216,0.147,"Colourless, odourless gaseous nonmetallic element. Belongs to group 18 of the periodic table. Lowest boiling point of all elements and can only be solidified under pressure. Chemically inert, no known compounds. Discovered in the solar spectrum in 1868 by Lockyer.",1.3837467,-19.7,1s2,0.08,,18.0,3.57,HEX,4.002602,0.95,Helium,1,2,5.188,0.152,140.0,28.000000000000004,46.0,,24.59,#d9ffff,#ffc0cb,177.8,148.5,,1.42,,,140.0,,,,,236.20000000000002,153.0,0.008,7.000000000000001e-06,0.32,8.0,0.414,#D9FFFF
+Li,,3,155.0,13.1,s,1118.15,0.534,Socket silvery metal. First member of group 1 of the periodic table. Lithium salts are used in psychomedicine.,164.0,0.618049,[He] 2s,148.0,2.89,1.0,3.49,BCC,6.941,553.69,Lithium,2,3,3.489,84.8,182.0,128.0,133.0,0.98,5.392,#cc80ff,#b22222,,,159.3,1392.0,150.0,145.0,181.0,,,220.00000000000003,,245.1,254.99999999999997,20.0,0.18,1.34,1.0,0.466,#CC80FF
+Be,,4,112.0,5.0,s,3243.0,1.848,Grey metallic element of group 2 of the periodic table. Is toxic and can cause severe lung diseases and dermatitis. Shows high covalent character. It was isolated independently by F. Wohler and A.A. Bussy in 1828.,37.71,-2.4,[He] 2s2,309.0,12.21,2.0,2.29,HEX,9.01218,1551.0,Beryllium,2,4,1.824,201.0,153.0,96.0,102.0,1.57,9.323,#c2ff00,#ff1493,,,324.0,227.0,114.99999999999999,105.0,,153.0,,190.0,,274.5,223.0,2.8,5.6e-06,0.9,8.0,0.493,#C2FF00
+B,,5,98.0,4.6,p,3931.0,2.34,"An element of group 13 of the periodic table. There are two allotropes, amorphous boron is a brown power, but metallic boron is black. The metallic form is hard (9.3 on Mohs' scale) and a bad conductor in room temperatures. It is never found free in nature. Boron-10 is used in nuclear reactor control rods and shields. It was discovered in 1808 by Sir Humphry Davy and by J.L. Gay-Lussac and L.J. Thenard.",20.53,0.279723,[He] 2s2 2p,504.5,23.6,13.0,8.73,TET,10.811,2573.0,Boron,2,5,1.025,27.4,192.0,84.0,85.0,2.04,12.13,#ffb5b5,#00ff00,,,565.0,99.5,,85.0,,192.0,,180.0,401.99999999999994,408.3,215.0,10.0,4.44,0.82,3.0,0.516,#FFB5B5
+C,"density(graphite), ",6,91.0,5.3,p,5100.0,2.25,"Carbon is a member of group 14 of the periodic table. It has three allotropic forms of it, diamonds, graphite and fullerite. Carbon-14 is commonly used in radioactive dating. Carbon occurs in all organic life and is the basis of organic chemistry. Carbon has the interesting chemical property of being able to bond with itself, and a wide variety of other elements.",20.53,1.262119,[He] 2s2 2p2,,,14.0,3.57,DIA,12.011,3820.0,Carbon,2,1,0.711,1.59,170.0,73.0,75.0,2.55,15.05,#909090,#c8c8c8,,,716.87,46.6,77.0,70.0,170.0,,177.0,170.0,389.83,385.1,204.0,200.0,28.0,0.77,4.0,0.526,#555555
+N,"density(@ -195.8C), ",7,92.0,17.3,p,77.4,0.808,"Colourless, gaseous element which belongs to group 15 of the periodic table. Constitutes ~78% of the atmosphere and is an essential part of the ecosystem. Nitrogen for industrial purposes is acquired by the fractional distillation of liquid air. Chemically inactive, reactive generally only at high temperatures or in electrical discharges. It was discovered in 1772 by D. Rutherford.",7.6,-1.4,[He] 2s2 2p3,,,15.0,4.039,HEX,14.00674,63.29,Nitrogen,2,1,,0.026,155.0,71.0,71.0,3.04,18.13,#3050f8,#8f8fff,342.2,318.7,472.44,24.2,65.0,65.0,155.0,,164.0,160.0,366.21000000000004,366.0,193.0,19.0,0.5,0.75,5.0,0.545,#3753BB
+O,"density(@ -183C), ",8,,14.0,p,90.19,1.149,"A colourless, odourless gaseous element belonging to group 16 of the periodic table. It is the most abundant element present in the earth's crust. It also makes up 20.8% of the Earth's atmosphere. For industrial purposes, it is separated from liquid air by fractional distillation. It is used in high temperature welding, and in breathing. It commonly comes in the form of Oxygen, but is found as Ozone in the upper atmosphere. It was discovered by Priestley in 1774.",5.24,1.4611135,[He] 2s2 2p4,,,16.0,6.83,CUB,15.9994,54.8,Oxygen,2,1,,0.027,152.0,66.0,63.0,3.44,21.36,#ff0d0d,#f00000,485.2,459.6,249.229,15.6,65.0,60.0,152.0,,158.0,155.0,340.46,350.0,182.0,461000.0,857000.0,0.73,2.0,0.563,#F32E42
+F,"density(@ -189C), evaporation_heat(F-F), fusion_heat(F-F), ",9,,17.1,p,85.01,1.108,"A poisonous pale yellow gaseous element belonging to group 17 of the periodic table (The halogens). It is the most chemically reactive and electronegative element. It is highly dangerous, causing severe chemical burns on contact with flesh. Fluorine was identified by Scheele in 1771 and first isolated by Moissan in 1886.",3.7,3.4011897000000006,[He] 2s2 2p5,6.54,0.51,17.0,,MCL,18.998403,53.53,Fluorine,2,6,,0.028,147.0,56.99999999999999,64.0,3.98,24.8,#90e050,#daa520,340.1,315.1,79.335,9.52,67.0,50.0,147.0,,146.0,150.0,347.2,336.4,171.0,585.0,1.3,0.71,1.0,0.587,#7FD03B
+Ne,"density(@ -246C), ",10,,16.8,p,27.1,1.204,"Colourless gaseous element of group 18 on the periodic table (noble gases). Neon occurs in the atmosphere, and comprises 0.0018% of the volume of the atmosphere. It has a distinct reddish glow when used in discharge tubes and neon based lamps. It forms almost no chemical compounds. Neon was discovered in 1898 by Sir William Ramsey and M.W. Travers.",2.67,,[He] 2s2 2p6,1.74,,18.0,4.43,FCC,20.1797,48.0,Neon,2,2,1.029,,154.0,57.99999999999999,67.0,,28.31,#b3e3f5,#ff1493,198.8,174.4,,6.2,,,154.0,,181.0,,,324.3,160.0,0.005,0.00011999999999999999,0.69,8.0,0.595,#B3E3F5
+Na,,11,190.0,23.7,s,1156.1,0.971,"Soft silvery reactive element belonging to group 1 of the periodic table (alkali metals). It is highly reactive, oxidizing in air and reacting violently with water, forcing it to be kept under oil. It was first isolated by Humphrey Davy in 1807.",162.7,0.547926,[Ne] 3s,97.9,2.64,1.0,4.23,BCC,22.989768,370.96,Sodium,3,3,1.222,142.0,227.0,166.0,155.0,0.93,5.14,#ab5cf2,#0000ff,,,107.5,1518.0,177.0,180.0,227.0,,176.0,240.0,,298.3,270.0,23600.0,10800.0,1.54,1.0,0.615,#AB5CF2
+Mg,,12,160.0,14.0,s,1363.0,1.738,"Silvery metallic element belonging to group 2 of the periodic table (alkaline-earth metals). It is essential for living organisms, and is used in a number of light alloys. Chemically very reactive, it forms a protective oxide coating when exposed to air and burns with an intense white flame. It also reacts with sulphur, nitrogen and the halogens. First isolated by Bussy in 1828.",70.89,,[Ne] 3s2,131.8,9.2,2.0,3.21,HEX,24.305,922.0,Magnesium,3,4,1.025,156.0,173.0,141.0,139.0,1.31,7.646,#8aff00,#228b22,819.6,797.3,147.1,626.0,142.0,150.0,173.0,,187.0,220.00000000000003,,302.1,243.00000000000003,23300.0,1290.0,1.3,2.0,0.622,#8AFF00
+Al,,13,143.0,10.0,p,2740.0,2.6989,"Silvery-white lustrous metallic element of group 3 of the periodic table. Highly reactive but protected by a thin transparent layer of the oxide which quickly forms in air. There are many alloys of aluminum, as well as a good number of industrial uses. Makes up 8.1% of the Earth's crust, by weight. Isolated in 1825 by H.C. Oersted.",46.0,0.43283,[Ne] 3s2 3p,284.1,10.75,13.0,4.05,FCC,26.981539,933.5,Aluminum,3,7,0.9,237.0,184.0,121.0,126.0,1.61,9.539,#bfa6a6,#808090,,,330.9,528.0,135.0,125.0,,184.0,202.99999999999997,210.0,438.99999999999994,449.9,236.0,82300.0,0.002,1.18,3.0,0.64,#BFA6A6
+Si,,14,132.0,12.1,p,2628.0,2.33,"Metalloid element belonging to group 14 of the periodic table. It is the second most abundant element in the Earth's crust, making up 25.7% of it by weight. Chemically less reactive than carbon. First identified by Lavoisier in 1787 and first isolated in 1823 by Berzelius.",37.31,1.3895211,[Ne] 3s2 3p2,383.0,50.6,14.0,5.43,DIA,28.0855,1683.0,Silicon,3,5,0.703,149.0,210.0,111.00000000000001,115.99999999999999,1.9,11.33,#f0c8a0,#daa520,837.0,814.1,450.0,305.0,117.0,110.00000000000001,210.0,,,210.0,426.99999999999994,429.5,229.0,282000.0,2.2,1.11,4.0,0.646,#F0C8A0
+P,"density(white phosphorus), ",15,128.0,17.0,p,553.0,1.82,Non-metallic element belonging to group 15 of the periodic table. Has a multiple allotropic forms. Essential element for living organisms. It was discovered by Brandt in 1669.,24.93,0.746607,[Ne] 3s2 3p3,49.8,2.51,15.0,7.17,CUB,30.973762,317.3,Phosphorus,3,1,0.757,,180.0,107.0,111.00000000000001,2.19,13.33,#ff8000,#ffa500,626.8,604.8,316.5,185.0,,100.0,180.0,,,195.0,415.00000000000006,414.70000000000005,222.00000000000003,1050.0,0.06,1.06,5.0,0.662,#FF8000
+S,,16,127.0,15.5,p,717.824,2.07,"Yellow, nonmetallic element belonging to group 16 of the periodic table. It is an essential element in living organisms, needed in the amino acids cysteine and methionine, and hence in many proteins. Absorbed by plants from the soil as sulphate ion.",24.93,2.07710403,[Ne] 3s2 3p4,10.5,1.23,16.0,10.47,ORC,32.066,386.0,Sulfur,3,1,0.732,0.27,180.0,105.0,103.0,2.58,15.31,#ffff30,#ffc832,664.3,640.2,277.17,134.0,102.0,100.0,180.0,,,180.0,403.0,403.5,215.0,350.0,905.0,1.02,6.0,0.668,#FFF529
+Cl,"density(@ -33.6C), evaporation_heat(Cl-Cl), fusion_heat(Cl-Cl), ",17,,18.7,p,238.6,1.56,"Halogen element. Poisonous greenish-yellow gas. Occurs widely in nature as sodium chloride in seawater. Reacts directly with many elements and compounds, strong oxidizing agent. Discovered by Karl Scheele in 1774. Humphrey David confirmed it as an element in 1810.",24.93,3.612725,[Ne] 3s2 3p5,20.41,6.41,17.0,6.24,ORC,35.4527,172.2,Chlorine,3,6,,0.009,175.0,102.0,99.0,3.16,16.97,#1ff01f,#00ff00,513.6,490.1,121.302,94.6,105.0,100.0,175.0,,,180.0,395.03,394.7,206.99999999999997,145.0,19400.0,0.99,1.0,0.683,#38B538
+Ar,"density(@ -186C), ",18,,24.2,p,87.3,1.4,"Monatomic noble gas. Makes up 0.93% of the air. Colourless, odorless. Is inert and has no true compounds. Lord Rayleigh and Sir william Ramsey identified argon in 1894.",11.07,-11.5,[Ne] 3s2 3p6,6.52,,18.0,5.26,FCC,39.948,83.8,Argon,3,2,0.138,0.0177,188.0,106.0,96.0,,19.17,#80d1e3,#ff1493,369.2,346.3,,64.2,,,188.0,,,,,386.8,199.0,3.5,0.45,0.97,8.0,0.707,#80D1E3
+K,,19,235.0,45.3,s,1047.0,0.856,"Soft silvery metallic element belonging to group 1 of the periodic table (alkali metals). Occurs naturally in seawater and a many minerals. Highly reactive, chemically, it resembles sodium in its behavior and compounds. Discovered by Sir Humphry Davy in 1807.",290.6,0.50147,[Ar] 4s,2.33,102.5,1.0,5.23,BCC,39.0983,336.8,Potassium,4,3,0.753,79.0,275.0,202.99999999999997,196.0,0.82,4.34,#8f40d4,#ff1493,,,89.0,3923.0,206.99999999999997,220.00000000000003,275.0,,,280.0,,381.2,309.0,20900.0,399.0,1.96,8.0,0.703,#8F40D4
+Ca,,20,197.0,29.9,s,1757.0,1.55,"Soft grey metallic element belonging to group 2 of the periodic table. Used a reducing agent in the extraction of thorium, zirconium and uranium. Essential element for living organisms.",169.0,0.02455,[Ar] 4s2,153.6,9.2,2.0,5.58,FCC,40.078,1112.0,Calcium,4,4,0.653,,231.0,176.0,171.0,1.0,6.1129999999999995,#3dff00,#808090,,,177.8,2163.0,170.0,180.0,,231.0,,240.0,,339.9,281.0,41500.0,412.0,1.74,8.0,0.707,#3DFF00
+Sc,,21,162.0,15.0,d,3104.0,2.99,"Rare soft silvery metallic element belonging to group 3 of the periodic table. There are ten isotopes, nine of which are radioactive and have short half-lives. Predicted in 1869 by Mendeleev, isolated by Nilson in 1879.",142.28,0.188,[Ar] 3d 4s2,332.7,15.8,3.0,3.31,HEX,44.95591,1814.0,Scandium,4,8,0.556,15.8,215.0,170.0,148.0,1.36,7.042000000000001,#e6e6e6,#ff1493,914.0,892.0,377.8,1383.0,,160.0,,,,229.99999999999997,,329.5,261.0,22.0,6e-07,1.44,8.0,0.729,#E6E6E6
+Ti,,22,147.0,10.6,d,3560.0,4.54,"White metallic transition element. Occurs in numerous minerals. Used in strong, light corrosion-resistant alloys. Forms a passive oxide coating when exposed to air. First discovered by Gregor in 1789.",114.34,0.079,[Ar] 3d2 4s2,422.6,18.8,4.0,2.95,HEX,47.88,1933.0,Titanium,4,8,0.523,21.9,211.0,160.0,136.0,1.54,8.17,#bfc2c7,#808090,876.0,853.7,473.0,1044.0,140.0,140.0,,,,215.0,,317.5,239.0,5650.0,0.001,1.36,8.0,0.741,#BFC2C7
+V,,23,134.0,8.35,d,3650.0,6.11,"Soft and ductile, bright white metal. Good resistance to corrosion by alkalis, sulphuric and hydrochloric acid. It oxidizes readily about 933K. There are two naturally occurring isotopes of vanadium, and 5 radioisotopes, V-49 having the longest half-life at 337 days. Vanadium has nuclear applications, the foil is used in cladding titanium to steel, and vanadium-gallium tape is used to produce a superconductive magnet. Originally discovered by Andres Manuel del Rio of Mexico City in 1801. His discovery went unheeded, however, and in 1820, Nils Gabriel Sefstron of Sweden rediscovered it. Metallic vanadium was isolated by Henry Enfield Roscoe in 1867. The name vanadium comes from Vanadis, a goddess of Scandinavian mythology. Silvery-white metallic transition element. Vanadium is essential to Ascidians. Rats and chickens are also known to require it. Metal powder is a fire hazard, and vanadium compounds should be considered highly toxic. May cause lung cancer if inhaled.",97.34,0.525,[Ar] 3d3 4s2,460.0,17.5,5.0,3.02,BCC,50.9415,2160.0,Vanadium,4,8,0.485,30.7,206.99999999999997,153.0,134.0,1.63,9.062999999999999,#a6a6ab,#ff1493,859.4,836.8,515.5,832.0,,135.0,,,,204.99999999999997,,314.4,229.0,120.0,0.0025,1.25,8.0,0.754,#A6A6AB
+Cr,,24,130.0,7.23,d,2945.0,7.18,Hard silvery transition element. Used in decorative electroplating. Discovered in 1797 by Vauquelin.,78.4,0.6659999999999999,[Ar] 3d5 4s,342.0,21.0,6.0,2.88,BCC,51.9961,2130.0,Chromium,4,8,0.488,93.9,206.0,139.0,122.0,1.66,9.77,#8a99c7,#808090,791.3,768.4,397.48,602.0,140.0,140.0,,,,204.99999999999997,,302.3,225.0,102.0,0.0003,1.27,8.0,0.757,#8A99C7
+Mn,,25,135.0,7.39,d,2235.0,7.21,"Grey brittle metallic transition element. Rather electropositive, combines with some non-metals when heated. Discovered in 1774 by Scheele.",66.8,,[Ar] 3d5 4s2,221.0,13.4,7.0,8.89,CUB,54.93805,1517.0,Manganese,4,8,0.477,,204.99999999999997,150.0,119.0,1.55,10.34,#9c7ac7,#808090,797.3,774.4,283.3,552.0,147.0,140.0,,,,204.99999999999997,,296.1,224.00000000000003,950.0,0.0002,1.39,8.0,0.769,#9C7AC7
+Fe,,26,126.0,7.1,d,3023.0,7.874,"Silvery malleable and ductile metallic transition element. Has nine isotopes and is the fourth most abundant element in the earth's crust. Required by living organisms as a trace element (used in hemoglobin in humans.) Quite reactive, oxidizes in moist air, displaces hydrogen from dilute acids and combines with nonmetallic elements.",63.93,0.151,[Ar] 3d6 4s2,340.0,13.8,8.0,2.87,BCC,55.847,1808.0,Iron,4,8,0.443,80.4,204.0,142.0,115.99999999999999,1.83,10.64,#e06633,#ffa500,754.0,731.1,415.5,482.0,140.0,140.0,,,,204.99999999999997,,291.2,223.0,56300.0,0.002,1.25,8.0,0.772,#E06633
+Co,,27,125.0,6.7,d,3143.0,8.9,"Light grey transition element. Some meteorites contain small amounts of metallic cobalt. Generally alloyed for use. Mammals require small amounts of cobalt salts. Cobalt-60, an artificially produced radioactive isotope of Cobalt is an important radioactive tracer and cancer-treatment agent. Discovered by G. Brandt in 1737.",57.71,0.662,[Ar] 3d7 4s2,389.1,15.48,9.0,2.51,HEX,58.9332,1768.0,Cobalt,4,8,0.456,100.0,200.0,138.0,111.00000000000001,1.88,10.86,#f090a0,#ff1493,742.7,719.8,426.7,408.0,137.0,135.0,,,,200.0,,287.2,223.0,25.0,2e-05,1.26,8.0,0.783,#F090A0
+Ni,,28,124.0,6.6,d,3005.0,8.902,Malleable ductile silvery metallic transition element. Discovered by A.F. Cronstedt in 1751.,51.1,1.156,[Ar] 3d8 4s2,378.6,17.61,10.0,3.52,FCC,58.6934,1726.0,Nickel,4,8,0.443,90.9,197.0,124.0,110.00000000000001,1.91,11.13,#50d050,#a52a2a,737.0,714.1,430.1,373.0,135.0,135.0,,,,200.0,,283.4,222.00000000000003,84.0,0.00056,1.21,8.0,0.782,#50D050
+Cu,,29,128.0,7.1,d,2840.0,8.96,"Red-brown transition element. Known by the Romans as 'cuprum.' Extracted and used for thousands of years. Malleable, ductile and an excellent conductor of heat and electricity. When in moist conditions, a greenish layer forms on the outside.",46.5,1.235,[Ar] 3d10 4s,304.6,13.01,11.0,3.61,FCC,63.546,1356.6,Copper,4,8,0.385,401.0,196.0,132.0,112.00000000000001,1.9,10.96,#c88033,#a52a2a,655.3,632.4,337.4,253.0,137.0,135.0,,,,200.0,,349.5,225.99999999999997,60.0,0.00025,1.38,8.0,0.798,#C88033
+Zn,,30,138.0,9.2,d,1180.0,7.133,"Blue-white metallic element. Occurs in multiple compounds naturally. Five stable isotopes are six radioactive isotopes have been found. Chemically a reactive metal, combines with oxygen and other non-metals, reacts with dilute acids to release hydrogen.",38.8,,[Ar] 3d10 4s2,114.8,7.28,12.0,2.66,HEX,65.39,692.73,Zinc,4,8,0.388,116.0,200.99999999999997,122.0,118.0,1.65,9.395,#7d80b0,#a52a2a,608.6,586.0,130.4,284.0,132.0,135.0,,,,210.0,,276.3,229.0,70.0,0.0049,1.31,8.0,0.804,#7D80B0
+Ga,,31,141.0,11.8,p,2676.0,5.91,"Soft silvery metallic element, belongs to group 13 of the periodic table. The two stable isotopes are Ga-69 and Ga-71. Eight radioactive isotopes are known, all having short half-lives. Gallium Arsenide is used as a semiconductor. Corrodes most other metals by diffusing into their lattice. First identified by Francois Lecoq de Boisbaudran in 1875.",49.9,0.43,[Ar] 3d10 4s2 4p,270.3,5.59,13.0,4.51,ORC,69.723,302.93,Gallium,4,7,0.372,28.1,187.0,122.0,124.0,1.81,10.39,#c28f8f,#ff1493,,,271.96,498.0,,130.0,187.0,,,210.0,438.99999999999994,438.3,246.0,19.0,2.9999999999999997e-05,1.26,8.0,0.819,#C28F8F
+Ge,,32,137.0,13.6,p,3103.0,5.323,"Lustrous hard metalloid element, belongs to group 14 of the periodic table. Forms a large number of organometallic compounds. Predicted by Mendeleev in 1871, it was actually found in 1886 by Winkler.",39.43,1.232712,[Ar] 3d10 4s2 4p2,328.0,36.8,14.0,5.66,DIA,72.61,1210.6,Germanium,4,5,0.322,60.2,211.0,120.0,121.0,2.01,11.8,#668f8f,#ff1493,,,372.0,354.0,,125.0,,211.0,,210.0,426.99999999999994,428.0,244.0,1.5,5e-05,1.22,8.0,0.828,#668F8F
+As,"density(grey arsenic), ",33,139.0,13.1,p,876.0,5.73,"Metalloid element of group 15. There are three allotropes, yellow, black, and grey. Reacts with halogens, concentrated oxidizing acids and hot alkalis. Albertus Magnus is believed to have been the first to isolate the element in 1250.",29.8,0.804,[Ar] 3d10 4s2 4p3,32.4,,15.0,4.13,RHL,74.92159,1090.0,Arsenic,4,5,0.328,,185.0,119.0,121.0,2.18,13.08,#bd80e3,#ff1493,,,302.5,246.0,126.0,114.99999999999999,185.0,,,204.99999999999997,415.00000000000006,423.00000000000006,236.0,1.8,0.0037,1.19,8.0,0.835,#BD80E3
+Se,,34,140.0,16.5,p,958.1,4.79,"Metalloid element, belongs to group 16 of the periodic table. Multiple allotropic forms exist. Chemically resembles sulphur. Discovered in 1817 by Jons J. Berzelius.",26.24,2.02067,[Ar] 3d10 4s2 4p4,59.7,5.23,16.0,4.36,HEX,78.96,490.0,Selenium,4,1,,0.52,190.0,120.0,115.99999999999999,2.55,14.34,#ffa100,#ff1493,,,227.2,210.0,117.0,114.99999999999999,190.0,,,190.0,403.0,420.5,229.0,0.05,0.0002,1.16,8.0,0.847,#FFA100
+Br,"evaporation_heat(Br-Br), fusion_heat(Br-Br), ",35,,23.5,p,331.9,3.12,"Halogen element. Red volatile liquid at room temperature. Its reactivity is somewhere between chlorine and iodine. Harmful to human tissue in a liquid state, the vapour irritates eyes and throat. Discovered in 1826 by Antoine Balard.",21.8,3.3635882000000006,[Ar] 3d10 4s2 4p5,29.56,10.57,17.0,6.67,ORC,79.904,265.9,Bromine,4,6,,0.005,185.0,120.0,113.99999999999999,2.96,15.88,#a62929,#a52a2a,554.4,531.2,111.85,162.0,119.0,114.99999999999999,183.0,,,190.0,395.0,418.9,222.00000000000003,2.4,67.3,1.14,8.0,0.849,#A62929
+Kr,"density(@ -153C), ",36,,32.2,p,120.85,2.155,"Colorless gaseous element, belongs to the noble gases. Occurs in the air, 0.0001% by volume. It can be extracted from liquid air by fractional distillation. Generally not isolated, but used with other inert gases in fluorescent lamps. Five natural isotopes, and five radioactive isotopes. Kr-85, the most stable radioactive isotope, has a half-life of 10.76 years and is produced in fission reactors. Practically inert, though known to form compounds with Fluorine.",17.075,,[Ar] 3d10 4s2 4p6,9.05,,18.0,5.72,FCC,83.8,116.6,Krypton,4,2,0.247,0.0095,202.0,115.99999999999999,117.0,,17.54,#5cb8d1,#ff1493,424.6,402.4,,130.0,,,202.0,,,,,414.1,215.0,0.0001,0.00021,1.1,8.0,0.86,#5CB8D1
+Rb,,37,248.0,55.9,s,961.0,1.532,"Soft silvery metallic element, belongs to group 1 of the periodic table. Rb-97, the naturally occurring isotope, is radioactive. It is highly reactive, with properties similar to other elements in group 1, like igniting spontaneously in air. Discovered spectroscopically in 1861 by W. Bunsen and G.R. Kirchoff.",318.8,0.48591999999999996,[Kr] 5s,75.8,2.2,1.0,5.59,BCC,85.4678,312.2,Rubidium,5,3,0.36,58.2,303.0,220.00000000000003,210.0,0.82,4.177,#702eb0,#ff1493,,,80.9,4769.0,225.0,235.0,,303.0,,290.0,,411.4,325.0,90.0,0.12,2.11,8.0,0.865,#702EB0
+Sr,,38,215.0,33.7,s,1657.0,2.54,"Soft yellowish metallic element, belongs to group 2 of the periodic table. Highly reactive chemically. Sr-90 is present in radioactive fallout and has a half-life of 28 years. Discovered in 1798 by Klaproth and Hope, isolated in 1808 by Humphry Davy.",186.0,0.048,[Kr] 5s2,144.0,9.2,2.0,6.08,FCC,87.62,1042.0,Strontium,5,4,0.301,,249.00000000000003,195.0,185.0,0.95,5.695,#00ff00,#ff1493,,,164.0,3175.0,195.0,200.0,,249.00000000000003,,254.99999999999997,,364.1,300.0,370.0,7.9,1.92,8.0,0.871,#00FF00
+Y,,39,178.0,19.8,d,3611.0,4.47,"Silvery-grey metallic element of group 3 on the periodic table. Found in uranium ores. The only natural isotope is Y-89, there are 14 other artificial isotopes. Chemically resembles the lanthanoids. Stable in the air below 400 degrees, celsius. Discovered in 1828 by Friedrich Wohler.",153.0,0.307,[Kr] 4d 5s2,367.0,11.5,3.0,3.65,HEX,88.90585,1795.0,Yttrium,5,8,0.284,,231.99999999999997,190.0,163.0,1.22,6.631,#94ffff,#ff1493,967.0,945.9,424.7,,,180.0,,,,240.0,,334.5,271.0,33.0,1.3000000000000001e-05,1.62,8.0,0.874,#94FFFF
+Zr,,40,160.0,14.1,d,4650.0,6.506,"Grey-white metallic transition element. Five natural isotopes and six radioactive isotopes are known. Used in nuclear reactors for a Neutron absorber. Discovered in 1789 by Martin Klaproth, isolated in 1824 by Berzelius.",121.0,0.426,[Kr] 4d2 5s2,567.0,19.2,4.0,3.23,HEX,91.224,2125.0,Zirconium,5,8,0.281,22.7,223.0,175.0,154.0,1.33,7.808,#94e0e0,#ff1493,,,610.0,,,155.0,,,,229.99999999999997,,312.4,254.0,165.0,2.9999999999999997e-05,1.48,8.0,0.881,#94E0E0
+Nb,,41,146.0,10.8,d,5015.0,8.57,"Soft, ductile grey-blue metallic transition element. Used in special steels and in welded joints to increase strength. Combines with halogens and oxidizes in air at 200 degrees celsius. Discovered by Charles Hatchett in 1801 and isolated by Blomstrand in 1864. Called Columbium originally.",106.0,0.9159999999999999,[Kr] 4d4 5s,680.0,26.8,5.0,3.3,BCC,92.90638,2741.0,Niobium,5,8,0.268,53.7,218.00000000000003,164.0,147.0,1.6,8.34,#73c2c9,#ff1493,,,733.0,,,145.0,,,,215.0,,316.5,243.00000000000003,20.0,1e-05,1.37,8.0,0.885,#73C2C9
+Mo,,42,139.0,9.4,d,4885.0,10.22,"Silvery-white, hard metallic transition element. It is chemically unreactive and is not affected by most acids. It oxidizes at high temperatures. There are seven natural isotopes, and four radioisotopes, Mo-93 being the most stable with a half-life of 3500 years. Molybdenum is used in almost all high-strength steels, it has nuclear applications, and is a catalyst in petroleum refining. Discovered in 1778 by Carl Welhelm Scheele of Sweden. Impure metal was prepared in 1782 by Peter Jacob Hjelm. The name comes from the Greek word molybdos which means lead. Trace amounts of molybdenum are required for all known forms of life. All molybdenum compounds should be considered highly toxic, and will also cause severe birth defects.",72.5,0.748,[Kr] 4d5 5s,590.0,28.0,6.0,3.15,BCC,95.94,2890.0,Molybdenum,5,8,0.251,,217.0,154.0,138.0,2.16,8.71,#54b5b5,#ff1493,,,658.98,,,145.0,,,,210.0,,305.2,239.0,1.2,0.01,1.45,8.0,0.893,#54B5B5
+Tc,,43,136.0,8.5,d,5150.0,11.5,"Radioactive metallic transition element. Can be detected in some stars and the fission products of uranium. First made by Perrier and Segre by bombarding molybdenum with deutrons, giving them Tc-97. Tc-99 is the most stable isotope with a half-life of 2.6*10^6 years. Sixteen isotopes are known. Organic technetium compounds are used in bone imaging. Chemical properties are intermediate between rhenium and manganese.",80.4,0.55,[Kr] 4d5 5s2,585.0,23.8,7.0,2.74,HEX,97.9072,2445.0,Technetium,5,8,0.243,50.6,216.0,147.0,128.0,2.1,8.94,#3b9e9e,#ff1493,,,678.0,,,135.0,,,,204.99999999999997,,299.8,236.0,,,1.56,8.0,0.898,#3B9E9E
+Ru,,44,134.0,8.3,d,4173.0,12.41,"Hard white metallic transition element. Found with platinum, used as a catalyst in some platinum alloys. Dissolves in fused alkalis, and is not attacked by acids. Reacts with halogens and oxygen at high temperatures. Isolated in 1844 by K.K. Klaus.",65.0,1.05,[Kr] 4d7 5s,,25.5,8.0,2.7,HEX,101.07,2583.0,Ruthenium,5,8,0.238,117.0,213.0,146.0,125.0,2.2,9.1,#248f8f,#ff1493,774.0,751.4,650.6,,,130.0,,,,204.99999999999997,,296.3,234.0,0.001,7e-07,1.26,8.0,0.906,#248F8F
+Rh,,45,134.0,8.3,d,4000.0,12.41,"Silvery white metallic transition element. Found with platinum and used in some platinum alloys. Not attacked by acids, dissolves only in aqua regia. Discovered in 1803 by W.H. Wollaston.",58.0,1.137,[Kr] 4d8 5s,494.0,21.8,9.0,3.8,FCC,102.9055,2239.0,Rhodium,5,8,0.244,150.0,210.0,142.0,125.0,2.28,9.259,#0a7d8c,#ff1493,768.0,745.4,556.0,,,135.0,,,,200.0,,292.9,234.0,0.001,,1.35,8.0,0.91,#0A7D8C
+Pd,,46,137.0,8.9,d,3413.0,12.02,Soft white ductile transition element. Found with some copper and nickel ores. Does not react with oxygen at normal temperatures. Dissolves slowly in hydrochloric acid. Discovered in 1803 by W.H. Wollaston.,32.0,0.562,[Kr] 4d10,372.4,17.24,10.0,3.89,FCC,106.42,1825.0,Palladium,5,8,0.244,71.8,210.0,139.0,120.0,2.2,9.402000000000001,#006985,#ff1493,696.0,673.4,376.6,,,140.0,,,,204.99999999999997,,289.9,237.0,0.015,,1.31,8.0,0.918,#006985
+Ag,,47,144.0,10.3,d,2485.0,10.5,"White lustrous soft metallic transition element. Found in both its elemental form and in minerals. Used in jewellery, tableware and so on. Less reactive than silver, chemically.",52.5,1.3019999999999998,[Kr] 4d10 5s,254.1,11.95,11.0,4.09,FCC,107.8682,1235.1,Silver,5,8,0.237,429.0,211.0,145.0,128.0,1.93,11.05,#c0c0c0,#808090,,,284.9,,177.0,160.0,,,,210.0,,314.8,243.00000000000003,0.075,4e-05,1.53,8.0,0.921,#C0C0C0
+Cd,,48,154.0,13.1,d,1038.0,8.65,"Soft bluish metal belonging to group 12 of the periodic table. Extremely toxic even in low concentrations. Chemically similar to zinc, but lends itself to more complex compounds. Discovered in 1817 by F. Stromeyer.",49.65,,[Kr] 4d10 5s2,59.1,6.11,12.0,2.98,HEX,112.411,594.1,Cadmium,5,8,0.232,96.9,218.00000000000003,144.0,136.0,1.69,8.995,#ffd98f,#ff1493,,,111.8,,160.0,155.0,,,,220.00000000000003,,284.8,250.0,0.15,0.00011,1.48,8.0,0.932,#FFD98F
+In,,49,166.0,15.7,p,2353.0,7.31,"Soft silvery element belonging to group 13 of the periodic table. The most common natural isotope is In-115, which has a half-life of 6*10^4 years. Five other radioisotopes exist. Discovered in 1863 by Reich and Richter.",68.7,0.3,[Kr] 4d10 5s2 5p,225.1,3.24,13.0,4.59,TET,114.818,429.32,Indium,5,7,0.234,81.8,193.0,142.0,142.0,1.78,9.793,#a67573,#ff1493,,,243.0,779.0,,155.0,193.0,,,220.00000000000003,459.0,446.3,264.0,0.25,0.02,1.44,8.0,0.938,#A67573
+Sn,,50,162.0,16.3,p,2543.0,7.31,"Silvery malleable metallic element belonging to group 14 of the periodic table. Twenty-six isotopes are known, five of which are radioactive. Chemically reactive. Combines directly with chlorine and oxygen and displaces hydrogen from dilute acids.",42.4,1.112067,[Kr] 4d10 5s2 5p2,296.0,7.07,14.0,5.82,TET,118.71,505.1,Tin,5,7,0.222,66.8,217.0,139.0,140.0,1.96,10.79,#668080,#ff1493,,,301.2,659.0,140.0,145.0,217.0,,,225.0,447.0,439.19999999999993,259.0,2.3,4e-06,1.41,8.0,0.947,#668080
+Sb,,51,159.0,18.4,p,1908.0,6.691,"Element of group 15. Multiple allotropic forms. The stable form of antimony is a blue-white metal. Yellow and black antimony are unstable non-metals. Used in flame-proofing, paints, ceramics, enamels, and rubber. Attacked by oxidizing acids and halogens. First reported by Tholden in 1450.",42.2,1.046,[Kr] 4d10 5s2 5p3,195.2,20.08,15.0,4.51,RHL,121.76,903.9,Antimony,5,5,0.205,24.43,206.0,139.0,140.0,2.05,11.74,#9e63b5,#ff1493,,,264.4,492.0,140.0,145.0,,206.0,,220.00000000000003,434.99999999999994,442.0,252.0,0.2,0.00023999999999999998,1.38,8.0,0.953,#9E63B5
+Te,,52,160.0,20.5,p,1263.0,6.24,"Silvery metalloid element of group 16. Eight natural isotopes, nine radioactive isotopes. Used in semiconductors and to a degree in some steels. Chemistry is similar to Sulphur. Discovered in 1782 by Franz Miller.",37.0,1.9708759999999999,[Kr] 4d10 5s2 5p4,49.8,17.91,16.0,4.45,HEX,127.6,722.7,Tellurium,5,5,0.201,14.3,206.0,138.0,136.0,2.1,12.76,#d47a00,#ff1493,,,196.6,445.0,133.0,140.0,206.0,,,210.0,423.00000000000006,447.0,244.0,0.001,,1.35,8.0,0.966,#D47A00
+I,"evaporation_heat(I-I), fusion_heat(I-I), ",53,,25.7,p,457.5,4.93,"Dark violet nonmetallic element, belongs to group 17 of the periodic table. Insoluble in water. Required as a trace element for living organisms. One stable isotope, I-127 exists, in addition to fourteen radioactive isotopes. Chemically the least reactive of the halogens, and the most electropositive metallic halogen. Discovered in 1812 by Courtois.",34.6,3.0590368,[Kr] 4d10 5s2 5p5,41.95,15.52,17.0,7.72,ORC,126.90447,386.7,Iodine,5,6,,,198.0,139.0,133.0,2.66,13.95,#940094,#a020f0,608.2,583.5,106.757,385.0,140.0,140.0,198.0,,,210.0,415.00000000000006,450.0,236.0,0.45,0.06,1.33,8.0,0.964,#940094
+Xe,"density(@ -109C), ",54,,42.9,p,166.1,3.52,"Colourless, odourless gas belonging to group 18 on the periodic table (the noble gases.) Nine natural isotopes and seven radioactive isotopes are known. Xenon was part of the first noble-gas compound synthesized. Several others involving Xenon have been found since then. Xenon was discovered by Ramsey and Travers in 1898.",27.815,-0.055999999999999994,[Kr] 4d10 5s2 5p6,12.65,,18.0,6.2,FCC,131.29,161.3,Xenon,5,2,0.158,0.0057,216.0,140.0,131.0,2.6,15.27,#429eb0,#ff1493,499.6,478.1,,,,,216.0,,,,,440.4,227.99999999999997,2.9999999999999997e-05,5e-05,1.3,8.0,0.973,#429EB0
+Cs,,55,267.0,70.0,s,951.6,1.873,"Soft silvery-white metallic element belonging to group 1 of the periodic table. One of the three metals which are liquid at room temperature. Cs-133 is the natural, and only stable, isotope. Fifteen other radioisotopes exist. Caesium reacts explosively with cold water, and ice at temperatures above 157K. Caesium hydroxide is the strongest base known. Caesium is the most electropositive, most alkaline and has the least ionization potential of all the elements. Known uses include the basis of atomic clocks, catalyst for the hydrogenation of some organic compounds, and in photoelectric cells. Caesium was discovered by Gustav Kirchoff and Robert Bunsen in Germany in 1860 spectroscopically. Its identification was based upon the bright blue lines in its spectrum. The name comes from the latin word caesius, which means sky blue. Caesium should be considered highly toxic. Some of the radioisotopes are even more toxic.",401.0,0.47162600000000005,[Xe] 6s,68.3,2.09,1.0,6.05,BCC,132.90543,301.6,Cesium,6,3,0.241,35.9,343.0,244.0,231.99999999999997,0.79,3.898,#57178f,#ff1493,,,76.5,,237.0,260.0,,343.0,,300.0,,451.69999999999993,344.0,3.0,0.0003,2.25,8.0,0.977,#57178F
+Ba,,56,222.0,39.0,s,1910.0,3.5,"Silvery-white reactive element, belonging to group 2 of the periodic table. Soluble barium compounds are extremely poisonous. Identified in 1774 by Karl Scheele and extracted in 1808 by Humphry Davy.",268.0,0.14462,[Xe] 6s2,142.0,7.66,2.0,5.02,BCC,137.327,1002.0,Barium,6,4,0.192,,268.0,215.0,196.0,0.89,5.211,#00c900,#ffa500,,,179.1,,210.0,215.0,,268.0,,270.0,,370.3,307.0,425.0,0.013000000000000001,1.98,8.0,0.986,#00C900
+La,,57,187.0,22.5,f,3730.0,6.15,"(From the Greek word lanthanein, to line hidden) Silvery metallic element belonging to group 3 of the periodic table and oft considered to be one of the lanthanoids. Found in some rare-earth minerals. Twenty-five natural isotopes exist. La-139 which is stable, and La-138 which has a half-life of 10^10 to 10^15 years. The other twenty-three isotopes are radioactive. It resembles the lanthanoids chemically. Lanthanum has a low to moderate level of toxicity, and should be handled with care. Discovered in 1839 by C.G. Mosander.",210.0,0.47,[Xe] 5d 6s2,402.0,8.5,,3.75,HEX,138.9055,1194.0,Lanthanum,6,9,0.197,13.4,243.00000000000003,206.99999999999997,180.0,1.1,,#70d4ff,#ff1493,1013.0,991.9,431.0,,,195.0,,,,250.0,,352.2,278.0,39.0,3.4e-06,1.69,8.0,0.989,#70D4FF
+Ce,,58,181.0,21.0,f,3699.0,6.757,"Silvery metallic element, belongs to the lanthanoids. Four natural isotopes exist, and fifteen radioactive isotopes have been identified. Used in some rare-earth alloys. The oxidized form is used in the glass industry. Discovered by Martin .H. Klaproth in 1803.",200.0,0.65,[Xe] 4f 5d 6s2,398.0,5.2,,5.16,FCC,140.115,1072.0,Cerium,6,9,0.205,11.3,242.0,204.0,163.0,1.12,,#ffffc7,#ff1493,,,420.1,,,185.0,,,,,,355.6,274.0,66.5,1.2e-06,1.85,8.0,0.991,#FFFFC7
+Pr,,59,182.0,20.8,f,3785.0,6.773,"Soft silvery metallic element, belongs to the lanthanoids. Only natural isotope is Pr-141 which is not radioactive. Fourteen radioactive isotopes have been artificially produced. Used in rare-earth alloys. Discovered in 1885 by C.A. von Welsbach.",190.0,0.9620000000000001,[Xe] 4f3 6s2,331.0,11.3,,3.67,HEX,140.90765,1204.0,Praseodymium,6,9,0.192,12.5,240.0,202.99999999999997,176.0,1.13,,#d9ffc7,#ff1493,,,356.9,,,185.0,,,,,,360.6,273.0,9.2,6.4e-07,1.85,8.0,0.993,#D9FFC7
+Nd,,60,182.0,20.6,f,3341.0,7.007,"Soft bright silvery metallic element, belongs to the lanthanoids. Seven natural isotopes, Nd-144 being the only radioactive one with a half-life of 10^10 to 10^15 years. Six artificial radioisotopes have been produced. The metal is used in glass works to color class a shade of violet-purple and make it dichroic. One of the more reactive rare-earth metals, quickly reacts with air. Used in some rare-earth alloys. Neodymium is used to color the glass used in welder's glasses. Neodymium is also used in very powerful, permanent magnets (Nd2Fe14B). Discovered by Carl F. Auer von Welsbach in Austria in 1885 by separating didymium into its elemental components Praseodymium and neodymium. The name comes from the Greek words 'neos didymos' which means 'new twin'. Neodymium should be considered highly toxic, however evidence would seem to show that it acts as little more than a skin and eye irritant. The dust however, presents a fire and explosion hazard.",212.0,1.916,[Xe] 4f4 6s2,289.0,7.1,,3.66,HEX,144.24,1294.0,Neodymium,6,9,0.205,,239.0,200.99999999999997,174.0,1.14,,#c7ffc7,#ff1493,,,326.9,,,185.0,,,,,,357.5,273.0,41.5,2.8e-06,1.85,8.0,0.999,#C7FFC7
+Pm,,61,,,f,3000.0,7.2,"Soft silvery metallic element, belongs to the lanthanoids. Pm-147, the only natural isotope, is radioactive and has a half-life of 252 years. Eighteen radioisotopes have been produced, but all have very short half-lives. Found only in nuclear decay waste. Pm-147 is of interest as a beta-decay source, however Pm-146 and Pm-148 have to be removed from it first, as they generate gamma radiation. Discovered by J.A. Marinsky, L.E. Glendenin and C.D. Coryell in 1947.",212.0,,[Xe] 4f5 6s2,,,,,,144.9127,1441.0,Promethium,6,9,0.185,17.9,238.0,199.0,173.0,,,#a3ffc7,#ff1493,,,,,,185.0,,,,,,354.7,272.0,,,1.85,8.0,1.004,#A3FFC7
+Sm,,62,181.0,19.9,f,2064.0,7.52,"Soft silvery metallic element, belongs to the lanthanoids. Seven natural isotopes, Sm-147 is the only radioisotope, and has a half-life of 2.5*10^11 years. Used for making special alloys needed in the production of nuclear reactors. Also used as a neutron absorber. Small quantities of samarium oxide is used in special optical glasses. The largest use of the element is its ferromagnetic alloy which produces permanent magnets that are five times stronger than magnets produced by any other material. Discovered by Francois Lecoq de Boisbaudran in 1879.",194.0,,[Xe] 4f6 6s2,165.0,8.9,,9.0,RHL,150.36,1350.0,Samarium,6,9,0.18,,236.0,198.0,172.0,1.17,,#8fffc7,#ff1493,,,206.7,,,185.0,,,,,,352.0,271.0,7.05,4.5e-07,1.85,8.0,1.011,#8FFFC7
+Eu,,63,199.0,28.9,f,1870.0,5.243,"Soft silvery metallic element belonging to the lanthanoids. Eu-151 and Eu-153 are the only two stable isotopes, both of which are Neutron absorbers. Discovered in 1889 by Sir William Crookes.",187.0,0.8640000000000001,[Xe] 4f7 6s2,176.0,,,4.61,BCC,151.965,1095.0,Europium,6,9,0.176,13.9,235.0,198.0,168.0,,,#61ffc7,#ff1493,,,177.4,,,185.0,,,,,,349.3,294.0,2.0,1.3e-07,1.85,8.0,1.014,#61FFC7
+Gd,,64,179.0,19.9,f,3539.0,7.9,"Soft silvery metallic element belonging to the lanthanoids. Seven natural, stable isotopes are known in addition to eleven artificial isotopes. Gd-155 and Gd-157 and the best neutron absorbers of all elements. Gadolinium compounds are used in electronics. Discovered by J.C.G Marignac in 1880.",159.0,,[Xe] 4f7 5d 6s2,398.0,,,3.64,HEX,157.25,1586.0,Gadolinium,6,9,0.23,,234.0,196.0,169.0,1.2,,#45ffc7,#ff1493,,,397.5,,,180.0,,,,,,336.8,271.0,6.2,7e-07,1.8,8.0,1.024,#45FFC7
+Tb,,65,180.0,19.2,f,3296.0,8.229,"Silvery metallic element belonging to the lanthanoids. Tb-159 is the only stable isotope, there are seventeen artificial isotopes. Discovered by G.G. Mosander in 1843.",172.0,1.165,[Xe] 4f9 6s2,389.0,,,3.6,HEX,158.92534,1629.0,Terbium,6,9,0.183,11.1,233.0,194.0,168.0,,,#30ffc7,#ff1493,,,388.7,,,175.0,,,,,,345.1,270.0,1.2,1.4e-07,1.75,8.0,1.026,#30FFC7
+Dy,,66,180.0,19.0,f,2835.0,8.55,"Metallic with a bright silvery-white lustre. Dysprosium belongs to the lanthanoids. It is relatively stable in air at room temperatures, it will however dissolve in mineral acids, evolving hydrogen. It is found in from rare-earth minerals. There are seven natural isotopes of dysprosium, and eight radioisotopes, Dy-154 being the most stable with a half-life of 3*10^6 years. Dysprosium is used as a neutron absorber in nuclear fission reactions, and in compact disks. It was discovered by Paul Emile Lecoq de Boisbaudran in 1886 in France. Its name comes from the Greek word dysprositos, which means hard to obtain.",165.0,0.35200000000000004,[Xe] 4f10 6s2,291.0,,,3.59,HEX,162.5,1685.0,Dysprosium,6,9,0.173,10.7,231.0,192.0,167.0,1.22,,#1fffc7,#ff1493,,,290.4,,,175.0,,,,,,342.8,290.0,5.2,9.1e-07,1.75,8.0,1.033,#1FFFC7
+Ho,,67,179.0,18.7,f,2968.0,8.795,"Relatively soft and malleable silvery-white metallic element, which is stable in dry air at room temperature. It oxidizes in moist air and at high temperatures. It belongs to the lanthanoids. A rare-earth metal, it is found in the minerals monazite and gadolinite. It possesses unusual magnetic properties. One natural isotope, Ho-165 exists, six radioisotopes exist, the most stable being Ho-163 with a half-life of 4570 years. Holmium is used in some metal alloys, it is also said to stimulate the metabolism. Discovered by Per Theodor Cleve and J.L. Soret in Switzerland in 1879. The name homium comes from the Greek word Holmia which means Sweden. While all holmium compounds should be considered highly toxic, initial evidence seems to indicate that they do not pose much danger. The metal's dust however, is a fire hazard.",159.0,,[Xe] 4f11 6s2,301.0,,,3.58,HEX,164.93032,1747.0,Holmium,6,9,0.164,,229.99999999999997,192.0,166.0,1.23,,#00ff9c,#ff1493,,,300.6,,,175.0,,,,,,340.9,267.0,1.3,2.2e-07,1.75,8.0,1.037,#00FF9C
+Er,,68,178.0,18.4,f,3136.0,9.06,Soft silvery metallic element which belongs to the lanthanoids. Six natural isotopes that are stable. Twelve artificial isotopes are known. Used in nuclear technology as a neutron absorber. It is being investigated for other possible uses. Discovered by Carl G. Mosander in 1843.,153.0,,[Xe] 4f12 6s2,317.0,,,3.56,HEX,167.26,1802.0,Erbium,6,9,0.168,,229.0,189.0,165.0,1.24,,#00e675,#ff1493,,,316.4,,,175.0,,,,,,339.1,267.0,3.5,8.7e-07,1.75,8.0,1.041,#00E675
+Tm,,69,177.0,18.1,f,2220.0,9.321,"Soft grey metallic element that belongs to the lanthanoids. One natural isotope exists, Tm-169, and seventeen artificial isotopes have been produced. No known uses for the element. Discovered in 1879 by Per Theodor Cleve.",147.0,1.0290000000000001,[Xe] 4f13 6s2,232.0,,,3.54,HEX,168.93421,1818.0,Thulium,6,9,0.16,,227.0,190.0,164.0,1.25,,#00d452,#ff1493,,,232.2,,,175.0,,,,,,337.4,267.0,0.52,1.7e-07,1.75,8.0,1.044,#00D452
+Yb,,70,194.0,24.8,f,1466.0,6.9654,Silvery metallic element of the lanthanoids. Seven natural isotopes and ten artificial isotopes are known. Used in certain steels. Discovered by J.D.G. Marignac in 1878.,140.7,-0.02,[Xe] 4f14 6s2,159.0,3.35,,5.49,FCC,173.04,1097.0,Ytterbium,6,9,0.145,,225.99999999999997,187.0,170.0,,,#00bf38,#ff1493,,,155.6,,,175.0,,,,,,335.5,279.0,3.2,8.2e-07,1.75,8.0,1.051,#00BF38
+Lu,,71,175.0,17.8,d,3668.0,9.8404,"Silvery-white rare-earth metal which is relatively stable in air. It happens to be the most expensive rare-earth metal. Its found with almost all rare-earth metals, but is very difficult to separate from other elements. Least abundant of all natural elements. Used in metal alloys, and as a catalyst in various processes. There are two natural, stable isotopes, and seven radioisotopes, the most stable being Lu-174 with a half-life of 3.3 years. The separation of lutetium from Ytterbium was described by Georges Urbain in 1907. It was discovered at approximately the same time by Carl Auer von Welsbach. The name comes from the Greek word lutetia which means Paris.",148.0,0.34,[Xe] 4f14 5d 6s2,414.0,,3.0,3.51,HEX,174.967,1936.0,Lutetium,6,8,0.155,,224.00000000000003,187.0,162.0,1.0,6.455,#00ab24,#ff1493,992.0,970.6,427.6,,,175.0,,,,,,364.0,265.0,0.8,1.5e-07,1.6,8.0,1.055,#00AB24
+Hf,,72,167.0,13.6,d,5470.0,13.31,"Silvery lustrous metallic transition element. Used in tungsten alloys in filaments and electrodes, also acts as a neutron absorber. First reported by Urbain in 1911, existence was finally established in 1923 by D. Coster, G.C. de Hevesy in 1923.",109.0,0.013999999999999999,[Xe] 4f14 5d2 6s2,575.0,25.1,4.0,3.2,HEX,178.49,2503.0,Hafnium,6,8,0.146,23.0,223.0,175.0,152.0,1.3,6.83,#4dc2ff,#ff1493,,,618.4,,,155.0,,,,225.0,,314.1,252.99999999999997,3.0,7.000000000000001e-06,1.5,8.0,1.06,#4DC2FF
+Ta,,73,149.0,10.9,d,5698.0,16.654,"Heavy blue-grey metallic transition element. Ta-181 is a stable isotope, and Ta-180 is a radioactive isotope, with a half-life in excess of 10^7 years. Used in surgery as it is unreactive. Forms a passive oxide layer in air. Identified in 1802 by Ekeberg and isolated in 1820 by Jons J. Berzelius.",88.0,0.322,[Xe] 4f14 5d3 6s2,758.0,24.7,5.0,3.31,BCC,180.9479,3269.0,Tantalum,6,8,0.14,57.5,222.00000000000003,170.0,146.0,1.5,7.93,#4da6ff,#ff1493,,,782.0,,,145.0,,,,220.00000000000003,,317.0,243.00000000000003,2.0,2e-06,1.38,8.0,1.065,#4DA6FF
+W,,74,141.0,9.53,d,5930.0,19.3,"White or grey metallic transition element,formerly called Wolfram. Forms a protective oxide in air and can be oxidized at high temperature. First isolated by Jose and Fausto de Elhuyer in 1783.",75.0,0.81626,[Xe] 4f14 5d4 6s2,824.0,35.0,6.0,3.16,BCC,183.84,3680.0,Tungsten,6,8,0.133,173.0,218.00000000000003,162.0,137.0,1.7,8.67,#2194d6,#ff1493,,,851.0,,,135.0,,,,210.0,,309.6,239.0,1.25,0.0001,1.46,8.0,1.07,#2194D6
+Re,,75,137.0,8.85,d,5900.0,21.02,Silvery-white metallic transition element. Obtained as a by-product of molybdenum refinement. Rhenium-molybdenum alloys are superconducting.,65.0,0.15,[Xe] 4f14 5d5 6s2,704.0,34.0,7.0,2.76,HEX,186.207,3453.0,Rhenium,6,8,0.138,48.0,216.0,151.0,131.0,1.9,9.46,#267dab,#ff1493,,,774.0,,,135.0,,,,204.99999999999997,,295.4,237.0,0.0007,4e-06,1.59,8.0,1.073,#267DAB
+Os,,76,135.0,8.43,d,5300.0,22.57,Hard blue-white metallic transition element. Found with platinum and used in some alloys with platinum and iridium.,57.0,1.1,[Xe] 4f14 5d6 6s2,738.0,31.7,8.0,2.74,HEX,190.23,3327.0,Osmium,6,8,0.131,,216.0,144.0,129.0,2.2,9.78,#266696,#ff1493,,,787.0,,,130.0,,,,200.0,,312.0,235.0,0.0015,,1.28,8.0,1.08,#266696
+Ir,,77,136.0,8.54,d,4403.0,22.42,"Very hard and brittle, silvery metallic transition element. It has a yellowish cast to it. Salts of iridium are highly colored. It is the most corrosion resistant metal known, not attacked by any acid, but is attacked by molten salts. There are two natural isotopes of iridium, and 4 radioisotopes, the most stable being Ir-192 with a half-life of 73.83 days. Ir-192 decays into Platinum, while the other radioisotopes decay into Osmium. Iridium is used in high temperature apparatus, electrical contacts, and as a hardening agent for platinumpy. Discovered in 1803 by Smithson Tennant in England. The name comes from the Greek word iris, which means rainbow. Iridium metal is generally non-toxic due to its relative unreactivity, but iridium compounds should be considered highly toxic.",51.0,1.5638,[Xe] 4f14 5d7 6s2,604.0,27.61,9.0,3.84,FCC,192.22,2683.0,Iridium,6,8,0.133,147.0,213.0,141.0,122.0,2.2,9.96,#175487,#ff1493,,,669.0,,,135.0,,,,200.0,,284.0,236.0,0.001,,1.37,8.0,1.083,#175487
+Pt,,78,139.0,9.1,d,4100.0,21.45,"Attractive greyish-white metal. When pure, it is malleable and ductile. Does not oxidize in air, insoluble in hydrochloric and nitric acid. Corroded by halogens, cyandies, sulphur and alkalis. Hydrogen and Oxygen react explosively in the presence of platinumpy. There are six stable isotopes and three radioisotopes, the most stable being Pt-193 with a half-life of 60 years. Platinum is used in jewelry, laboratory equipment, electrical contacts, dentistry, and anti-pollution devices in cars. PtCl2(NH3)2 is used to treat some forms of cancer. Platinum-Cobalt alloys have magnetic properties. It is also used in the definition of the Standard Hydrogen Electrode. Discovered by Antonio de Ulloa in South America in 1735. The name comes from the Spanish word platina which means silver. Platinum metal is generally not a health concern due to its unreactivity, however platinum compounds should be considered highly toxic.",44.0,2.128,[Xe] 4f14 5d9 6s,470.0,21.76,10.0,3.92,FCC,195.08,2045.0,Platinum,6,8,0.133,71.6,213.0,136.0,123.0,2.2,10.16,#d0d0e0,#ff1493,,,565.7,,,135.0,,,,204.99999999999997,,275.4,239.0,0.005,,1.28,8.0,1.088,#D0D0E0
+Au,,79,146.0,10.2,d,3080.0,19.3,"Gold is gold colored. It is the most malleable and ductile metal known. There is only one stable isotope of gold, and five radioisotopes of gold, Au-195 being the most stable with a half-life of 186 days. Gold is used as a monetary standard, in jewelry, dentistry, electronics. Au-198 is used in treating cancer and some other medical conditions. Gold has been known to exist as far back as 2600 BC. Gold comes from the Anglo-Saxon word gold. Its symbol, Au, comes from the Latin word aurum, which means gold. Gold is not particularly toxic, however it is known to cause damage to the liver and kidneys in some.",36.1,2.30863,[Xe] 4f14 5d10 6s,340.0,12.68,11.0,4.08,FCC,196.96654,1337.58,Gold,6,8,0.129,318.0,214.0,136.0,124.0,2.4,11.33,#ffd123,#daa520,,,368.2,,,135.0,,,,210.0,,329.3,243.00000000000003,0.004,4e-06,1.44,8.0,1.091,#FFD123
+Hg,"density(@ +20C), ",80,157.0,14.8,d,629.73,13.546,"Heavy silvery liquid metallic element, belongs to the zinc group. Used in thermometers, barometers and other scientific apparatus. Less reactive than zinc and cadmium, does not displace hydrogen from acids. Forms a number of complexes and organomercury compounds.",33.91,,[Xe] 4f14 5d10 6s2,58.5,2.295,12.0,2.99,RHL,200.59,234.28,Mercury,6,8,0.138,8.3,223.0,132.0,133.0,1.9,10.44,#b8b8d0,#ff1493,,,61.38,,,150.0,,,,204.99999999999997,,270.5,252.99999999999997,0.085,2.9999999999999997e-05,1.49,8.0,1.097,#B8B8D0
+Tl,,81,171.0,17.2,p,1730.0,11.85,"Pure, unreacted thallium appears silvery-white and exhibits a metallic lustre. Upon reacting with air, it begins to turn bluish-grey and looks like lead. It is very malleable, and can be cut with a knife. There are two stable isotopes, and four radioisotopes, Tl-204 being the most stable with a half-life of 3.78 years. Thallium sulphate was used as a rodenticide. Thallium sulphine's conductivity changes with exposure to infrared light, this gives it a use in infrared detectors. Discovered by Sir William Crookes via spectroscopy. Its name comes from the Greek word thallos, which means green twig. Thallium and its compounds are toxic and can cause cancer.",51.7,0.377,[Xe] 4f14 5d10 6s2 6p,162.4,4.31,13.0,3.46,HEX,204.3833,576.6,Thallium,6,7,0.128,46.1,196.0,145.0,144.0,1.8,,#a6544d,#ff1493,,,182.2,,190.0,190.0,196.0,,,220.00000000000003,,434.69999999999993,259.0,0.85,1.9e-05,1.48,8.0,1.103,#A6544D
+Pb,,82,175.0,18.3,p,2013.0,11.35,"Heavy dull grey ductile metallic element, belongs to group 14. Used in building construction, lead-place accumulators, bullets and shot, and is part of solder, pewter, bearing metals, type metals and fusible alloys.",47.1,0.364,[Xe] 4f14 5d10 6s2 6p2,177.8,4.77,14.0,4.95,FCC,207.2,600.65,Lead,6,7,0.159,35.3,202.0,146.0,144.0,1.8,10.97,#575961,#ff1493,,,195.2,,,,202.0,,,229.99999999999997,,429.7,274.0,14.0,2.9999999999999997e-05,1.47,8.0,1.107,#575961
+Bi,,83,170.0,21.3,p,1883.0,9.747,"White crystalline metal with a pink tinge, belongs to group 15. Most diamagnetic of all metals and has the lowest thermal conductivity of all the elements except mercury. Lead-free bismuth compounds are used in cosmetics and medical procedures. Burns in the air and produces a blue flame. In 1753, C.G. Junine first demonstrated that it was different from lead.",50.0,0.942362,[Xe] 4f14 5d10 6s2 6p3,172.0,11.0,15.0,4.75,RHL,208.98037,544.5,Bismuth,6,7,0.124,7.9,206.99999999999997,148.0,151.0,1.9,11.9,#9e4fb5,#ff1493,,,209.6,,148.0,160.0,,206.99999999999997,,229.99999999999997,,437.0,266.0,0.0085,2e-05,1.46,8.0,1.109,#9E4FB5
+Po,,84,176.0,22.7,p,1235.0,9.32,"Rare radioactive metallic element, belongs to group 16 of the periodic table. Over 30 known isotopes exist, the most of all elements. Po-209 has a half-life of 103 years. Possible uses in heating spacecraft. Discovered by Marie Curie in 1898 in a sample of pitchblende.",46.0,1.9,[Xe] 4f14 5d10 6s2 6p4,102.9,10.0,16.0,3.35,SC,208.9824,527.0,Polonium,6,5,0.125,,197.0,140.0,145.0,2.0,13.0,#ab5c00,#ff1493,,,,,,190.0,,197.0,,,,470.9,259.0,2e-10,1.5e-14,1.9,8.0,1.111,#AB5C00
+At,,85,,,p,610.0,,"Radioactive halogen element. Occurs naturally from uranium and thorium decay. At least 20 known isotopes. At-210, the most stable, has a half-life of 8.3 hours. Synthesized by nuclear bombardment in 1940 by D.R. Corson, K.R. MacKenzie and E. Segre at the University of California.",43.0,2.8,[Xe] 4f14 5d10 6s2 6p5,,,17.0,,,209.9871,575.0,Astatine,6,6,,,202.0,150.0,147.0,2.2,14.1,#754f45,#ff1493,,,,,,,,202.0,,,,475.0,250.99999999999997,,,1.9,8.0,1.111,#754F45
+Rn,"density(@ -62C), ",86,,,p,211.4,4.4,"Colorless radioactive gaseous element, belongs to the noble gases. Of the twenty known isotopes, the most stable is Rn-222 with a half-life of 3.8 days. Formed by the radioactive decay of Radium-226. Radon itself decays into Polonium. Used in radiotherapy. As a noble gas, it is effectively inert, though radon fluoride has been synthesized. First isolated in 1908 by Ramsey and Gray.",33.18,,[Xe] 4f14 5d10 6s2 6p6,18.1,,18.0,,FCC,222.0176,202.0,Radon,6,2,0.094,0.0036,220.00000000000003,150.0,142.0,,15.4,#428296,#ffffff,,,,,,,,220.00000000000003,,,,476.49999999999994,243.00000000000003,4e-13,6e-16,1.9,8.0,1.129,#428296
+Fr,,87,,,s,950.0,,"Radioactive element, belongs to group 1 of the periodic table. Found in uranium and thorium ores. The 22 known isotopes are all radioactive, with the most stable being Fr-223. Its existence was confirmed in 1939 by Marguerite Perey.",311.5,0.486,[Rn] 7s,,15.0,1.0,,BCC,223.0197,300.0,Francium,7,3,,,348.0,260.0,223.0,0.7,,#420066,#ffffff,,,,,,,,348.0,,,,490.00000000000006,364.0,,,2.6,8.0,1.13,#420066
+Ra,,88,,45.0,s,1413.0,5.5,"Radioactive metallic transuranic element, belongs to group 2 of the periodic table. Most stable isotope, Ra-226 has a half-life of 1602 years, which decays into radon. Isolated from pitchblende in 1898 Marie and Pierre Curie.",242.8,0.1,[Rn] 7s2,113.0,9.6,2.0,,,226.0254,973.0,Radium,7,4,0.12,,283.0,221.0,200.99999999999997,0.9,,#007d00,#ffffff,,,159.0,,,215.0,,283.0,,,,367.7,327.0,9e-07,8.9e-11,2.15,8.0,1.135,#007D00
+Ac,,89,188.0,22.54,f,3470.0,,"Silvery radioactive metallic element, belongs to group 3 of the periodic table. The most stable isotope, Ac-227, has a half-life of 217 years. Ac-228 (half-life of 6.13 hours) also occurs in nature. There are 22 other artificial isotopes, all radioactive and having very short half-lives. Chemistry similar to lanthanumpy. Used as a source of alpha particles. Discovered by A. Debierne in 1899.",217.0,0.35,[Rn] 6d 7s2,292.9,10.5,,5.31,FCC,227.0278,1320.0,Actinium,7,10,,,247.00000000000003,215.0,186.0,1.1,,#70abfa,#ffffff,,,406.0,,,195.0,,,,,,347.8,308.0,5.5e-10,,1.95,8.0,1.136,#70ABFA
+Th,,90,180.0,19.8,f,5060.0,11.78,"Grey radioactive metallic element. Belongs to actinoids. Found in monazite sand in Brazil, India and the US. Thorium-232 has a half-life of 1.39x10^10 years. Can be used as a nuclear fuel for breeder reactors. Thorium-232 captures slow Neutrons and breeds uranium-233. Discovered by Jons J. Berzelius in 1829.",217.0,,[Rn] 6d2 7s2,513.7,16.11,,5.08,FCC,232.0381,2028.0,Thorium,7,10,0.113,,245.00000000000003,206.0,175.0,1.3,,#00baff,#ff1493,,,602.0,,,180.0,,,,240.0,,339.6,274.0,9.6,1e-06,1.8,8.0,1.143,#00BAFF
+Pa,,91,161.0,15.0,f,4300.0,15.37,"Radioactive metallic element, belongs to the actinoids. The most stable isotope, Pa-231 has a half-life of 2.43*10^4 years. At least 10 other radioactive isotopes are known. No practical applications are known. Discovered in 1917 by Lise Meitner and Otto Hahn.",171.0,,[Rn] 5f2 6d 7s2,481.2,16.7,,3.92,TET,231.03588,2113.0,Protactinium,7,10,0.121,,243.00000000000003,200.0,169.0,1.5,,#00a1ff,#ffffff,,,563.0,,,180.0,,,,,,342.4,264.0,1.4e-06,5e-11,1.75,8.0,1.141,#00A1FF
+U,,92,138.0,12.5,f,4018.0,19.05,"White radioactive metallic element belonging to the actinoids. Three natural isotopes, U-238, U-235 and U-234. Uranium-235 is used as the fuel for nuclear reactors and weapons. Discovered by Martin H. Klaproth in 1789.",137.0,,[Rn] 5f3 6d 7s2,417.0,12.6,,2.85,ORC,238.0289,1405.5,Uranium,7,10,0.115,27.5,241.0,196.0,170.0,1.7,,#008fff,#ff1493,995.2,973.2,533.0,,,175.0,,,,229.99999999999997,,339.5,252.0,2.7,0.0032,1.75,8.0,1.151,#008FFF
+Np,,93,130.0,21.1,f,4175.0,20.25,"Radioactive metallic transuranic element, belongs to the actinoids. Np-237, the most stable isotope, has a half-life of 2.2*10^6 years and is a by product of nuclear reactors. The other known isotopes have mass numbers 229 through 236, and 238 through 241. Np-236 has a half-life of 5*10^3 years. First produced by Edwin M. McMillan and P.H. Abelson in 1940.",167.0,,[Rn] 5f4 6d 7s2,336.0,9.6,,4.72,ORC,237.048,913.0,Neptunium,7,10,,,239.0,190.0,171.0,1.3,,#0080ff,#ffffff,,,464.8,,,175.0,,,,,,342.4,252.0,,,1.75,8.0,1.15,#0080FF
+Pu,,94,151.0,,f,3505.0,19.84,"Dense silvery radioactive metallic transuranic element, belongs to the actinoids. Pu-244 is the most stable isotope with a half-life of 7.6*10^7 years. Thirteen isotopes are known. Pu-239 is the most important, it undergoes nuclear fission with slow neutrons and is hence important to nuclear weapons and reactors. Plutonium production is monitored down to the gram to prevent military misuse. First produced by Gleen T. Seaborg, Edwin M. McMillan, J.W. Kennedy and A.C. Wahl in 1940.",165.0,,[Rn] 5f6 7s2,343.5,2.8,,,MCL,244.0642,914.0,Plutonium,7,10,,,243.00000000000003,187.0,172.0,1.3,,#006bff,#ffffff,,,345.0,,,175.0,,,,,,342.4,252.0,,,1.75,8.0,1.157,#006BFF
+Am,,95,173.0,20.8,f,2880.0,13.67,"Radioactive metallic transuranic element, belongs to the actinoids. Ten known isotopes. Am-243 is the most stable isotope, with a half-life of 7.95*10^3 years. Discovered by Glenn T. Seaborg and associates in 1945, it was obtained by bombarding Uranium-238 with alpha particles.",157.0,,[Rn] 5f7 7s2,238.5,10.0,,,,243.0614,1267.0,Americium,7,10,,,244.0,180.0,166.0,,,#545cf2,#ffffff,,,284.0,,,175.0,,,,,,338.1,,,,1.75,8.0,1.159,#545CF2
+Cm,,96,299.0,18.28,f,,13.51,"Radioactive metallic transuranic element. Belongs to actinoid series. Nine known isotopes, Cm-247 has a half-life of 1.64*10^7 years. First identified by Glenn T. Seaborg and associates in 1944, first produced by L.B. Werner and I. Perlman in 1947 by bombarding americium-241 with Neutrons. Named for Marie Curie.",155.0,,[Rn] 5f7 6d 7s2,,,,,,247.0703,1340.0,Curium,7,10,,,245.00000000000003,169.0,166.0,,,#785ce3,#ffffff,,,386.0,,,,,,,,,332.6,,,,1.75,8.0,1.164,#785CE3
+Bk,,97,297.0,,f,,13.25,"Radioactive metallic transuranic element. Belongs to actinoid series. Eight known isotopes, the most common Bk-247, has a half-life of 1.4*10^3 years. First produced by Glenn T. Seaborg and associates in 1949 by bombarding americium-241 with alpha particles.",153.0,,[Rn] 5f9 7s2,,,,,,247.0703,,Berkelium,7,10,,,244.0,,168.0,,,#8a4fe3,#ffffff,,,310.0,,,,,,,,,333.9,,,,1.75,8.0,1.164,#8A4FE3
+Cf,,98,295.0,,f,,15.1,"Radioactive metallic transuranic element. Belongs to actinoid series. Cf-251 has a half life of about 700 years. Nine isotopes are known. Cf-252 is an intense Neutron source, which makes it an intense Neutron source and gives it a use in Neutron activation analysis and a possible use as a radiation source in medicine. First produced by Glenn T. Seaborg and associates in 1950.",138.0,,[Rn] 5f10 7s2,,,,,,251.0796,900.0,Californium,7,10,,,245.00000000000003,,168.0,,,#a136d4,#ffffff,,,196.0,,,,,,,,,331.3,,,,1.75,8.0,1.166,#A136D4
+Es,,99,292.0,,f,1130.0,,"Appearance is unknown, however it is most probably metallic and silver or gray in color. Radioactive metallic transuranic element belonging to the actinoids. Es-254 has the longest half-life of the eleven known isotopes at 270 days. First identified by Albert Ghiorso and associates in the debris of the 1952 hydrogen bomb explosion. In 1961 the first microgram quantities of Es-232 were separated. While einsteinium never exists naturally, if a sufficient amount was assembled, it would pose a radiation hazard.",133.0,,[Rn] 5f11 7s2,,,,,,252.083,,Einsteinium,7,10,,,245.00000000000003,,165.0,,,#b31fd4,#ffffff,,,133.0,,,,,,,,,329.9,,,,1.75,8.0,1.173,#B31FD4
+Fm,,100,290.0,,f,,,"Radioactive metallic transuranic element, belongs to the actinoids. Ten known isotopes, most stable is Fm-257 with a half-life of 10 days. First identified by Albert Ghiorso and associates in the debris of the first hydrogen-bomb explosion in 1952.",161.0,,[Rn] 5f12 7s2,,,,,,257.0951,1800.0,Fermium,7,10,,,245.00000000000003,,167.0,,,#b31fba,#ffffff,,,,,,,,,,,,328.6,,,,1.75,8.0,1.171,#B31FBA
+Md,,101,287.0,,f,,,"Radioactive metallic transuranic element. Belongs to the actinoid series. Only known isotope, Md-256 has a half-life of 1.3 hours. First identified by Glenn T. Seaborg, Albert Ghiorso and associates in 1955. Alternative name Unnilunium has been proposed. Named after the 'inventor' of the periodic table, Dmitri Mendeleev.",123.0,,[Rn] 5f13 7s2,,,,,,258.1,1100.0,Mendelevium,7,10,,,246.0,,173.0,,,#b30da6,#ffffff,,,,,,,,,,,,327.4,,,,1.75,8.0,1.175,#B30DA6
+No,,102,285.0,,f,,,"Radioactive metallic transuranic element, belongs to the actinoids. Seven known isotopes exist, the most stable being No-254 with a half-life of 255 seconds. First identified with certainty by Albert Ghiorso and Glenn T. Seaborg in 1966. Unnilbium has been proposed as an alternative name.",110.8,,[Rn] 5f14 7s2,,,,,,259.1009,1100.0,Nobelium,7,10,,,246.0,,176.0,,,#bd0d87,#ffffff,,,,,,,,,,,,324.8,,,,1.75,8.0,1.173,#BD0D87
+Lr,,103,282.0,,d,,,"Appearance unknown, however it is most likely silvery-white or grey and metallic. Lawrencium is a synthetic rare-earth metal. There are eight known radioisotopes, the most stable being Lr-262 with a half-life of 3.6 hours. Due to the short half-life of lawrencium, and its radioactivity, there are no known uses for it. Identified by Albert Ghiorso in 1961 at Berkeley. It was produced by bombarding californium with boron ions. The name is temporary IUPAC nomenclature, the origin of the name comes from Ernest O. Lawrence, the inventor of the cyclotron. If sufficient amounts of lawrencium were produced, it would pose a radiation hazard.",,,[Rn] 5f14 6d 7s2,,,3.0,,,262.11,,Lawrencium,7,8,,,246.0,,161.0,,,#c70066,#ffffff,,,,,,,,,,,,323.6,,,,1.75,8.0,1.177,#C70066
+Rf,,104,,,d,,,Radioactive transactinide element. Expected to have similar chemical properties to those displayed by hafnium. Rf-260 was discovered by the Joint Nuclear Research Institute at Dubna (U.S.S.R.) in 1964. Researchers at Berkeley discovered Unq-257 and Unq-258 in 1964.,,,[Rn] 5f14 6d2 7s2,,,4.0,,,261.0,,Rutherfordium,7,8,,,,,157.0,,,#cc0059,,,,,,,,,,,,,,,,,,,,
+Db,,105,,,d,,,"Also known as Hahnium, Ha. Radioactive transactinide element. Half-life of 1.6s. Discovered in 1970 by Berkeley researchers. So far, seven isotopes have been discovered.",,,[Rn] 5f14 6d3 7s2,,,5.0,,,262.0,,Dubnium,7,8,,,,,149.0,,,#d1004f,,,,,,,,,,,,,,,,,,,,
+Sg,,106,,,d,,,Half-life of 0.9 +/- 0.2 s. Discovered by the Joint Institute for Nuclear Research at Dubna (U.S.S.R.) in June of 1974. Its existence was confirmed by the Lawrence Berkeley Laboratory and Livermore National Laboratory in September of 1974.,,,[Rn] 5f14 6d4 7s2,,,6.0,,,266.0,,Seaborgium,7,8,,,,,143.0,,,#d90045,,,,,,,,,,,,,,,,,,,,
+Bh,,107,,,d,,,Radioactive transition metal. Half-life of approximately 1/500 s. Discovered by the Joint Institute for Nuclear Research at Dubna (U.S.S.R.) in 1976. Confirmed by West German physicists at the Heavy Ion Research Laboratory at Darmstadt.,,,[Rn] 5f14 6d5 7s2,,,7.0,,,264.0,,Bohrium,7,8,,,,,141.0,,,#e00038,,,,,,,,,,,,,,,,,,,,
+Hs,,108,,,d,,,Radioactive transition metal first synthesized in 1984 by a German research team led by Peter Armbruster and Gottfried Muenzenberg at the Institute for Heavy Ion Research at Darmstadt.,,,[Rn] 5f14 6d6 7s2,,,8.0,,,269.0,,Hassium,7,8,,,,,134.0,,,#e6002e,,,,,,,,,,,,,,,,,,,,
+Mt,,109,,,d,,,"Half-life of approximately 5 ms. The creation of this element demonstrated that fusion techniques could indeed be used to make new, heavy nuclei. Made and identified by physicists of the Heavy Ion Research Laboratory, Darmstadt, West Germany in 1982. Named in honor of Lise Meitner, the Austrian physicist.",,,[Rn] 5f14 6d7 7s2,,,9.0,,,268.0,,Meitnerium,7,8,,,,,129.0,,,#eb0026,,,,,,,,,,,,,,,,,,,,
+Ds,,110,,,d,,,,,,[Rn] 5f14 6d9 7s1,,,10.0,,,269.0,,Darmstadtium,7,8,,,,,128.0,,,,,,,,,,,,,,,,,,,,,,,
+Rg,,111,,,d,,,,,,[Rn] 5f14 6d10 7s1,,,11.0,,,272.0,,Roentgenium,7,8,,,,,121.0,,,,,,,,,,,,,,,,,,,,,,,
+Cn,,112,,,d,,,,27.64,,[Rn] 5f14 6d10 7s2,,,12.0,,,277.0,,Copernicium,7,8,,,,,122.0,,,,,,,,,,,,,,,,,,,,,,,
+Uut,,113,,,p,,,,29.9,,[Rn] 5f14 6d10 7s2 7p1,,,13.0,,,,,Ununtrium,7,7,,,,,136.0,,,,,,,,,,,,,,,,,,,,,,,
+Fl,,114,,,p,,,,31.98,,[Rn] 5f14 6d10 7s2 7p2,,,14.0,,,289.0,,Flerovium,7,7,,,,,143.0,,,,,,,,,,,,,,,,,,,,,,,
+Uup,,115,,,p,,,,,,[Rn] 5f14 6d10 7s2 7p3,,,15.0,,,,,Ununpentium,7,7,,,,,162.0,,,,,,,,,,,,,,,,,,,,,,,
+Lv,,116,,,p,,,,,,[Rn] 5f14 6d10 7s2 7p4,,,16.0,,,,,Livermorium,7,7,,,,,175.0,,,,,,,,,,,,,,,,,,,,,,,
+Uus,,117,,,p,,,,,,[Rn] 5f14 6d10 7s2 7p5,,,17.0,,,,,Ununseptium,7,6,,,,,165.0,,,,,,,,,,,,,,,,,,,,,,,
+Uuo,,118,,,p,,,,46.33,0.055999999999999994,[Rn] 5f14 6d10 7s2 7p6,,,18.0,,,,,Ununoctium,7,2,,,,,157.0,,,,,,,,,,,,,,,,,,,,,,,
+""")
+elements = pd.read_csv(atom_properties, index_col=0)

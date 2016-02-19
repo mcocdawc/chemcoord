@@ -34,6 +34,7 @@ Cartesian
          ~Cartesian.to_zmat
          ~Cartesian.write
          ~Cartesian.add_data
+         ~Cartesian.make_similar
        
        
     
