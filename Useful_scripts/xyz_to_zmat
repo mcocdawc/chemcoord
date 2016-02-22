@@ -35,12 +35,10 @@ def read_input():
 
 args = read_input()
 
-ref_xyz = cc.read.xyz(args.inputfile)
-zmat = cc.xyz_functions.to_zmat(ref_xyz, recursion_level = args.recursion_level)
-
 if args.outputfile is None:
     outputfile = ''.join(args.inputfile.split('.')[:-1]) + '.zmat'
 else:
     outputfile = args.outputfile
 
-cc.write.zmat(zmat, outputfile)
+ref_xyz = cc.Cartesian.read_xyz(args.inputfile)
+ref_xyz.to_zmat().write(outputfile)

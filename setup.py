@@ -8,5 +8,5 @@ setup(name='chemcoord',
       author_email='oskar.weser@gmail.com',
       url='https://github.com/mcocdawc/chemcoord',
       packages=['chemcoord'],
-      requires=['numpy', 'pandas', 'copy', 'math'],
+      requires=['numpy', 'pandas', 'copy', 'math', 'collections', 'os', 'sys'],
      )

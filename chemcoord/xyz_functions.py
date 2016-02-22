@@ -23,6 +23,17 @@ class Cartesian:
     """The main class for dealing with cartesian Coordinates.
     """
     def __init__(self, xyz_frame):
+        """How to initialize a Cartesian instance.
+
+
+        Args:
+            xyz_frame (pd.DataFrame): A Dataframe with at least the columns ``['atom', 'x', 'y', 'z']``.
+                Where ``'atom'`` is a string for the elementsymbol.
+    
+        Returns:
+            Cartesian: A new cartesian instance.
+
+        """
         self.xyz_frame = xyz_frame.copy()
         self.n_atoms = xyz_frame.shape[0]
 
@@ -70,10 +81,14 @@ class Cartesian:
     def _overlap(self, bond_size_dic, include=None):
         """Calculates the overlap of van der Vaals radii.
 
+        Do not confuse it with overlap of atomic orbitals. 
+        This is just a "poor man's overlap" of van der Vaals radii.
+        
         Args:
-            frame (pd.DataFrame): The indices of atoms for which the overlap should be calculated.
             bond_size_dic (dic): A dictionary mapping from the indices of atoms (integers) to their 
                 van der Vaals radius.
+            include (list): The indices between which the overlap should be calculated. 
+                If ``None``, the whole index is taken.
     
         Returns:
             tuple: **First element**: overlap_array:
@@ -145,8 +160,7 @@ class Cartesian:
                 This means that in certain situations some atoms can be oversaturated, although ``use_valency`` is ``True``.
     
         Returns:
-            dic: Dictionary mapping from an atom index to the indices of atoms bonded to.
-
+            dict: Dictionary mapping from an atom index to the indices of atoms bonded to.
         """
         def preparation_of_variables(modified_properties):
             bond_dic = dict(zip(self.xyz_frame.index, [set([]) for _ in range(self.n_atoms)]))
@@ -236,6 +250,9 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
     def _divide_et_impera(self, maximum_edge_length=25., difference_edge=6.):
         """Returns a molecule split into cuboids.
+
+        If your algorithm scales with :math:`O(n^2)`. 
+        You can use this function as a preprocessing step to make it scaling with :math:`O(n\log(n))`.
          
         Args:
             maximum_edge_length (float): Maximum length of one edge of a cuboid. 
@@ -372,6 +389,18 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
 
     def _preserve_bonds(self, sliced_xyz_frame):
+        """Is called after cutting geometric shapes.
+
+        If you want to change the rules how bonds are preserved, when applying e.g. :meth:`Cartesian.cutsphere`
+        this is the function you have to modify.
+        It is recommended to inherit from the Cartesian class to tailor it for your project, instead of modifying the source code of ChemCoord.
+
+        Args:
+            sliced_xyz_frame (pd.DataFrame): 
+    
+        Returns:
+            Cartesian: 
+        """
         included_atoms_set = set(sliced_xyz_frame.index)
         assert included_atoms_set.issubset(set(self.xyz_frame.index)), 'The sliced frame has to be a subset of the bigger frame'
         included_atoms_list = list(included_atoms_set)
@@ -429,7 +458,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             preserve_bonds (bool): Do not cut covalent bonds.
     
         Returns:
-            pd.dataframe: Sliced xyz_frame
+            Cartesian: 
         """
         try:
             origin[0]
@@ -487,7 +516,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return barycenter
 
     def total_mass(self):
-        """Returns the total mass.
+        """Returns the total mass in g/mol.
     
         Args:
             None
@@ -510,7 +539,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             vector (np.array): default is np.zeros(3)
             matrix (np.array): default is np.identity(3)
             indices (list): Indices to be moved.
-            copy (bool): Atoms are copied to the new location or not.
+            copy (bool): Atoms are copied or translated to the new location.
     
         Returns:
             Cartesian: 
@@ -873,7 +902,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
         return buildlist
 
-    def clean_dihedral(self, buildlist_to_check):
+    def _clean_dihedral(self, buildlist_to_check):
         """Reindexes the dihedral defining atom if colinear.
 
         Args:
@@ -930,6 +959,14 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
 
     def _build_zmat(self, buildlist):
+        """Creates the zmatrix from a buildlist.
+
+        Args:
+            buildlist (np.array): 
+        
+        Returns:
+            Zmat: A new instance of ``Zmat``.
+        """
         indexlist = buildlist[:, 0]
 
         default_columns = ['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'] 
@@ -955,8 +992,46 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         zmat_frame.loc[indexlist[3:], 'dihedral'] = dihedrals
         return zmat_functions.Zmat(zmat_frame)
 
-
+# TODO docstring
     def to_zmat(self, buildlist=None, fragment_list=None, check_linearity=True):
+        """Transform to internal coordinates.
+
+        Transforming to internal coordinates involves basically three steps:
+
+        1. Define an order of how to build.
+        2. Check for problematic local linearity. In this algorithm an angle with ``170 < angle < 10`` is assumed to be linear. This is not the mathematical definition, but makes it safer against "floating point noise"
+        3. Calculate the bond lengths, angles and dihedrals using the references defined in step 1 and 2.
+
+        In the first two steps a so called ``buildlist`` is created. 
+        This is basically a ``np.array`` of shape ``(n_atoms, 4)`` and integer type.
+
+        The four columns are ``['own_index', 'bond_with', 'angle_with', 'dihedral_with']``.
+        This means that usually the upper right triangle can be any number, because for example the first atom
+        has no other atom as reference.
+
+        It is important to know, that getting the buildlist is a very costly step since the algoritym tries to make some guesses based on 
+        the connectivity to create a "chemical" zmatrix.
+
+        If you create several zmatrices based on the same references you can save the buildlist of a zmatrix with :meth:`Zmat.build_list`.
+        If you then pass the buildlist as argument to ``to_zmat``, then the algorithm directly starts with step 3.
+
+        
+        Another thing is that you can specify fragments. 
+        For this purpose the function :meth:`Cartesian.get_fragment` is quite handy.
+        An element of fragment_list looks like::
+
+            (fragment, connections)
+
+        Fragment is a ``Cartesian`` instance and connections is a ``(3, 4)`` numpy integer array, that defines how the fragment is connected to the molecule.
+    
+        Args:
+            buildlist (np.array):
+            fragment_list (list):
+            check_linearity (bool):
+    
+        Returns: 
+            Zmat: A new instance of ``Zmat``.
+        """
         if (buildlist is None):
             if (fragment_list is None):
                 buildlist = self._get_buildlist()
@@ -989,7 +1064,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                     buildlist, big_molecule, row = add_fragment(self, fragment_tpl, big_molecule, buildlist, row)
 
         if check_linearity:
-            buildlist = self.clean_dihedral(buildlist) 
+            buildlist = self._clean_dihedral(buildlist) 
 
         zmat = self._build_zmat(buildlist)
         return zmat
@@ -1003,7 +1078,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             None
     
         Returns:
-            dic: The returned dictionary has four possible keys:
+            dict: The returned dictionary has four possible keys:
             
             ``transformed_Cartesian``:
             A xyz_frame that is transformed to the basis spanned by the eigenvectors 
@@ -1077,7 +1152,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             rotate_only (bool): 
     
         Returns:
-            pd.DataFrame: The transformed xyz_frame
+            Cartesian: The transformed molecule.
         """
         frame = self.xyz_frame.copy()
         old_basis = np.array(old_basis)
@@ -1153,10 +1228,10 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
     
         Args:
             xyz_frame (pd.dataframe): 
-            rename_dic (dic): A dictionary mapping integers on integers.
+            rename_dic (dict): A dictionary mapping integers on integers.
     
         Returns:
-            pd.dataframe: 
+            Cartesian: A renamed copy according to the dictionary passed.
         """
         frame = copy.deepcopy(self.xyz_frame)
         replace_list = list(rename_dic.keys())
@@ -1170,22 +1245,22 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
 
     def partition_chem_env(self, follow_bonds=4):
-        """This function partitions the molecule into subsets of same chemical environment.
+        """This function partitions the molecule into subsets of the same chemical environment.
 
-        A chemical environment is specified by the number of surrounding atoms with a certain atomic number
-        around an atom with a certain atomic number represented by a tuple of an integer and a frozenset of tuples. 
+        A chemical environment is specified by the number of surrounding atoms of a certain kin
+        around an atom with a certain atomic number represented by a tuple of a string and a frozenset of tuples. 
         The ``follow_bonds`` option determines how many branches the algorithm follows to determine the chemical environment.
 
         Example:
         A carbon atom in ethane has bonds with three hydrogen (atomic number 1) and one carbon atom (atomic number 6).
         If ``follow_bonds=1`` these are the only atoms we are interested in and the chemical environment is::
 
-            (6, frozenset([(1, 3), (6, 1)]))
+            ('C', frozenset([('H', 3), ('C', 1)]))
 
         If ``follow_bonds=2`` we follow every atom in the chemical enviromment of ``follow_bonds=1`` to their direct neighbours.
         In the case of ethane this gives::
 
-            (6, frozenset([(1, 6), (6, 1)]))
+            ('C', frozenset([('H', 6), ('C', 1)]))
 
         In the special case of ethane this is the whole molecule; 
         in other cases you can apply this operation recursively and stop after ``follow_bonds`` or after reaching the end of branches.
@@ -1197,7 +1272,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         Returns:
             dict: The output will look like this::
                 
-                { (atomic_number, frozenset([tuples]))  : set([indices]) }
+                { (element_symbol, frozenset([tuples]))  : set([indices]) }
                 
                 A dictionary mapping from a chemical environment to the set of indices of atoms in this environment.
         """
@@ -1227,30 +1302,12 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
     
         Returns a reindexed copy of ``Cartesian2`` that minimizes the distance 
         for each atom in the same chemical environemt from ``self`` to ``Cartesian2``.
+        Read more about the definition of the chemical environment in :func:`Cartesian.partition_chem_env`
     
         .. warning:: The algorithm is still very basic, so it is important, to have a good
             prealignment and quite similar frames. 
             It is probably necessary to use the function :func:`Cartesian.change_numbering()`
 
-        A chemical environment is specified by the number of surrounding atoms with a certain atomic number and
-        represented by a frozenset of tuples. 
-        The ``max_follow_bonds`` option determines how many branches the algorithm follows to determine the chemical environment.
-
-        Example:
-        A carbon atom in ethane has bonds with three hydrogen (atomic number 1) and one carbon atom (atomic number 6).
-        If ``follow_bonds=1`` these are the only atoms we are interested in and the chemical environment is::
-
-            frozenset([(1, 3), (6, 1)])
-
-        If ``follow_bonds=2`` we follow every atom in the chemical enviromment of ``follow_bonds=1`` to their direct neighbours.
-        In the case of ethane this gives::
-
-            frozenset([(1, 6), (6, 1)])
-
-        In the special case of ethane this is the whole molecule; 
-        in other cases you can apply this operation recursively and stop after ``max_follow_bonds`` or after reaching the end of branches.
-
-    
         Args:
             Cartesian2 (Cartesian): 
             max_follow_bonds (int):
@@ -1258,7 +1315,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                 their principal axes of inertia before reindexing.
     
         Returns:
-            Cartesian: Reindexed version of Cartesian2.
+            tpl: Aligned copy of ``self`` and aligned + reindexed version of ``Cartesian2``
         """
         if prealign:
             molecule1 = self.inertia()['transformed_Cartesian']

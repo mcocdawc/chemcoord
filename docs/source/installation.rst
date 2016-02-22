@@ -7,24 +7,54 @@ You need a working python 3.x installation together with the modules:
 - pandas
 - math
 - copy
+- collections
+- os
+- sys
+- distutils.core
 
-All of them come shipped by default if you use e.g. the `anaconda3 installer <https://www.continuum.io/downloads/>`_.
+All of them come shipped by default with nearly every python installation.
+You can use for example the `anaconda3 installer <https://www.continuum.io/downloads/>`_.
+
+The advantage of the anaconda3 installer is that you get a lot of additional modules and programs,
+that make it really easy to work with python. 
+For example `Ipython <http://ipython.org/>`_ and the `jupyter notebooks <http://jupyter.org/>`_.
+I highly recommend to use those.
 
 Unix
 ++++
 
-If you already have a directory for custom modules and a correctly set PYTHONPATH, 
-just put the two files chemcoord.py and constants.py in this directory.
+Create a directory where you want to put the source code and execute there::
 
-Otherwise create a directory e.g. `~/Python_scripts`, copy the files there and execute in the terminal the two commands::
+   git clone -b stable https://github.com/mcocdawc/chemcoord.git
 
-    echo export PYTHONPATH="$PYTHONPATH:~/Python_scripts/" >> ~/.bash_profile
-    source ~/.bash_profile
+If you want to install it for the user then execute::
 
+    python setup.py install --user
+
+For a systemwide installation execute (you need probably ``sudo`` rights)::
+
+    python setup.py install 
+
+To read the documentation go to docs and execute for a browser based documentation::
+    
+    make html
+
+Afterwards go to ``build/html`` and open the ``index.html`` file in a browser.
+
+If you want to have a PDF version of the documentation execute::
+
+    
 
 
 
 Windows
 +++++++
 
-To be written.
+I tested neither installation nor running the program on windows.
+Since I use mainly the IO functionality provided by pandas for Dataframes and 
+do all operations on numpy arrays and pandas Dataframes kept in memory, 
+it could work on Windows.
+
+If you get it installed and running, please report it on the Github page.
+
+

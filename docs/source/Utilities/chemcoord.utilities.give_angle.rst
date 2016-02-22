@@ -1,4 +1,4 @@
-chemcoord.utilities.give_angle
+give_angle
 ==============================
 
 .. currentmodule:: chemcoord.utilities

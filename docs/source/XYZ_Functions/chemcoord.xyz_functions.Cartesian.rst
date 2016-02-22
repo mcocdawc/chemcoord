@@ -6,38 +6,49 @@ Cartesian
 .. autoclass:: Cartesian
 
    
-    .. rubric:: Methods
+    .. rubric:: User methods
     
     .. autosummary::
          :toctree: Cartesian
     
          ~Cartesian.__init__
-         ~Cartesian.angle_degrees
-         ~Cartesian.basistransform
+         ~Cartesian.read_xyz
+         ~Cartesian.get_bonds
+         ~Cartesian.to_zmat
+         ~Cartesian.location
          ~Cartesian.bond_lengths
-         ~Cartesian.change_numbering
-         ~Cartesian.clean_dihedral
-         ~Cartesian.connected_to
+         ~Cartesian.angle_degrees
+         ~Cartesian.dihedral_degrees
+         ~Cartesian.move
+         ~Cartesian.basistransform
+         ~Cartesian.add_data
+         ~Cartesian.total_mass
+         ~Cartesian.barycenter
+         ~Cartesian.inertia
+         ~Cartesian.topologic_center
          ~Cartesian.cutcuboid
          ~Cartesian.cutsphere
-         ~Cartesian.dihedral_degrees
+         ~Cartesian.connected_to
          ~Cartesian.distance_to
-         ~Cartesian.get_bonds
          ~Cartesian.get_fragment
-         ~Cartesian.inertia
-         ~Cartesian.location
-         ~Cartesian.topologic_center
-         ~Cartesian.barycenter
-         ~Cartesian.molden
-         ~Cartesian.move
-         ~Cartesian.read_xyz
-         ~Cartesian.to_zmat
-         ~Cartesian.write
-         ~Cartesian.add_data
+         ~Cartesian.fragmentate
          ~Cartesian.make_similar
+         ~Cartesian.change_numbering
+         ~Cartesian.move_to
+         ~Cartesian.partition_chem_env
+         ~Cartesian.write
+         ~Cartesian.write_molden
        
-       
+
+    .. rubric:: Advanced methods
     
-       
+    .. autosummary::
+         :toctree: Cartesian
+    
+         ~Cartesian._divide_et_impera
+         ~Cartesian._preserve_bonds
+         ~Cartesian._get_buildlist
+         ~Cartesian._clean_dihedral
+         ~Cartesian._build_zmat
        
        

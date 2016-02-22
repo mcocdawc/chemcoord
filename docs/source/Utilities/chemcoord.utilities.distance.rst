@@ -1,4 +1,4 @@
-chemcoord.utilities.distance
+distance
 ============================
 
 .. currentmodule:: chemcoord.utilities

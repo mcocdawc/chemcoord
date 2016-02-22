@@ -1,6 +1,6 @@
-make_similar
+write_molden
 ==============================================
 
 .. currentmodule:: chemcoord.xyz_functions
 
-.. automethod:: Cartesian.make_similar
+.. automethod:: Cartesian.write_molden

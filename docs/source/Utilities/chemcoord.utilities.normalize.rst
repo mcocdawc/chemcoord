@@ -1,4 +1,4 @@
-chemcoord.utilities.normalize
+normalize
 =============================
 
 .. currentmodule:: chemcoord.utilities

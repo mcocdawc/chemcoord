@@ -1,4 +1,4 @@
-chemcoord.utilities.rotation_matrix
+rotation_matrix
 ===================================
 
 .. currentmodule:: chemcoord.utilities

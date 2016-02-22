@@ -1,4 +1,4 @@
-chemcoord.utilities.orthormalize
+orthormalize
 ================================
 
 .. currentmodule:: chemcoord.utilities

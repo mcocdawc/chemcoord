@@ -1,6 +1,6 @@
-clean_dihedral
+_get_buildlist
 ================================================
 
 .. currentmodule:: chemcoord.xyz_functions
 
-.. automethod:: Cartesian.clean_dihedral
+.. automethod:: Cartesian._get_buildlist

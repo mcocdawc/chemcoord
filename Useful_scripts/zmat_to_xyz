@@ -29,12 +29,11 @@ def read_input():
 
 args = read_input()
 
-ref_zmat = cc.read.xyz(args.inputfile)
-xyz = cc.zmat_functions.zmat_to_xyz(ref_zmat)
-
 if args.outputfile is None:
     outputfile = ''.join(args.inputfile.split('.')[:-1]) + '.xyz'
 else:
     outputfile = args.outputfile
 
-cc.write.xyz(zmat, outputfile)
+
+ref_zmat = cc.Zmat.read_zmat(args.inputfile)
+ref_zmat.to_xyz().write(outputfile)

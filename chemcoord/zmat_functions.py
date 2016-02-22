@@ -9,7 +9,18 @@ from . import xyz_functions
 
 @export
 class Zmat:
+    """The main class for dealing with internal coordinates.
+    """
     def __init__(self, zmat_frame):
+        """How to initialize a Zmat instance.
+
+        Args:
+            zmat_frame (pd.DataFrame): A Dataframe with at least the columns ``['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral']``.
+                Where ``'atom'`` is a string for the elementsymbol.
+    
+        Returns:
+            Zmat: A new zmat instance.
+        """
         self.zmat_frame = zmat_frame.copy()
         self.n_atoms = zmat_frame.shape[0]
 
@@ -43,7 +54,7 @@ class Zmat:
             in_place (bool):
     
         Returns:
-            Cartesian:
+            Zmat:
         """
         data = constants.elements
         if in_place:
@@ -84,6 +95,7 @@ class Zmat:
         """Return the buildlist which is necessary to create this Zmat
     
         Args:
+            None
     
         Returns:
             np.array: Buildlist
@@ -100,11 +112,16 @@ class Zmat:
 
 
     def change_numbering(self, new_index = None):
-        """
-        The input is a zmat_DataFrame.
+        """Change numbering to a new index.
+
         Changes the numbering of index and all dependent numbering (bond_with...) to a new_index.
         The user has to make sure that the new_index consists of distinct elements.
-        By default the new_index are the natural number ascending from 0.
+
+        Args:
+            new_index (list): If None the new_index is taken from 1 to the number of atoms.
+    
+        Returns:
+            Zmat: Reindexed version of the zmatrix.
         """
         zmat_frame = self.zmat_frame.copy()
         old_index = list(zmat_frame.index)
@@ -119,10 +136,18 @@ class Zmat:
 
 
     def to_xyz(self, SN_NeRF=False):
-        """
-        The input is a zmat_DataFrame.
-        The output is a xyz_DataFrame.
-        If SN_NeRF is True the algorithm is used.
+        """Transforms to cartesian space.
+
+        Args:
+            SN_NeRF (bool): Use the **Self-Normalizing Natural Extension Reference Frame** algorithm [1]_. In theory this means 30 % less floating point operations, but since this module is in python, floating point operations are not the rate determining step. Nevertheless it is a more elegant method than the "intuitive" conversion. Could make a difference in the future when certain functions will be implemented in ``Fortran``.
+    
+        Returns:
+            Zmat: Reindexed version of the zmatrix.
+
+        .. [1] Parsons J, Holmes JB, Rojas JM, Tsai J, Strauss CE (2005). 
+            Practical conversion from torsion space to Cartesian space for in silico protein synthesis.
+            J Comput Chem. 26(10) , 1063-8. 
+            `doi:10.1002/jcc.20237 <http://dx.doi.org/10.1002/jcc.20237>`_ 
         """
         zmat = self.zmat_frame.copy()
         n_atoms = zmat.shape[0]
@@ -301,7 +326,7 @@ class Zmat:
                 The row number is used to determine the index.
     
         Returns:
-            pd.DataFrame: 
+            Zmat: 
         """
         if implicit_index:
             zmat_frame = pd.read_table(
@@ -331,7 +356,6 @@ class Zmat:
             The frame to be written is of course not changed.
     
         Args:
-            zmat (pd.dataframe): 
             outputfile (str): 
             implicit_index (bool): If implicit_index is set, the zmat indexing is changed to range(1, number_atoms+1)
                 Besides the index is omitted while writing which means, that the index is given implicitly by the row number.
