@@ -16,7 +16,7 @@ Besides it supplies you with a lot of functions to manipulate them and make your
   So all functions are tested and tailored around the workflow in theoretical chemistry.
 * The classes are safe to inherit from and you can easily costumize it for the needs of your project.
 
-## Installation
+## Installation guide
 
 You need a working python 3.x installation together with the modules:
 
@@ -37,11 +37,12 @@ that make it really easy to work with python.
 For example [Ipython](http://ipython.org/) and the [jupyter notebooks](http://jupyter.org/)
 I highly recommend to use those.
 
-#### Unix
+### Unix
 
+#### Installation
 Create a directory where you want to put the source code and execute there::
 ```bash
-   git clone -b stable https://github.com/mcocdawc/chemcoord.git
+git clone -b stable https://github.com/mcocdawc/chemcoord.git
 ```
 If you want to install it for the user then execute::
 ```bash
@@ -50,27 +51,28 @@ If you want to install it for the user then execute::
 
 For a systemwide installation execute (you need probably `sudo` rights):
 ```bash
-    python setup.py install 
+python setup.py install 
 ```
 
+#### Documentation
 To read the documentation go to docs and execute for a browser based documentation::
 ```bash
-    make html
+make html
 ```
 
 Afterwards go to `build/html` and open the `index.html` file in a browser.
 
 If you want to have a PDF version of the documentation execute:
 ```bash
-    make latex
-    make latexpdf
-    make latexpdf
+make latex
+make latexpdf
+make latexpdf
 ```
 
 Afterwards go to `build/latex` and open the `ChemCoord.pdf` file with a PDF reader.
  
 
-#### Windows
+### Windows
 
 I tested neither installation nor running the program on windows.
 Since I use mainly the IO functionality provided by pandas for Dataframes and 
@@ -79,7 +81,6 @@ it could work on Windows.
 
 If you get it installed and running, please report it on the Github page.
 
-## Documentation
 
 
 
