@@ -46,7 +46,7 @@ git clone -b stable https://github.com/mcocdawc/chemcoord.git
 ```
 If you want to install it for the user then execute::
 ```bash
-    python setup.py install --user
+python setup.py install --user
 ```
 
 For a systemwide installation execute (you need probably `sudo` rights):
