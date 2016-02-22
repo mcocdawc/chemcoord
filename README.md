@@ -37,8 +37,7 @@ that make it really easy to work with python.
 For example [Ipython](http://ipython.org/) and the [jupyter notebooks](http://jupyter.org/)
 I highly recommend to use those.
 
-Unix
-++++
+#### Unix
 
 Create a directory where you want to put the source code and execute there::
 ```bash
@@ -71,10 +70,7 @@ If you want to have a PDF version of the documentation execute:
 Afterwards go to `build/latex` and open the `ChemCoord.pdf` file with a PDF reader.
  
 
-
-
-Windows
-+++++++
+#### Windows
 
 I tested neither installation nor running the program on windows.
 Since I use mainly the IO functionality provided by pandas for Dataframes and 
