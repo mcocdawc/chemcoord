@@ -192,7 +192,8 @@ class Cartesian:
                 if settings.show_warnings['valency']:
                     warning_string = """Warning: You specified use_valency=True and provided a geometry with over saturated atoms. 
 This means that the bonds with lowest overlap will be cut, although the van der Waals radii overlap.
-If you don't want to see this warning go to settings.py and edit the dictionary.
+If you don't want to see this warning go to settings.py and edit the dictionary. 
+Or execute cc.settings.show_warnings['valency'] = False.
 The problematic indices are:\n""" + oversaturated_converted.__repr__()
                     print(warning_string)
                 select = np.nonzero(overlap_array[indices_of_oversaturated_atoms, :])
@@ -211,6 +212,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 and provided a geometry with over saturated atoms. 
 This means that bonds are not cut even if their number exceeds the valency.
 If you don't want to see this warning go to settings.py and edit the dictionary.
+Or execute cc.settings.show_warnings['valency'] = False.
 The problematic indices are:\n""" + oversaturated_converted.__repr__()
                     print(warning_string)
             
@@ -383,7 +385,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         if give_only_index:
             to_return = fixed_atoms
         else:
-            to_return = Cartesian(self.xyz_frame.loc[fixed_atoms, :])
+            to_return = self.__class__(self.xyz_frame.loc[fixed_atoms, :])
         return to_return
 
 
@@ -560,7 +562,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             
         else:
             frame.loc[indices, ['x', 'y', 'z']] = vectors
-        return Cartesian(frame)
+        return self.__class__(frame)
 
     def bond_lengths(self, buildlist, start_row=0):
         """Return the distances between given atoms.
@@ -1044,7 +1046,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                         big_molecule_index = set(self.xyz_frame.index) - fragment_index
                         return buildlist, big_molecule_index
                     buildlist, big_molecule_index = prepare_variables(self, fragment_list)
-                    big_molecule = Cartesian(self.xyz_frame.loc[big_molecule_index, :])
+                    big_molecule = self.__class__(self.xyz_frame.loc[big_molecule_index, :])
                     row = big_molecule.n_atoms
                     buildlist[: row, :] = big_molecule._get_buildlist()
                     return buildlist, big_molecule, row
@@ -1322,7 +1324,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         else:
             molecule1 = self
         # Copy ??
-            molecule2_new = Cartesian(Cartesian2.xyz_frame)
+            molecule2_new = self.__class__(Cartesian2.xyz_frame)
         molecule2_new.__bond_dic = Cartesian2.get_bonds(use_lookup=True)
 
         partition1 = molecule1.partition_chem_env(follow_bonds)
@@ -1476,7 +1478,10 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             xyz_frame.index = range(1, n_atoms+1)
         molecule = cls(xyz_frame)
         if get_bonds:
+            previous_warnings_bool = settings.show_warnings['valency']
+            settings.show_warnings['valency'] = False
             molecule.get_bonds()
+            settings.show_warnings['valency'] = previous_warnings_bool
         return molecule
 
     def add_data(self, list_of_columns=None, in_place=False):

@@ -1,5 +1,5 @@
 
-show_warnings = {'valency' : False}
+show_warnings = {'valency' : True}
 
 # The Cartesian().get_bonds() method will use or not use a lookup.
 # Greatly increases performance if True, but could introduce bugs
