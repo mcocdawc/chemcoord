@@ -7,7 +7,7 @@ Besides it supplies you with a lot of functions to manipulate them and make your
 
 ## Features
 
-* `You can use it as a python module. <https://xkcd.com/353/>`_
+* [You can use it as a python module](https://xkcd.com/353/)
 * It reliably converts from Cartesian space (xyz-files) to internal coordinates (zmat-files)
   **without** introducing dummy atoms. Even in the case of linearity.
 * The created zmatrix is not only a transformation to internal coordinates, it is a "chemical" zmatrix. 
