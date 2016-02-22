@@ -43,7 +43,12 @@ Afterwards go to ``build/html`` and open the ``index.html`` file in a browser.
 
 If you want to have a PDF version of the documentation execute::
 
-    
+    make latex
+    make latexpdf
+    make latexpdf
+
+Afterwards go to ``build/latex`` and open the ``ChemCoord.pdf`` file with a PDF reader.
+ 
 
 
 

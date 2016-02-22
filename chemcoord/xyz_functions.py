@@ -569,6 +569,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
        
         Args:
             buildlist (np.array): 
+            start_row (int):
     
         Returns:
             list: Vector of the distances between the first and second atom of every entry in the buildlist. 
@@ -596,9 +597,8 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         In order to know more about the buildlist, go to :func:`to_zmat`.
        
         Args:
-            xyz_frame (pd.dataframe): 
             buildlist (list): 
-            exclude_first (bool): The exclude_first option excludes the first two rows of the buildlist from calculation.
+            start_row (int):
     
         Returns:
             list: List of the angle between the first, second and third atom of every entry in the buildlist. 
@@ -632,9 +632,8 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         In order to know more about the buildlist, go to :func:`to_zmat`.
     
         Args:
-            xyz_frame (pd.dataframe): 
             buildlist (list): 
-            exclude_first (bool): The exclude_first option excludes the first three rows of the buildlist from calculation.
+            start_row (int):
     
         Returns:
             list: List of the dihedral between the first, second, third and fourth atom of every entry in the buildlist. 

@@ -29,9 +29,7 @@ Contents
 
     installation.rst
     remarks.rst 
-    tutorial.rst
     documentation.rst
-    advanced_usage.rst
     references.rst
 
 

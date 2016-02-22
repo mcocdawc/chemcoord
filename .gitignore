@@ -45,4 +45,5 @@ nosetests.xml
 # Pdfs
 *pdf
 
-
+# ignore molden files from the Tutorial
+*molden
