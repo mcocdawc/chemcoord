@@ -1,9 +1,5 @@
 # chemcoord: A python module for coordinates of molecules
 
-## Introduction
-
-With this module you can read cartesian (xyz) and internal (zmat) coordinates into pandas DataFrames.
-Besides it supplies you with a lot of functions to manipulate them and make your workflow more efficient.
 
 ## Features
 
@@ -32,10 +28,9 @@ You need a working python 3.x installation together with the modules:
 All of them come shipped by default with nearly every python installation.
 You can use for example the [anaconda3 installer](https://www.continuum.io/downloads/)
 
-The advantage of the anaconda3 installer is that you get a lot of additional modules and programs,
+The advantage of the anaconda3 installer is that you get a lot of additional modules and programs
 that make it really easy to work with python. 
-For example [Ipython](http://ipython.org/) and the [jupyter notebooks](http://jupyter.org/)
-I highly recommend to use those.
+[Ipython](http://ipython.org/) and the [jupyter notebooks](http://jupyter.org/) are an example.
 
 ### Unix
 
