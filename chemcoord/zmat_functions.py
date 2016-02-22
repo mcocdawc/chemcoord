@@ -19,28 +19,65 @@ class Zmat:
     def _repr_html_(self):
         return self.zmat_frame._repr_html_()
 
-    def mass(self):
-        """Gives several properties related to mass.
+    def add_data(self, list_of_columns=None, in_place=False):
+        """Adds a column with the requested data.
+
+        If you want to see for example the mass, the colormap used in jmol and the block of the element, just use::
+
+            ['mass', 'jmol_color', 'block']
+
+        The underlying ``pd.DataFrame`` can be accessed with ``cc.constants.elements``.
+        To see all available keys use ``cc.constants.elements.info()``.
+
+        The data comes from the module `mendeleev <http://mendeleev.readthedocs.org/en/latest/>`_ written by Lukasz Mentel.
+
+        Please note that I added three columns to the mendeleev data::
+
+            ['atomic_radius_gv', 'gv_color', 'valency']
+
+        These are taken from the MOLCAS grid viewer written by Valera Veryazov. 
     
         Args:
+            list_of_columns (str): You can pass also just one value. E.g. ``'mass'`` is equivalent to ``['mass']``. 
+                If ``list_of_columns`` is ``None`` all available data is returned.
+            in_place (bool):
     
         Returns:
-            dic: The returned dictionary has four possible keys:
-            
-            ``Zmat_mass``: Zmatrix with an additional column for the masses of each atom.
-        
-            ``total_mass``: The total mass.
+            Cartesian:
         """
-        zmat_mass = self.zmat_frame.copy()
-        masses_dic = dict(zip(
-                constants.atom_properties.keys(), 
-                [constants.atom_properties[atom]['mass'] for atom in constants.atom_properties.keys()]
-                ))
-        masses = [masses_dic[atom] for atom in zmat_mass['atom']]
-        zmat_mass['mass'] = masses
-        total_mass = zmat_mass['mass'].sum()
-        dic_of_values = dict(zip(['Zmat_mass', 'total_mass'], [Zmat(zmat_mass), total_mass]))
-        return dic_of_values
+        data = constants.elements
+        if in_place:
+            frame = self.zmat_frame
+        else:
+            frame = self.zmat_frame.copy()
+
+        list_of_columns = data.columns if (list_of_columns is None) else list_of_columns
+        
+        atom_symbols = frame['atom']
+        new_columns = data.loc[atom_symbols, list_of_columns]
+        new_columns.index = frame.index
+
+
+        frame = pd.concat([frame, new_columns], axis=1)
+
+        if in_place:
+            to_return = self
+        else:
+            to_return = self.__class__(frame)
+        return to_return
+
+    def total_mass(self):
+        """Returns the total mass.
+    
+        Args:
+            None
+
+        Returns:
+            float: 
+        """
+        mass_molecule = self.add_data('mass')
+        mass = mass_molecule.zmat_frame['mass'].sum()
+        return mass
 
 
     def build_list(self):
@@ -79,38 +116,6 @@ class Zmat:
         return self.__class__(zmat_frame)
 
 
-    # TODO performing better
-    def movement_to(self, Zmat, steps = 5):
-        """
-        This function returns a list of zmat_frames with the subsequent 
-        movement from zmat_frame1 to zmat_frame2.
-        The list contains zmat_frame1 as first and zmat_frame2 as last element.
-        Please note, that for this reason: len(list) = (step + 1).
-        """
-        zmatframe1 = self.zmat_frame.copy()
-        zmatframe2 = Zmat.zmat_frame.copy()
-        difference = zmatframe2.copy()
-    
-        difference.loc[:, ['bond', 'angle', 'dihedral']] = zmatframe2.loc[
-                :, ['bond', 'angle', 'dihedral']
-                ] - zmatframe1.loc[:, ['bond', 'angle', 'dihedral']]
-
-        step_frame = difference.copy()
-    
-        step_frame.loc[:, ['bond', 'angle', 'dihedral']] = step_frame.loc[
-                :, ['bond', 'angle', 'dihedral']] / steps
-    
-        list_of_zmatrices = []
-        temp_zmat = zmatframe1.copy()
-    
-        for t in range(steps + 1):
-            temp_zmat.loc[:, ['bond', 'angle', 'dihedral']] = zmatframe1.loc[
-                    :, ['bond', 'angle', 'dihedral']] + (
-                        step_frame.loc[:, ['bond', 'angle', 'dihedral']]  * t
-                        )
-            
-            list_of_zmatrices.append(self.__class__(temp_zmat))
-        return list_of_zmatrices
 
 
     def to_xyz(self, SN_NeRF=False):
@@ -127,34 +132,26 @@ class Zmat:
                 )
         molecule = xyz_functions.Cartesian(xyz_frame)
         buildlist = self.build_list()
-        to_be_built = list(zmat.index)
-        already_built = []
     
         normalize = utilities.normalize
         rotation_matrix = utilities.rotation_matrix
-        tolerance_for_linearity=1e-04
     
         def add_first_atom():
-            index = to_be_built[0]
+            index = buildlist[0, 0]
             # Change of nonlocal variables
             molecule.xyz_frame.loc[index] = [zmat.at[index, 'atom'], 0., 0., 0.]
-            already_built.append(to_be_built.pop(0))
     
         def add_second_atom():
-            index = to_be_built[0]
+            index = buildlist[1, 0]
             atom, bond = zmat.loc[index, ['atom', 'bond']]
             # Change of nonlocal variables
             molecule.xyz_frame.loc[index] = [atom, bond, 0., 0. ]
-            already_built.append(to_be_built.pop(0))
     
     
         def add_third_atom():
-            index = to_be_built[0]
+            index, bond_with, angle_with = buildlist[2, :3]
             atom, bond, angle = zmat.loc[index, ['atom', 'bond', 'angle']]
             angle = m.radians(angle)
-            bond_with, angle_with = buildlist[2, 1:3]
-#            bond_with, angle_with = zmat.loc[index, ['bond_with', 'angle_with']]
-#            bond_with, angle_with = map(int, (bond_with, angle_with))
     
             # vb is the vector of the atom bonding to, 
             # va is the vector of the angle defining atom,
@@ -174,50 +171,45 @@ class Zmat:
     
             # Change of nonlocal variables
             molecule.xyz_frame.loc[index] = [atom] + list(p)
-            already_built.append(to_be_built.pop(0))
     
-    
+
         def add_atom(row):
-            index = to_be_built[0]
+            index, bond_with, angle_with, dihedral_with = buildlist[row, :]
             atom, bond, angle, dihedral = zmat.loc[index, ['atom', 'bond', 'angle', 'dihedral']]
             angle, dihedral = map(m.radians, (angle, dihedral))
-            bond_with, angle_with, dihedral_with = buildlist[row, 1:]
-#            bond_with, angle_with, dihedral_with = zmat.loc[index, ['bond_with', 'angle_with', 'dihedral_with']]
-#            bond_with, angle_with, dihedral_with = map(int, (bond_with, angle_with, dihedral_with))
     
             # vb is the vector of the atom bonding to, 
             # va is the vector of the angle defining atom,
             # vd is the vector of the dihedral defining atom
             vb, va, vd = molecule.location([bond_with, angle_with, dihedral_with])
-            if np.isclose(m.degrees(angle), 180., atol=tolerance_for_linearity):
+            if np.isclose(m.degrees(angle), 180.):
                 AB = vb - va
                 ab = normalize(AB)
                 d = bond * ab
     
                 p = vb + d
                 molecule.xyz_frame.loc[index] = [atom] + list(p)
-                already_built.append(to_be_built.pop(0))
     
             else:
                 AB = vb - va
                 DA = vd - va
-    
+        
                 n1 = normalize(np.cross(DA, AB))
                 ab = normalize(AB)
-    
+        
                 # Vector of length distance pointing along the x-axis
                 d = bond * -ab
-    
+        
                 # Rotate d by the angle around the n1 axis
                 d = np.dot(rotation_matrix(n1, angle), d)
                 d = np.dot(rotation_matrix(ab, dihedral), d)
-    
+        
                 # Add d to the position of q to get the new coordinates of the atom
                 p = vb + d
-    
+        
                 # Change of nonlocal variables
                 molecule.xyz_frame.loc[index] = [atom] + list(p)
-                already_built.append(to_be_built.pop(0))
+
     
         def add_atom_SN_NeRF(row):
             normalize = utilities.normalize
@@ -226,8 +218,6 @@ class Zmat:
             atom, bond, angle, dihedral = zmat.loc[index, ['atom', 'bond', 'angle', 'dihedral']]
             angle, dihedral = map(m.radians, (angle, dihedral))
             bond_with, angle_with, dihedral_with = buildlist[row, 1:]
-#            bond_with, angle_with, dihedral_with = zmat.loc[index, ['bond_with', 'angle_with', 'dihedral_with']]
-#            bond_with, angle_with, dihedral_with = map(int, (bond_with, angle_with, dihedral_with))
     
             vb, va, vd = molecule.location([bond_with, angle_with, dihedral_with])
     
@@ -244,14 +234,13 @@ class Zmat:
             # Since the python overhead is the limiting step, you won't see any difference.
             # But it is more elegant ;).
 
-            if np.isclose(m.degrees(angle), 180., atol=tolerance_for_linearity):
+            if np.isclose(m.degrees(angle), 180.):
                 AB = vb - va
                 ab = normalize(AB)
                 d = bond * ab
     
                 p = vb + d
                 molecule.xyz_frame.loc[index] = [atom] + list(p)
-                already_built.append(to_be_built.pop(0))
     
             else:
                 D2 = bond * np.array([
@@ -272,7 +261,6 @@ class Zmat:
                 D = np.dot(np.transpose(M), D2) + vb
         
                 molecule.xyz_frame.loc[index] = [atom] + list(D)
-                already_built.append(to_be_built.pop(0))
     
         if n_atoms == 1:
             add_first_atom()
@@ -296,7 +284,10 @@ class Zmat:
             else:
                 for row in range(3, n_atoms):
                     add_atom(row)
+
+        assert not molecule.xyz_frame.isnull().values.any(), 'Serious bug while converting, please report an error on the Github page with your coordinate files'
         return molecule
+
 
     @classmethod
     def read_zmat(cls, inputfile, implicit_index=True):
@@ -466,4 +457,7 @@ class Zmat:
 #
 #
 #    out_frame = pd.concat([zmat_frame, fragment])
+#    return out_frame
+
+
 #    return out_frame
