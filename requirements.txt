@@ -1,7 +1,2 @@
 numpy
 pandas
-math
-collections
-os
-sys
-io
