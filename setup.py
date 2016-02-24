@@ -20,7 +20,7 @@ KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
 CLASSIFIERS = ['Development Status :: 3 - Alpha',
                'Environment :: Console',
                'Intended Audience :: Science/Research',
-               'License :: OSI Approved :: GPL',
+               'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
                'Natural Language :: English',
                'Programming Language :: Python :: 3',
                'Topic :: Scientific/Engineering :: Chemistry',
@@ -29,7 +29,7 @@ CLASSIFIERS = ['Development Status :: 3 - Alpha',
 
 def readme():
     '''Return the contents of the README.rst file.'''
-    with open('README') as freadme:
+    with open('README.md') as freadme:
         return freadme.read()
 
 
