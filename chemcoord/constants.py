@@ -9,12 +9,12 @@
 ######################################################################################################
 import pandas as pd
 import os
-import sys
-if sys.version_info[0] < 3:
-    from StringIO import StringIO
-else:
-    from io import StringIO
-
+#import sys
+#if sys.version_info[0] < 3:
+#    from StringIO import StringIO
+#else:
+#    from io import StringIO
+from io import StringIO
 
 #energy_conversion={
 #        ('hartree', 'kJ per mole') : 2625.50, 

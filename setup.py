@@ -14,7 +14,7 @@ AUTHOR='Oskar Weser'
 EMAIL='oskar.weser@gmail.com'
 URL='https://github.com/mcocdawc/chemcoord'
 #PACKAGES=['chemcoord'],
-REQUIRES=['numpy', 'pandas', 'copy', 'math', 'collections', 'os', 'sys']
+REQUIRES=['numpy', 'pandas', 'copy', 'math', 'collections', 'os', 'sys', 'io']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry', 'zmatrix', 'xyz', 'zmat']
 
 CLASSIFIERS = ['Development Status :: 3 - Alpha',
