@@ -1,6 +1,5 @@
 numpy
 pandas
-copy
 math
 collections
 os
