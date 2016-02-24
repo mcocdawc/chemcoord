@@ -1,0 +1,3 @@
+include *.md
+recursive-include chemcoord *.py 
+recursive-include docs/source *.rst
