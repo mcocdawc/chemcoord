@@ -15,7 +15,35 @@
 
 import sys
 import os
-import shlex
+import inspect
+from unittest.mock import MagicMock    # if python ver >= 3.3
+#import shlex
+
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return Mock()
+
+MOCK_MODULES = ['numpy',
+                'pandas'
+                ]
+
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+
+#__location__ = os.path.join(os.getcwd(), os.path.dirname(
+#    inspect.getfile(inspect.currentframe())))
+#
+#output_dir = os.path.join(__location__, "_reference")
+#module_dir = os.path.join(__location__, "../mendeleev")
+#
+#on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+#if on_rtd:
+#    html_theme = 'default'
+#else:
+#    sys.path.append(os.path.dirname(os.path.normpath(module_dir)))
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
