@@ -20,17 +20,16 @@ from unittest.mock import MagicMock    # if python ver >= 3.3
 #import shlex
 
 
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return Mock()
-
-MOCK_MODULES = ['numpy',
-                'pandas'
-                ]
-
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-
+#class Mock(MagicMock):
+#    @classmethod
+#    def __getattr__(cls, name):
+#        return Mock()
+#
+#MOCK_MODULES = ['numpy'
+#                ]
+#
+#sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+#
 
 #__location__ = os.path.join(os.getcwd(), os.path.dirname(
 #    inspect.getfile(inspect.currentframe())))
