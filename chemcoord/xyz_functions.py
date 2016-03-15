@@ -4,7 +4,7 @@ import pandas as pd
 import math as m
 import copy
 import collections 
-from . import constants
+#from . import constants
 from . import utilities
 from . import zmat_functions
 from . import export
