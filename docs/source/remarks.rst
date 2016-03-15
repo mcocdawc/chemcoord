@@ -44,6 +44,7 @@ Let's assume you have a ``molecule1`` and you want to cut a sphere around the or
     molecule2 = molecule1.cutsphere()
 
 If you try this, you will see that:
+
 * molecule2 is a ``Cartesian`` instance.
 * molecule1 remains unchanged.
 
