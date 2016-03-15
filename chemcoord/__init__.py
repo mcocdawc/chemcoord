@@ -13,3 +13,4 @@ from . import xyz_functions
 from . import zmat_functions
 from . import utilities
 from . import constants
+from . import settings
