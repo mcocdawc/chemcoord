@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 import math as m
 import copy
-from . import export
+#from . import export
 #from . import constants
-from . import utilities
-from . import xyz_functions
+#from . import utilities
+#from . import xyz_functions
 
 @export
 class Zmat:
