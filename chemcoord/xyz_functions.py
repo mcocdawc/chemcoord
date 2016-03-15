@@ -14,9 +14,11 @@ from . import settings
 def pick(my_set):
     """Returns one element from a set.
     """
+    assert type(my_set) is set, 'Pick can be applied only on sets.'
     x = my_set.pop()
     my_set.add(x)
     return x
+
 
 @export
 class Cartesian:
