@@ -7,7 +7,7 @@ import collections
 #from . import constants
 #from . import utilities
 #from . import zmat_functions
-#from . import export
+from . import export
 #from . import settings
 
 
