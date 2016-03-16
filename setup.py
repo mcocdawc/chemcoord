@@ -15,9 +15,11 @@ EMAIL='oskar.weser@gmail.com'
 URL='https://github.com/mcocdawc/chemcoord'
 #PACKAGES=['chemcoord'],
 REQUIRES=['numpy', 'pandas', 'copy', 'math', 'collections', 'os', 'sys', 'io']
-KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry', 'zmatrix', 'xyz', 'zmat']
+KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
+        'zmatrix', 'xyz', 'zmat', 'coordinates', 'coordinate system'
+        ]
 
-CLASSIFIERS = ['Development Status :: 3 - Alpha',
+CLASSIFIERS = ['Development Status :: 5 - Production/Stable',
                'Environment :: Console',
                'Intended Audience :: Science/Research',
                'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
@@ -28,7 +30,7 @@ CLASSIFIERS = ['Development Status :: 3 - Alpha',
 
 
 def readme():
-    '''Return the contents of the README.rst file.'''
+    '''Return the contents of the README.md file.'''
     with open('README.md') as freadme:
         return freadme.read()
 
