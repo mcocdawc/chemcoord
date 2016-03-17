@@ -45,5 +45,6 @@ nosetests.xml
 # Pdfs
 *pdf
 
-# ignore molden files from the Tutorial
+# ignore molecule files from the Tutorial
 *molden
+*xyz
