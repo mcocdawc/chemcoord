@@ -26,17 +26,16 @@ that make it really easy to work with python.
 For example [Ipython](http://ipython.org/) and the [jupyter notebooks](http://jupyter.org/)
 I highly recommend to use those.
 
-Unix
-++++
+### Unix
+
 
 Just type in your terminal:
-'''
+```
 pip install chemcoord
-'''
+```
 This should also resolve all dependencies automatically.
 
-Windows
-+++++++
+### Windows
 
 I tested neither installation nor running the module on windows.
 As far as I know it should work as well if you use the ``pip`` manager.
