@@ -33,5 +33,6 @@ Contents
     documentation.rst
     references.rst
     bugs.rst
+    license.rst
 
 
