@@ -2,7 +2,7 @@
 
 ## Website
 
-The project's website is: chemcoord.readthedocs.org/
+The project's website is: http://chemcoord.readthedocs.org/
 
 
 ## Features
