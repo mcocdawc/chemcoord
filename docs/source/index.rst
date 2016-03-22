@@ -32,5 +32,6 @@ Contents
     tutorial.rst
     documentation.rst
     references.rst
+    bugs.rst
 
 

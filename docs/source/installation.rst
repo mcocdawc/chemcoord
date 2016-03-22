@@ -16,6 +16,8 @@ Just type in your terminal::
 
     pip install chemcoord
 
+This should also resolve all dependencies automatically.
+
 Windows
 +++++++
 
