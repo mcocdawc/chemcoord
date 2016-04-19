@@ -127,7 +127,7 @@ def orthormalize(basis):
 def distance(vector1, vector2):
     """Calculates the distance between vector1 and vector2
     """
-    length = np.sqrt(np.linalg.norm(vector1 - vector2))
+    length = np.linalg.norm(vector1 - vector2)
     return length
 
 
@@ -139,3 +139,63 @@ def give_distance_array(location_array):
     C = A - B
     return_array = np.linalg.norm(C, axis=2)
     return return_array
+
+
+def kabsch(P, Q):
+    """Application of Kabsch algorithm on two matrices.
+
+    The optimal rotation matrix U is calculated and then used to rotate matrix
+    P unto matrix Q so the minimum root-mean-square deviation (RMSD) can be
+    calculated.
+
+    Using the Kabsch algorithm with two sets of paired point P and Q,
+    centered around the center-of-mass.
+    Each vector set is represented as an NxD matrix, where D is the
+    the dimension of the space.
+
+    The algorithm works in three steps:
+
+    * a translation of P and Q
+    * the computation of a covariance matrix C
+    * computation of the optimal rotation matrix U
+
+    http://en.wikipedia.org/wiki/Kabsch_algorithm
+
+    Args:
+        P (np.array): (N, number of points)x(D, dimension) matrix
+        Q (np.array): (N, number of points)x(D, dimension) matrix
+
+    Returns:
+        new_basis (np.array): A right handed orthonormalized basis.
+        U (np.array): Rotation matrix
+
+    .. [1] Kabsch W. (1976). 
+        A solution for the best rotation to relate two sets of vectors.
+        Acta Crystallographica, A32:922-923. 
+        `doi:10.1107/S0567739476001873 <http://dx.doi.org/10.1107/S0567739476001873>`_
+
+    .. [2] Jimmy Charnley Kromann ; Casper Steinmann ; larsbratholm ; aandi ; Kasper Primdal Lauritzen (2016). 
+        GitHub: Calculate RMSD for two XYZ structures.
+        http://github.com/charnley/rmsd, `doi:10.5281/zenodo.46697 <http://dx.doi.org/10.5281/zenodo.46697>`_
+    """
+
+    # Computation of the covariance matrix
+    C = np.dot(np.transpose(P), Q)
+
+    # Computation of the optimal rotation matrix
+    # This can be done using singular value decomposition (SVD)
+    # Getting the sign of the det(V)*(W) to decide
+    # whether we need to correct our rotation matrix to ensure a
+    # right-handed coordinate system.
+    # And finally calculating the optimal rotation matrix U
+    # see http://en.wikipedia.org/wiki/Kabsch_algorithm
+    V, S, W = np.linalg.svd(C)
+    signature = (np.linalg.det(V) * np.linalg.det(W)) < 0.0
+
+    if signature:
+        S[-1] = -S[-1]
+        V[:, -1] = -V[:, -1]
+
+    # Create Rotation matrix U
+    U = np.dot(V, W)
+    return U

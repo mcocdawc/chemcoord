@@ -10,6 +10,13 @@ References
     Luscus: molecular viewer and editor for MOLCAS.
     Journal of Cheminformatics. 7(1), 1-10
     `doi:10.1186/s13321-015-0060-z <http://dx.doi.org/10.1186/s13321-015-0060-z>`_
+.. [4] Kabsch W. (1976). 
+    A solution for the best rotation to relate two sets of vectors.
+    Acta Crystallographica, A32:922-923. 
+    `doi:10.1107/S0567739476001873 <http://dx.doi.org/10.1107/S0567739476001873>`_
+.. [5] Jimmy Charnley Kromann ; Casper Steinmann ; larsbratholm ; aandi ; Kasper Primdal Lauritzen (2016). 
+    GitHub: Calculate RMSD for two XYZ structures.
+    http://github.com/charnley/rmsd, `doi:10.5281/zenodo.46697 <http://dx.doi.org/10.5281/zenodo.46697>`_
 
 
 

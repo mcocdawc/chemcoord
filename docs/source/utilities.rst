@@ -12,3 +12,4 @@ Utilities for euclidean geometry
     orthormalize
     normalize
     distance
+    kabsch

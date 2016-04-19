@@ -44,6 +44,17 @@ class Cartesian:
 
     def _repr_html_(self):
         return self.xyz_frame._repr_html_()
+    
+    def __len__(self):
+        return self.n_atoms
+
+    def copy(self):
+        molecule = self.__class__(self.xyz_frame)
+        try:
+            molecule.__bond_dic = self.__bond_dic
+        except AttributeError:
+            pass
+        return molecule
 
 ############################################################################
 # From here till shown end pandas wrappers are defined.
@@ -120,7 +131,8 @@ class Cartesian:
                 use_valency=False,
                 use_lookup=False,
                 set_lookup=True,
-                divide_et_impera=True
+                divide_et_impera=True,
+                atomic_radius_data=settings.atomic_radius_data
                 ):
         """Returns a dictionary representing the bonds.
 
@@ -160,6 +172,9 @@ class Cartesian:
                 This approach can lead to problems if ``use_valency`` is ``True``. 
                 Bonds from one cuboid to another can not be counted for the valency..
                 This means that in certain situations some atoms can be oversaturated, although ``use_valency`` is ``True``.
+            atomic_radius_data (str): Defines which column of :attr:`constants.elements` is used. 
+                The default is ``atomic_radius_cc`` and can be changed with :attr:`settings.atomic_radius_data`.
+                Compare with :func:`add_data`.
     
         Returns:
             dict: Dictionary mapping from an atom index to the indices of atoms bonded to.
@@ -167,9 +182,9 @@ class Cartesian:
         def preparation_of_variables(modified_properties):
             bond_dic = dict(zip(self.xyz_frame.index, [set([]) for _ in range(self.n_atoms)]))
 
-            molecule2 = self.add_data(['valency', 'atomic_radius_gv'])
+            molecule2 = self.add_data(['valency', atomic_radius_data])
             valency_dic = dict(zip(molecule2.xyz_frame.index, molecule2.xyz_frame['valency'].get_values().astype('int64')))
-            atomic_radius_dic = dict(zip(molecule2.xyz_frame.index, molecule2.xyz_frame['atomic_radius_gv']))
+            atomic_radius_dic = dict(zip(molecule2.xyz_frame.index, molecule2.xyz_frame[atomic_radius_data]))
 
             if modified_properties is None:
                 pass
@@ -1300,6 +1315,44 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         return env_dict
 
 
+    def align(self, Cartesian2, ignore_hydrogens=False):
+        """Aligns two xyz_frames.
+
+        Searches for the optimal rotation matrix that minimizes 
+        the RMSD (root mean squared deviation) of ``self`` to Cartesian2.
+        Returns a tuple of copies of ``self`` and ``Cartesian2`` where both are centered
+        around their topologic center and ``Cartesian2`` is aligned along ``self``.
+
+        Args:
+            Cartesian2 (Cartesian): 
+            ignore_hydrogens (bool): Hydrogens are ignored for the RMSD.
+    
+        Returns:
+            tuple:
+        """
+        molecule1 = self.copy()
+        molecule2 = Cartesian2.copy()
+        molecule1 = molecule1.move(vector=-molecule1.topologic_center())
+        molecule2 = molecule2.move(vector=-molecule2.topologic_center())
+        
+
+        if ignore_hydrogens:
+            tmp_frame1 = molecule1.xyz_frame.copy()
+            tmp_frame2 = molecule2.xyz_frame.copy()
+            tmp_frame1 = tmp_frame1[tmp_frame1['atom'] != 'H']
+            tmp_frame2 = tmp_frame2[tmp_frame2['atom'] != 'H']
+            P = tmp_frame1[['x', 'y', 'z']].get_values().astype(float)
+            Q = tmp_frame2[['x', 'y', 'z']].get_values().astype(float)
+        else:
+            P = molecule1.location() 
+            Q = molecule2.location()
+
+        U = utilities.kabsch(P, Q)
+        molecule2 = molecule2.move(matrix=U)
+        return molecule1, molecule2
+
+
+
     def make_similar(self, Cartesian2, follow_bonds=4, prealign = True):
         """Similarizes two xyz_frames.
     
@@ -1307,32 +1360,27 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         for each atom in the same chemical environemt from ``self`` to ``Cartesian2``.
         Read more about the definition of the chemical environment in :func:`Cartesian.partition_chem_env`
     
-        .. warning:: The algorithm is still very basic, so it is important, to have a good
-            prealignment and quite similar frames. 
-            It is probably necessary to use the function :func:`Cartesian.change_numbering()`
+        .. warning:: Please check the result with e.g. :func:`Cartesian.move_to()`
+            It is probably necessary to use the function :func:`Cartesian.change_numbering()`.
 
         Args:
             Cartesian2 (Cartesian): 
             max_follow_bonds (int):
-            prealign (bool): If True both molecules are moved to their barycenters and aligned along 
-                their principal axes of inertia before reindexing.
+            prealign (bool): The method :func:`Cartesian.align()` is applied before reindexing.
     
         Returns:
-            tpl: Aligned copy of ``self`` and aligned + reindexed version of ``Cartesian2``
+            tuple: Aligned copy of ``self`` and aligned + reindexed version of ``Cartesian2``
         """
         if prealign:
-            molecule1 = self.inertia()['transformed_Cartesian']
-            molecule2_new = Cartesian2.inertia()['transformed_Cartesian']
+            molecule1, molecule2_new = self.align(Cartesian2)
         else:
-            molecule1 = self
+            molecule1 = self.copy()
         # Copy ??
-            molecule2_new = self.__class__(Cartesian2.xyz_frame)
-        molecule2_new.__bond_dic = Cartesian2.get_bonds(use_lookup=True)
+            molecule2_new = Cartesian2.copy()
 
         partition1 = molecule1.partition_chem_env(follow_bonds)
         partition2 = molecule2_new.partition_chem_env(follow_bonds)
         index_dic = {}
-
 
         def make_subset_similar(molecule1, subset1, molecule2, subset2, index_dic):
             indexlist1 = list(subset1)
@@ -1354,7 +1402,6 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                             break
                         else:
                             index_on_molecule2 = distances_to_atom_on_molecule1.xyz_frame.iloc[i].name
-
                             distance_new = distances_to_atom_on_molecule1.xyz_frame.at[index_on_molecule2, 'distance']
                             location_of_atom2 = distances_to_atom_on_molecule1.location(index_on_molecule2)
                             i = i + 1
@@ -1364,7 +1411,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             return index_dic
 
         for key in partition1.keys():
-            assert len(partition1[key]) == len(partition2[key]), 'You have too different molecules. Perhaps get_bonds(use_valency=False) helps.'
+            assert len(partition1[key]) == len(partition2[key]), 'You have chemically different molecules, regarding the topology of their connectivity. Perhaps get_bonds(use_valency=False) helps.'
             index_dic = make_subset_similar(molecule1, partition1[key], molecule2_new, partition2[key], index_dic)
 
         new_index = [index_dic[old_index2] for old_index2 in molecule2_new.xyz_frame.index]
@@ -1482,7 +1529,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         if get_bonds:
             previous_warnings_bool = settings.show_warnings['valency']
             settings.show_warnings['valency'] = False
-            molecule.get_bonds()
+            molecule.get_bonds(use_lookup=False, set_lookup=True, use_valency=False)
             settings.show_warnings['valency'] = previous_warnings_bool
         return molecule
 
@@ -1493,16 +1540,17 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
             ['mass', 'jmol_color', 'block']
 
-        The underlying ``pd.DataFrame`` can be accessed with ``cc.constants.elements``.
-        To see all available keys use ``cc.constants.elements.info()``.
+        The underlying ``pd.DataFrame`` can be accessed with ``constants.elements``.
+        To see all available keys use ``constants.elements.info()``.
 
         The data comes from the module `mendeleev <http://mendeleev.readthedocs.org/en/latest/>`_ written by Lukasz Mentel.
 
         Please note that I added three columns to the mendeleev data::
 
-            ['atomic_radius_gv', 'gv_color', 'valency']
-
-        These are taken from the MOLCAS grid viewer written by Valera Veryazov. 
+            ['atomic_radius_cc', 'atomic_radius_gv', 'gv_color', 'valency']
+        
+        The ``atomic_radius_cc`` is used by default by this module for determining bond lengths.
+        The three others are taken from the MOLCAS grid viewer written by Valera Veryazov. 
     
         Args:
             list_of_columns (str): You can pass also just one value. E.g. ``'mass'`` is equivalent to ``['mass']``. 
@@ -1535,7 +1583,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
 
     @staticmethod
-    def write_molden(cartesian_list, outputfile):
+    def _write_molden(cartesian_list, outputfile):
         """Writes a list of Cartesians into a molden file.
     
         .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
@@ -1572,3 +1620,37 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                 header=False,
                 mode='a'
                 )
+
+def write_molden(cartesian_list, outputfile):
+    """Writes a list of Cartesians into a molden file.
+
+    .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
+        The frame to be written is of course not changed.
+
+    Args:
+        cartesian_list (list): 
+        outputfile (str): 
+
+    Returns:
+        None: 
+    """
+    cartesian_list[0]._write_molden(cartesian_list, outputfile)
+
+
+def read_xyz(inputfile, pythonic_index=False, get_bonds=True):
+    """Reads a xyz file.
+
+    .. note:: This function calls in the background :func:`Cartesian.read_xyz`.
+        If you inherited from :class:`Cartesian` to tailor it for your project,
+        you have to use this method as a constructor.
+        Otherwise you can choose.
+
+    Args:
+        inputfile (str): 
+        pythonic_index (bool):
+
+    Returns:
+        Cartesian:
+    """
+    molecule = Cartesian.read_xyz(inputfile, pythonic_index=False, get_bonds=True)
+    return molecule

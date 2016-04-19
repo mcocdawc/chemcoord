@@ -33,11 +33,11 @@ Cartesian
          ~Cartesian.get_fragment
          ~Cartesian.fragmentate
          ~Cartesian.make_similar
+         ~Cartesian.align
          ~Cartesian.change_numbering
          ~Cartesian.move_to
          ~Cartesian.partition_chem_env
          ~Cartesian.write
-         ~Cartesian.write_molden
        
 
     .. rubric:: Advanced methods
