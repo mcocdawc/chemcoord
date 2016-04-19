@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 
 MAIN_PACKAGE = 'chemcoord'
 DESCRIPTION = "Python module for dealing with chemical coordinates."
-VERSION='1.0.0'
+VERSION='1.1.0'
 LICENSE='GPL'
 AUTHOR='Oskar Weser'
 EMAIL='oskar.weser@gmail.com'
