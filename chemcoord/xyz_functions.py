@@ -6,7 +6,7 @@ import copy
 import collections 
 from . import constants
 from . import utilities
-#from . import zmat_functions
+from . import zmat_functions
 from . import export
 from . import settings
 
@@ -1322,6 +1322,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         the RMSD (root mean squared deviation) of ``self`` to Cartesian2.
         Returns a tuple of copies of ``self`` and ``Cartesian2`` where both are centered
         around their topologic center and ``Cartesian2`` is aligned along ``self``.
+        Uses the Kabsch algorithm implemented with :func:`utilities.kabsch`
 
         Args:
             Cartesian2 (Cartesian): 
