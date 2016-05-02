@@ -9,11 +9,10 @@ from setuptools import setup, find_packages
 MAIN_PACKAGE = 'chemcoord'
 DESCRIPTION = "Python module for dealing with chemical coordinates."
 VERSION='1.1.0'
-LICENSE='GPL'
+LICENSE='LGPLv3'
 AUTHOR='Oskar Weser'
 EMAIL='oskar.weser@gmail.com'
 URL='https://github.com/mcocdawc/chemcoord'
-#PACKAGES=['chemcoord'],
 REQUIRES=['numpy', 'pandas', 'copy', 'math', 'collections', 'os', 'sys', 'io']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
         'zmatrix', 'xyz', 'zmat', 'coordinates', 'coordinate system'
@@ -22,7 +21,7 @@ KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
 CLASSIFIERS = ['Development Status :: 5 - Production/Stable',
                'Environment :: Console',
                'Intended Audience :: Science/Research',
-               'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+               'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
                'Natural Language :: English',
                'Programming Language :: Python :: 3',
                'Topic :: Scientific/Engineering :: Chemistry',
