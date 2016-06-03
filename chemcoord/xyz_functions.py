@@ -1389,8 +1389,8 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             return index_dic
 
         for key in partition1.keys():
-            assert len(partition1[key]) == len(partition2[key]), /
-            'You have chemically different molecules, regarding the topology of their connectivity. Perhaps get_bonds(use_valency=False) helps.'
+            assert len(partition1[key]) == len(partition2[key]), \
+                'You have chemically different molecules, regarding the topology of their connectivity. Perhaps get_bonds(use_valency=False) helps.'
             index_dic = make_subset_similar(molecule1, partition1[key], molecule2_new, partition2[key], index_dic)
 
         new_index = [index_dic[old_index2] for old_index2 in molecule2_new.xyz_frame.index]
