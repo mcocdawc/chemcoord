@@ -1,18 +1,18 @@
+from __future__ import division
+from __future__ import absolute_import
 import numpy as np
 import math as m
-# import pandas as pd
-# import copy
 
 
 def normalize(vector):
-    """Normalizes a vector
+    u"""Normalizes a vector
     """
     normed_vector = vector / np.linalg.norm(vector)
     return normed_vector
 
 
 def rotation_matrix(axis, angle):
-    """Returns the rotation matrix.
+    u"""Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
     around the given axis.
@@ -36,7 +36,7 @@ def rotation_matrix(axis, angle):
 
 
 def give_angle(Vector1, Vector2):
-    '''
+    u'''
     Calculate the angle in degrees between two vectors.
     The vectors do not have to be normalized.
     '''
@@ -63,19 +63,19 @@ def add_dummy(zmat_frame, xyz_frame, index):
     xyz = xyz_frame.copy()
 
     atom, bond, angle, dihedral = zmat.loc[
-        index, ['atom', 'bond', 'angle', 'dihedral']]
+        index, [u'atom', u'bond', u'angle', u'dihedral']]
 
     angle, dihedral = map(m.radians, (angle, dihedral))
 
     bond_with, angle_with, dihedral_with = zmat.loc[index, [
-        'bond_with', 'angle_with', 'dihedral_with']]
+        u'bond_with', u'angle_with', u'dihedral_with']]
 
     bond_with, angle_with, dihedral_with = map(
         int, (bond_with, angle_with, dihedral_with))
 
-    vb = np.array(xyz.loc[bond_with, ['x', 'y', 'z']], dtype=float)
-    va = np.array(xyz.loc[angle_with, ['x', 'y', 'z']], dtype=float)
-    vd = np.array(xyz.loc[dihedral_with, ['x', 'y', 'z']], dtype=float)
+    vb = np.array(xyz.loc[bond_with, [u'x', u'y', u'z']], dtype=float)
+    va = np.array(xyz.loc[angle_with, [u'x', u'y', u'z']], dtype=float)
+    vd = np.array(xyz.loc[dihedral_with, [u'x', u'y', u'z']], dtype=float)
 
     AB = vb - va
     DA = vd - va
@@ -100,7 +100,7 @@ def add_dummy(zmat_frame, xyz_frame, index):
 
 
 def orthormalize(basis):
-    """Orthonormalizes a given basis.
+    u"""Orthonormalizes a given basis.
 
     This functions returns a right handed orthormalized basis.
     Since only the first two vectors in the basis are used, it does not matter
@@ -126,20 +126,20 @@ def orthormalize(basis):
         basis = np.transpose(np.array([e1, e2, e3]))
         return basis
 
-    for _ in range(3):
+    for _ in xrange(3):
         basis = local_orthonormalize(basis)
     return basis
 
 
 def distance(vector1, vector2):
-    """Calculates the distance between vector1 and vector2
+    u"""Calculates the distance between vector1 and vector2
     """
     length = np.linalg.norm(vector1 - vector2)
     return length
 
 
 def give_distance_array(location_array):
-    """Returns a xyz_frame with a column for the distance from origin.
+    u"""Returns a xyz_frame with a column for the distance from origin.
     """
     A = np.expand_dims(location_array, axis=1)
     B = np.expand_dims(location_array, axis=0)
@@ -149,7 +149,7 @@ def give_distance_array(location_array):
 
 
 def kabsch(P, Q):
-    """Application of Kabsch algorithm on two matrices.
+    u"""Application of Kabsch algorithm on two matrices.
 
     The optimal rotation matrix U is calculated and then used to rotate matrix
     P unto matrix Q so the minimum root-mean-square deviation (RMSD) can be

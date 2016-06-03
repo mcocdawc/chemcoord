@@ -1,41 +1,50 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Setup file for the chemcoord package.
+u"""Setup file for the chemcoord package.
 """
 
+from __future__ import with_statement
+from __future__ import absolute_import
 from setuptools import setup, find_packages
+from io import open
 
 
-MAIN_PACKAGE = 'chemcoord'
-DESCRIPTION = "Python module for dealing with chemical coordinates."
-VERSION='1.1.0'
-LICENSE='LGPLv3'
-AUTHOR='Oskar Weser'
-EMAIL='oskar.weser@gmail.com'
-URL='https://github.com/mcocdawc/chemcoord'
-REQUIRES=['numpy', 'pandas', 'copy', 'math', 'collections', 'os', 'sys', 'io']
-KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
-        'zmatrix', 'xyz', 'zmat', 'coordinates', 'coordinate system'
-        ]
+MAIN_PACKAGE = u'chemcoord'
+DESCRIPTION = u"Python module for dealing with chemical coordinates."
+VERSION = u'1.1.0'
+LICENSE = u'LGPLv3'
+AUTHOR = u'Oskar Weser'
+EMAIL = u'oskar.weser@gmail.com'
+URL = u'https://github.com/mcocdawc/chemcoord'
+REQUIRES = [
+    u'numpy', u'pandas', u'copy', u'math', u'collections', u'os', u'sys',
+    u'io']
+KEYWORDS = [
+    u'chemcoord', u'transformation', u'cartesian', u'internal', u'chemistry',
+    u'zmatrix', u'xyz', u'zmat', u'coordinates', u'coordinate system']
 
-CLASSIFIERS = ['Development Status :: 5 - Production/Stable',
-               'Environment :: Console',
-               'Intended Audience :: Science/Research',
-               'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
-               'Natural Language :: English',
-               'Programming Language :: Python :: 3',
-               'Topic :: Scientific/Engineering :: Chemistry',
-               'Topic :: Scientific/Engineering :: Physics']
+CLASSIFIERS = [
+    u'Development Status :: 5 - Production/Stable',
+    u'Environment :: Console',
+    u'Intended Audience :: Science/Research',
+    (
+        u'License :: OSI Approved :: '
+        u'GNU Lesser General Public License v3 (LGPLv3)'),
+    u'Natural Language :: English',
+    u'Programming Language :: Python :: 3',
+    u'Topic :: Scientific/Engineering :: Chemistry',
+    u'Topic :: Scientific/Engineering :: Physics']
 
 
 def readme():
-    '''Return the contents of the README.md file.'''
-    with open('README.md') as freadme:
+    u'''Return the contents of the README.md file.'''
+    with open(u'README.md') as freadme:
         return freadme.read()
 
 
 def setup_package():
-    setup(name=MAIN_PACKAGE,
+    setup(
+        name=MAIN_PACKAGE,
         version=VERSION,
         url=URL,
         description=DESCRIPTION,
@@ -48,8 +57,8 @@ def setup_package():
         classifiers=CLASSIFIERS,
         packages=find_packages(),
         requires=REQUIRES
-        )
+    )
 
 
-if __name__ == "__main__":
+if __name__ == u"__main__":
     setup_package()
