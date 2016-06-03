@@ -1,7 +1,8 @@
 import numpy as np
-import pandas as pd
 import math as m
-import copy
+# import pandas as pd
+# import copy
+
 
 def normalize(vector):
     """Normalizes a vector
@@ -9,28 +10,30 @@ def normalize(vector):
     normed_vector = vector / np.linalg.norm(vector)
     return normed_vector
 
+
 def rotation_matrix(axis, angle):
     """Returns the rotation matrix.
 
-    This function returns a matrix for the counterclockwise rotation around the given axis.
+    This function returns a matrix for the counterclockwise rotation
+    around the given axis.
     The Input angle is in radians.
 
     Args:
-        axis (vector): 
-        angle (float): 
+        axis (vector):
+        angle (float):
 
     Returns:
         Rotation matrix (np.array):
     """
     axis = normalize(np.array(axis))
-    a = np.cos( angle/2 )
-    b,c,d =  axis * np.sin(angle/2)
+    a = np.cos(angle/2)
+    b, c, d = axis * np.sin(angle/2)
     rot_matrix = np.array([
         [a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
         [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
-        [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]
-        ])
+        [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]])
     return rot_matrix
+
 
 def give_angle(Vector1, Vector2):
     '''
@@ -42,12 +45,11 @@ def give_angle(Vector1, Vector2):
 
     # Is this ok
     scalar_product = np.dot(vector1, vector2)
-    if  -1.00000000000001 < scalar_product < -1.:
+    if -1.00000000000001 < scalar_product < -1.:
         scalar_product = -1.
 
     elif 1.00000000000001 > scalar_product > 1.:
         scalar_product = 1.
-
 
     angle = m.acos(scalar_product)
     angle = np.degrees(angle)
@@ -60,32 +62,37 @@ def add_dummy(zmat_frame, xyz_frame, index):
     p_list = []
     xyz = xyz_frame.copy()
 
-    atom, bond, angle, dihedral = zmat.loc[index, ['atom', 'bond', 'angle', 'dihedral']]
+    atom, bond, angle, dihedral = zmat.loc[
+        index, ['atom', 'bond', 'angle', 'dihedral']]
+
     angle, dihedral = map(m.radians, (angle, dihedral))
-    bond_with, angle_with, dihedral_with = zmat.loc[index, ['bond_with', 'angle_with', 'dihedral_with']]
-    bond_with, angle_with, dihedral_with = map(int, (bond_with, angle_with, dihedral_with))
-    
-    
+
+    bond_with, angle_with, dihedral_with = zmat.loc[index, [
+        'bond_with', 'angle_with', 'dihedral_with']]
+
+    bond_with, angle_with, dihedral_with = map(
+        int, (bond_with, angle_with, dihedral_with))
+
     vb = np.array(xyz.loc[bond_with, ['x', 'y', 'z']], dtype=float)
     va = np.array(xyz.loc[angle_with, ['x', 'y', 'z']], dtype=float)
     vd = np.array(xyz.loc[dihedral_with, ['x', 'y', 'z']], dtype=float)
-    
+
     AB = vb - va
     DA = vd - va
-    
+
     n1 = normalize(np.cross(DA, AB))
     ab = normalize(AB)
-    
+
     # Vector of length distance pointing along the x-axis
     d = bond * -ab
-    
+
     # Rotate d by the angle around the n1 axis
-    d = np.dot(rotation_matrix( n1, angle), d)
-    d = np.dot(rotation_matrix( ab, dihedral), d)
-    
+    d = np.dot(rotation_matrix(n1, angle), d)
+    d = np.dot(rotation_matrix(ab, dihedral), d)
+
     # Add d to the position of q to get the new coordinates of the atom
     p = vb + d
-    
+
     # Change of nonlocal variables
     p_list.append(list(p))
     xyz.loc[index] = [atom] + list(p)
@@ -99,20 +106,20 @@ def orthormalize(basis):
     Since only the first two vectors in the basis are used, it does not matter
     if you give two or three vectors.
 
-    Right handed means, that: 
+    Right handed means, that:
 
         - np.cross(e1, e2) = e3
         - np.cross(e2, e3) = e1
         - np.cross(e3, e1) = e2
 
     Args:
-        basis (np.array): An array of shape = (3,2) or (3,3) 
+        basis (np.array): An array of shape = (3,2) or (3,3)
 
     Returns:
         new_basis (np.array): A right handed orthonormalized basis.
     """
     def local_orthonormalize(basis):
-        v1, v2 =  basis[:, 0], basis[:, 1]
+        v1, v2 = basis[:, 0], basis[:, 1]
         e1 = normalize(v1)
         e3 = normalize(np.cross(e1, v2))
         e2 = normalize(np.cross(e3, e1))
@@ -169,12 +176,12 @@ def kabsch(P, Q):
         new_basis (np.array): A right handed orthonormalized basis.
         U (np.array): Rotation matrix
 
-    .. [1] Kabsch W. (1976). 
+    .. [1] Kabsch W. (1976).
         A solution for the best rotation to relate two sets of vectors.
-        Acta Crystallographica, A32:922-923. 
+        Acta Crystallographica, A32:922-923.
         `doi:10.1107/S0567739476001873 <http://dx.doi.org/10.1107/S0567739476001873>`_
 
-    .. [2] Jimmy Charnley Kromann ; Casper Steinmann ; larsbratholm ; aandi ; Kasper Primdal Lauritzen (2016). 
+    .. [2] Jimmy Charnley Kromann ; Casper Steinmann ; larsbratholm ; aandi ; Kasper Primdal Lauritzen (2016).
         GitHub: Calculate RMSD for two XYZ structures.
         http://github.com/charnley/rmsd, `doi:10.5281/zenodo.46697 <http://dx.doi.org/10.5281/zenodo.46697>`_
     """
