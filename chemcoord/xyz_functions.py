@@ -3,6 +3,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
+try:
+    # import itertools.imap as map
+    import itertools.izip as zip
+except ImportError:
+    pass
 import numpy as np
 import pandas as pd
 import copy
@@ -85,8 +90,8 @@ class Cartesian(object):
         """
         frame = self.xyz_frame.loc[include, :]
         convert_to = {
-            u'frame': dict(zip(xrange(len(frame.index)), frame.index)),
-            u'array': dict(zip(frame.index, xrange(len(frame.index))))}
+            u'frame': dict(zip(range(len(frame.index)), frame.index)),
+            u'array': dict(zip(frame.index, range(len(frame.index))))}
         location_array = frame.loc[:, [u'x', u'y', u'z']].get_values().astype(
             float)
         A = np.expand_dims(location_array, axis=1)
@@ -152,44 +157,57 @@ class Cartesian(object):
             depending on ``use_lookup``. Greatly increases performance if
             True, but could introduce bugs in certain situations.
 
-        Just imagine a situation where the ``Cartesian().xyz_frame`` is changed manually.
-        If you apply lateron a method e.g. ``to_zmat()`` that makes use of
-        ``get_bonds()`` the dictionary of the bonds
+        Just imagine a situation where the ``Cartesian().xyz_frame`` is
+        changed manually. If you apply lateron a method e.g. ``to_zmat()``
+        that makes use of ``get_bonds()`` the dictionary of the bonds
         may not represent the actual situation anymore.
 
         You have two possibilities to cope with this problem.
         Either you just re-execute ``get_bonds`` on your specific instance,
-        or you change the ``internally_use_lookup`` option in the settings submodule.
-        Please note that the internal use of the lookup variable greatly improves performance.
+        or you change the ``internally_use_lookup`` option in the settings
+        submodule. Please note that the internal use of the lookup variable
+        greatly improves performance.
 
         Args:
-            modified_properties (dic): If you want to change the van der Vaals
-                radius or valency of one or more specific atoms, pass a dictionary that looks like::
+            modified_properties (dic): If you want to change the van der
+                Vaals radius or valency of one or more specific atoms, pass a
+                dictionary that looks like::
 
-                    modified_properties = {index1 : {'atomic_radius' : 1.5, 'valency' : 8}, ...}
+                    modified_properties = {index1 :
+                        {'atomic_radius' : 1.5, 'valency' : 8}, ...}
 
                 For global changes use the constants.py module.
-            maximum_edge_length (float): Maximum length of one edge of a cuboid if ``divide_et_impera`` is ``True``.
+            maximum_edge_length (float): Maximum length of one edge of a
+            cuboid if ``divide_et_impera`` is ``True``.
             difference_edge (float):
-            use_valency (bool): If ``True`` atoms can't have more bonds than their valency.
-                This means that the bonds, exceeding the number of valency, with lowest overlap will be cut, although the van der Waals radii overlap.
+            use_valency (bool): If ``True`` atoms can't have more bonds than
+                their valency. This means that the bonds, exceeding the number
+                of valency, with lowest overlap will be cut, although the
+                van der Waals radii overlap.
             use_lookup (bool):
             set_lookup (bool):
-            divide_et_impera (bool): Since the calculation of overlaps or distances between atoms scale with :math:`O(n^2)`,
-                it is recommended to split the molecule in smaller cuboids and calculate the bonds in each cuboid.
-                The scaling becomes then :math:`O(n\log(n))`.
-                This approach can lead to problems if ``use_valency`` is ``True``.
-                Bonds from one cuboid to another can not be counted for the valency..
-                This means that in certain situations some atoms can be oversaturated, although ``use_valency`` is ``True``.
-            atomic_radius_data (str): Defines which column of :attr:`constants.elements` is used.
-                The default is ``atomic_radius_cc`` and can be changed with :attr:`settings.atomic_radius_data`.
-                Compare with :func:`add_data`.
+            divide_et_impera (bool): Since the calculation of overlaps or
+                distances between atoms scale with :math:`O(n^2)`, it is
+                recommended to split the molecule in smaller cuboids and
+                calculate the bonds in each cuboid. The scaling becomes
+                then :math:`O(n\log(n))`. This approach can lead to problems
+                if ``use_valency`` is ``True``. Bonds from one cuboid to
+                another can not be counted for the valency.. This means that
+                in certain situations some atoms can be oversaturated, although
+                ``use_valency`` is ``True``.
+            atomic_radius_data (str): Defines which column of
+                :attr:`constants.elements` is used. The default is
+                ``atomic_radius_cc`` and can be changed with
+                :attr:`settings.atomic_radius_data`. Compare with
+                :func:`add_data`.
 
         Returns:
-            dict: Dictionary mapping from an atom index to the indices of atoms bonded to.
+            dict: Dictionary mapping from an atom index to the indices of atoms
+            bonded to.
         """
         def preparation_of_variables(modified_properties):
-            bond_dic = dict(zip(self.xyz_frame.index, [set([]) for _ in xrange(self.n_atoms)]))
+            bond_dic = dict(
+                zip(self.xyz_frame.index, [set([]) for _ in range(self.n_atoms)]))
 
             molecule2 = self.add_data([u'valency', atomic_radius_data])
             valency_dic = dict(zip(molecule2.xyz_frame.index, molecule2.xyz_frame[u'valency'].get_values().astype(u'int64')))
@@ -298,7 +316,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             coordinates,
             [self.xyz_frame[axis].sort_values().copy() for axis in coordinates]))
 
-        convert = dict((axis, dict(zip(xrange(self.n_atoms), sorted_series[axis].index))) for axis in coordinates)
+        convert = dict((axis, dict(zip(range(self.n_atoms), sorted_series[axis].index))) for axis in coordinates)
         sorted_arrays = dict((key, sorted_series[key].get_values().astype(float)) for key in coordinates)
 
         list_of_cuboid_tuples = []
@@ -319,21 +337,21 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             edge_big = dict((axis, (edge_small[axis] + difference_edge)) for axis in coordinates)
             origin_array = np.empty((steps[u'x'], steps[u'y'], steps[u'z'], 3))
 
-            for x_counter in xrange(steps[u'x']):
-                for y_counter in xrange(steps[u'y']):
-                    for z_counter in xrange(steps[u'z']):
+            for x_counter in range(steps[u'x']):
+                for y_counter in range(steps[u'y']):
+                    for z_counter in range(steps[u'z']):
                         origin_array[x_counter, y_counter, z_counter] = (
                             minimum + cuboid_diagonal / 2
                             + np.dot(np.diag([x_counter, y_counter, z_counter]), cuboid_diagonal))
 
             origin1D = {}
-            origin1D[u'x'] = dict((counter, origin_array[counter, 0, 0, 0]) for counter in xrange(steps[u'x']))
-            origin1D[u'y'] = dict((counter, origin_array[0, counter, 0, 1]) for counter in xrange(steps[u'y']))
-            origin1D[u'z'] = dict((counter, origin_array[0, 0, counter, 2]) for counter in xrange(steps[u'z']))
+            origin1D[u'x'] = dict((counter, origin_array[counter, 0, 0, 0]) for counter in range(steps[u'x']))
+            origin1D[u'y'] = dict((counter, origin_array[0, counter, 0, 1]) for counter in range(steps[u'y']))
+            origin1D[u'z'] = dict((counter, origin_array[0, 0, counter, 2]) for counter in range(steps[u'z']))
 
             indices = dict(zip(coordinates, [{}, {}, {}]))
             for axis in coordinates:
-                for counter in xrange(steps[axis]):
+                for counter in range(steps[axis]):
                     intervall_small = [origin1D[axis][counter] - edge_small[axis] / 2, origin1D[axis][counter] + edge_small[axis] / 2]
                     intervall_big = [origin1D[axis][counter] - edge_big[axis] / 2, origin1D[axis][counter] + edge_big[axis] / 2]
                     bool_vec_small = np.logical_and(intervall_small[0] <= sorted_arrays[axis], sorted_arrays[axis] < intervall_small[1])
@@ -344,9 +362,9 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                     index_big = set(convert[axis][index] for index in index_big)
                     indices[axis][counter] = [index_small, index_big]
 
-            for x_counter in xrange(steps[u'x']):
-                for y_counter in xrange(steps[u'y']):
-                    for z_counter in xrange(steps[u'z']):
+            for x_counter in range(steps[u'x']):
+                for y_counter in range(steps[u'y']):
+                    for z_counter in range(steps[u'z']):
                         small_cube_index = indices[u'x'][x_counter][0] & indices[u'y'][y_counter][0] & indices[u'z'][z_counter][0]
                         big_cube_index = indices[u'x'][x_counter][1] & indices[u'y'][y_counter][1] & indices[u'z'][z_counter][1]
                         cube_dic[(x_counter, y_counter, z_counter)] = (small_cube_index, big_cube_index)
@@ -403,7 +421,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         else:
             assert follow_bonds >= 0, u'follow_bonds has to be positive'
             fixed_atoms = set([index_of_atom]) if (follow_bonds == 0) else fixed_atoms
-            for _ in xrange(follow_bonds - 1):
+            for _ in range(follow_bonds - 1):
                 previous_atoms, fixed_atoms, changed = new_shell(bond_dic, previous_atoms, fixed_atoms, exclude)
 
         if give_only_index:
@@ -573,7 +591,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         vectors = vectors + np.array(vector)
         if copy:
             max_index = frame.index.max()
-            index_for_copied_atoms = xrange(max_index + 1, max_index + len(indices) + 1)
+            index_for_copied_atoms = range(max_index + 1, max_index + len(indices) + 1)
             temp_frame = frame.loc[indices, :].copy()
             temp_frame.index = index_for_copied_atoms
             temp_frame.loc[:, [u'x', u'y', u'z']] = vectors
@@ -764,7 +782,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             start_row = fixed_buildlist.shape[0]
             already_built = set(fixed_buildlist[:, 0])
             to_be_built = set(self.xyz_frame.index) - already_built
-            convert_index = dict(zip(buildlist[:, 0], xrange(start_row)))
+            convert_index = dict(zip(buildlist[:, 0], range(start_row)))
         else:
             start_row = 0
             already_built, to_be_built = set([]), set(self.xyz_frame.index)
@@ -873,7 +891,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                     buildlist[row_in_buildlist: new_row_to_modify, 1] = bond_with
                     buildlist[row_in_buildlist: new_row_to_modify, 2] = angle_with
                     buildlist[row_in_buildlist: new_row_to_modify, 3] = dihedral_with
-                    for key, value in zip(new_atoms_list, xrange(row_in_buildlist, new_row_to_modify)):
+                    for key, value in zip(new_atoms_list, range(row_in_buildlist, new_row_to_modify)):
                         convert_index[key] = value
                 else:
                     new_row_to_modify, already_built, to_be_built = from_topologic_center(self, row_in_buildlist, already_built, to_be_built)
@@ -889,7 +907,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                 buildlist[row_in_buildlist: new_row_to_modify, 2] = angle_with
                 buildlist[row_in_buildlist: new_row_to_modify, 3] = dihedral_with
                 update(already_built, to_be_built, new_atoms_set)
-                for key, value in izip(new_atoms_list, xrange(row_in_buildlist, new_row_to_modify)):
+                for key, value in zip(new_atoms_list, range(row_in_buildlist, new_row_to_modify)):
                     convert_index[key] = value
 
             return new_row_to_modify, already_built, to_be_built
@@ -935,7 +953,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
 
         converged = True if len(problematic_indices) == 0 else False
 
-# look for index + 3 because index start directly at dihedrals
+        # look for index + 3 because index start directly at dihedrals
         for index in problematic_indices:
             try:
                 already_tested = set([])
@@ -1043,8 +1061,8 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         Returns:
             Zmat: A new instance of ``Zmat``.
         """
-        if (buildlist is None):
-            if (fragment_list is None):
+        if buildlist is None:
+            if fragment_list is None:
                 buildlist = self._get_buildlist()
             else:
                 def create_big_molecule(self, fragment_list):
@@ -1138,7 +1156,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         old_basis = np.identity(3)
         Cartesian_mass = self.basistransform(new_basis, old_basis)
 
-        dic_of_values = dict(izip(
+        dic_of_values = dict(zip(
             [u'transformed_Cartesian', u'diag_inertia_tensor', u'inertia_tensor', u'eigenvectors'],
             [Cartesian_mass, diag_inertia_tensor, inertia_tensor, eigenvectors]))
         return dic_of_values
@@ -1431,7 +1449,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         list_of_xyzframes = []
         temp_xyz = xyzframe1.copy()
 
-        for t in xrange(-extrapolate[0], step + 1 + extrapolate[1]):
+        for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
             temp_xyz.loc[:, [u'x', u'y', u'z']] = xyzframe1.loc[:, [u'x', u'y', u'z']] + (
                 step_frame.loc[:, [u'x', u'y', u'z']] * t)
             appendframe = temp_xyz.copy()
@@ -1461,26 +1479,26 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         if sort_index:
             frame = frame.sort_index()
             n_atoms = frame.shape[0]
-            with open(outputfile, mode=u'w') as f:
-                f.write(unicode(n_atoms) + 2 * u'\n')
+            with open(outputfile, mode='w') as f:
+                f.write(str(n_atoms) + 2 * u'\n')
             frame.to_csv(
                 outputfile,
-                sep=u' ',
+                sep=str(' '),
                 index=False,
                 header=False,
-                mode=u'a'
+                mode='a'
             )
         else:
             frame = frame.sort_values(by=u'atom')
             n_atoms = frame.shape[0]
-            with open(outputfile, mode=u'w') as f:
-                f.write(unicode(n_atoms) + 2 * u'\n')
+            with open(outputfile, mode='w') as f:
+                f.write(str(n_atoms) + 2 * u'\n')
             frame.to_csv(
                 outputfile,
-                sep=u' ',
+                sep=str(' '),
                 index=False,
                 header=False,
-                mode=u'a'
+                mode='a'
             )
 
     @classmethod
@@ -1500,9 +1518,10 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
             comment=u'#',
             delim_whitespace=True,
             names=[u'atom', u'x', u'y', u'z'])
+
         if not pythonic_index:
             n_atoms = xyz_frame.shape[0]
-            xyz_frame.index = xrange(1, n_atoms+1)
+            xyz_frame.index = range(1, n_atoms+1)
         molecule = cls(xyz_frame)
         if get_bonds:
             previous_warnings_bool = settings.show_warnings[u'valency']
@@ -1547,7 +1566,9 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
         list_of_columns = data.columns if (list_of_columns is None) else list_of_columns
 
         atom_symbols = frame[u'atom']
+
         new_columns = data.loc[atom_symbols, list_of_columns]
+
         new_columns.index = frame.index
 
         frame = pd.concat([frame, new_columns], axis=1)
@@ -1579,25 +1600,31 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
     [N_GEO]
         """
         values = n_frames * u'1\n'
-        string = string + unicode(n_frames) + u'\n[GEOCONV]\nenergy\n' + values + u'max-force\n' + values + u'rms-force\n' + values + u'[GEOMETRIES] (XYZ)\n'
+        string = (
+            string +
+            str(n_frames) + u'\n[GEOCONV]\nenergy\n' +
+            values + u'max-force\n' +
+            values + u'rms-force\n' +
+            values + u'[GEOMETRIES] (XYZ)\n')
 
-        with open(outputfile, mode=u'w') as f:
+        with open(outputfile, mode='w') as f:
             f.write(string)
 
         for frame in framelist:
             frame = frame.sort_index()
             n_atoms = frame.shape[0]
-            with open(outputfile, mode=u'a') as f:
-                f.write(unicode(n_atoms) + 2 * u'\n')
+            with open(outputfile, mode='a') as f:
+                f.write(str(n_atoms) + 2 * u'\n')
             frame.to_csv(
                 outputfile,
-                sep=u' ',
+                sep=str(' '),
                 index=False,
                 header=False,
-                mode=u'a')
+                mode='a')
 
 
 Cartesian = export(Cartesian)
+
 
 def write_molden(cartesian_list, outputfile):
     u"""Writes a list of Cartesians into a molden file.

@@ -1,5 +1,11 @@
 from __future__ import division
 from __future__ import absolute_import
+
+try:
+    import itertools.imap as map
+except ImportError:
+    pass
+
 import numpy as np
 import math as m
 
@@ -126,7 +132,7 @@ def orthormalize(basis):
         basis = np.transpose(np.array([e1, e2, e3]))
         return basis
 
-    for _ in xrange(3):
+    for _ in range(3):
         basis = local_orthonormalize(basis)
     return basis
 

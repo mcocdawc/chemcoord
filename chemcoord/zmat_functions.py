@@ -1,10 +1,17 @@
 from __future__ import absolute_import
+
+try:
+    import itertools.imap as map
+except ImportError:
+    pass
+
 import numpy as np
 import pandas as pd
 import math as m
 from . import export
 from . import constants
 from . import utilities
+# from . import xyz_functions
 
 
 class Zmat(object):
@@ -14,7 +21,9 @@ class Zmat(object):
         u"""How to initialize a Zmat instance.
 
         Args:
-            zmat_frame (pd.DataFrame): A Dataframe with at least the columns ``['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral']``.
+            zmat_frame (pd.DataFrame): A Dataframe with at least the columns
+                ``['atom', 'bond_with', 'bond', 'angle_with', 'angle',
+                'dihedral_with', 'dihedral']``.
                 Where ``'atom'`` is a string for the elementsymbol.
 
         Returns:
@@ -32,14 +41,18 @@ class Zmat(object):
     def add_data(self, list_of_columns=None, in_place=False):
         u"""Adds a column with the requested data.
 
-        If you want to see for example the mass, the colormap used in jmol and the block of the element, just use::
+        If you want to see for example the mass, the colormap used
+        in jmol and the block of the element, just use::
 
             ['mass', 'jmol_color', 'block']
 
-        The underlying ``pd.DataFrame`` can be accessed with ``cc.constants.elements``.
+        The underlying ``pd.DataFrame`` can be accessed with
+            ``cc.constants.elements``.
         To see all available keys use ``cc.constants.elements.info()``.
 
-        The data comes from the module `mendeleev <http://mendeleev.readthedocs.org/en/latest/>`_ written by Lukasz Mentel.
+        The data comes from the module `mendeleev
+            <http://mendeleev.readthedocs.org/en/latest/>`_ written by Lukasz
+            Mentel.
 
         Please note that I added three columns to the mendeleev data::
 
@@ -48,8 +61,10 @@ class Zmat(object):
         These are taken from the MOLCAS grid viewer written by Valera Veryazov.
 
         Args:
-            list_of_columns (str): You can pass also just one value. E.g. ``'mass'`` is equivalent to ``['mass']``.
-                If ``list_of_columns`` is ``None`` all available data is returned.
+            list_of_columns (str): You can pass also just one value. E.g.
+            ``'mass'`` is equivalent to ``['mass']``.
+                If ``list_of_columns`` is ``None`` all available data is
+                returned.
             in_place (bool):
 
         Returns:
@@ -61,7 +76,8 @@ class Zmat(object):
         else:
             frame = self.zmat_frame.copy()
 
-        list_of_columns = data.columns if (list_of_columns is None) else list_of_columns
+        list_of_columns = data.columns if (list_of_columns is None) \
+            else list_of_columns
 
         atom_symbols = frame[u'atom']
         new_columns = data.loc[atom_symbols, list_of_columns]
@@ -101,7 +117,9 @@ class Zmat(object):
         # n_atoms = zmat.shape[0]
         zmat.insert(0, u'temporary_index', zmat.index)
 
-        buildlist = zmat.loc[:, [u'temporary_index', u'bond_with', u'angle_with', u'dihedral_with']].get_values().astype(u'int64')
+        buildlist = zmat.loc[:, [
+            u'temporary_index', u'bond_with',
+            u'angle_with', u'dihedral_with']].get_values().astype(u'int64')
         buildlist[0, 1:] = 0
         buildlist[1, 2:] = 0
         buildlist[2, 3:] = 0
@@ -110,35 +128,49 @@ class Zmat(object):
     def change_numbering(self, new_index=None):
         u"""Change numbering to a new index.
 
-        Changes the numbering of index and all dependent numbering (bond_with...) to a new_index.
-        The user has to make sure that the new_index consists of distinct elements.
+        Changes the numbering of index and all dependent numbering
+            (bond_with...) to a new_index.
+        The user has to make sure that the new_index consists of distinct
+            elements.
 
         Args:
-            new_index (list): If None the new_index is taken from 1 to the number of atoms.
+            new_index (list): If None the new_index is taken from 1 to the
+            number of atoms.
 
         Returns:
             Zmat: Reindexed version of the zmatrix.
         """
         zmat_frame = self.zmat_frame.copy()
         old_index = list(zmat_frame.index)
-        new_index = xrange(1, zmat_frame.shape[0]+1) if (new_index is None) else list(new_index)
+        new_index = range(1, zmat_frame.shape[0]+1) if (new_index is None) \
+            else list(new_index)
         assert len(new_index) == len(old_index)
         zmat_frame.index = new_index
-        zmat_frame.loc[:, [u'bond_with', u'angle_with', u'dihedral_with']] = zmat_frame.loc[
-            :, [u'bond_with', u'angle_with', u'dihedral_with']].replace(old_index, new_index)
+        zmat_frame.loc[:, [u'bond_with', u'angle_with', u'dihedral_with']] = \
+            zmat_frame.loc[
+                :, [u'bond_with', u'angle_with', u'dihedral_with']
+            ].replace(old_index, new_index)
+
         return self.__class__(zmat_frame)
 
     def to_xyz(self, SN_NeRF=False):
         u"""Transforms to cartesian space.
 
         Args:
-            SN_NeRF (bool): Use the **Self-Normalizing Natural Extension Reference Frame** algorithm [1]_. In theory this means 30 % less floating point operations, but since this module is in python, floating point operations are not the rate determining step. Nevertheless it is a more elegant method than the "intuitive" conversion. Could make a difference in the future when certain functions will be implemented in ``Fortran``.
+            SN_NeRF (bool): Use the **Self-Normalizing Natural Extension
+            Reference Frame** algorithm [1]_. In theory this means 30 % less
+            floating point operations, but since this module is in python,
+            floating point operations are not the rate determining step.
+            Nevertheless it is a more elegant method than the "intuitive"
+            conversion. Could make a difference in the future when certain
+            functions will be implemented in ``Fortran``.
 
         Returns:
             Zmat: Reindexed version of the zmatrix.
 
         .. [1] Parsons J, Holmes JB, Rojas JM, Tsai J, Strauss CE (2005).
-            Practical conversion from torsion space to Cartesian space for in silico protein synthesis.
+            Practical conversion from torsion space to Cartesian space for in
+            silico protein synthesis.
             J Comput Chem. 26(10) , 1063-8.
             `doi:10.1002/jcc.20237 <http://dx.doi.org/10.1002/jcc.20237>`_
         """
@@ -149,6 +181,8 @@ class Zmat(object):
             dtype=u'float',
             index=zmat.index)
 
+        # molecule = xyz_functions.Cartesian(xyz_frame)
+        from . import xyz_functions
         molecule = xyz_functions.Cartesian(xyz_frame)
         buildlist = self.build_list()
 
@@ -158,7 +192,8 @@ class Zmat(object):
         def add_first_atom():
             index = buildlist[0, 0]
             # Change of nonlocal variables
-            molecule.xyz_frame.loc[index] = [zmat.at[index, u'atom'], 0., 0., 0.]
+            molecule.xyz_frame.loc[index] = [
+                zmat.at[index, u'atom'], 0., 0., 0.]
 
         def add_second_atom():
             index = buildlist[1, 0]
@@ -192,13 +227,16 @@ class Zmat(object):
 
         def add_atom(row):
             index, bond_with, angle_with, dihedral_with = buildlist[row, :]
-            atom, bond, angle, dihedral = zmat.loc[index, [u'atom', u'bond', u'angle', u'dihedral']]
+            atom, bond, angle, dihedral = zmat.loc[
+                index, [u'atom', u'bond', u'angle', u'dihedral']]
+
             angle, dihedral = map(m.radians, (angle, dihedral))
 
             # vb is the vector of the atom bonding to,
             # va is the vector of the angle defining atom,
             # vd is the vector of the dihedral defining atom
-            vb, va, vd = molecule.location([bond_with, angle_with, dihedral_with])
+            vb, va, vd = molecule.location(
+                [bond_with, angle_with, dihedral_with])
             if np.isclose(m.degrees(angle), 180.):
                 AB = vb - va
                 ab = normalize(AB)
@@ -221,7 +259,8 @@ class Zmat(object):
                 d = np.dot(rotation_matrix(n1, angle), d)
                 d = np.dot(rotation_matrix(ab, dihedral), d)
 
-                # Add d to the position of q to get the new coordinates of the atom
+                # Add d to the position of q to get the new coordinates
+                # of the atom
                 p = vb + d
 
                 # Change of nonlocal variables
@@ -230,27 +269,32 @@ class Zmat(object):
         def add_atom_SN_NeRF(row):
             normalize = utilities.normalize
 
-            raise NotImplementedError(u"This functionality has not been implemented yet!")
+            raise NotImplementedError(
+                u"This functionality has not been implemented yet!")
             index = None  # Should be added
 
-            atom, bond, angle, dihedral = zmat.loc[index, [u'atom', u'bond', u'angle', u'dihedral']]
-            angle, dihedral = imap(m.radians, (angle, dihedral))
+            atom, bond, angle, dihedral = zmat.loc[
+                index, [u'atom', u'bond', u'angle', u'dihedral']]
+            angle, dihedral = map(m.radians, (angle, dihedral))
             bond_with, angle_with, dihedral_with = buildlist[row, 1:]
 
-            vb, va, vd = molecule.location([bond_with, angle_with, dihedral_with])
+            vb, va, vd = molecule.location([
+                bond_with, angle_with, dihedral_with])
 
             # The next steps implements the so called SN-NeRF algorithm.
             # In their paper they use a different definition of the angle.
-            # This means, that I use sometimes cos instead of sin and other minor changes
+            # This means, that I use sometimes cos instead of sin and other
+            # minor changes
             # Compare with the paper:
             # Parsons J, Holmes JB, Rojas JM, Tsai J, Strauss CE.:
-            # Practical conversion from torsion space to Cartesian space for in silico protein synthesis.
+            # Practical conversion from torsion space to Cartesian space for
+            # in silico protein synthesis.
             # J Comput Chem.  2005 Jul 30;26(10):1063-8.
             # PubMed PMID: 15898109
 
             # Theoretically it uses 30 % less floating point operations.
-            # Since the python overhead is the limiting step, you won't see any difference.
-            # But it is more elegant ;).
+            # Since the python overhead is the limiting step, you won't see
+            # any difference. But it is more elegant ;).
 
             if np.isclose(m.degrees(angle), 180.):
                 AB = vb - va
@@ -296,13 +340,15 @@ class Zmat(object):
             add_second_atom()
             add_third_atom()
             if SN_NeRF:
-                for row in xrange(3, n_atoms):
+                for row in range(3, n_atoms):
                     add_atom_SN_NeRF(row)
             else:
-                for row in xrange(3, n_atoms):
+                for row in range(3, n_atoms):
                     add_atom(row)
 
-        assert not molecule.xyz_frame.isnull().values.any(), u'Serious bug while converting, please report an error on the Github page with your coordinate files'
+        assert not molecule.xyz_frame.isnull().values.any(), \
+            (u'Serious bug while converting, please report an error'
+                'on the Github page with your coordinate files')
         return molecule
 
     @classmethod
@@ -313,7 +359,8 @@ class Zmat(object):
 
         Args:
             inputfile (str):
-            implicit_index (bool): If this option is true the first column has to be the element symbols for the atoms.
+            implicit_index (bool): If this option is true the first column
+            has to be the element symbols for the atoms.
                 The row number is used to determine the index.
 
         Returns:
@@ -324,16 +371,21 @@ class Zmat(object):
                 inputfile,
                 comment=u'#',
                 delim_whitespace=True,
-                names=[u'atom', u'bond_with', u'bond', u'angle_with', u'angle', u'dihedral_with', u'dihedral'], )
+                names=[
+                    u'atom', u'bond_with', u'bond', u'angle_with',
+                    u'angle', u'dihedral_with', u'dihedral'], )
 
             n_atoms = zmat_frame.shape[0]
-            zmat_frame.index = xrange(1, n_atoms+1)
+            zmat_frame.index = range(1, n_atoms+1)
         else:
             zmat_frame = pd.read_table(
                 inputfile,
                 comment=u'#',
                 delim_whitespace=True,
-                names=[u'temp_index', u'atom', u'bond_with', u'bond', u'angle_with', u'angle', u'dihedral_with', u'dihedral'],
+                names=[
+                    u'temp_index', u'atom', u'bond_with',
+                    u'bond', u'angle_with', u'angle',
+                    u'dihedral_with', u'dihedral'],
             )
             zmat_frame.set_index(u'temp_index', drop=True, inplace=True)
             zmat_frame.index.name = None
@@ -342,20 +394,25 @@ class Zmat(object):
     def write(self, outputfile, implicit_index=True):
         u"""Writes the zmatrix into a file.
 
-        .. note:: Since it permamently writes a file, this function is strictly speaking **not sideeffect free**.
+        .. note:: Since it permamently writes a file, this function is
+            strictly speaking **not sideeffect free**.
             The frame to be written is of course not changed.
 
         Args:
             outputfile (str):
-            implicit_index (bool): If implicit_index is set, the zmat indexing is changed to range(1, number_atoms+1)
-                Besides the index is omitted while writing which means, that the index is given implicitly by the row number.
+            implicit_index (bool): If implicit_index is set, the zmat indexing
+                is changed to range(1, number_atoms+1). Besides the index is
+                omitted while writing which means, that the index is given
+                implicitly by the row number.
 
         Returns:
             None: None
         """
-        # The following functions are necessary to deal with the fact, that pandas does not support "NaN" for integers.
+        # The following functions are necessary to deal with the fact,
+        # that pandas does not support "NaN" for integers.
         # It was written by the user LondonRob at StackExchange:
-        # http://stackoverflow.com/questions/25789354/exporting-ints-with-missing-values-to-csv-in-pandas/31208873#31208873
+        # http://stackoverflow.com/questions/25789354/
+        # exporting-ints-with-missing-values-to-csv-in-pandas/31208873#31208873
         # Begin of the copied code snippet
         EPSILON = 1e-9
 
@@ -400,27 +457,30 @@ class Zmat(object):
             nansafe_to_csv(
                 zmat_frame.loc[:, u'atom':],
                 outputfile,
-                sep=u' ',
+                sep=str(' '),
                 index=False,
                 header=False,
-                mode=u'w'
+                mode='w'
             )
         else:
             nansafe_to_csv(
                 self.zmat_frame,
                 outputfile,
-                sep=u' ',
+                sep=str(' '),
                 index=True,
                 header=False,
-                mode=u'w'
+                mode='w'
             )
 
 #def concatenate(self, zmat_frame, reference_atoms, xyz_frame=None):
 #    """
-#    This function binds the fragment_zmat_frame onto the molecule defined by zmat_frame.
-#    The reference atoms is a list/matrix of three rows and four columns and contains the
+#    This function binds the fragment_zmat_frame onto the molecule defined
+#    by zmat_frame.
+#    The reference atoms is a list/matrix of three rows and four columns and
+#    contains the
 #    first atoms of fragment_zmat_frame and each their reference atoms.
-#    If xyz_frame is specified the values of the bond, angles and dihedrals are calculated.
+#    If xyz_frame is specified the values of the bond, angles and dihedrals
+#    are calculated.
 #    Otherwise the values 2, 90 and 90 are used.
 #    """
 #    fragment = fragment_zmat_frame.copy()
