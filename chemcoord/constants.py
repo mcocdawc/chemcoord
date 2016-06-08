@@ -1,31 +1,27 @@
 ######################################################################################################
-# If you are editing this file please consider commiting the change 
+# If you are editing this file please consider commiting the change
 # and sending a pull request to my Github account 'mcocdawc'.
-# Normal dictionaries "cost" nearly nothing to be kept in RAM. 
+# Normal dictionaries "cost" nearly nothing to be kept in RAM.
 # Besides you don't introduce bugs by defining keys that are unused lateron.
 # So there is no harm in having a key like e.g. 'first_discovery_of_element' which is hardly used in everyday work.
 # But if there is only one other person in the world which does not have to repeat your steps,
 # typing in those values by hand, it is already a win.
 ######################################################################################################
+from __future__ import absolute_import
 import pandas as pd
 import os
-#import sys
-#if sys.version_info[0] < 3:
-#    from StringIO import StringIO
-#else:
-#    from io import StringIO
+
 from io import StringIO
 
 #energy_conversion={
-#        ('hartree', 'kJ per mole') : 2625.50, 
+#        ('hartree', 'kJ per mole') : 2625.50,
 #        ('hartree', 'cm^-1') : 219474.63,
 #        ('bohr', 'angstroem'): 0.529177249,
 #        ('angstroem', 'bohr'): 1/0.529177249
 #        }
 
-
-atom_properties=StringIO(
-""",annotation,atomic_number,atomic_radius,atomic_volume,block,boiling_point,density,description,dipole_polarizability,electron_affinity,electronic_configuration,evaporation_heat,fusion_heat,group_id,lattice_constant,lattice_structure,mass,melting_point,name,period,series_id,specific_heat,thermal_conductivity,vdw_radius,covalent_radius_cordero,covalent_radius_pyykko,en_pauling,en_allen,jmol_color,cpk_color,proton_affinity,gas_basicity,heat_of_formation,c6,covalent_radius_bragg,covalent_radius_slater,vdw_radius_bondi,vdw_radius_truhlar,vdw_radius_rt,vdw_radius_batsanov,vdw_radius_dreiding,vdw_radius_uff,vdw_radius_mm3,abundance_crust,abundance_sea,atomic_radius_gv,valency,size_in_gv,gv_color,atomic_radius_cc
+atom_properties = StringIO(
+u""",annotation,atomic_number,atomic_radius,atomic_volume,block,boiling_point,density,description,dipole_polarizability,electron_affinity,electronic_configuration,evaporation_heat,fusion_heat,group_id,lattice_constant,lattice_structure,mass,melting_point,name,period,series_id,specific_heat,thermal_conductivity,vdw_radius,covalent_radius_cordero,covalent_radius_pyykko,en_pauling,en_allen,jmol_color,cpk_color,proton_affinity,gas_basicity,heat_of_formation,c6,covalent_radius_bragg,covalent_radius_slater,vdw_radius_bondi,vdw_radius_truhlar,vdw_radius_rt,vdw_radius_batsanov,vdw_radius_dreiding,vdw_radius_uff,vdw_radius_mm3,abundance_crust,abundance_sea,atomic_radius_gv,valency,size_in_gv,gv_color,atomic_radius_cc
 H,"density(@ -253C), evaporation_heat(H-H), fusion_heat(H-H), ",1,79.0,14.1,s,20.28,0.0708,"Colourless, odourless gaseous chemical element. Lightest and most abundant element in the universe. Present in water and in all organic compounds. Chemically reacts with most elements. Discovered by Henry Cavendish in 1776.",4.50710742367,0.754195,1s,0.904,0.11699999999999999,1.0,3.75,HEX,1.00794,14.01,Hydrogen,1,1,,0.1815,110.0,31.0,32.0,2.2,13.61,#ffffff,#ffffff,,,217.998,6.499026705,,25.0,120.0,,110.0,,319.5,288.6,162.0,1400.0,108000.0,0.37,1.0,0.32,#F2F2F2,0.37
 He,"density(@ -270C), ",2,,31.8,s,4.216,0.147,"Colourless, odourless gaseous nonmetallic element. Belongs to group 18 of the periodic table. Lowest boiling point of all elements and can only be solidified under pressure. Chemically inert, no known compounds. Discovered in the solar spectrum in 1868 by Lockyer.",1.3837466999999999,-19.7,1s2,0.08,,18.0,3.57,HEX,4.0026019999999995,0.95,Helium,1,2,5.188,0.152,140.0,28.000000000000004,46.0,,24.59,#d9ffff,#ffc0cb,177.8,148.5,,1.42,,,140.0,,,,,236.2,153.0,0.008,7.000000000000002e-06,0.32,8.0,0.414,#D9FFFF,0.32
 Li,,3,155.0,13.1,s,1118.15,0.534,Socket silvery metal. First member of group 1 of the periodic table. Lithium salts are used in psychomedicine.,164.0,0.618049,[He] 2s,148.0,2.89,1.0,3.49,BCC,6.941,553.69,Lithium,2,3,3.489,84.8,182.0,128.0,133.0,0.98,5.392,#cc80ff,#b22222,,,159.3,1392.0,150.0,145.0,181.0,,,220.00000000000003,,245.1,255.0,20.0,0.18,1.34,1.0,0.466,#CC80FF,1.34
@@ -148,6 +144,7 @@ Uuo,,118,,,p,,,,46.33,0.056,[Rn] 5f14 6d10 7s2 7p6,,,18.0,,,,,Ununoctium,7,2,,,,
 
 elements = pd.read_csv(atom_properties, index_col=0)
 
+
 def replace_data(path, data):
     improve = pd.read_csv(path, index_col=0)
     for index in improve.index:
@@ -157,11 +154,7 @@ def replace_data(path, data):
     return data
 
 try:
-    elements = replace_data('~/.chemcoord_data_rc', elements)
+    if os.path.exists(u'~/.chemcoord_data_rc'):
+        elements = replace_data(u'~/.chemcoord_data_rc', elements)
 except OSError:
     pass
-try:
-    elements = replace_data('./.chemcoord_data_rc', elements)
-except OSError:
-    pass
-
