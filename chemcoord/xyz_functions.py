@@ -377,8 +377,8 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                         pass
                     finally:
                         previous_key = key
-# slows down performance too much
-#            test_output(cube_dic)
+        # slows down performance too much
+        #            test_output(cube_dic)
         return cube_dic
 
     def connected_to(self, index_of_atom, exclude=None, give_only_index=False, follow_bonds=None):
@@ -1495,7 +1495,7 @@ The problematic indices are:\n""" + oversaturated_converted.__repr__()
                 f.write(str(n_atoms) + 2 * u'\n')
             frame.to_csv(
                 outputfile,
-                sep=str(' '),
+                sep=str(' '), # see https://github.com/pydata/pandas/issues/6035
                 index=False,
                 header=False,
                 mode='a'
