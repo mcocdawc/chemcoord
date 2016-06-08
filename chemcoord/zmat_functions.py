@@ -156,13 +156,14 @@ class Zmat(object):
         u"""Transforms to cartesian space.
 
         Args:
-            SN_NeRF (bool): Use the **Self-Normalizing Natural Extension
-            Reference Frame** algorithm [1]_. In theory this means 30 % less
-            floating point operations, but since this module is in python,
-            floating point operations are not the rate determining step.
-            Nevertheless it is a more elegant method than the "intuitive"
-            conversion. Could make a difference in the future when certain
-            functions will be implemented in ``Fortran``.
+            SN_NeRF (bool): Use the **Self-Normalizing Natural
+            Extension Reference Frame** algorithm [1]_. In theory this
+            means 30 % less floating point operations, but since
+            this module is in python, floating point operations are
+            not the rate determining step. Nevertheless it is a more
+            elegant method than the "intuitive" conversion. Could make
+            a difference in the future when certain functions will be
+            implemented in ``Fortran``.
 
         Returns:
             Zmat: Reindexed version of the zmatrix.
