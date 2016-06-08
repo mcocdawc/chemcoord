@@ -52,10 +52,50 @@ class Cartesian(object):
         return self.xyz_frame.__repr__()
 
     def _repr_html_(self):
-        return self.xyz_frame._repr_html_()
+        try:
+            return self.xyz_frame._repr_html_()
+        except AttributeError:
+            pass
 
     def __len__(self):
         return self.n_atoms
+
+    def __gt__(self, other):
+        return self.xyz_frame > other
+
+    def __lt__(self, other):
+        return self.xyz_frame < other
+
+    def __ge__(self, other):
+        return self.xyz_frame >= other
+
+    def __le__(self, other):
+        return self.xyz_frame <= other
+
+
+# TODO what if not a physical meaningful Cartesian is returned?
+    def __getitem__(self, key):
+        frame = self.xyz_frame.loc[key[0], key[1]]
+        try:
+            if set(['atom', 'x', 'y', 'z']) <= set(frame.columns):
+                return self.__class__(frame)
+            else:
+                return frame
+        except AttributeError:
+            # Series object was returned which has no columns attribute
+            return frame
+
+
+    def __setitem__(self, key, value):
+        self.xyz_frame.loc[key[0], key[1]] = value
+
+    def _to_ase_Atoms(self):
+        import ase
+#        frame = self.xyz_frame
+        atoms = ''.join(self[:, 'atom'])
+        positions = self.location()
+        return ase.Atoms(atoms, positions)
+
 
     def copy(self):
         molecule = self.__class__(self.xyz_frame)
@@ -64,6 +104,7 @@ class Cartesian(object):
         except AttributeError:
             pass
         return molecule
+
 
 ############################################################################
 # From here till shown end pandas wrappers are defined.
