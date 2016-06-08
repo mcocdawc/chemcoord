@@ -11,7 +11,6 @@ import math as m
 from . import export
 from . import constants
 from . import utilities
-# from . import xyz_functions
 
 
 class Zmat(object):
@@ -181,8 +180,12 @@ class Zmat(object):
             dtype=u'float',
             index=zmat.index)
 
-        # molecule = xyz_functions.Cartesian(xyz_frame)
+        # Cannot import globally in python 2, so we will only import here.
+        # It is not a beautiful hack, but works for now!
+        # See:
+        # stackoverflow.com/questions/17226016/simple-cross-import-in-python
         from . import xyz_functions
+
         molecule = xyz_functions.Cartesian(xyz_frame)
         buildlist = self.build_list()
 
