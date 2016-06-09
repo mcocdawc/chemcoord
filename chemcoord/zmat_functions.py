@@ -37,6 +37,47 @@ class Zmat(object):
     def _repr_html_(self):
         return self.zmat_frame._repr_html_()
 
+    def __len__(self):
+        return self.n_atoms
+
+    def __gt__(self, other):
+        return self.zmat_frame > other
+
+    def __lt__(self, other):
+        return self.zmat_frame < other
+
+    def __ge__(self, other):
+        return self.zmat_frame >= other
+
+    def __le__(self, other):
+        return self.zmat_frame <= other
+
+
+# TODO what if not a physical meaningful Cartesian is returned?
+    def __getitem__(self, key):
+        frame = self.zmat_frame.loc[key[0], key[1]]
+
+        try:
+            if set([u'atom', u'bond_with', u'bond',
+                    u'angle_with', u'angle', u'dihedral_with',
+                    u'dihedral']) <= set(frame.columns):
+                return self.__class__(frame)
+            else:
+                return frame
+        except AttributeError:
+            # Series object was returned which has no columns attribute
+            return frame
+
+
+    def __setitem__(self, key, value):
+        self.zmat_frame.loc[key[0], key[1]] = value
+
+
+    def copy(self):
+        molecule = self.__class__(self.zmat_frame)
+        return molecule
+
+
     def add_data(self, list_of_columns=None, in_place=False):
         u"""Adds a column with the requested data.
 

@@ -76,6 +76,7 @@ class Cartesian(object):
 # TODO what if not a physical meaningful Cartesian is returned?
     def __getitem__(self, key):
         frame = self.xyz_frame.loc[key[0], key[1]]
+
         try:
             if set(['atom', 'x', 'y', 'z']) <= set(frame.columns):
                 return self.__class__(frame)
@@ -89,10 +90,10 @@ class Cartesian(object):
     def __setitem__(self, key, value):
         self.xyz_frame.loc[key[0], key[1]] = value
 
+
     def _to_ase_Atoms(self):
         import ase
-#        frame = self.xyz_frame
-        atoms = ''.join(self[:, 'atom'])
+        atoms = ''.join(self['atom'])
         positions = self.location()
         return ase.Atoms(atoms, positions)
 
