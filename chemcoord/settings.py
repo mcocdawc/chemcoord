@@ -1,5 +1,5 @@
 
-show_warnings = {u'valency' : True}
+show_warnings = {'valency' : True}
 
 # The Cartesian().get_bonds() method will use or not use a lookup.
 # Greatly increases performance if True, but could introduce bugs
@@ -7,6 +7,6 @@ show_warnings = {u'valency' : True}
 use_lookup_internally = True
 
 
-atomic_radius_data = u'atomic_radius_cc'
+atomic_radius_data = 'atomic_radius_cc'
 
 

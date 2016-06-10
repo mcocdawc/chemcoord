@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 
 def export(func):
-    if callable(func) and hasattr(func, u'__name__'):
+    if callable(func) and hasattr(func, '__name__'):
         globals()[func.__name__] = func
     try:
         __all__.append(func.__name__)

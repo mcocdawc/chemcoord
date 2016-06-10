@@ -14,10 +14,10 @@ from . import utilities
 
 
 class Zmat(object):
-    u"""The main class for dealing with internal coordinates.
+    """The main class for dealing with internal coordinates.
     """
     def __init__(self, zmat_frame):
-        u"""How to initialize a Zmat instance.
+        """How to initialize a Zmat instance.
 
         Args:
             zmat_frame (pd.DataFrame): A Dataframe with at least the columns
@@ -58,9 +58,9 @@ class Zmat(object):
         frame = self.zmat_frame.loc[key[0], key[1]]
 
         try:
-            if set([u'atom', u'bond_with', u'bond',
-                    u'angle_with', u'angle', u'dihedral_with',
-                    u'dihedral']) <= set(frame.columns):
+            if set(['atom', 'bond_with', 'bond',
+                    'angle_with', 'angle', 'dihedral_with',
+                    'dihedral']) <= set(frame.columns):
                 return self.__class__(frame)
             else:
                 return frame
@@ -79,7 +79,7 @@ class Zmat(object):
 
 
     def add_data(self, list_of_columns=None, in_place=False):
-        u"""Adds a column with the requested data.
+        """Adds a column with the requested data.
 
         If you want to see for example the mass, the colormap used
         in jmol and the block of the element, just use::
@@ -119,7 +119,7 @@ class Zmat(object):
         list_of_columns = data.columns if (list_of_columns is None) \
             else list_of_columns
 
-        atom_symbols = frame[u'atom']
+        atom_symbols = frame['atom']
         new_columns = data.loc[atom_symbols, list_of_columns]
         new_columns.index = frame.index
 
@@ -132,7 +132,7 @@ class Zmat(object):
         return to_return
 
     def total_mass(self):
-        u"""Returns the total mass.
+        """Returns the total mass.
 
         Args:
             None
@@ -140,12 +140,12 @@ class Zmat(object):
         Returns:
             float:
         """
-        mass_molecule = self.add_data(u'mass')
-        mass = mass_molecule.zmat_frame[u'mass'].sum()
+        mass_molecule = self.add_data('mass')
+        mass = mass_molecule.zmat_frame['mass'].sum()
         return mass
 
     def build_list(self):
-        u"""Return the buildlist which is necessary to create this Zmat
+        """Return the buildlist which is necessary to create this Zmat
 
         Args:
             None
@@ -155,18 +155,18 @@ class Zmat(object):
         """
         zmat = self.zmat_frame.copy()
         # n_atoms = zmat.shape[0]
-        zmat.insert(0, u'temporary_index', zmat.index)
+        zmat.insert(0, 'temporary_index', zmat.index)
 
         buildlist = zmat.loc[:, [
-            u'temporary_index', u'bond_with',
-            u'angle_with', u'dihedral_with']].get_values().astype(u'int64')
+            'temporary_index', 'bond_with',
+            'angle_with', 'dihedral_with']].get_values().astype('int64')
         buildlist[0, 1:] = 0
         buildlist[1, 2:] = 0
         buildlist[2, 3:] = 0
         return buildlist
 
     def change_numbering(self, new_index=None):
-        u"""Change numbering to a new index.
+        """Change numbering to a new index.
 
         Changes the numbering of index and all dependent numbering
             (bond_with...) to a new_index.
@@ -186,15 +186,15 @@ class Zmat(object):
             else list(new_index)
         assert len(new_index) == len(old_index)
         zmat_frame.index = new_index
-        zmat_frame.loc[:, [u'bond_with', u'angle_with', u'dihedral_with']] = \
+        zmat_frame.loc[:, ['bond_with', 'angle_with', 'dihedral_with']] = \
             zmat_frame.loc[
-                :, [u'bond_with', u'angle_with', u'dihedral_with']
+                :, ['bond_with', 'angle_with', 'dihedral_with']
             ].replace(old_index, new_index)
 
         return self.__class__(zmat_frame)
 
     def to_xyz(self, SN_NeRF=False):
-        u"""Transforms to cartesian space.
+        """Transforms to cartesian space.
 
         Args:
             SN_NeRF (bool): Use the **Self-Normalizing Natural
@@ -218,8 +218,8 @@ class Zmat(object):
         zmat = self.zmat_frame.copy()
         n_atoms = zmat.shape[0]
         xyz_frame = pd.DataFrame(
-            columns=[u'atom', u'x', u'y', u'z'],
-            dtype=u'float',
+            columns=['atom', 'x', 'y', 'z'],
+            dtype='float',
             index=zmat.index)
 
         # Cannot import globally in python 2, so we will only import here.
@@ -238,17 +238,17 @@ class Zmat(object):
             index = buildlist[0, 0]
             # Change of nonlocal variables
             molecule.xyz_frame.loc[index] = [
-                zmat.at[index, u'atom'], 0., 0., 0.]
+                zmat.at[index, 'atom'], 0., 0., 0.]
 
         def add_second_atom():
             index = buildlist[1, 0]
-            atom, bond = zmat.loc[index, [u'atom', u'bond']]
+            atom, bond = zmat.loc[index, ['atom', 'bond']]
             # Change of nonlocal variables
             molecule.xyz_frame.loc[index] = [atom, bond, 0., 0.]
 
         def add_third_atom():
             index, bond_with, angle_with = buildlist[2, :3]
-            atom, bond, angle = zmat.loc[index, [u'atom', u'bond', u'angle']]
+            atom, bond, angle = zmat.loc[index, ['atom', 'bond', 'angle']]
             angle = m.radians(angle)
 
             # vb is the vector of the atom bonding to,
@@ -273,7 +273,7 @@ class Zmat(object):
         def add_atom(row):
             index, bond_with, angle_with, dihedral_with = buildlist[row, :]
             atom, bond, angle, dihedral = zmat.loc[
-                index, [u'atom', u'bond', u'angle', u'dihedral']]
+                index, ['atom', 'bond', 'angle', 'dihedral']]
 
             angle, dihedral = map(m.radians, (angle, dihedral))
 
@@ -315,11 +315,11 @@ class Zmat(object):
             normalize = utilities.normalize
 
             raise NotImplementedError(
-                u"This functionality has not been implemented yet!")
+                "This functionality has not been implemented yet!")
             index = None  # Should be added
 
             atom, bond, angle, dihedral = zmat.loc[
-                index, [u'atom', u'bond', u'angle', u'dihedral']]
+                index, ['atom', 'bond', 'angle', 'dihedral']]
             angle, dihedral = map(m.radians, (angle, dihedral))
             bond_with, angle_with, dihedral_with = buildlist[row, 1:]
 
@@ -392,13 +392,13 @@ class Zmat(object):
                     add_atom(row)
 
         assert not molecule.xyz_frame.isnull().values.any(), \
-            (u'Serious bug while converting, please report an error'
+            ('Serious bug while converting, please report an error'
                 'on the Github page with your coordinate files')
         return molecule
 
     @classmethod
     def read_zmat(cls, inputfile, implicit_index=True):
-        u"""Reads a zmat file.
+        """Reads a zmat file.
 
         Lines beginning with ``#`` are ignored.
 
@@ -414,30 +414,30 @@ class Zmat(object):
         if implicit_index:
             zmat_frame = pd.read_table(
                 inputfile,
-                comment=u'#',
+                comment='#',
                 delim_whitespace=True,
                 names=[
-                    u'atom', u'bond_with', u'bond', u'angle_with',
-                    u'angle', u'dihedral_with', u'dihedral'], )
+                    'atom', 'bond_with', 'bond', 'angle_with',
+                    'angle', 'dihedral_with', 'dihedral'], )
 
             n_atoms = zmat_frame.shape[0]
             zmat_frame.index = range(1, n_atoms+1)
         else:
             zmat_frame = pd.read_table(
                 inputfile,
-                comment=u'#',
+                comment='#',
                 delim_whitespace=True,
                 names=[
-                    u'temp_index', u'atom', u'bond_with',
-                    u'bond', u'angle_with', u'angle',
-                    u'dihedral_with', u'dihedral'],
+                    'temp_index', 'atom', 'bond_with',
+                    'bond', 'angle_with', 'angle',
+                    'dihedral_with', 'dihedral'],
             )
-            zmat_frame.set_index(u'temp_index', drop=True, inplace=True)
+            zmat_frame.set_index('temp_index', drop=True, inplace=True)
             zmat_frame.index.name = None
         return cls(zmat_frame)
 
     def write(self, outputfile, implicit_index=True):
-        u"""Writes the zmatrix into a file.
+        """Writes the zmatrix into a file.
 
         .. note:: Since it permamently writes a file, this function is
             strictly speaking **not sideeffect free**.
@@ -462,7 +462,7 @@ class Zmat(object):
         EPSILON = 1e-9
 
         def _lost_precision(s):
-            u"""
+            """
             The total amount of precision lost over Series `s`
             during conversion to int64 dtype
             """
@@ -472,20 +472,20 @@ class Zmat(object):
                 return np.nan
 
         def _nansafe_integer_convert(s):
-            u"""
+            """
             Convert Series `s` to an object type with `np.nan`
             represented as an empty string ""
             """
             if _lost_precision(s) < EPSILON:
                 # Here's where the magic happens
                 as_object = s.fillna(0).astype(np.int64).astype(np.object)
-                as_object[s.isnull()] = u""
+                as_object[s.isnull()] = ""
                 return as_object
             else:
                 return s
 
         def nansafe_to_csv(df, *args, **kwargs):
-            u"""
+            """
             Write `df` to a csv file, allowing for missing values
             in integer columns
 
@@ -500,7 +500,7 @@ class Zmat(object):
         if implicit_index:
             zmat_frame = self.change_numbering().zmat_frame
             nansafe_to_csv(
-                zmat_frame.loc[:, u'atom':],
+                zmat_frame.loc[:, 'atom':],
                 outputfile,
                 sep=str(' '),
                 index=False,
