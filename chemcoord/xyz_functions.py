@@ -92,7 +92,7 @@ class Cartesian(object):
 
     def _to_ase_Atoms(self):
         import ase
-        atoms = ''.join(self['atom'])
+        atoms = ''.join(self[:, 'atom'])
         positions = self.location()
         return ase.Atoms(atoms, positions)
 
