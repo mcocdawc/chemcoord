@@ -47,6 +47,8 @@ class Cartesian(object):
         """
         self.xyz_frame = xyz_frame.copy()
         self.n_atoms = xyz_frame.shape[0]
+        # TODO @property for index
+        self.index = xyz_frame.index
 
     def __repr__(self):
         return self.xyz_frame.__repr__()
@@ -90,6 +92,7 @@ class Cartesian(object):
         self.xyz_frame.loc[key[0], key[1]] = value
 
 
+
     def _to_ase_Atoms(self):
         import ase
         atoms = ''.join(self[:, 'atom'])
@@ -106,14 +109,13 @@ class Cartesian(object):
         return molecule
 
 
-    def _give_distance_array(self, include):
+    def _give_distance_array(self):
         """Returns a xyz_frame with a column for the distance from origin.
         """
-        frame = self.xyz_frame.loc[include, :]
         convert_to = {
-            'frame': dict(zip(range(len(frame.index)), frame.index)),
-            'array': dict(zip(frame.index, range(len(frame.index))))}
-        location_array = frame.loc[:, ['x', 'y', 'z']].get_values().astype(
+            'frame': dict(zip(range(self.n_atoms), self.index)),
+            'array': dict(zip(self.index, range(self.n_atoms)))}
+        location_array = self[:, ['x', 'y', 'z']].get_values().astype(
             float)
         A = np.expand_dims(location_array, axis=1)
         B = np.expand_dims(location_array, axis=0)
@@ -155,7 +157,7 @@ class Cartesian(object):
             return C
 
         bond_size_array = summed_bond_size_array(bond_size_dic)
-        distance_array, convert_to = self._give_distance_array(include)
+        distance_array, convert_to = self[include, :]._give_distance_array()
         overlap_array = bond_size_array - distance_array
         return overlap_array, convert_to
 
@@ -230,17 +232,12 @@ class Cartesian(object):
         """
         def preparation_of_variables(modified_properties):
             bond_dic = dict(
-                zip(self.xyz_frame.index, [set([])
-                    for _ in range(self.n_atoms)]))
+                zip(self.index, [set([]) for _ in range(self.n_atoms)]))
 
             molecule2 = self.add_data(['valency', atomic_radius_data])
-            valency_dic = dict(zip(
-                molecule2.xyz_frame.index,
-                molecule2.xyz_frame['valency'].get_values().astype('int64')))
+            valency_dic = dict(zip(molecule2.index, molecule2['valency'].astype('int64')))
 
-            atomic_radius_dic = dict(zip(
-                molecule2.xyz_frame.index,
-                molecule2.xyz_frame[atomic_radius_data]))
+            atomic_radius_dic = dict(zip(molecule2.index, molecule2[atomic_radius_data]))
 
             if modified_properties is None:
                 pass
@@ -249,7 +246,6 @@ class Cartesian(object):
                     valency_dic[key] = modified_properties[key]['valency']
                     atomic_radius_dic[key] = modified_properties[key][
                         'atomic_radius']
-
             return bond_dic, valency_dic, atomic_radius_dic
 
         def get_bonds_local(
@@ -384,7 +380,7 @@ class Cartesian(object):
         coordinates = ['x', 'y', 'z']
         sorted_series = dict(zip(
             coordinates, [
-                self.xyz_frame[axis].sort_values().copy()
+                self[:, axis].sort_values().copy()
                 for axis in coordinates]))
 
         convert = dict(
@@ -406,7 +402,7 @@ class Cartesian(object):
         cube_dic = {}
 
         if np.array_equal(steps, np.array([1, 1, 1])):
-            small_cube_index = self.xyz_frame.index
+            small_cube_index = self.index
             big_cube_index = small_cube_index
             cube_dic[(0, 0, 0)] = [small_cube_index, big_cube_index]
         else:
@@ -552,7 +548,7 @@ class Cartesian(object):
         if give_only_index:
             to_return = fixed_atoms
         else:
-            to_return = self.__class__(self.xyz_frame.loc[fixed_atoms, :])
+            to_return = self[fixed_atoms, :]
         return to_return
 
     def _preserve_bonds(self, sliced_xyz_frame):
@@ -573,7 +569,7 @@ class Cartesian(object):
         """
         included_atoms_set = set(sliced_xyz_frame.index)
         assert included_atoms_set.issubset(
-            set(self.xyz_frame.index)), \
+            set(self.index)), \
             'The sliced frame has to be a subset of the bigger frame'
         included_atoms_list = list(included_atoms_set)
         bond_dic = self.get_bonds(use_lookup=True)
@@ -590,7 +586,7 @@ class Cartesian(object):
                     exclude=included_atoms_set,
                     give_only_index=True))
             new_atoms = new_atoms - included_atoms_set
-        chemical_xyz_frame = self.xyz_frame.loc[included_atoms_set, :].copy()
+        chemical_xyz_frame = self[included_atoms_set, :].copy()
         return chemical_xyz_frame
 
     def cutsphere(
@@ -984,7 +980,8 @@ class Cartesian(object):
                 row_in_buildlist,
                 already_built,
                 to_be_built,
-                first_time=False):
+                first_time=False,
+                third_time=False):
             index_of_new_atom = distance_to_topologic_center.loc[
                 to_be_built, 'distance'].idxmin()
             buildlist[row_in_buildlist, 0] = index_of_new_atom
@@ -992,17 +989,20 @@ class Cartesian(object):
             if not first_time:
                 bond_with = self.distance_to(
                     index_of_new_atom,
-                    already_built).xyz_frame['distance'].idxmin()
+                    already_built)[:, 'distance'].idxmin()
                 angle_with = self.distance_to(
                     bond_with,
                     already_built - set([bond_with])
-                ).xyz_frame['distance'].idxmin()
-                dihedral_with = self.distance_to(
-                    bond_with,
-                    already_built - set([bond_with, angle_with])
-                ).xyz_frame['distance'].idxmin()
-                buildlist[row_in_buildlist, 1:] = [
-                    bond_with, angle_with, dihedral_with]
+                    )[:,'distance'].idxmin()
+                buildlist[row_in_buildlist, 1:3] = [
+                    bond_with, angle_with]
+                if not third_time:
+                    dihedral_with = self.distance_to(
+                        bond_with,
+                        already_built - set([bond_with, angle_with])
+                        )[:, 'distance'].idxmin()
+                    buildlist[row_in_buildlist, 1:] = [
+                        bond_with, angle_with, dihedral_with]
             new_row_to_modify = row_in_buildlist + 1
             already_built.add(index_of_new_atom)
             to_be_built.remove(index_of_new_atom)
@@ -1051,17 +1051,18 @@ class Cartesian(object):
                             already_built - set([use_index]))
                     except KeyError:
                         pass
+                already_built.add(index_of_new_atom)
+                to_be_built.remove(index_of_new_atom)
             else:
                 new_row_to_modify, already_built, to_be_built = \
                     from_topologic_center(
-                        self, row_in_buildlist, already_built, to_be_built)
+                        self, 2, already_built, to_be_built, third_time=True)
+                    # The two is hardcoded because of third atom.
             if len(new_atoms_set) > 1:
                 use_index = use_index
             else:
                 use_index = buildlist[2, 0]
             new_row_to_modify = 3
-            already_built.add(index_of_new_atom)
-            to_be_built.remove(index_of_new_atom)
             return new_row_to_modify, already_built, to_be_built, use_index
 
         def pick_new_atoms(
