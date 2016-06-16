@@ -92,6 +92,10 @@ class Cartesian(object):
         self.xyz_frame.loc[key[0], key[1]] = value
 
 
+    def sort_index(self, **kwargs):
+        return self.__class__(self.xyz_frame.sort_index(**kwargs))
+
+
 
     def _to_ase_Atoms(self):
         import ase
@@ -235,9 +239,9 @@ class Cartesian(object):
                 zip(self.index, [set([]) for _ in range(self.n_atoms)]))
 
             molecule2 = self.add_data(['valency', atomic_radius_data])
-            valency_dic = dict(zip(molecule2.index, molecule2['valency'].astype('int64')))
+            valency_dic = dict(zip(molecule2.index, molecule2[:, 'valency'].astype('int64')))
 
-            atomic_radius_dic = dict(zip(molecule2.index, molecule2[atomic_radius_data]))
+            atomic_radius_dic = dict(zip(molecule2.index, molecule2[:, atomic_radius_data]))
 
             if modified_properties is None:
                 pass
@@ -1660,24 +1664,21 @@ class Cartesian(object):
         Returns:
             tuple:
         """
-        molecule1 = self.copy()
-        molecule2 = Cartesian2.copy()
-        molecule1 = molecule1.move(vector=-molecule1.topologic_center())
-        molecule2 = molecule2.move(vector=-molecule2.topologic_center())
+        molecule1 = self.sort_index()
+        molecule2 = Cartesian2.sort_index()
+        molecule1[:, 'x':'z'] = molecule1[:, 'x':'z'] - molecule1.topologic_center()
+        molecule2[:, 'x':'z'] = molecule2[:, 'x':'z'] - molecule2.topologic_center()
 
         if ignore_hydrogens:
-            tmp_frame1 = molecule1.xyz_frame.copy()
-            tmp_frame2 = molecule2.xyz_frame.copy()
-            tmp_frame1 = tmp_frame1[tmp_frame1['atom'] != 'H']
-            tmp_frame2 = tmp_frame2[tmp_frame2['atom'] != 'H']
-            P = tmp_frame1[['x', 'y', 'z']].get_values().astype(float)
-            Q = tmp_frame2[['x', 'y', 'z']].get_values().astype(float)
+            location1 = molecule1[molecule1[:, 'atom'] != 'H', :].location()
+            location2 = molecule2[molecule2[:, 'atom'] != 'H', :].location()
         else:
-            P = molecule1.location()
-            Q = molecule2.location()
+            location1 = molecule1.location()
+            location2 = molecule2.location()
 
-        U = utilities.kabsch(P, Q)
-        molecule2 = molecule2.move(matrix=U)
+#        U = utilities.kabsch(location2, location1)
+
+        molecule2[:, ['x', 'y', 'z']] = utilities.rotate(location2, location1)
         return molecule1, molecule2
 
     def make_similar(self, Cartesian2, follow_bonds=4, prealign=True):
