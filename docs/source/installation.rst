@@ -1,7 +1,7 @@
 Installation Guide
 ==================
 
-You need a working python 3.x installation together with some standard modules.
+You need a working python (both python2 and 3) installation together with some standard modules.
 You can use for example the `anaconda3 installer <https://www.continuum.io/downloads/>`_.
 
 The advantage of the anaconda3 installer is that you get a lot of additional modules and programs,

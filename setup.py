@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-u"""Setup file for the chemcoord package.
+"""Setup file for the chemcoord package.
 """
 
 from __future__ import with_statement
@@ -9,36 +9,36 @@ from setuptools import setup, find_packages
 from io import open
 
 
-MAIN_PACKAGE = u'chemcoord'
-DESCRIPTION = u"Python module for dealing with chemical coordinates."
-VERSION = u'1.1.0'
-LICENSE = u'LGPLv3'
-AUTHOR = u'Oskar Weser'
-EMAIL = u'oskar.weser@gmail.com'
-URL = u'https://github.com/mcocdawc/chemcoord'
+MAIN_PACKAGE = 'chemcoord'
+DESCRIPTION = "Python module for dealing with chemical coordinates."
+VERSION = '1.2.0'
+LICENSE = 'LGPLv3'
+AUTHOR = 'Oskar Weser'
+EMAIL = 'oskar.weser@gmail.com'
+URL = 'https://github.com/mcocdawc/chemcoord'
 REQUIRES = [
-    u'numpy', u'pandas', u'copy', u'math', u'collections', u'os', u'sys',
-    u'io']
+    'numpy', 'pandas', 'copy', 'math', 'collections', 'os', 'sys',
+    'io']
 KEYWORDS = [
-    u'chemcoord', u'transformation', u'cartesian', u'internal', u'chemistry',
-    u'zmatrix', u'xyz', u'zmat', u'coordinates', u'coordinate system']
+    'chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
+    'zmatrix', 'xyz', 'zmat', 'coordinates', 'coordinate system']
 
 CLASSIFIERS = [
-    u'Development Status :: 5 - Production/Stable',
-    u'Environment :: Console',
-    u'Intended Audience :: Science/Research',
+    'Development Status :: 5 - Production/Stable',
+    'Environment :: Console',
+    'Intended Audience :: Science/Research',
     (
-        u'License :: OSI Approved :: '
-        u'GNU Lesser General Public License v3 (LGPLv3)'),
-    u'Natural Language :: English',
-    u'Programming Language :: Python :: 3',
-    u'Topic :: Scientific/Engineering :: Chemistry',
-    u'Topic :: Scientific/Engineering :: Physics']
+        'License :: OSI Approved :: '
+        'GNU Lesser General Public License v3 (LGPLv3)'),
+    'Natural Language :: English',
+    'Programming Language :: Python',
+    'Topic :: Scientific/Engineering :: Chemistry',
+    'Topic :: Scientific/Engineering :: Physics']
 
 
 def readme():
-    u'''Return the contents of the README.md file.'''
-    with open(u'README.md') as freadme:
+    '''Return the contents of the README.md file.'''
+    with open('README.md') as freadme:
         return freadme.read()
 
 
@@ -60,5 +60,5 @@ def setup_package():
     )
 
 
-if __name__ == u"__main__":
+if __name__ == "__main__":
     setup_package()

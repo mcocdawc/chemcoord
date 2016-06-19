@@ -7,7 +7,11 @@
 # But if there is only one other person in the world which does not have to repeat your steps,
 # typing in those values by hand, it is already a win.
 ######################################################################################################
+from __future__ import with_statement
+from __future__ import division
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
 import pandas as pd
 import os
 

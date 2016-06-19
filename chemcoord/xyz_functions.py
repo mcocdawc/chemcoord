@@ -12,11 +12,15 @@ import numpy as np
 import pandas as pd
 import copy
 import collections
+from . import _common_class
+from . import test
+from ._exceptions import PhysicalMeaningError
 from . import constants
 from . import utilities
 from . import zmat_functions
 from . import export
 from . import settings
+import io
 from io import open
 
 
@@ -28,73 +32,53 @@ def pick(my_set):
     my_set.add(x)
     return x
 
-
-class Cartesian(object):
+@export
+class Cartesian(_common_class.common_methods):
     """The main class for dealing with cartesian Coordinates.
     """
-    def __init__(self, xyz_frame):
+    def __init__(self, init):
         """How to initialize a Cartesian instance.
 
-
         Args:
-            xyz_frame (pd.DataFrame): A Dataframe with at least the
-                columns ``['atom', 'x', 'y', 'z']``. Where ``'atom'``
-                is a string for the elementsymbol.
+            frame (pd.DataFrame): A Dataframe with at least the
+                columns ``['atom', 'x', 'y', 'z']``. 
+                Where ``'atom'`` is a string for the elementsymbol.
 
         Returns:
             Cartesian: A new cartesian instance.
 
         """
-        self.xyz_frame = xyz_frame.copy()
-        self.n_atoms = xyz_frame.shape[0]
-        # TODO @property for index
-        self.index = xyz_frame.index
-
-    def __repr__(self):
-        return self.xyz_frame.__repr__()
-
-    def _repr_html_(self):
         try:
-            return self.xyz_frame._repr_html_()
+            tmp = init._to_Cartesian()
+            self.frame = tmp.frame.copy()
+            self.shape = self.frame.shape
+            self.n_atoms = self.shape[0]
+            try:
+                self.__bond_dic = tmp.__bond_dic
+            except AttributeError:
+                pass
+            
+
+        except AttributeError:
+            # Create from pd.DataFrame
+            if not self._is_physical(init.columns):
+                raise PhysicalMeaningError('There are columns missing for a meaningful description of a molecule')
+            self.frame = init.copy()
+            self.shape = self.frame.shape
+            self.n_atoms = self.shape[0]
+
+
+    def copy(self):
+        molecule = self.__class__(self.frame)
+        try:
+            molecule.__bond_dic = self.__bond_dic
         except AttributeError:
             pass
-
-    def __len__(self):
-        return self.n_atoms
-
-    def __gt__(self, other):
-        return self.xyz_frame > other
-
-    def __lt__(self, other):
-        return self.xyz_frame < other
-
-    def __ge__(self, other):
-        return self.xyz_frame >= other
-
-    def __le__(self, other):
-        return self.xyz_frame <= other
+        return molecule
 
 
-    def __getitem__(self, key):
-        frame = self.xyz_frame.loc[key[0], key[1]]
-
-        try:
-            if set(['atom', 'x', 'y', 'z']) <= set(frame.columns):
-                return self.__class__(frame)
-            else:
-                return frame
-        except AttributeError:
-            # Series object was returned which has no columns attribute
-            return frame
-
-
-    def __setitem__(self, key, value):
-        self.xyz_frame.loc[key[0], key[1]] = value
-
-
-    def sort_index(self, **kwargs):
-        return self.__class__(self.xyz_frame.sort_index(**kwargs))
-
+    def _to_Cartesian(self):
+        return self.copy()
 
 
     def _to_ase_Atoms(self):
@@ -104,23 +88,13 @@ class Cartesian(object):
         return ase.Atoms(atoms, positions)
 
 
-    def copy(self):
-        molecule = self.__class__(self.xyz_frame)
-        try:
-            molecule.__bond_dic = self.__bond_dic
-        except AttributeError:
-            pass
-        return molecule
-
-
     def _give_distance_array(self):
-        """Returns a xyz_frame with a column for the distance from origin.
+        """Returns a frame with a column for the distance from origin.
         """
         convert_to = {
             'frame': dict(zip(range(self.n_atoms), self.index)),
             'array': dict(zip(self.index, range(self.n_atoms)))}
-        location_array = self[:, ['x', 'y', 'z']].get_values().astype(
-            float)
+        location_array = self[:, ['x', 'y', 'z']].values.astype(float)
         A = np.expand_dims(location_array, axis=1)
         B = np.expand_dims(location_array, axis=0)
         C = A - B
@@ -150,11 +124,10 @@ class Cartesian(object):
                     that gives the possibility to convert the indices
                     from the frame to the overlap_array and back.
         """
-        include = self.xyz_frame.index if (include is None) else include
+        include = self.index if (include is None) else include
 
         def summed_bond_size_array(bond_size_dic):
-            bond_size_vector = np.array([bond_size_dic[key]
-                                         for key in include])
+            bond_size_vector = np.array([bond_size_dic[key] for key in include])
             A = np.expand_dims(bond_size_vector, axis=1)
             B = np.expand_dims(bond_size_vector, axis=0)
             C = A + B
@@ -186,7 +159,7 @@ class Cartesian(object):
             depending on ``use_lookup``. Greatly increases performance if
             True, but could introduce bugs in certain situations.
 
-        Just imagine a situation where the ``Cartesian().xyz_frame`` is
+        Just imagine a situation where the ``Cartesian().frame`` is
         changed manually. If you apply lateron a method e.g. ``to_zmat()``
         that makes use of ``get_bonds()`` the dictionary of the bonds
         may not represent the actual situation anymore.
@@ -248,8 +221,7 @@ class Cartesian(object):
             else:
                 for key in modified_properties:
                     valency_dic[key] = modified_properties[key]['valency']
-                    atomic_radius_dic[key] = modified_properties[key][
-                        'atomic_radius']
+                    atomic_radius_dic[key] = modified_properties[key]['atomic_radius']
             return bond_dic, valency_dic, atomic_radius_dic
 
         def get_bonds_local(
@@ -258,9 +230,8 @@ class Cartesian(object):
                 valency_dic,
                 atomic_radius_dic,
                 use_valency,
-                index_of_cube=self.xyz_frame.index):
-            overlap_array, convert_to = self._overlap(atomic_radius_dic,
-                                                      index_of_cube)
+                index_of_cube=self.index):
+            overlap_array, convert_to = self._overlap(atomic_radius_dic, index_of_cube)
             np.fill_diagonal(overlap_array, -1.)
             bin_overlap_array = overlap_array > 0
             actual_valency = np.sum(bin_overlap_array, axis=1)
@@ -391,7 +362,7 @@ class Cartesian(object):
             (axis, dict(zip(range(self.n_atoms), sorted_series[axis].index)))
             for axis in coordinates)
         sorted_arrays = dict(
-            (key, sorted_series[key].get_values().astype(float))
+            (key, sorted_series[key].values.astype(float))
             for key in coordinates)
 
         list_of_cuboid_tuples = []
@@ -485,7 +456,7 @@ class Cartesian(object):
                             cube_dic[key][0]
                             & cube_dic[previous_key][0] == set([])), \
                             ('I am sorry Dave. I made a mistake.'
-                             ' Report a bug please.')
+                             'Report a bug please.')
                     except UnboundLocalError:
                         pass
                     finally:
@@ -555,7 +526,7 @@ class Cartesian(object):
             to_return = self[fixed_atoms, :]
         return to_return
 
-    def _preserve_bonds(self, sliced_xyz_frame):
+    def _preserve_bonds(self, sliced_cartesian):
         """Is called after cutting geometric shapes.
 
         If you want to change the rules how bonds are preserved, when
@@ -566,15 +537,14 @@ class Cartesian(object):
             source code of ChemCoord.
 
         Args:
-            sliced_xyz_frame (pd.DataFrame):
+            sliced_frame (Cartesian):
 
         Returns:
             Cartesian:
         """
-        included_atoms_set = set(sliced_xyz_frame.index)
-        assert included_atoms_set.issubset(
-            set(self.index)), \
-            'The sliced frame has to be a subset of the bigger frame'
+        included_atoms_set = set(sliced_cartesian.index)
+        assert included_atoms_set.issubset(set(self.index)), \
+            'The sliced Cartesian has to be a subset of the bigger frame'
         included_atoms_list = list(included_atoms_set)
         bond_dic = self.get_bonds(use_lookup=True)
         new_atoms = set([])
@@ -590,8 +560,8 @@ class Cartesian(object):
                     exclude=included_atoms_set,
                     give_only_index=True))
             new_atoms = new_atoms - included_atoms_set
-        chemical_xyz_frame = self[included_atoms_set, :].copy()
-        return chemical_xyz_frame
+        molecule = self[included_atoms_set, :]
+        return molecule
 
     def cutsphere(
             self,
@@ -618,16 +588,16 @@ class Cartesian(object):
         except (TypeError, IndexError):
             origin = self.location(int(origin))
 
-        ordered_molecule = self.distance_to(origin)
-        frame = ordered_molecule.xyz_frame
+        molecule = self.distance_to(origin)
         if outside_sliced:
-            sliced_xyz_frame = frame[frame['distance'] < radius]
+            molecule = molecule[molecule[:, 'distance'] < radius, :]
         else:
-            sliced_xyz_frame = frame[frame['distance'] > radius]
+            molecule = molecule[molecule[:, 'distance'] > radius, :]
 
         if preserve_bonds:
-            sliced_xyz_frame = self._preserve_bonds(sliced_xyz_frame)
-        return self.__class__(sliced_xyz_frame)
+            molecule = self._preserve_bonds(molecule)
+
+        return molecule
 
     def cutcuboid(
             self,
@@ -659,25 +629,23 @@ class Cartesian(object):
             origin = self.location(int(origin))
         b = a if b is None else b
         c = a if c is None else c
-        xyz_frame = self.xyz_frame.copy()
+
         origin = dict(zip(['x', 'y', 'z'], list(origin)))
+
+        boolean_vector = (
+                (np.abs((self[:, 'x'] - origin['x'])) < a / 2)
+                    & (np.abs((self[:, 'y'] - origin['y'])) < b / 2)
+                    & (np.abs((self[:, 'z'] - origin['z'])) < c / 2)
+                    )
         if outside_sliced:
-            sliced_xyz_frame = xyz_frame[
-                (np.abs((xyz_frame['x'] - origin['x'])) < a / 2)
-                & (np.abs((xyz_frame['y'] - origin['y'])) < b / 2)
-                & (np.abs((xyz_frame['z'] - origin['z'])) < c / 2)
-            ].copy()
+            molecule = self[boolean_vector, :]
         else:
-            sliced_xyz_frame = xyz_frame[
-                (np.abs((xyz_frame['x'] - origin['x'])) > a / 2)
-                & (np.abs((xyz_frame['y'] - origin['y'])) > b / 2)
-                & (np.abs((xyz_frame['z'] - origin['z'])) > c / 2)
-            ].copy()
+            molecule = self[~boolean_vector, :]
 
         if preserve_bonds:
-            sliced_xyz_frame = self._preserve_bonds(sliced_xyz_frame)
+            molecule = self._preserve_bonds(molecule)
+        return molecule
 
-        return self.__class__(sliced_xyz_frame)
 
     def topologic_center(self):
         """Returns the average location.
@@ -701,24 +669,10 @@ class Cartesian(object):
             np.array:
         """
         mass_molecule = self.add_data('mass')
-        mass_vector = mass_molecule.xyz_frame[
-            'mass'].get_values().astype('float64')
+        mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
         location_array = mass_molecule.location()
         barycenter = np.mean(location_array * mass_vector[:, None], axis=0)
         return barycenter
-
-    def total_mass(self):
-        """Returns the total mass in g/mol.
-
-        Args:
-            None
-
-        Returns:
-            float:
-        """
-        mass_molecule = self.add_data('mass')
-        mass = mass_molecule.xyz_frame['mass'].sum()
-        return mass
 
     def move(
             self,
@@ -726,9 +680,9 @@ class Cartesian(object):
             matrix=np.identity(3),
             indices=None,
             copy=False):
-        """Move an xyz_frame.
+        """Move a Cartesian.
 
-        The xyz_frame is first rotated, mirrored... by the matrix
+        The Cartesian is first rotated, mirrored... by the matrix
         and afterwards translated by the vector
 
         Args:
@@ -740,26 +694,26 @@ class Cartesian(object):
         Returns:
             Cartesian:
         """
-        indices = self.xyz_frame.index if (indices is None) else indices
-        indices = list(indices)
-        frame = self.xyz_frame.copy()
-        vectors = frame.loc[
-            indices, ['x', 'y', 'z']].get_values().astype(float)
-        vectors = np.transpose(
-            np.dot(np.array(matrix), np.transpose(vectors)))
+        output = self.copy()
+
+        indices = self.index if (indices is None) else indices
+        vectors = output[indices, ['x', 'y', 'z']]
+        vectors = np.dot(np.array(matrix), vectors.T).T
         vectors = vectors + np.array(vector)
+
         if copy:
-            max_index = frame.index.max()
+            max_index = self.index.max()
             index_for_copied_atoms = range(
-                max_index + 1, max_index + len(indices) + 1)
-            temp_frame = frame.loc[indices, :].copy()
-            temp_frame.index = index_for_copied_atoms
-            temp_frame.loc[:, ['x', 'y', 'z']] = vectors
-            frame = frame.append(temp_frame)
+                max_index + 1, max_index + len(indices) + 1
+                )
+            temp = self[indices, :].copy()
+            temp.index = index_for_copied_atoms
+            temp[index_for_copied_atoms , ['x', 'y', 'z']] = vectors
+            output = output.append(temp)
 
         else:
-            frame.loc[indices, ['x', 'y', 'z']] = vectors
-        return self.__class__(frame)
+            output[indices, ['x', 'y', 'z']] = vectors
+        return output
 
     def bond_lengths(self, buildlist, start_row=0):
         """Return the distances between given atoms.
@@ -897,21 +851,19 @@ class Cartesian(object):
         Returns:
             list: A list of sets of indices or new Cartesian instances.
         """
-        list_of_fragment_indices = []
-        still_to_check = set(self.xyz_frame.index)
+        list_fragment_indices = []
+        still_to_check = set(self.index)
         while still_to_check != set([]):
             indices = self.connected_to(
                 pick(still_to_check),
                 give_only_index=True)
             still_to_check = still_to_check - indices
-            list_of_fragment_indices.append(indices)
+            list_fragment_indices.append(indices)
 
         if give_only_index:
-            value_to_return = list_of_fragment_indices
+            value_to_return = list_fragment_indices
         else:
-            value_to_return = [
-                self.__class__(self.xyz_frame.loc[indices, :])
-                for indices in list_of_fragment_indices]
+            value_to_return = [self[indices, :] for indices in list_fragment_indices]
         return value_to_return
 
     def get_fragment(self, list_of_indextuples, give_only_index=False):
@@ -939,8 +891,7 @@ class Cartesian(object):
         if give_only_index:
             value_to_return = fragment_index
         else:
-            value_to_return = self.__class__(
-                self.xyz_frame.loc[fragment_index, :])
+            value_to_return = self[fragment_index, :]
         return value_to_return
 
     def _get_buildlist(self, fixed_buildlist=None):
@@ -959,17 +910,16 @@ class Cartesian(object):
             buildlist[:fixed_buildlist.shape[0], :] = fixed_buildlist
             start_row = fixed_buildlist.shape[0]
             already_built = set(fixed_buildlist[:, 0])
-            to_be_built = set(self.xyz_frame.index) - already_built
+            to_be_built = set(self.index) - already_built
             convert_index = dict(zip(buildlist[:, 0], range(start_row)))
         else:
             start_row = 0
-            already_built, to_be_built = set([]), set(self.xyz_frame.index)
+            already_built, to_be_built = set([]), set(self.index)
             convert_index = {}
 
         bond_dic = self.get_bonds(use_lookup=True)
         topologic_center = self.topologic_center()
-        distance_to_topologic_center = self.distance_to(
-            topologic_center).xyz_frame.copy()
+        distance_to_topologic_center = self.distance_to(topologic_center)
 
         def update(already_built, to_be_built, new_atoms_set):
             """NOT SIDEEFFECT FREE
@@ -985,9 +935,9 @@ class Cartesian(object):
                 already_built,
                 to_be_built,
                 first_time=False,
-                third_time=False):
-            index_of_new_atom = distance_to_topologic_center.loc[
-                to_be_built, 'distance'].idxmin()
+                third_time=False
+                ):
+            index_of_new_atom = distance_to_topologic_center[to_be_built, 'distance'].idxmin()
             buildlist[row_in_buildlist, 0] = index_of_new_atom
             convert_index[index_of_new_atom] = row_in_buildlist
             if not first_time:
@@ -1216,15 +1166,15 @@ class Cartesian(object):
                 sorted_Cartesian = self.distance_to(
                     origin,
                     indices_of_other_atoms=could_be_reference)
-                sorted_Cartesian.xyz_frame = \
-                    sorted_Cartesian.xyz_frame.sort_values(by='distance')
+                sorted_Cartesian.frame = \
+                    sorted_Cartesian.frame.sort_values(by='distance')
 
                 buildlist_for_new_dihedral_with = np.empty(
                     (len(could_be_reference), 3), dtype='int64')
                 bond_with, angle_with = buildlist[index + 3, [1, 2]]
                 buildlist_for_new_dihedral_with[:, 0] = bond_with
                 buildlist_for_new_dihedral_with[:, 1] = angle_with
-                dihedral_with = sorted_Cartesian.xyz_frame.index
+                dihedral_with = sorted_Cartesian.index
                 buildlist_for_new_dihedral_with[:, 2] = dihedral_with
                 angles = self.angle_degrees(buildlist_for_new_dihedral_with)
 
@@ -1249,7 +1199,7 @@ class Cartesian(object):
             'atom', 'bond_with', 'bond', 'angle_with',
             'angle', 'dihedral_with', 'dihedral']
         additional_columns = list(
-            set(self.xyz_frame.columns)
+            set(self.columns)
             - set(['atom', 'x', 'y', 'z']))
 
         zmat_frame = pd.DataFrame(
@@ -1257,15 +1207,13 @@ class Cartesian(object):
             dtype='float',
             index=indexlist)
 
-        zmat_frame.loc[:, additional_columns] = self.xyz_frame.loc[
-            indexlist, additional_columns]
+        zmat_frame.loc[:, additional_columns] = self[indexlist, additional_columns]
 
         bonds = self.bond_lengths(buildlist, start_row=1)
         angles = self.angle_degrees(buildlist, start_row=2)
         dihedrals = self.dihedral_degrees(buildlist, start_row=3)
 
-        zmat_frame.loc[indexlist, 'atom'] = self.xyz_frame.loc[
-            indexlist, 'atom']
+        zmat_frame.loc[indexlist, 'atom'] = self[indexlist, 'atom']
         zmat_frame.loc[indexlist[1:], 'bond_with'] = buildlist[1:, 1]
         zmat_frame.loc[indexlist[1:], 'bond'] = bonds
         zmat_frame.loc[indexlist[2:], 'angle_with'] = buildlist[2:, 2]
@@ -1343,14 +1291,13 @@ class Cartesian(object):
                         fragment_index = set([])
                         for fragment_tpl in fragment_list:
                             fragment_index |= set(
-                                fragment_tpl[0].xyz_frame.index)
+                                fragment_tpl[0].index)
                         big_molecule_index = (
-                            set(self.xyz_frame.index) - fragment_index)
+                            set(self.index) - fragment_index)
                         return buildlist, big_molecule_index
                     buildlist, big_molecule_index = prepare_variables(
                         self, fragment_list)
-                    big_molecule = self.__class__(
-                        self.xyz_frame.loc[big_molecule_index, :])
+                    big_molecule = self[big_molecule_index, :]
                     row = big_molecule.n_atoms
                     buildlist[: row, :] = big_molecule._get_buildlist()
                     return buildlist, big_molecule, row
@@ -1390,7 +1337,7 @@ class Cartesian(object):
             dict: The returned dictionary has four possible keys:
 
             ``transformed_Cartesian``:
-            A xyz_frame that is transformed to the basis spanned by
+            A frame that is transformed to the basis spanned by
                 the eigenvectors of the inertia tensor. The x-axis
                 is the axis with the lowest inertia moment, the
                 z-axis the one with the highest. Contains also a
@@ -1409,7 +1356,7 @@ class Cartesian(object):
         Cartesian_mass = self.add_data('mass')
 
         Cartesian_mass = Cartesian_mass.move(vector=-self.barycenter())
-        frame_mass = Cartesian_mass.xyz_frame
+        frame_mass = Cartesian_mass.frame
 
         coordinates = ['x', 'y', 'z']
 
@@ -1455,7 +1402,7 @@ class Cartesian(object):
             self, new_basis,
             old_basis=np.identity(3),
             rotate_only=True):
-        """Transforms the xyz_frame to a new basis.
+        """Transforms the frame to a new basis.
 
         This function transforms the cartesian coordinates from an
             old basis to a new one. Please note that old_basis and
@@ -1475,7 +1422,7 @@ class Cartesian(object):
         Returns:
             Cartesian: The transformed molecule.
         """
-        frame = self.xyz_frame.copy()
+        frame = self.frame.copy()
         old_basis = np.array(old_basis)
         new_basis = np.array(new_basis)
         # tuples are extracted row wise
@@ -1514,7 +1461,7 @@ class Cartesian(object):
         You can pass an indexlist or an index.
 
         Args:
-            xyz_frame (pd.dataframe):
+            frame (pd.dataframe):
             indexlist (list): If indexlist is None, the complete index
                 is used.
 
@@ -1523,61 +1470,52 @@ class Cartesian(object):
             atoms specified by indexlist. In the case of one index
             given a 3D vector is returned one index.
         """
-        xyz_frame = self.xyz_frame.copy()
-        indexlist = xyz_frame.index if indexlist is None else indexlist
-        try:
-            if not set(indexlist).issubset(set(xyz_frame.index)):
-                raise KeyError(
-                    'One or more indices in the indexlist '
-                    'are not in the xyz_frame')
-        except TypeError:
-            if indexlist not in set(xyz_frame.index):
-                raise KeyError(
-                    'One or more indices in the'
-                    'indexlist are not in the xyz_frame')
-        array = xyz_frame.ix[
-            indexlist, ['x', 'y', 'z']].get_values().astype(float)
+        indexlist = self.index if indexlist is None else indexlist
+        array = self[indexlist, ['x', 'y', 'z']].values.astype(float)
         return array
 
-    def distance_to(self, origin, indices_of_other_atoms=None, sort=False):
-        """Returns a xyz_frame with a column for the distance from origin.
+    def distance_to(self, origin=[0,0,0], indices_of_other_atoms=None, sort=False):
+        """Returns a Cartesian with a column for the distance from origin.
         """
         try:
             origin[0]
         except (TypeError, IndexError):
             origin = self.location(int(origin))
         if indices_of_other_atoms is None:
-            indices_of_other_atoms = self.xyz_frame.index
-        frame_distance = self.xyz_frame.loc[indices_of_other_atoms, :].copy()
+            indices_of_other_atoms = self.index
         origin = np.array(origin, dtype=float)
-        locations = frame_distance.loc[
-            :, ['x', 'y', 'z']].get_values().astype(float)
-        frame_distance['distance'] = np.linalg.norm(
-            locations - origin, axis=1)
-        if sort:
-            frame_distance.sort_values(by='distance', inplace=True)
-        return self.__class__(frame_distance)
 
-# TODO Why not sideeffect free?
-    def change_numbering(self, rename_dic):
-        """Returns the reindexed version of xyz_frame.
+        output = self[indices_of_other_atoms, :].copy()
+        other_locations = output.location()
+        output[:, 'distance'] = np.linalg.norm(other_locations - origin, axis=1)
+        if sort:
+            output.sort_values(by='distance', inplace=True)
+        return output
+
+    
+    def change_numbering(self, rename_dict, inplace=False):
+        """Returns the reindexed version of Cartesian.
 
         Args:
-            xyz_frame (pd.dataframe):
-            rename_dic (dict): A dictionary mapping integers on integers.
+            rename_dict (dict): A dictionary mapping integers on integers.
 
         Returns:
             Cartesian: A renamed copy according to the dictionary passed.
         """
-        frame = copy.deepcopy(self.xyz_frame)
-        replace_list = list(rename_dic.keys())
-        with_list = [rename_dic[key] for key in replace_list]
-        frame['temporary_column'] = frame.index
-        frame.loc[:, 'temporary_column'].replace(
-            replace_list, with_list, inplace=True)
-        frame = frame.set_index('temporary_column', drop=True)
-        frame.index.name = None
-        return self.__class__(frame)
+        output = self if inplace else self.copy()
+        
+        replace_list = list(rename_dict.keys())
+        with_list = [rename_dict[key] for key in replace_list]
+
+        output[:, 'temporary_column'] = output.index
+        output[:, 'temporary_column'].replace(replace_list, with_list, inplace=True)
+
+        output.set_index('temporary_column', drop=True, inplace=True)
+        output.sort_index(inplace=True)
+        output.index.name = None
+
+        if not inplace:
+            return output
 
     def partition_chem_env(self, follow_bonds=4):
         """This function partitions the molecule into subsets of the
@@ -1634,9 +1572,9 @@ class Cartesian(object):
             environment = frozenset(environment)
             return (own_symbol, environment)
 
-        atomseries = self.xyz_frame.loc[:, 'atom']
+        atomseries = self[:, 'atom']
 
-        for index in self.xyz_frame.index:
+        for index in self.index:
             chem_env = get_chem_env(self, atomseries, index, follow_bonds)
             try:
                 env_dict[chem_env].add(index)
@@ -1645,7 +1583,7 @@ class Cartesian(object):
         return env_dict
 
     def align(self, Cartesian2, ignore_hydrogens=False):
-        """Aligns two xyz_frames.
+        """Aligns two Cartesians.
 
         Searches for the optimal rotation matrix that minimizes
             the RMSD (root mean squared deviation) of ``self`` to
@@ -1676,13 +1614,14 @@ class Cartesian(object):
             location1 = molecule1.location()
             location2 = molecule2.location()
 
+# TODO still to rewrite
 #        U = utilities.kabsch(location2, location1)
 
         molecule2[:, ['x', 'y', 'z']] = utilities.rotate(location2, location1)
         return molecule1, molecule2
 
     def make_similar(self, Cartesian2, follow_bonds=4, prealign=True):
-        """Similarizes two xyz_frames.
+        """Similarizes two Cartesians.
 
         Returns a reindexed copy of ``Cartesian2`` that minimizes the
             distance for each atom in the same chemical environemt
@@ -1724,9 +1663,8 @@ class Cartesian(object):
                     molecule1.location(index_on_molecule1), subset2, sort=True)
 
                 index_on_molecule2 = \
-                    distances_to_atom_on_molecule1.xyz_frame.iloc[0].name
-                distance_new = distances_to_atom_on_molecule1.xyz_frame.at[
-                    index_on_molecule2, 'distance']
+                    distances_to_atom_on_molecule1.frame.iloc[0].name
+                distance_new = distances_to_atom_on_molecule1[index_on_molecule2, 'distance']
                 location_of_atom2 = distances_to_atom_on_molecule1.location(
                     index_on_molecule2)
 
@@ -1743,11 +1681,9 @@ class Cartesian(object):
                             break
                         else:
                             index_on_molecule2 = \
-                                distances_to_atom_on_molecule1.xyz_frame.iloc[
-                                    i].name
+                                distances_to_atom_on_molecule1.frame.iloc[i].name
                             distance_new = \
-                                distances_to_atom_on_molecule1.xyz_frame.at[
-                                    index_on_molecule2, 'distance']
+                                distances_to_atom_on_molecule1[index_on_molecule2, 'distance']
                             location_of_atom2 = \
                                 distances_to_atom_on_molecule1.location(
                                     index_on_molecule2)
@@ -1769,24 +1705,23 @@ class Cartesian(object):
 
         new_index = [
             index_dic[old_index2]
-            for old_index2 in molecule2_new.xyz_frame.index]
-        molecule2_new.xyz_frame.index = new_index
-        molecule2_new.xyz_frame.sort_index(inplace=True)
+            for old_index2 in molecule2_new.index]
+        molecule2_new.index = new_index
+        molecule2_new.sort_index(inplace=True)
 
         return molecule1, molecule2_new
 
     def move_to(self, Cartesian2, step=5, extrapolate=(0, 0)):
-        """Returns list of xyz_frames for the movement from
-            xyz_frame1 to xyz_frame2.
+        """Returns list of Cartesians for the movement from
+            self to Cartesian2.
 
         Args:
-            xyz_frame1 (pd.DataFrame):
-            xyz_frame2 (pd.DataFrame):
+            Cartesian2 (Cartesian):
             step (int):
             extrapolate (tuple):
 
         Returns:
-            list: The list contains xyz_frame1 as first and xyz_frame2
+            list: The list contains ``self`` as first and ``Cartesian2``
                 as last element.
             The number of intermediate frames is defined by step.
             Please note, that for this reason: len(list) = (step + 1).
@@ -1794,35 +1729,23 @@ class Cartesian(object):
                 appended to the left and right of the list continuing
                 the movement.
         """
-        xyzframe1 = self.xyz_frame.copy()
-        xyzframe2 = Cartesian2.xyz_frame.copy()
+        difference = Cartesian2[:, ['x', 'y', 'z']] - self[:, ['x', 'y', 'z']]
 
-        difference = xyzframe2.copy()
-        difference.loc[:, ['x', 'y', 'z']] = (
-            xyzframe2.loc[:, ['x', 'y', 'z']]
-            - (xyzframe1.loc[:, ['x', 'y', 'z']]))
+        step_frame = difference.copy() / step
 
-        step_frame = difference.copy()
-        step_frame.loc[:, ['x', 'y', 'z']] = (
-            step_frame.loc[:, ['x', 'y', 'z']] / step)
-
-        list_of_xyzframes = []
-        temp_xyz = xyzframe1.copy()
+        Cartesian_list = []
+        temp_Cartesian = self.copy()
 
         for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
-            temp_xyz.loc[:, ['x', 'y', 'z']] = (
-                xyzframe1.loc[:, ['x', 'y', 'z']]
-                + (step_frame.loc[:, ['x', 'y', 'z']] * t))
-            appendframe = temp_xyz.copy()
-            list_of_xyzframes.append(appendframe)
-
-        list_of_cartesians = [
-            self.__class__(frame) for frame in list_of_xyzframes]
+            temp_Cartesian[:, ['x', 'y', 'z']] = (
+                    self[:, ['x', 'y', 'z']] + step_frame.loc[:, ['x', 'y', 'z']] * t
+                    )
+            Cartesian_list.append(temp_Cartesian)
 
         return list_of_cartesians
 
     def write(self, outputfile, sort_index=True):
-        """Writes the xyz_frame into a file.
+        """Writes the Cartesian into a file.
 
         If sort_index is true, the frame is sorted by the index before writing.
 
@@ -1831,14 +1754,13 @@ class Cartesian(object):
             The frame to be written is of course not changed.
 
         Args:
-            xyz_frame (pd.dataframe):
             outputfile (str):
             sort_index (bool):
 
         Returns:
             None: None
         """
-        frame = self.xyz_frame[['atom', 'x', 'y', 'z']].copy()
+        frame = self.frame[['atom', 'x', 'y', 'z']].copy()
         if sort_index:
             frame = frame.sort_index()
             n_atoms = frame.shape[0]
@@ -1875,7 +1797,7 @@ class Cartesian(object):
         Returns:
             Cartesian:
         """
-        xyz_frame = pd.read_table(
+        frame = pd.read_table(
             inputfile,
             skiprows=2,
             comment='#',
@@ -1883,9 +1805,10 @@ class Cartesian(object):
             names=['atom', 'x', 'y', 'z'])
 
         if not pythonic_index:
-            n_atoms = xyz_frame.shape[0]
-            xyz_frame.index = range(1, n_atoms+1)
-        molecule = cls(xyz_frame)
+            n_atoms = frame.shape[0]
+            frame.index = range(1, n_atoms+1)
+
+        molecule = cls(frame)
         if get_bonds:
             previous_warnings_bool = settings.show_warnings['valency']
             settings.show_warnings['valency'] = False
@@ -1894,64 +1817,49 @@ class Cartesian(object):
             settings.show_warnings['valency'] = previous_warnings_bool
         return molecule
 
-    def add_data(self, list_of_columns=None, in_place=False):
-        """Adds a column with the requested data.
 
-        If you want to see for example the mass, the colormap used in
-            jmol and the block of the element, just use::
-
-            ['mass', 'jmol_color', 'block']
-
-        The underlying ``pd.DataFrame`` can be accessed with
-            ``constants.elements``.
-        To see all available keys use ``constants.elements.info()``.
-
-        The data comes from the module `mendeleev
-            <http://mendeleev.readthedocs.org/en/latest/>`_ written
-            by Lukasz Mentel.
-
-        Please note that I added three columns to the mendeleev data::
-
-            ['atomic_radius_cc', 'atomic_radius_gv', 'gv_color',
-                'valency']
-
-        The ``atomic_radius_cc`` is used by default by this module
-            for determining bond lengths.
-        The three others are taken from the MOLCAS grid viewer written
-            by Valera Veryazov.
+    @classmethod
+    def read_molden(cls, inputfile, pythonic_index=False, get_bonds=True):
+        """Reads a molden file.
 
         Args:
-            list_of_columns (str): You can pass also just one value.
-                E.g. ``'mass'`` is equivalent to ``['mass']``. If
-                ``list_of_columns`` is ``None`` all available data
-                is returned.
-            in_place (bool):
+            inputfile (str):
+            pythonic_index (bool):
 
         Returns:
-            Cartesian:
+            list: A list containing Cartesian is returned.
         """
-        data = constants.elements
-        if in_place:
-            frame = self.xyz_frame
-        else:
-            frame = self.xyz_frame.copy()
+        f = open(inputfile, 'r')
 
-        list_of_columns = (
-            data.columns if (list_of_columns is None) else list_of_columns)
+        found = False
+        while not found:
+            line = f.readline()
+            if line.strip() == '[N_GEO]':
+                found = True
+                number_of_molecules = int(f.readline().strip())
 
-        atom_symbols = frame['atom']
+        found = False
+        while not found:
+            line = f.readline()
+            if line.strip() == '[GEOMETRIES] (XYZ)':
+                found = True
+                current_line = f.tell()
+                number_of_atoms = int(f.readline().strip())
+                f.seek(current_line)
 
-        new_columns = data.loc[atom_symbols, list_of_columns]
+        for i in range(number_of_molecules):
+            molecule_in = [f.readline() for j in range(number_of_atoms + 2)]
+            molecule_in = ''.join(molecule_in)
+            molecule_in = io.StringIO(molecule_in)
+            molecule = cls.read_xyz(molecule_in, pythonic_index=pythonic_index, get_bonds=get_bonds)
+            try:
+                list_of_cartesians.append(molecule)
+            except NameError:
+                list_of_cartesians = [molecule]
 
-        new_columns.index = frame.index
+        f.close()
+        return list_of_cartesians
 
-        frame = pd.concat([frame, new_columns], axis=1)
-
-        if in_place:
-            to_return = self
-        else:
-            to_return = self.__class__(frame)
-        return to_return
 
     @staticmethod
     def _write_molden(cartesian_list, outputfile):
@@ -1968,7 +1876,7 @@ class Cartesian(object):
         Returns:
             None:
         """
-        framelist = [molecule.xyz_frame for molecule in cartesian_list]
+        framelist = [molecule.frame for molecule in cartesian_list]
         n_frames = len(framelist)
         n_atoms = framelist[0].shape[0]
         string = """[MOLDEN FORMAT]
@@ -1996,9 +1904,6 @@ class Cartesian(object):
                 index=False,
                 header=False,
                 mode='a')
-
-
-Cartesian = export(Cartesian)
 
 
 def write_molden(cartesian_list, outputfile):
@@ -2034,5 +1939,20 @@ def read_xyz(inputfile, pythonic_index=False, get_bonds=True):
         Cartesian:
     """
     molecule = Cartesian.read_xyz(
-        inputfile, pythonic_index=False, get_bonds=True)
+        inputfile, pythonic_index=pythonic_index, get_bonds=get_bonds)
     return molecule
+
+
+def read_molden(inputfile, pythonic_index=False, get_bonds=True):
+    """Reads a molden file.
+
+    Args:
+        inputfile (str):
+        pythonic_index (bool):
+
+    Returns:
+        list: A list containing Cartesian is returned.
+    """
+    list_of_cartesians = Cartesian.read_molden(
+            inputfile, pythonic_index=pythonic_index, get_bonds=get_bonds)
+    return list_of_cartesians

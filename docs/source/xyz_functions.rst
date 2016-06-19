@@ -10,5 +10,6 @@ Cartesian coordinates
 
     ~xyz_functions.Cartesian
     ~xyz_functions.read_xyz
+    ~xyz_functions.read_molden
     ~xyz_functions.write_molden
 

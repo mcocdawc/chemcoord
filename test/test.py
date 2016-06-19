@@ -1,12 +1,20 @@
-#!/usr/bin/env python3
 
+from __future__ import with_statement
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
 import chemcoord as cc
 cc.settings.show_warnings['valency'] = False
 import numpy as np
 from io import StringIO
 
-files = {}
 
+# Defines a maximum allowed deviation for conversion.
+DEVIATION_THRESHOLD = 10 ** -3
+
+
+files = {}
 
 files['Cd-S-lattice'] = StringIO(
 """56
@@ -174,6 +182,11 @@ Cr    -0.06283512  -1.70550000   0.69244277
  X    -0.06283512   0.00000000   0.69244277
 """)
 
+print('This small test suite converts from Cartesian space to internal coordinates and back.')
+print('Afterwards the converted and the original molecule are aligned.')
+print('If the mean length of the difference vectors is less than', DEVIATION_THRESHOLD, 'the transformation worked.')
+print()
+
 
 for name, molecule_in in files.items():
     molecule1 = cc.xyz_functions.read_xyz(molecule_in)
@@ -182,9 +195,8 @@ for name, molecule_in in files.items():
     molecule1, molecule2 = molecule1.make_similar(molecule2)
     difference = (molecule1[:, 'x': 'z'] - molecule2[:, 'x': 'z']).get_values().astype('float')
     average_deviation = np.linalg.norm(difference, axis=1).sum() / difference.shape[0]
-    transformation_worked = (average_deviation < 10 ** -3)
+    transformation_worked = (average_deviation < DEVIATION_THRESHOLD)
     if transformation_worked:
         print(name + ': transformation worked')
     else:
         print(name + ': transformation didn\'t work')
-

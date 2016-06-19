@@ -6,12 +6,11 @@ Zmat
 .. autoclass:: Zmat
 
    
-    .. rubric:: Methods
+    .. rubric:: Chemical Methods
     
     .. autosummary::
         :toctree: Zmat
         
-        ~Zmat.__init__
         ~Zmat.build_list
         ~Zmat.change_numbering
         ~Zmat.add_data
@@ -20,7 +19,17 @@ Zmat
         ~Zmat.write
 
 
+    .. rubric:: Technical Methods
 
-   
-   
-   
+    .. autosummary::
+         :toctree: Zmat
+
+         ~Zmat.__init__
+         ~Zmat.index
+         ~Zmat.columns
+         ~Zmat.replace
+         ~Zmat.sort_index
+         ~Zmat.set_index
+         ~Zmat.append
+         ~Zmat.insert
+         ~Zmat.sort_values

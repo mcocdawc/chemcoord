@@ -6,13 +6,12 @@ Cartesian
 .. autoclass:: Cartesian
 
    
-    .. rubric:: User methods
+
+    .. rubric:: Chemical Methods
     
     .. autosummary::
          :toctree: Cartesian
     
-         ~Cartesian.__init__
-         ~Cartesian.read_xyz
          ~Cartesian.get_bonds
          ~Cartesian.to_zmat
          ~Cartesian.location
@@ -37,8 +36,27 @@ Cartesian
          ~Cartesian.change_numbering
          ~Cartesian.move_to
          ~Cartesian.partition_chem_env
+         
+
+    .. rubric:: Technical Methods
+
+    .. autosummary::
+         :toctree: Cartesian
+
+         ~Cartesian.__init__
+         ~Cartesian.index
+         ~Cartesian.columns
+         ~Cartesian.replace
+         ~Cartesian.sort_index
+         ~Cartesian.set_index
+         ~Cartesian.append
+         ~Cartesian.insert
+         ~Cartesian.sort_values
          ~Cartesian.write
-       
+         ~Cartesian.read_xyz
+         ~Cartesian.read_molden
+
+
 
     .. rubric:: Advanced methods
     
