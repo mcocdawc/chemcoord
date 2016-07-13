@@ -50,3 +50,6 @@ nohup.out
 # ignore molecule files from the Tutorial
 *molden
 *xyz
+
+
+cealign-0.8-RBS
