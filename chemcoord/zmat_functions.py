@@ -104,7 +104,7 @@ class Zmat(_common_class.common_methods):
         old_index = output.index
 
         if (new_index is None):
-            new_index = range(1, zmat_frame.shape[0]+1) 
+            new_index = range(1, zmat_frame.shape[0]+1)
         else:
             new_index = new_index
         assert len(new_index) == len(old_index)
@@ -113,7 +113,7 @@ class Zmat(_common_class.common_methods):
 
         output[:, ['bond_with', 'angle_with', 'dihedral_with']] = \
             output[:, ['bond_with', 'angle_with', 'dihedral_with']].replace(old_index, new_index)
-        
+
         if not inplace:
             return output
 
@@ -122,13 +122,13 @@ class Zmat(_common_class.common_methods):
 
         Args:
             SN_NeRF (bool): Use the **Self-Normalizing Natural
-            Extension Reference Frame** algorithm [1]_. In theory this
-            means 30 % less floating point operations, but since
-            this module is in python, floating point operations are
-            not the rate determining step. Nevertheless it is a more
-            elegant method than the "intuitive" conversion. Could make
-            a difference in the future when certain functions will be
-            implemented in ``Fortran``.
+                Extension Reference Frame** algorithm [1]_. In theory this
+                means 30 % less floating point operations, but since
+                this module is in python, floating point operations are
+                not the rate determining step. Nevertheless it is a more
+                elegant method than the "intuitive" conversion. Could make
+                a difference in the future when certain functions will be
+                implemented in ``Fortran``.
 
         Returns:
             Zmat: Reindexed version of the zmatrix.
@@ -438,4 +438,3 @@ class Zmat(_common_class.common_methods):
                 header=False,
                 mode='w'
             )
-

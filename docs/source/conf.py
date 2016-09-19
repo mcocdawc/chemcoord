@@ -66,7 +66,7 @@ extensions = [
     u'sphinx.ext.autosummary',
     u'sphinx.ext.napoleon',
     u'sphinx.ext.todo',
-    u'sphinx.ext.pngmath',
+    u'sphinx.ext.mathjax',
     u'sphinx.ext.viewcode',
 ]
 

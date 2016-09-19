@@ -12,6 +12,10 @@ import numpy as np
 import pandas as pd
 import copy
 import collections
+from threading import Thread
+import subprocess
+import os
+import tempfile
 from . import _common_class
 from . import test
 from ._exceptions import PhysicalMeaningError
@@ -41,7 +45,7 @@ class Cartesian(_common_class.common_methods):
 
         Args:
             frame (pd.DataFrame): A Dataframe with at least the
-                columns ``['atom', 'x', 'y', 'z']``. 
+                columns ``['atom', 'x', 'y', 'z']``.
                 Where ``'atom'`` is a string for the elementsymbol.
 
         Returns:
@@ -57,7 +61,7 @@ class Cartesian(_common_class.common_methods):
                 self.__bond_dic = tmp.__bond_dic
             except AttributeError:
                 pass
-            
+
 
         except AttributeError:
             # Create from pd.DataFrame
@@ -334,7 +338,7 @@ class Cartesian(_common_class.common_methods):
 
         If your algorithm scales with :math:`O(n^2)`.
         You can use this function as a preprocessing step to make it
-            scaling with :math:`O(n\log(n))`.
+        scaling with :math:`O(n\log(n))`.
 
         Args:
             maximum_edge_length (float): Maximum length of one edge
@@ -342,15 +346,15 @@ class Cartesian(_common_class.common_methods):
 
         Returns:
             dict: A dictionary mapping from a 3 tuple of integers
-                to a 2 tuple of sets. The 3 tuple gives the integer
-                numbered coordinates of the cuboids. The first set
-                contains the indices of atoms lying in the cube with
-                a maximum edge length of ``maximum_edge_length``. They
-                are pairwise disjunct and are referred to as small
-                cuboids. The second set contains the indices of atoms
-                lying in the cube with ``maximum_edge_length +
-                difference_edge``. They are a bit larger than the small
-                cuboids and overlap with ``difference_edge / 2``.
+            to a 2 tuple of sets. The 3 tuple gives the integer
+            numbered coordinates of the cuboids. The first set
+            contains the indices of atoms lying in the cube with
+            a maximum edge length of ``maximum_edge_length``. They
+            are pairwise disjunct and are referred to as small
+            cuboids. The second set contains the indices of atoms
+            lying in the cube with ``maximum_edge_length +
+            difference_edge``. They are a bit larger than the small
+            cuboids and overlap with ``difference_edge / 2``.
         """
         coordinates = ['x', 'y', 'z']
         sorted_series = dict(zip(
@@ -1231,47 +1235,49 @@ class Cartesian(_common_class.common_methods):
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
-            steps:
+        steps:
 
         1. Define an order of how to build.
+
         2. Check for problematic local linearity. In this algorithm an
-            angle with ``170 < angle < 10`` is assumed to be linear.
-            This is not the mathematical definition, but makes it safer
-            against "floating point noise"
+        angle with ``170 < angle < 10`` is assumed to be linear.
+        This is not the mathematical definition, but makes it safer
+        against "floating point noise"
+
         3. Calculate the bond lengths, angles and dihedrals using the
-            references defined in step 1 and 2.
+        references defined in step 1 and 2.
 
         In the first two steps a so called ``buildlist`` is created.
         This is basically a ``np.array`` of shape ``(n_atoms, 4)`` and
-            integer type.
+        integer type.
 
         The four columns are ``['own_index', 'bond_with', 'angle_with',
-            'dihedral_with']``.
+        'dihedral_with']``.
         This means that usually the upper right triangle can be any
-            number, because for example the first atom has no other
-            atom as reference.
+        number, because for example the first atom has no other
+        atom as reference.
 
         It is important to know, that getting the buildlist is a very
-            costly step since the algoritym tries to make some guesses
-            based on the connectivity to create a "chemical" zmatrix.
+        costly step since the algoritym tries to make some guesses
+        based on the connectivity to create a "chemical" zmatrix.
 
         If you create several zmatrices based on the same references
-            you can save the buildlist of a zmatrix with
-            :meth:`Zmat.build_list`.
+        you can save the buildlist of a zmatrix with
+        :meth:`Zmat.build_list`.
         If you then pass the buildlist as argument to ``to_zmat``,
-            then the algorithm directly starts with step 3.
+        then the algorithm directly starts with step 3.
 
 
         Another thing is that you can specify fragments.
         For this purpose the function :meth:`Cartesian.get_fragment`
-            is quite handy.
+        is quite handy.
         An element of fragment_list looks like::
 
             (fragment, connections)
 
         Fragment is a ``Cartesian`` instance and connections is a
-            ``(3, 4)`` numpy integer array, that defines how the
-            fragment is connected to the molecule.
+        ``(3, 4)`` numpy integer array, that defines how the
+        fragment is connected to the molecule.
 
         Args:
             buildlist (np.array):
@@ -1325,10 +1331,10 @@ class Cartesian(_common_class.common_methods):
 
     def inertia(self):
         """Calculates the inertia tensor and transforms along
-            rotation axes.
+        rotation axes.
 
         This function calculates the inertia tensor and returns
-            a 4-tuple.
+        a 4-tuple.
 
         Args:
             None
@@ -1338,14 +1344,14 @@ class Cartesian(_common_class.common_methods):
 
             ``transformed_Cartesian``:
             A frame that is transformed to the basis spanned by
-                the eigenvectors of the inertia tensor. The x-axis
-                is the axis with the lowest inertia moment, the
-                z-axis the one with the highest. Contains also a
-                column for the mass
+            the eigenvectors of the inertia tensor. The x-axis
+            is the axis with the lowest inertia moment, the
+            z-axis the one with the highest. Contains also a
+            column for the mass
 
             ``diag_inertia_tensor``:
             A vector containing the sorted inertia moments after
-                diagonalization.
+            diagonalization.
 
             ``inertia_tensor``:
             The inertia tensor in the old basis.
@@ -1492,7 +1498,7 @@ class Cartesian(_common_class.common_methods):
             output.sort_values(by='distance', inplace=True)
         return output
 
-    
+
     def change_numbering(self, rename_dict, inplace=False):
         """Returns the reindexed version of Cartesian.
 
@@ -1503,7 +1509,7 @@ class Cartesian(_common_class.common_methods):
             Cartesian: A renamed copy according to the dictionary passed.
         """
         output = self if inplace else self.copy()
-        
+
         replace_list = list(rename_dict.keys())
         with_list = [rename_dict[key] for key in replace_list]
 
@@ -1519,33 +1525,33 @@ class Cartesian(_common_class.common_methods):
 
     def partition_chem_env(self, follow_bonds=4):
         """This function partitions the molecule into subsets of the
-            same chemical environment.
+        same chemical environment.
 
         A chemical environment is specified by the number of
-            surrounding atoms of a certain kind around an atom with a
-            certain atomic number represented by a tuple of a string
-            and a frozenset of tuples.
+        surrounding atoms of a certain kind around an atom with a
+        certain atomic number represented by a tuple of a string
+        and a frozenset of tuples.
         The ``follow_bonds`` option determines how many branches the
-            algorithm follows to determine the chemical environment.
+        algorithm follows to determine the chemical environment.
 
         Example:
         A carbon atom in ethane has bonds with three hydrogen (atomic
-            number 1) and one carbon atom (atomic number 6).
+        number 1) and one carbon atom (atomic number 6).
         If ``follow_bonds=1`` these are the only atoms we are
-            interested in and the chemical environment is::
+        interested in and the chemical environment is::
 
-            ('C', frozenset([('H', 3), ('C', 1)]))
+        ('C', frozenset([('H', 3), ('C', 1)]))
 
         If ``follow_bonds=2`` we follow every atom in the chemical
-            enviromment of ``follow_bonds=1`` to their direct neighbours.
+        enviromment of ``follow_bonds=1`` to their direct neighbours.
         In the case of ethane this gives::
 
-            ('C', frozenset([('H', 6), ('C', 1)]))
+        ('C', frozenset([('H', 6), ('C', 1)]))
 
         In the special case of ethane this is the whole molecule;
         in other cases you can apply this operation recursively and
-            stop after ``follow_bonds`` or after reaching the end of
-            branches.
+        stop after ``follow_bonds`` or after reaching the end of
+        branches.
 
 
         Args:
@@ -1554,12 +1560,11 @@ class Cartesian(_common_class.common_methods):
         Returns:
             dict: The output will look like this::
 
-                { (element_symbol, frozenset([tuples]))  :
-                    set([indices]) }
+                { (element_symbol, frozenset([tuples])) : set([indices]) }
 
                 A dictionary mapping from a chemical environment to
-                    the set of indices of atoms in this environment.
-        """
+                the set of indices of atoms in this environment.
+    """
         env_dict = {}
 
         def get_chem_env(self, atomseries, index, follow_bonds):
@@ -1624,25 +1629,25 @@ class Cartesian(_common_class.common_methods):
         """Similarizes two Cartesians.
 
         Returns a reindexed copy of ``Cartesian2`` that minimizes the
-            distance for each atom in the same chemical environemt
-            from ``self`` to ``Cartesian2``.
+        distance for each atom in the same chemical environemt
+        from ``self`` to ``Cartesian2``.
         Read more about the definition of the chemical environment in
-            :func:`Cartesian.partition_chem_env`
+        :func:`Cartesian.partition_chem_env`
 
         .. warning:: Please check the result with e.g.
-                :func:`Cartesian.move_to()`
+            :func:`Cartesian.move_to()`
             It is probably necessary to use the function
-                :func:`Cartesian.change_numbering()`.
+            :func:`Cartesian.change_numbering()`.
 
         Args:
             Cartesian2 (Cartesian):
             max_follow_bonds (int):
             prealign (bool): The method :func:`Cartesian.align()`
-                is applied before reindexing.
+            is applied before reindexing.
 
         Returns:
             tuple: Aligned copy of ``self`` and aligned + reindexed
-                version of ``Cartesian2``
+            version of ``Cartesian2``
         """
         if prealign:
             molecule1, molecule2_new = self.align(Cartesian2)
@@ -1713,7 +1718,7 @@ class Cartesian(_common_class.common_methods):
 
     def move_to(self, Cartesian2, step=5, extrapolate=(0, 0)):
         """Returns list of Cartesians for the movement from
-            self to Cartesian2.
+        self to Cartesian2.
 
         Args:
             Cartesian2 (Cartesian):
@@ -1722,12 +1727,12 @@ class Cartesian(_common_class.common_methods):
 
         Returns:
             list: The list contains ``self`` as first and ``Cartesian2``
-                as last element.
+            as last element.
             The number of intermediate frames is defined by step.
             Please note, that for this reason: len(list) = (step + 1).
             The numbers in extrapolate define how many frames are
-                appended to the left and right of the list continuing
-                the movement.
+            appended to the left and right of the list continuing
+            the movement.
         """
         difference = Cartesian2[:, ['x', 'y', 'z']] - self[:, ['x', 'y', 'z']]
 
@@ -1905,6 +1910,75 @@ class Cartesian(_common_class.common_methods):
                 header=False,
                 mode='a')
 
+    def view(self, viewer=settings.viewer):
+        """View your molecule
+
+        .. note:: This function writes a temporary file and opens it with
+            an external viewer.
+            If you modify your molecule afterwards you have to recall view
+            in order to see the changes.
+
+        Args:
+            viewer (str): The external viewer to use. The default is
+                specified in settings.viewer
+
+        Returns:
+            None:
+        """
+        # TODO write python2 compatible
+        TEMP_DIR = tempfile.gettempdir()
+        file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_molecule_' + str(i) + '.xyz')
+        i = 1
+        while os.path.exists(file(i)):
+            i = i + 1
+        self.write(file(i))
+
+        def open(i):
+            """Open file and close after being finished"""
+            try:
+                subprocess.check_call([viewer, file(i)])
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                raise
+            finally:
+                os.remove(file(i))
+
+        Thread(target = open, args=(i,)).start()
+
+
+def view(molecule, viewer=settings.viewer):
+    """View your molecule or list of molecules.
+
+    .. note:: This function writes a temporary file and opens it with
+        an external viewer.
+        If you modify your molecule afterwards you have to recall view
+        in order to see the changes.
+
+    Args:
+        molecule: Can be a cartesian, or a list of cartesians.
+        viewer (str): The external viewer to use. The default is
+            specified in settings.viewer
+
+    Returns:
+        None:
+    """
+    try:
+        molecule.view(viewer=viewer)
+    except AttributeError:
+        TEMP_DIR = tempfile.gettempdir()
+        file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_list_' + str(i) + '.molden')
+        i = 1
+        while os.path.exists(file(i)):
+            i = i + 1
+        write_molden(molecule, file(i))
+
+        def open(i):
+            """Open file and close after being finished"""
+            try:
+                subprocess.check_call([viewer, file(i)])
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                raise
+            finally:
+                os.remove(file(i))
 
 def write_molden(cartesian_list, outputfile):
     """Writes a list of Cartesians into a molden file.

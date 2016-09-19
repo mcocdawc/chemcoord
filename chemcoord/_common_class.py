@@ -22,17 +22,17 @@ class common_methods(_pandas_wrapper.core):
         """Adds a column with the requested data.
 
         If you want to see for example the mass, the colormap used in
-            jmol and the block of the element, just use::
+        jmol and the block of the element, just use::
 
             ['mass', 'jmol_color', 'block']
 
         The underlying ``pd.DataFrame`` can be accessed with
-            ``constants.elements``.
+        ``constants.elements``.
         To see all available keys use ``constants.elements.info()``.
 
         The data comes from the module `mendeleev
-            <http://mendeleev.readthedocs.org/en/latest/>`_ written
-            by Lukasz Mentel.
+        <http://mendeleev.readthedocs.org/en/latest/>`_ written
+        by Lukasz Mentel.
 
         Please note that I added three columns to the mendeleev data::
 
@@ -40,9 +40,9 @@ class common_methods(_pandas_wrapper.core):
                 'valency']
 
         The ``atomic_radius_cc`` is used by default by this module
-            for determining bond lengths.
+        for determining bond lengths.
         The three others are taken from the MOLCAS grid viewer written
-            by Valera Veryazov.
+        by Valera Veryazov.
 
         Args:
             list_of_columns (str): You can pass also just one value.
@@ -55,7 +55,7 @@ class common_methods(_pandas_wrapper.core):
             Cartesian:
         """
         data = constants.elements
-        
+
         frame = self.frame.copy()
 
         list_of_columns = (

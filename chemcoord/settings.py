@@ -10,3 +10,7 @@ use_lookup_internally = True
 atomic_radius_data = 'atomic_radius_cc'
 
 
+viewer = 'gv.exe'
+# viewer = 'avogadro'
+# viewer = 'jmol'
+# viewer = 'molden'
