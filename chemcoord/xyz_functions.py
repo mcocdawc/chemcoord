@@ -1925,7 +1925,6 @@ class Cartesian(_common_class.common_methods):
         Returns:
             None:
         """
-        # TODO write python2 compatible
         TEMP_DIR = tempfile.gettempdir()
         file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_molecule_' + str(i) + '.xyz')
         i = 1
@@ -1979,6 +1978,8 @@ def view(molecule, viewer=settings.viewer):
                 raise
             finally:
                 os.remove(file(i))
+                
+        Thread(target = open, args=(i,)).start()
 
 def write_molden(cartesian_list, outputfile):
     """Writes a list of Cartesians into a molden file.
