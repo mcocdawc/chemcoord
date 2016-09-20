@@ -675,7 +675,7 @@ class Cartesian(_common_class.common_methods):
         mass_molecule = self.add_data('mass')
         mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
         location_array = mass_molecule.location()
-        barycenter = np.mean(location_array * mass_vector[:, None], axis=0)
+        barycenter = np.sum(location_array * mass_vector[:, None], axis=0) / self.total_mass()
         return barycenter
 
     def move(
@@ -1745,9 +1745,9 @@ class Cartesian(_common_class.common_methods):
             temp_Cartesian[:, ['x', 'y', 'z']] = (
                     self[:, ['x', 'y', 'z']] + step_frame.loc[:, ['x', 'y', 'z']] * t
                     )
-            Cartesian_list.append(temp_Cartesian)
+            Cartesian_list.append(temp_Cartesian.copy())
 
-        return list_of_cartesians
+        return Cartesian_list
 
     def write(self, outputfile, sort_index=True):
         """Writes the Cartesian into a file.
@@ -1978,7 +1978,7 @@ def view(molecule, viewer=settings.viewer):
                 raise
             finally:
                 os.remove(file(i))
-                
+
         Thread(target = open, args=(i,)).start()
 
 def write_molden(cartesian_list, outputfile):
