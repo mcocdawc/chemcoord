@@ -682,16 +682,19 @@ class Cartesian(_common_class.common_methods):
             self,
             vector=[0, 0, 0],
             matrix=np.identity(3),
+            matrix_first=True,
             indices=None,
             copy=False):
         """Move a Cartesian.
 
         The Cartesian is first rotated, mirrored... by the matrix
-        and afterwards translated by the vector
+        and afterwards translated by the vector.
 
         Args:
             vector (np.array): default is np.zeros(3)
             matrix (np.array): default is np.identity(3)
+            matrix_first (bool): If True the multiplication with the matrix
+            is the first operation.
             indices (list): Indices to be moved.
             copy (bool): Atoms are copied or translated to the new location.
 
@@ -702,8 +705,13 @@ class Cartesian(_common_class.common_methods):
 
         indices = self.index if (indices is None) else indices
         vectors = output[indices, ['x', 'y', 'z']]
-        vectors = np.dot(np.array(matrix), vectors.T).T
-        vectors = vectors + np.array(vector)
+
+        if matrix_first:
+            vectors = np.dot(np.array(matrix), vectors.T).T
+            vectors = vectors + np.array(vector)
+        else:
+            vectors = vectors + np.array(vector)
+            vectors = np.dot(np.array(matrix), vectors.T).T
 
         if copy:
             max_index = self.index.max()
@@ -1910,7 +1918,7 @@ class Cartesian(_common_class.common_methods):
                 header=False,
                 mode='a')
 
-    def view(self, viewer=settings.viewer):
+    def view(self, viewer=settings.viewer, use_curr_dir=False):
         """View your molecule
 
         .. note:: This function writes a temporary file and opens it with
@@ -1921,11 +1929,18 @@ class Cartesian(_common_class.common_methods):
         Args:
             viewer (str): The external viewer to use. The default is
                 specified in settings.viewer
+            use_curr_dir (bool): If True, the temporary file is written to
+                the current diretory. Otherwise it gets written to the
+                OS dependendent temporary directory.
 
         Returns:
             None:
         """
-        TEMP_DIR = tempfile.gettempdir()
+        if use_curr_dir:
+            TEMP_DIR = os.path.curdir
+        else:
+            TEMP_DIR = tempfile.gettempdir()
+
         file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_molecule_' + str(i) + '.xyz')
         i = 1
         while os.path.exists(file(i)):
@@ -1939,12 +1954,15 @@ class Cartesian(_common_class.common_methods):
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
             finally:
-                os.remove(file(i))
+                if use_curr_dir:
+                    pass
+                else:
+                    os.remove(file(i))
 
         Thread(target = open, args=(i,)).start()
 
 
-def view(molecule, viewer=settings.viewer):
+def view(molecule, viewer=settings.viewer, use_curr_dir=False):
     """View your molecule or list of molecules.
 
     .. note:: This function writes a temporary file and opens it with
@@ -1956,14 +1974,20 @@ def view(molecule, viewer=settings.viewer):
         molecule: Can be a cartesian, or a list of cartesians.
         viewer (str): The external viewer to use. The default is
             specified in settings.viewer
+        use_curr_dir (bool): If True, the temporary file is written to
+            the current diretory. Otherwise it gets written to the
+            OS dependendent temporary directory.
 
     Returns:
         None:
     """
     try:
-        molecule.view(viewer=viewer)
+        molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
     except AttributeError:
-        TEMP_DIR = tempfile.gettempdir()
+        if use_curr_dir:
+            TEMP_DIR = os.path.curdir
+        else:
+            TEMP_DIR = tempfile.gettempdir()
         file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_list_' + str(i) + '.molden')
         i = 1
         while os.path.exists(file(i)):
@@ -1977,7 +2001,10 @@ def view(molecule, viewer=settings.viewer):
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
             finally:
-                os.remove(file(i))
+                if use_curr_dir:
+                    pass
+                else:
+                    os.remove(file(i))
 
         Thread(target = open, args=(i,)).start()
 
