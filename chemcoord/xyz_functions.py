@@ -218,16 +218,19 @@ class Cartesian(_common_class.common_methods):
                 zip(self.index, [set([]) for _ in range(self.n_atoms)]))
 
             molecule2 = self.add_data(['valency', atomic_radius_data])
-            valency_dic = dict(zip(molecule2.index, molecule2[:, 'valency'].astype('int64')))
+            valency_dic = dict(zip(
+                molecule2.index, molecule2[:, 'valency'].astype('int64')))
 
-            atomic_radius_dic = dict(zip(molecule2.index, molecule2[:, atomic_radius_data]))
+            atomic_radius_dic = dict(zip(molecule2.index,
+                                         molecule2[:, atomic_radius_data]))
 
             if modified_properties is None:
                 pass
             else:
                 for key in modified_properties:
                     valency_dic[key] = modified_properties[key]['valency']
-                    atomic_radius_dic[key] = modified_properties[key]['atomic_radius']
+                    atomic_radius_dic[key] = \
+                        modified_properties[key]['atomic_radius']
             return bond_dic, valency_dic, atomic_radius_dic
 
         def get_bonds_local(
@@ -237,7 +240,8 @@ class Cartesian(_common_class.common_methods):
                 atomic_radius_dic,
                 use_valency,
                 index_of_cube=self.index):
-            overlap_array, convert_to = self._overlap(atomic_radius_dic, index_of_cube)
+            overlap_array, convert_to = self._overlap(atomic_radius_dic,
+                                                      index_of_cube)
             np.fill_diagonal(overlap_array, -1.)
             bin_overlap_array = overlap_array > 0
             actual_valency = np.sum(bin_overlap_array, axis=1)
@@ -677,7 +681,8 @@ class Cartesian(_common_class.common_methods):
         mass_molecule = self.add_data('mass')
         mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
         location_array = mass_molecule.location()
-        barycenter = np.sum(location_array * mass_vector[:, None], axis=0) / self.total_mass()
+        barycenter = (np.sum(location_array * mass_vector[:, None], axis=0)
+                      / self.total_mass())
         return barycenter
 
     def move(
@@ -877,7 +882,8 @@ class Cartesian(_common_class.common_methods):
         if give_only_index:
             value_to_return = list_fragment_indices
         else:
-            value_to_return = [self[indices, :] for indices in list_fragment_indices]
+            value_to_return = [self[indices, :] for indices in
+                               list_fragment_indices]
         return value_to_return
 
     def get_fragment(self, list_of_indextuples, give_only_index=False):
@@ -951,7 +957,8 @@ class Cartesian(_common_class.common_methods):
                 first_time=False,
                 third_time=False
                 ):
-            index_of_new_atom = distance_to_topologic_center[to_be_built, 'distance'].idxmin()
+            index_of_new_atom = distance_to_topologic_center[to_be_built,
+                                                            'distance'].idxmin()
             buildlist[row_in_buildlist, 0] = index_of_new_atom
             convert_index[index_of_new_atom] = row_in_buildlist
             if not first_time:
@@ -1221,7 +1228,8 @@ class Cartesian(_common_class.common_methods):
             dtype='float',
             index=indexlist)
 
-        zmat_frame.loc[:, additional_columns] = self[indexlist, additional_columns]
+        zmat_frame.loc[:, additional_columns] = self[indexlist,
+                                                     additional_columns]
 
         bonds = self.bond_lengths(buildlist, start_row=1)
         angles = self.angle_degrees(buildlist, start_row=2)
@@ -1490,7 +1498,10 @@ class Cartesian(_common_class.common_methods):
         array = self[indexlist, ['x', 'y', 'z']].values.astype(float)
         return array
 
-    def distance_to(self, origin=[0,0,0], indices_of_other_atoms=None, sort=False):
+    def distance_to(self,
+                    origin=[0,0,0],
+                    indices_of_other_atoms=None,
+                    sort=False):
         """Returns a Cartesian with a column for the distance from origin.
         """
         try:
@@ -1524,7 +1535,8 @@ class Cartesian(_common_class.common_methods):
         with_list = [rename_dict[key] for key in replace_list]
 
         output[:, 'temporary_column'] = output.index
-        output[:, 'temporary_column'].replace(replace_list, with_list, inplace=True)
+        output[:, 'temporary_column'].replace(replace_list,
+                                              with_list, inplace=True)
 
         output.set_index('temporary_column', drop=True, inplace=True)
         output.sort_index(inplace=True)
@@ -1619,8 +1631,10 @@ class Cartesian(_common_class.common_methods):
         """
         molecule1 = self.sort_index()
         molecule2 = Cartesian2.sort_index()
-        molecule1[:, 'x':'z'] = molecule1[:, 'x':'z'] - molecule1.topologic_center()
-        molecule2[:, 'x':'z'] = molecule2[:, 'x':'z'] - molecule2.topologic_center()
+        molecule1[:, 'x':'z'] = (molecule1[:, 'x':'z']
+                                 - molecule1.topologic_center())
+        molecule2[:, 'x':'z'] = (molecule2[:, 'x':'z']
+                                 - molecule2.topologic_center())
 
         if ignore_hydrogens:
             location1 = molecule1[molecule1[:, 'atom'] != 'H', :].location()
@@ -1679,7 +1693,8 @@ class Cartesian(_common_class.common_methods):
 
                 index_on_molecule2 = \
                     distances_to_atom_on_molecule1.frame.iloc[0].name
-                distance_new = distances_to_atom_on_molecule1[index_on_molecule2, 'distance']
+                distance_new = distances_to_atom_on_molecule1[
+                    index_on_molecule2, 'distance']
                 location_of_atom2 = distances_to_atom_on_molecule1.location(
                     index_on_molecule2)
 
@@ -1698,7 +1713,8 @@ class Cartesian(_common_class.common_methods):
                             index_on_molecule2 = \
                                 distances_to_atom_on_molecule1.frame.iloc[i].name
                             distance_new = \
-                                distances_to_atom_on_molecule1[index_on_molecule2, 'distance']
+                                distances_to_atom_on_molecule1[
+                                    index_on_molecule2, 'distance']
                             location_of_atom2 = \
                                 distances_to_atom_on_molecule1.location(
                                     index_on_molecule2)
@@ -1753,7 +1769,8 @@ class Cartesian(_common_class.common_methods):
 
         for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
             temp_Cartesian[:, ['x', 'y', 'z']] = (
-                    self[:, ['x', 'y', 'z']] + step_frame.loc[:, ['x', 'y', 'z']] * t
+                    self[:, ['x', 'y', 'z']]
+                    + step_frame.loc[:, ['x', 'y', 'z']] * t
                     )
             Cartesian_list.append(temp_Cartesian.copy())
 
