@@ -1,3 +1,4 @@
+# TODO rewrite using configparser module
 
 show_warnings = {'valency' : True}
 
