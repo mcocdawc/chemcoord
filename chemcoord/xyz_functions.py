@@ -66,7 +66,9 @@ class Cartesian(_common_class.common_methods):
         except AttributeError:
             # Create from pd.DataFrame
             if not self._is_physical(init.columns):
-                raise PhysicalMeaningError('There are columns missing for a meaningful description of a molecule')
+                raise PhysicalMeaningError(
+                    'There are columns missing for a meaningful \
+                    description of a molecule')
             self.frame = init.copy()
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
@@ -1864,7 +1866,8 @@ class Cartesian(_common_class.common_methods):
             molecule_in = [f.readline() for j in range(number_of_atoms + 2)]
             molecule_in = ''.join(molecule_in)
             molecule_in = io.StringIO(molecule_in)
-            molecule = cls.read_xyz(molecule_in, pythonic_index=pythonic_index, get_bonds=get_bonds)
+            molecule = cls.read_xyz(molecule_in, pythonic_index=pythonic_index,
+                                    get_bonds=get_bonds)
             try:
                 list_of_cartesians.append(molecule)
             except NameError:
