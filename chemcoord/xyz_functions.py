@@ -40,6 +40,8 @@ def pick(my_set):
 class Cartesian(_common_class.common_methods):
     """The main class for dealing with cartesian Coordinates.
     """
+    # Look into numpy manual for description of __array_priority__
+    __array_priority__ = 15.0
     def __init__(self, init):
         """How to initialize a Cartesian instance.
 
@@ -82,10 +84,125 @@ class Cartesian(_common_class.common_methods):
             pass
         return molecule
 
+    def __add__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] + other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] + other
+        return new_molecule
+
+    def __radd__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] + other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] + other
+        return new_molecule
+
+
+    def __sub__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] - other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] - other
+        return new_molecule
+
+
+    def __rsub__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = other[:, coords] - self[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = other - self[:, coords]
+        return new_molecule
+
+    def __mul__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] * other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] * other
+        return new_molecule
+
+    def __rmul__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] * other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] * other
+        return new_molecule
+
+    def __truediv__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] / other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] / other
+        return new_molecule
+
+    def __rtruediv__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = other[:, coords] / self[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = other / self[:, coords]
+        return new_molecule
+
+    def __pos__(self):
+        return self.copy()
+
+    def __abs__(self):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        new_molecule[:, coords] = abs(new_molecule[:, coords])
+        return new_molecule
+
+    def __neg__(self):
+        return -1 * self.copy()
+
+    def __rmatmul__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        new_molecule[:, coords] = (other @ new_molecule[:, coords].T).T
+        return new_molecule
+
 
     def _to_Cartesian(self):
         return self.copy()
-
 
     def _to_ase_Atoms(self):
         import ase
