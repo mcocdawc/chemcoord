@@ -40,8 +40,9 @@ def pick(my_set):
 class Cartesian(_common_class.common_methods):
     """The main class for dealing with cartesian Coordinates.
     """
-    # Look into numpy manual for description of __array_priority__
+    # Look into the numpy manual for description of __array_priority__
     __array_priority__ = 15.0
+
     def __init__(self, init):
         """How to initialize a Cartesian instance.
 
@@ -52,18 +53,9 @@ class Cartesian(_common_class.common_methods):
 
         Returns:
             Cartesian: A new cartesian instance.
-
         """
         try:
-            tmp = init._to_Cartesian()
-            self.frame = tmp.frame.copy()
-            self.shape = self.frame.shape
-            self.n_atoms = self.shape[0]
-            try:
-                self.__bond_dic = tmp.__bond_dic
-            except AttributeError:
-                pass
-
+            self = init._to_Cartesian()
 
         except AttributeError:
             # Create from pd.DataFrame
@@ -74,12 +66,31 @@ class Cartesian(_common_class.common_methods):
             self.frame = init.copy()
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
+            self.metadata = {}
+
+    def __getitem__(self, key):
+        # overwrites the method defined in _pandas_wrapper
+        frame = self.frame.loc[key[0], key[1]]
+        try:
+            if self._is_physical(frame.columns):
+                molecule = self.__class__(frame)
+                # NOTE here is the difference to the _pandas_wrapper definition
+                # TODO make clear in documentation that metadata is an
+                # alias/pointer
+                molecule.metadata = self.metadata
+                return molecule
+            else:
+                return frame
+        except AttributeError:
+            # A series and not a DataFrame was returned
+            return frame
 
 
     def copy(self):
         molecule = self.__class__(self.frame)
+        molecule.metadata = self.metadata
         try:
-            molecule.__bond_dic = self.__bond_dic
+            molecule.__bond_dic = self.__bond_dic.copy()
         except AttributeError:
             pass
         return molecule
@@ -97,16 +108,7 @@ class Cartesian(_common_class.common_methods):
         return new_molecule
 
     def __radd__(self, other):
-        coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self[:, coords] + other[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
-            new_molecule[:, coords] = self[:, coords] + other
-        return new_molecule
+        return self.__add__(other)
 
 
     def __sub__(self, other):
@@ -1462,6 +1464,7 @@ class Cartesian(_common_class.common_methods):
             buildlist = self._clean_dihedral(buildlist)
 
         zmat = self._build_zmat(buildlist)
+        zmat.metadata = self.metadata
         return zmat
 
     def inertia(self):

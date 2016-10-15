@@ -76,7 +76,8 @@ class core(object):
             columns = set([columns])
 
         is_cartesian = {'atom', 'x', 'y', 'z'} <= columns
-        is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'} <= columns
+        is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle',
+                   'dihedral_with', 'dihedral'} <= columns
         return (is_cartesian or is_zmat)
 
     def __getitem__(self, key):
@@ -95,7 +96,8 @@ class core(object):
     def __setitem__(self, key, value):
         self.frame.loc[key[0], key[1]] = value
 
-    def sort_values(self, by, axis=0, ascending=True, inplace=False, kind='quicksort', na_position='last'):
+    def sort_values(self, by, axis=0, ascending=True, inplace=False,
+                    kind='quicksort', na_position='last'):
         """Sort by the values along either axis
 
         The description is taken from the pandas project.
