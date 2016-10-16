@@ -852,9 +852,12 @@ class Cartesian(_common_class.common_methods):
         Returns:
             np.array:
         """
-        mass_molecule = self.add_data('mass')
-        mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
-        location_array = mass_molecule.location()
+        try:
+            mass_vector = self[:, 'mass'].values.astype('float64')
+        except KeyError:
+            mass_molecule = self.add_data('mass')
+            mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
+        location_array = self.location()
         barycenter = (np.sum(location_array * mass_vector[:, None], axis=0)
                       / self.total_mass())
         return barycenter
@@ -1560,31 +1563,25 @@ class Cartesian(_common_class.common_methods):
             ``eigenvectors``:
             The eigenvectors of the inertia tensor in the old basis.
         """
-        Cartesian_mass = self.add_data('mass')
-
-        Cartesian_mass = Cartesian_mass.move(vector=-self.barycenter())
-        frame_mass = Cartesian_mass.frame
-
         coordinates = ['x', 'y', 'z']
+        try:
+            mass_vector = self[:, 'mass'].values.astype('float64')
+            molecule = self.copy()
+        except KeyError:
+            molecule = self.add_data('mass')
+            mass_vector = molecule[:, 'mass'].values.astype('float64')
 
-        def kronecker(i, j):
-            """Please note, that it also compares e.g. strings.
-            """
-            if i == j:
-                return 1
-            else:
-                return 0
+        molecule = molecule - molecule.barycenter()
+        locations = molecule.location()
 
-        inertia_tensor = np.zeros([3, 3])
-        for row_index, row_coordinate in enumerate(coordinates):
-            for column_index, column_coordinate in enumerate(coordinates):
-                inertia_tensor[row_index, column_index] = (
-                    frame_mass.loc[:, 'mass'] * (
-                        kronecker(row_index, column_index)
-                        * (frame_mass.loc[:, coordinates]**2).sum(axis=1)
-                        - (frame_mass.loc[:, row_coordinate]
-                            * frame_mass.loc[:, column_coordinate])
-                    )).sum()
+        diagonals = (np.sum(locations**2, axis=1)[:, None, None]
+                     * np.identity(3)[None, :, :])
+
+        dyadic_product = locations[:, :, None] * locations[:, None, :]
+
+        inertia_tensor = (mass_vector[:, None, None]
+                          * (diagonals - dyadic_product)).sum(axis=0)
+
 
         diag_inertia_tensor, eigenvectors = np.linalg.eig(inertia_tensor)
 
