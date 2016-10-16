@@ -16,14 +16,14 @@ from threading import Thread
 import subprocess
 import os
 import tempfile
+import warnings
 from . import _common_class
-from . import test
 from ._exceptions import PhysicalMeaningError
 from . import constants
 from . import utilities
 from . import zmat_functions
 from . import export
-from . import settings
+from .configuration import settings
 import io
 from io import open
 
@@ -67,6 +67,7 @@ class Cartesian(_common_class.common_methods):
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
             self.metadata = {}
+            self._metadata = {}
 
     def __getitem__(self, key):
         # overwrites the method defined in _pandas_wrapper
@@ -77,7 +78,17 @@ class Cartesian(_common_class.common_methods):
                 # NOTE here is the difference to the _pandas_wrapper definition
                 # TODO make clear in documentation that metadata is an
                 # alias/pointer
+                # TODO persistent attributes have to be inserted here
                 molecule.metadata = self.metadata
+                molecule._metadata = self.metadata.copy()
+                keys_not_to_keep = [
+                    'bond_dict' # You could end up with loose ends
+                    ]
+                for key in keys_not_to_keep:
+                    try:
+                        molecule._metadata.pop(key)
+                    except KeyError:
+                        pass
                 return molecule
             else:
                 return frame
@@ -89,10 +100,8 @@ class Cartesian(_common_class.common_methods):
     def copy(self):
         molecule = self.__class__(self.frame)
         molecule.metadata = self.metadata
-        try:
-            molecule.__bond_dic = self.__bond_dic.copy()
-        except AttributeError:
-            pass
+        for key in self._metadata.keys():
+            molecule._metadata[key] = self._metadata[key]
         return molecule
 
     def __add__(self, other):
@@ -199,7 +208,7 @@ class Cartesian(_common_class.common_methods):
     def __rmatmul__(self, other):
         coords = ['x', 'y', 'z']
         new_molecule = self.copy()
-        new_molecule[:, coords] = (other @ new_molecule[:, coords].T).T
+        new_molecule[:, coords] = (np.dot(other, new_molecule[:, coords].T)).T
         return new_molecule
 
 
@@ -272,11 +281,11 @@ class Cartesian(_common_class.common_methods):
             use_lookup=False,
             set_lookup=True,
             divide_et_impera=True,
-            atomic_radius_data=settings.atomic_radius_data):
+            atomic_radius_data=settings['defaults']['atomic_radius_data']):
         """Returns a dictionary representing the bonds.
 
         .. warning:: This function is **not sideeffect free**, since it
-            assigns the output to a variable ``self.__bond_dic`` if
+            assigns the output to a variable ``self._metadata['bond_dict']`` if
             ``set_lookup`` is ``True`` (which is the default). This is
             necessary for performance reasons.
 
@@ -325,7 +334,7 @@ class Cartesian(_common_class.common_methods):
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
                 ``atomic_radius_cc`` and can be changed with
-                :attr:`settings.atomic_radius_data`. Compare with
+                :attr:`settings.settings['atomic_radius_data']`. Compare with
                 :func:`add_data`.
 
         Returns:
@@ -372,20 +381,21 @@ class Cartesian(_common_class.common_methods):
                 convert_to['frame'][index]
                 for index in indices_of_oversaturated_atoms]
 
+# TODO documentation
             if use_valency & (len(indices_of_oversaturated_atoms) > 0):
-                if settings.show_warnings['valency']:
+                if settings['show_warnings']['valency']:
                     warning_string = (
-                        'Warning: You specified use_valency=True '
+                        'You specified use_valency=True '
                         'and provided a geometry with over saturated '
                         'atoms. This means that the bonds with lowest '
                         'overlap will be cut, although the van der '
                         "Waals radii overlap. If you don't want to see "
                         "this warning go to settings.py and edit the "
                         "dictionary. Or execute "
-                        "cc.settings.show_warnings['valency'] = False."
+                        "cc.settings.settings['show_warnings']['valency'] = False."
                         "The problematic indices are:\n") \
                         + oversaturated_converted.__repr__()
-                    print(warning_string)
+                    warnings.warn(warning_string)
                 select = np.nonzero(overlap_array[
                     indices_of_oversaturated_atoms, :])
 
@@ -401,10 +411,11 @@ class Cartesian(_common_class.common_methods):
                     overlap_array[[cut_bonds_to], index] = -1
                     bin_overlap_array = overlap_array > 0
 
+# TODO documentation
             if (not use_valency) & (len(indices_of_oversaturated_atoms) > 0):
-                if settings.show_warnings['valency']:
+                if settings['show_warnings']['valency']:
                     warning_string = (
-                        "Warning: You specified use_valency=False (or "
+                        "You specified use_valency=False (or "
                         "used the default) and provided a geometry with "
                         "over saturated atoms. This means that bonds are "
                         "not cut even if their number exceeds the valency. "
@@ -413,7 +424,7 @@ class Cartesian(_common_class.common_methods):
                         "cc.settings.show_warnings['valency'] = False. "
                         "The problematic indices are:\n"
                     ) + oversaturated_converted.__repr__()
-                    print(warning_string)
+                    warnings.warn(warning_string)
 
             def update_dic(bin_overlap_array):
                 a, b = np.nonzero(bin_overlap_array)
@@ -446,15 +457,15 @@ class Cartesian(_common_class.common_methods):
 
         if use_lookup:
             try:
-                bond_dic = self.__bond_dic
+                bond_dic = self._metadata['bond_dict']
             except AttributeError:
                 bond_dic = complete_calculation(divide_et_impera)
                 if set_lookup:
-                    self.__bond_dic = bond_dic
+                    self._metadata['bond_dict'] = bond_dic
         else:
             bond_dic = complete_calculation(divide_et_impera)
             if set_lookup:
-                self.__bond_dic = bond_dic
+                self._metadata['bond_dict'] = bond_dic
 
         return bond_dic
 
@@ -1465,6 +1476,14 @@ class Cartesian(_common_class.common_methods):
 
         zmat = self._build_zmat(buildlist)
         zmat.metadata = self.metadata
+        zmat._metadata = self.metadata.copy()
+        keys_not_to_keep = [] # Because they don't make **physically** sense for
+            # internal coordinates
+        for key in keys_not_to_keep:
+            try:
+                molecule._metadata.pop(key)
+            except KeyError:
+                pass
         return zmat
 
     def inertia(self):
@@ -1962,11 +1981,11 @@ class Cartesian(_common_class.common_methods):
 
         molecule = cls(frame)
         if get_bonds:
-            previous_warnings_bool = settings.show_warnings['valency']
-            settings.show_warnings['valency'] = False
+            previous_warnings_bool = settings['show_warnings']['valency']
+            settings['show_warnings']['valency'] = False
             molecule.get_bonds(
                 use_lookup=False, set_lookup=True, use_valency=False)
-            settings.show_warnings['valency'] = previous_warnings_bool
+            settings['show_warnings']['valency'] = previous_warnings_bool
         return molecule
 
 
@@ -2058,7 +2077,7 @@ class Cartesian(_common_class.common_methods):
                 header=False,
                 mode='a')
 
-    def view(self, viewer=settings.viewer, use_curr_dir=False):
+    def view(self, viewer=settings['defaults']['viewer'], use_curr_dir=False):
         """View your molecule
 
         .. note:: This function writes a temporary file and opens it with
@@ -2068,7 +2087,7 @@ class Cartesian(_common_class.common_methods):
 
         Args:
             viewer (str): The external viewer to use. The default is
-                specified in settings.viewer
+                specified in cc.settings.settings['viewer']
             use_curr_dir (bool): If True, the temporary file is written to
                 the current diretory. Otherwise it gets written to the
                 OS dependendent temporary directory.
@@ -2102,7 +2121,7 @@ class Cartesian(_common_class.common_methods):
         Thread(target = open, args=(i,)).start()
 
 
-def view(molecule, viewer=settings.viewer, use_curr_dir=False):
+def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     """View your molecule or list of molecules.
 
     .. note:: This function writes a temporary file and opens it with

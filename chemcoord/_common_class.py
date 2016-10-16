@@ -14,7 +14,7 @@ from ._exceptions import PhysicalMeaningError
 from . import _pandas_wrapper
 from . import constants
 from . import utilities
-from . import settings
+from .configuration import settings
 
 
 class common_methods(_pandas_wrapper.core):

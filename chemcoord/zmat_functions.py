@@ -16,6 +16,7 @@ from . import _common_class
 from . import export
 from . import constants
 from . import utilities
+from .configuration import settings
 from ._exceptions import PhysicalMeaningError
 
 @export
@@ -47,6 +48,7 @@ class Zmat(_common_class.common_methods):
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
             self.metadata = {}
+            self._metadata = {}
 
     def __getitem__(self, key):
         # overwrites the method defined in _pandas_wrapper
@@ -55,8 +57,19 @@ class Zmat(_common_class.common_methods):
             if self._is_physical(frame.columns):
                 molecule = self.__class__(frame)
                 # NOTE here is the difference to the _pandas_wrapper definition
+                # TODO make clear in documentation that metadata is an
+                # alias/pointer
                 # TODO persistent attributes have to be inserted here
                 molecule.metadata = self.metadata
+                molecule._metadata = self.metadata.copy()
+                keys_not_to_keep = [
+                    'bond_dict' # You could end up with loose ends
+                    ]
+                for key in keys_not_to_keep:
+                    try:
+                        molecule._metadata.pop(key)
+                    except KeyError:
+                        pass
                 return molecule
             else:
                 return frame
@@ -69,26 +82,36 @@ class Zmat(_common_class.common_methods):
         molecule = self.__class__(self.frame)
         # TODO persistent attributes have to be inserted here
         molecule.metadata = self.metadata
-        try:
-            # molecule.__bond_dic = self.__bond_dic
-            pass
-        except AttributeError:
-            pass
+        for key in self._metadata.keys():
+            molecule._metadata[key] = self._metadata[key]
         return molecule
 
     def __add__(self, other):
         selection = ['atom', 'bond_with', 'angle_with', 'dihedral_with']
         coords = ['bond', 'angle', 'dihedral']
-        new_molecule = self.copy()
+        new = self.copy()
+        new._metadata['absolute_zmat'] = (self._metadata['absolute_zmat']
+                                          and other._metadata['absolute_zmat'])
         try:
             assert (self.index == other.index).all()
-            (self[:, 'selection'] == other[self.index, 'selection'])
-            assert np.alltrue(self[:, 'selection'] == other[self.index, 'selection'])
-            new_molecule[:, coords] = self[:, coords] + other[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
-            new_molecule[:, coords] = self[:, coords] + other
-        return new_molecule
+            # TODO default values for _metadata
+            if new._metadata['absolute_zmat']:
+                assert np.alltrue(self[:, selection] == other[:, selection])
+            else:
+                self[:, selection].isnull()
+                tested_where_equal = (self[:, selection] == other[:, selection])
+                tested_where_nan = (self[:, selection].isnull()
+                                    | other[:, selection].isnull())
+                for column in selection:
+                    tested_where_equal[tested_where_nan[column], column] = True
+                assert np.alltrue(tested_where_equal)
+
+            new[:, coords] = self[:, coords] + other[:, coords]
+        except AssertionError:
+            raise PhysicalMeaningError("You can add only those zmatrices that \
+have the same index, use the same buildlist, have the same ordering... \
+The only allowed difference is ['bond', 'angle', 'dihedral']")
+        return new
 
     def __radd__(self, other):
         return self.__add__(other)

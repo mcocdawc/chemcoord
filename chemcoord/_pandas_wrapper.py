@@ -16,7 +16,7 @@ import pandas as pd
 from . import constants
 from . import utilities
 from . import export
-from . import settings
+from .configuration import settings
 from ._exceptions import PhysicalMeaningError
 #from io import open
 
@@ -82,14 +82,13 @@ class core(object):
 
     def __getitem__(self, key):
         frame = self.frame.loc[key[0], key[1]]
-
         try:
             if self._is_physical(frame.columns):
                 return self.__class__(frame)
             else:
                 return frame
         except AttributeError:
-            # A series and not a DataFrame was returne
+            # A series and not a DataFrame was returned
             return frame
 
 

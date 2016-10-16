@@ -13,5 +13,7 @@ def export(func):
 from . import xyz_functions
 from . import utilities
 from . import constants
-from . import settings
+from . import configuration
 from . import zmat_functions
+
+globals()['settings'] = configuration.settings
