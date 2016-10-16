@@ -27,7 +27,21 @@ def provide_default_settings():
 
 def write_configuration_file(filepath=_give_default_file_path(),
                              overwrite=False):
-    """Currently this function works only under UNIX."""
+    """Create a configuration file.
+
+    Writes the current state of settings into a configuration file.
+
+    .. note:: Since a file is permamently written, this function
+        is strictly speaking not sideeffect free.
+
+    Args:
+        filepath (str): Where to write the file.
+            The default is under both UNIX and Windows ``~/.chemcoordrc``.
+        overwrite (bool):
+
+    Returns:
+        None:
+    """
     config = configparser.ConfigParser()
     config.read_dict(settings)
 
@@ -40,19 +54,20 @@ def write_configuration_file(filepath=_give_default_file_path(),
         with open(filepath, 'w') as configfile:
             config.write(configfile)
 
-        try:
-            import ctypes.windll
-            MAGIG_NUMBER_FOR_HIDING = 2
-            ctypes.windll.kernel32.SetFileAttributesW(
-                filepath, MAGIG_NUMBER_FOR_HIDING)
-        except ImportError:
-            # If not on windows submodule windll does not exist and
-            # on UNIX '.' in front of a filename is already enough.
-            pass
-
 
 def read_configuration_file(filepath=_give_default_file_path()):
-    """Read ~/.chemcoordrc and changes settings inplace"""
+    """Read the configuration file.
+
+    .. note:: This function changes ``cc.settings`` inplace and is
+        therefore not sideeffect free.
+
+    Args:
+        filepath (str): Where to read the file.
+            The default is under both UNIX and Windows ``~/.chemcoordrc``.
+
+    Returns:
+        None:
+    """
     config = configparser.ConfigParser()
     config.read(filepath)
     def get_correct_type(section, key, config):

@@ -39,6 +39,48 @@ def pick(my_set):
 @export
 class Cartesian(_common_class.common_methods):
     """The main class for dealing with cartesian Coordinates.
+
+    **Mathematical Operations**:
+
+    It supports binary operators in the logic of the scipy stack, but you need
+    python3.x for using the matrix multiplication operator ``@``.
+
+    The general rule is that mathematical operations using the binary operators
+    ``+ - * / @`` and the unary operatos ``+ - abs``
+    are only applied to the ``['x', 'y', 'z']`` columns.
+
+    **Addition/Subtraction/Multiplication/Division**:
+    If you add a scalar to a Cartesian it is added elementwise onto the
+    ``['x', 'y', 'z']`` columns.
+    If you add a 3-dimensional vector, list, tuple... the first element of this
+    vector is added elementwise to the ``'x'`` column of the
+    Cartesian instance and so on.
+    The last possibility is to add a matrix with
+    ``shape=(Cartesian.n_atoms, 3)`` which is again added elementwise.
+    The same rules are true for subtraction, division and multiplication.
+
+    **Matrixmultiplication**:
+    Only leftsided multiplication with a matrix of ``shape=(n, 3)``,
+    where ``n`` is a natural number, are supported.
+    The usual usecase is for example
+    ``np.diag([1, 1, -1]) @ cartesian_instance``
+    to mirror on the x-y plane.
+
+    **Slicing**:
+
+    Slicing is supported and behaves like the ``.loc`` method of pandas.
+    The returned type depends on the remaining columns after the slice.
+    If the information of the remaining columns
+    is sufficient to describe the geometry
+    of a molecule, a Cartesian instance is returned.
+    Otherwise a ``pandas.DataFrame`` or in the case of one remaining column
+    a ``pandas.Series`` is returned.
+
+    ``molecule[:, ['atom', 'x', 'y', 'z']]`` returns a ``Cartesian``.
+
+    ``molecule[:, ['atom', 'x']]`` returns a ``pandas.DataFrame``.
+
+    ``molecule[:, 'atom']`` returns a ``pandas.Series``.
     """
     # Look into the numpy manual for description of __array_priority__
     __array_priority__ = 15.0
@@ -289,9 +331,9 @@ class Cartesian(_common_class.common_methods):
             ``set_lookup`` is ``True`` (which is the default). This is
             necessary for performance reasons.
 
-        The Cartesian().get_bonds() method will use or not use a lookup
-            depending on ``use_lookup``. Greatly increases performance if
-            True, but could introduce bugs in certain situations.
+        ``.get_bonds()`` will use or not use a lookup
+        depending on ``use_lookup``. Greatly increases performance if
+        True, but could introduce bugs in certain situations.
 
         Just imagine a situation where the ``Cartesian().frame`` is
         changed manually. If you apply lateron a method e.g. ``to_zmat()``
@@ -300,8 +342,8 @@ class Cartesian(_common_class.common_methods):
 
         You have two possibilities to cope with this problem.
         Either you just re-execute ``get_bonds`` on your specific instance,
-        or you change the ``internally_use_lookup`` option in the settings
-        submodule. Please note that the internal use of the lookup variable
+        or you change the ``internally_use_lookup`` option in the settings.
+        Please note that the internal use of the lookup variable
         greatly improves performance.
 
         Args:
@@ -334,7 +376,7 @@ class Cartesian(_common_class.common_methods):
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
                 ``atomic_radius_cc`` and can be changed with
-                :attr:`settings.settings['atomic_radius_data']`. Compare with
+                :attr:`settings['defaults']['atomic_radius_data']`. Compare with
                 :func:`add_data`.
 
         Returns:
@@ -390,9 +432,10 @@ class Cartesian(_common_class.common_methods):
                         'atoms. This means that the bonds with lowest '
                         'overlap will be cut, although the van der '
                         "Waals radii overlap. If you don't want to see "
-                        "this warning go to settings.py and edit the "
-                        "dictionary. Or execute "
-                        "cc.settings.settings['show_warnings']['valency'] = False."
+                        "this warning execute "
+                        "cc.settings['show_warnings']['valency'] = False. "
+                        "For a permament change have a look "
+                        "at the configuration submodule. "
                         "The problematic indices are:\n") \
                         + oversaturated_converted.__repr__()
                     warnings.warn(warning_string)
@@ -419,11 +462,12 @@ class Cartesian(_common_class.common_methods):
                         "used the default) and provided a geometry with "
                         "over saturated atoms. This means that bonds are "
                         "not cut even if their number exceeds the valency. "
-                        "If you don't want to see this warning go to "
-                        "settings.py and edit the dictionary. Or execute "
-                        "cc.settings.show_warnings['valency'] = False. "
-                        "The problematic indices are:\n"
-                    ) + oversaturated_converted.__repr__()
+                        "If you don't want to see this warning execute "
+                        "cc.settings['show_warnings']['valency'] = False. "
+                        "For a permament change have a look "
+                        "at the configuration submodule. "
+                        "The problematic indices are:\n") \
+                        + oversaturated_converted.__repr__()
                     warnings.warn(warning_string)
 
             def update_dic(bin_overlap_array):
