@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
+import six
 try:
     # import itertools.imap as map
     import itertools.izip as zip
@@ -61,6 +62,15 @@ class common_methods(_pandas_wrapper.core):
         list_of_columns = (
             data.columns if (list_of_columns is None) else list_of_columns)
 
+
+        if isinstance(list_of_columns, six.string_types):
+            assert list_of_columns not in set(self.columns), \
+                'Column is already present'
+        else:
+            for column in list_of_columns:
+                assert column not in set(self.columns), \
+                    'Column is already present'
+
         atom_symbols = frame['atom']
         new_columns = data.loc[atom_symbols, list_of_columns]
         new_columns.index = frame.index
@@ -81,6 +91,9 @@ class common_methods(_pandas_wrapper.core):
         Returns:
             float:
         """
-        mass_molecule = self.add_data('mass')
-        mass = mass_molecule[:, 'mass'].sum()
+        try:
+            mass = self[:, 'mass'].sum()
+        except KeyError:
+            mass_molecule = self.add_data('mass')
+            mass = mass_molecule[:, 'mass'].sum()
         return mass
