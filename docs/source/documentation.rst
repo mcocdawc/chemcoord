@@ -11,5 +11,6 @@ Contents:
     xyz_functions
     utilities
     zmat_functions
+    configuration
 
 

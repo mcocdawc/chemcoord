@@ -55,6 +55,7 @@ Cartesian
          ~Cartesian.write
          ~Cartesian.read_xyz
          ~Cartesian.read_molden
+         ~Cartesian.view
 
 
 

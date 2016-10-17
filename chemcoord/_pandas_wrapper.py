@@ -16,7 +16,7 @@ import pandas as pd
 from . import constants
 from . import utilities
 from . import export
-from . import settings
+from .configuration import settings
 from ._exceptions import PhysicalMeaningError
 #from io import open
 
@@ -26,7 +26,7 @@ class core(object):
     """This class provides wrappers for pd.DataFrame methods.
     """
     # PLEASE NOTE: It is written under the assumption that there exists an
-    # attribute self.frame and self.n_atoms. 
+    # attribute self.frame and self.n_atoms.
     # So you have to provide it in the __init__ of an inheriting class.
     # Look into ./xyz_functions.py for an example.
 
@@ -76,30 +76,31 @@ class core(object):
             columns = set([columns])
 
         is_cartesian = {'atom', 'x', 'y', 'z'} <= columns
-        is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral'} <= columns
+        is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle',
+                   'dihedral_with', 'dihedral'} <= columns
         return (is_cartesian or is_zmat)
 
     def __getitem__(self, key):
         frame = self.frame.loc[key[0], key[1]]
-
         try:
             if self._is_physical(frame.columns):
                 return self.__class__(frame)
             else:
                 return frame
         except AttributeError:
-            # A series and not a DataFrame was returne
+            # A series and not a DataFrame was returned
             return frame
 
 
     def __setitem__(self, key, value):
         self.frame.loc[key[0], key[1]] = value
 
-    def sort_values(self, by, axis=0, ascending=True, inplace=False, kind='quicksort', na_position='last'):
+    def sort_values(self, by, axis=0, ascending=True, inplace=False,
+                    kind='quicksort', na_position='last'):
         """Sort by the values along either axis
 
         The description is taken from the pandas project.
-        
+
         Parameters
         ----------
         by : string name or list of names which refer to the axis items
@@ -117,7 +118,7 @@ class core(object):
              column or label.
         na_position : {'first', 'last'}
              `first` puts NaNs at the beginning, `last` puts NaNs at the end
-        
+
         Returns
         -------
         sorted_obj : Cartesian
@@ -155,7 +156,7 @@ class core(object):
         sort_remaining : bool
             if true and sorting by level and index is multilevel, sort by other
             levels too (in order) after sorting by specified level
-        
+
         Returns
         -------
         sorted_obj : Cartesian
@@ -175,20 +176,20 @@ class core(object):
         """Replace values given in 'to_replace' with 'value'.
 
         The description is taken from the pandas project.
-    
+
         Parameters
         ----------
         to_replace : str, regex, list, dict, Series, numeric, or None
-        
+
             * str or regex:
-        
+
                 - str: string exactly matching `to_replace` will be replaced
                   with `value`
                 - regex: regexs matching `to_replace` will be replaced with
                   `value`
-        
+
             * list of str, regex, or numeric:
-        
+
                 - First, if `to_replace` and `value` are both lists, they
                   **must** be the same length.
                 - Second, if ``regex=True`` then all of the strings in **both**
@@ -196,9 +197,9 @@ class core(object):
                   directly. This doesn't matter much for `value` since there
                   are only a few possible substitution regexes you can use.
                 - str and regex rules apply as above.
-        
+
             * dict:
-        
+
                 - Nested dictionaries, e.g., {'a': {'b': nan}}, are read as
                   follows: look in column 'a' for the value 'b' and replace it
                   with nan. You can nest regular expressions as well. Note that
@@ -207,14 +208,14 @@ class core(object):
                 - Keys map to column names and values map to substitution
                   values. You can treat this as a special case of passing two
                   lists except that you are specifying the column to search in.
-        
+
             * None:
-        
+
                 - This means that the ``regex`` argument must be a string,
                   compiled regular expression, or list, dict, ndarray or Series
                   of such elements. If `value` is also ``None`` then this
                   **must** be a nested dictionary or ``Series``.
-        
+
             See the examples section for examples of each of these.
         value : scalar, dict, list, str, regex, default None
             Value to use to fill holes (e.g. 0), alternately a dict of values
@@ -236,25 +237,25 @@ class core(object):
         method : string, optional, {'pad', 'ffill', 'bfill'}
             The method to use when for replacement, when ``to_replace`` is a
             ``list``.
-        
-        
+
+
         Returns
         -------
         filled : Cartesian
-        
+
         Raises
         ------
         AssertionError
-            * If `regex` is not a ``bool`` and `to_replace` is not ``None``.
+            If `regex` is not a ``bool`` and `to_replace` is not ``None``.
         TypeError
-            * If `to_replace` is a ``dict`` and `value` is not a ``list``,
-              ``dict``, ``ndarray``, or ``Series``
-            * If `to_replace` is ``None`` and `regex` is not compilable into a
-              regular expression or is a list, dict, ndarray, or Series.
+            If `to_replace` is a ``dict`` and `value` is not a ``list``,
+            ``dict``, ``ndarray``, or ``Series``.
+            If `to_replace` is ``None`` and `regex` is not compilable into a
+            regular expression or is a list, dict, ndarray, or Series.
         ValueError
-            * If `to_replace` and `value` are ``list`` s or ``ndarray`` s, but
-              they are not the same length.
-        
+            If `to_replace` and `value` are ``list`` s or ``ndarray`` s, but
+            they are not the same length.
+
         Notes
         -----
         * Regex substitution is performed under the hood with ``re.sub``. The
@@ -276,7 +277,7 @@ class core(object):
     def set_index(self, keys, drop=True, append=False, inplace=False, verify_integrity=False):
         """Set the DataFrame index (row labels) using one or more existing
         columns. By default yields a new object.
-        
+
         The description is taken from the pandas project.
 
         Parameters
@@ -292,13 +293,13 @@ class core(object):
             Check the new index for duplicates. Otherwise defer the check until
             necessary. Setting to False will improve the performance of this
             method
-        
+
         Examples
         --------
         >>> indexed_df = df.set_index(['A', 'B'])
         >>> indexed_df2 = df.set_index(['A', [0, 1, 2, 0, 1, 2]])
         >>> indexed_df3 = df.set_index([[0, 1, 2, 0, 1, 2]])
-        
+
         Returns
         -------
         Cartesian : Cartesian
@@ -321,8 +322,8 @@ class core(object):
 
 
     def append(self, other, ignore_index=False, verify_integrity=False):
-        """Append rows of `other` to the end of this frame, returning a new object. 
-        
+        """Append rows of `other` to the end of this frame, returning a new object.
+
         Columns not in this frame are added as new columns.
         The description is taken from the pandas project.
 

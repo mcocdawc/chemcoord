@@ -16,6 +16,7 @@ from . import _common_class
 from . import export
 from . import constants
 from . import utilities
+from .configuration import settings
 from ._exceptions import PhysicalMeaningError
 
 @export
@@ -35,33 +36,85 @@ class Zmat(_common_class.common_methods):
             Zmat: A new zmat instance.
         """
         try:
-            tmp = init._to_Zmat()
-            self.frame = tmp.frame.copy()
-            self.shape = self.frame.shape
-            self.n_atoms = self.shape[0]
-            try:
-                # self.__bond_dic = tmp.__bond_dic
-                pass
-            except AttributeError:
-                pass
+            self = init._to_Zmat()
 
         except AttributeError:
             # Create from pd.DataFrame
             if not self._is_physical(init.columns):
-                raise PhysicalMeaningError('There are columns missing for a meaningful description of a molecule')
+                raise PhysicalMeaningError(
+                    'There are columns missing for a meaningful \
+                    description of a molecule')
             self.frame = init.copy()
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
+            self.metadata = {}
+            self._metadata = {}
+
+    def __getitem__(self, key):
+        # overwrites the method defined in _pandas_wrapper
+        frame = self.frame.loc[key[0], key[1]]
+        try:
+            if self._is_physical(frame.columns):
+                molecule = self.__class__(frame)
+                # NOTE here is the difference to the _pandas_wrapper definition
+                # TODO make clear in documentation that metadata is an
+                # alias/pointer
+                # TODO persistent attributes have to be inserted here
+                molecule.metadata = self.metadata
+                molecule._metadata = self.metadata.copy()
+                keys_not_to_keep = [
+                    'bond_dict' # You could end up with loose ends
+                    ]
+                for key in keys_not_to_keep:
+                    try:
+                        molecule._metadata.pop(key)
+                    except KeyError:
+                        pass
+                return molecule
+            else:
+                return frame
+        except AttributeError:
+            # A series and not a DataFrame was returned
+            return frame
 
 
     def copy(self):
         molecule = self.__class__(self.frame)
-        try:
-            # molecule.__bond_dic = self.__bond_dic
-            pass
-        except AttributeError:
-            pass
+        # TODO persistent attributes have to be inserted here
+        molecule.metadata = self.metadata
+        for key in self._metadata.keys():
+            molecule._metadata[key] = self._metadata[key]
         return molecule
+
+    def __add__(self, other):
+        selection = ['atom', 'bond_with', 'angle_with', 'dihedral_with']
+        coords = ['bond', 'angle', 'dihedral']
+        new = self.copy()
+        new._metadata['absolute_zmat'] = (self._metadata['absolute_zmat']
+                                          and other._metadata['absolute_zmat'])
+        try:
+            assert (self.index == other.index).all()
+            # TODO default values for _metadata
+            if new._metadata['absolute_zmat']:
+                assert np.alltrue(self[:, selection] == other[:, selection])
+            else:
+                self[:, selection].isnull()
+                tested_where_equal = (self[:, selection] == other[:, selection])
+                tested_where_nan = (self[:, selection].isnull()
+                                    | other[:, selection].isnull())
+                for column in selection:
+                    tested_where_equal[tested_where_nan[column], column] = True
+                assert np.alltrue(tested_where_equal)
+
+            new[:, coords] = self[:, coords] + other[:, coords]
+        except AssertionError:
+            raise PhysicalMeaningError("You can add only those zmatrices that \
+have the same index, use the same buildlist, have the same ordering... \
+The only allowed difference is ['bond', 'angle', 'dihedral']")
+        return new
+
+    def __radd__(self, other):
+        return self.__add__(other)
 
 
     def _to_Zmat(self):
@@ -104,7 +157,7 @@ class Zmat(_common_class.common_methods):
         old_index = output.index
 
         if (new_index is None):
-            new_index = range(1, zmat_frame.shape[0]+1) 
+            new_index = range(1, zmat_frame.shape[0]+1)
         else:
             new_index = new_index
         assert len(new_index) == len(old_index)
@@ -113,7 +166,7 @@ class Zmat(_common_class.common_methods):
 
         output[:, ['bond_with', 'angle_with', 'dihedral_with']] = \
             output[:, ['bond_with', 'angle_with', 'dihedral_with']].replace(old_index, new_index)
-        
+
         if not inplace:
             return output
 
@@ -122,13 +175,13 @@ class Zmat(_common_class.common_methods):
 
         Args:
             SN_NeRF (bool): Use the **Self-Normalizing Natural
-            Extension Reference Frame** algorithm [1]_. In theory this
-            means 30 % less floating point operations, but since
-            this module is in python, floating point operations are
-            not the rate determining step. Nevertheless it is a more
-            elegant method than the "intuitive" conversion. Could make
-            a difference in the future when certain functions will be
-            implemented in ``Fortran``.
+                Extension Reference Frame** algorithm [1]_. In theory this
+                means 30 % less floating point operations, but since
+                this module is in python, floating point operations are
+                not the rate determining step. Nevertheless it is a more
+                elegant method than the "intuitive" conversion. Could make
+                a difference in the future when certain functions will be
+                implemented in ``Fortran``.
 
         Returns:
             Zmat: Reindexed version of the zmatrix.
@@ -195,7 +248,8 @@ class Zmat(_common_class.common_methods):
 
         def add_atom(row):
             index, bond_with, angle_with, dihedral_with = buildlist[row, :]
-            atom, bond, angle, dihedral = self[index, ['atom', 'bond', 'angle', 'dihedral']]
+            atom, bond, angle, dihedral = self[
+                index, ['atom', 'bond', 'angle', 'dihedral']]
 
             angle, dihedral = map(m.radians, (angle, dihedral))
 
@@ -242,7 +296,8 @@ class Zmat(_common_class.common_methods):
 #            index = None  # Should be added
 
             index, bond_with, angle_with, dihedral_with = buildlist[row, :]
-            atom, bond, angle, dihedral = self[index, ['atom', 'bond', 'angle', 'dihedral']]
+            atom, bond, angle, dihedral = self[
+                index, ['atom', 'bond', 'angle', 'dihedral']]
             angle, dihedral = map(m.radians, (angle, dihedral))
             bond_with, angle_with, dihedral_with = buildlist[row, 1:]
 
@@ -316,6 +371,8 @@ class Zmat(_common_class.common_methods):
         assert not molecule.frame.isnull().values.any(), \
             ('Serious bug while converting, please report an error'
                 'on the Github page with your coordinate files')
+
+        molecule.metadata = self.metadata
         return molecule
 
     @classmethod
@@ -438,4 +495,3 @@ class Zmat(_common_class.common_methods):
                 header=False,
                 mode='w'
             )
-

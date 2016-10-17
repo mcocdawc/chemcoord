@@ -12,14 +12,18 @@ import numpy as np
 import pandas as pd
 import copy
 import collections
+from threading import Thread
+import subprocess
+import os
+import tempfile
+import warnings
 from . import _common_class
-from . import test
 from ._exceptions import PhysicalMeaningError
 from . import constants
 from . import utilities
 from . import zmat_functions
 from . import export
-from . import settings
+from .configuration import settings
 import io
 from io import open
 
@@ -35,51 +39,223 @@ def pick(my_set):
 @export
 class Cartesian(_common_class.common_methods):
     """The main class for dealing with cartesian Coordinates.
+
+    **Mathematical Operations**:
+
+    It supports binary operators in the logic of the scipy stack, but you need
+    python3.x for using the matrix multiplication operator ``@``.
+
+    The general rule is that mathematical operations using the binary operators
+    ``+ - * / @`` and the unary operatos ``+ - abs``
+    are only applied to the ``['x', 'y', 'z']`` columns.
+
+    **Addition/Subtraction/Multiplication/Division**:
+    If you add a scalar to a Cartesian it is added elementwise onto the
+    ``['x', 'y', 'z']`` columns.
+    If you add a 3-dimensional vector, list, tuple... the first element of this
+    vector is added elementwise to the ``'x'`` column of the
+    Cartesian instance and so on.
+    The last possibility is to add a matrix with
+    ``shape=(Cartesian.n_atoms, 3)`` which is again added elementwise.
+    The same rules are true for subtraction, division and multiplication.
+
+    **Matrixmultiplication**:
+    Only leftsided multiplication with a matrix of ``shape=(n, 3)``,
+    where ``n`` is a natural number, are supported.
+    The usual usecase is for example
+    ``np.diag([1, 1, -1]) @ cartesian_instance``
+    to mirror on the x-y plane.
+
+    **Slicing**:
+
+    Slicing is supported and behaves like the ``.loc`` method of pandas.
+    The returned type depends on the remaining columns after the slice.
+    If the information of the remaining columns
+    is sufficient to describe the geometry
+    of a molecule, a Cartesian instance is returned.
+    Otherwise a ``pandas.DataFrame`` or in the case of one remaining column
+    a ``pandas.Series`` is returned.
+
+    ``molecule[:, ['atom', 'x', 'y', 'z']]`` returns a ``Cartesian``.
+
+    ``molecule[:, ['atom', 'x']]`` returns a ``pandas.DataFrame``.
+
+    ``molecule[:, 'atom']`` returns a ``pandas.Series``.
     """
+    # Look into the numpy manual for description of __array_priority__
+    __array_priority__ = 15.0
+
     def __init__(self, init):
         """How to initialize a Cartesian instance.
 
         Args:
             frame (pd.DataFrame): A Dataframe with at least the
-                columns ``['atom', 'x', 'y', 'z']``. 
+                columns ``['atom', 'x', 'y', 'z']``.
                 Where ``'atom'`` is a string for the elementsymbol.
 
         Returns:
             Cartesian: A new cartesian instance.
-
         """
         try:
-            tmp = init._to_Cartesian()
-            self.frame = tmp.frame.copy()
-            self.shape = self.frame.shape
-            self.n_atoms = self.shape[0]
-            try:
-                self.__bond_dic = tmp.__bond_dic
-            except AttributeError:
-                pass
-            
+            self = init._to_Cartesian()
 
         except AttributeError:
             # Create from pd.DataFrame
             if not self._is_physical(init.columns):
-                raise PhysicalMeaningError('There are columns missing for a meaningful description of a molecule')
+                raise PhysicalMeaningError(
+                    'There are columns missing for a meaningful \
+                    description of a molecule')
             self.frame = init.copy()
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
+            self.metadata = {}
+            self._metadata = {}
+
+    def __getitem__(self, key):
+        # overwrites the method defined in _pandas_wrapper
+        frame = self.frame.loc[key[0], key[1]]
+        try:
+            if self._is_physical(frame.columns):
+                molecule = self.__class__(frame)
+                # NOTE here is the difference to the _pandas_wrapper definition
+                # TODO make clear in documentation that metadata is an
+                # alias/pointer
+                # TODO persistent attributes have to be inserted here
+                molecule.metadata = self.metadata
+                molecule._metadata = self.metadata.copy()
+                keys_not_to_keep = [
+                    'bond_dict' # You could end up with loose ends
+                    ]
+                for key in keys_not_to_keep:
+                    try:
+                        molecule._metadata.pop(key)
+                    except KeyError:
+                        pass
+                return molecule
+            else:
+                return frame
+        except AttributeError:
+            # A series and not a DataFrame was returned
+            return frame
 
 
     def copy(self):
         molecule = self.__class__(self.frame)
-        try:
-            molecule.__bond_dic = self.__bond_dic
-        except AttributeError:
-            pass
+        molecule.metadata = self.metadata
+        for key in self._metadata.keys():
+            molecule._metadata[key] = self._metadata[key]
         return molecule
+
+    def __add__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] + other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] + other
+        return new_molecule
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+
+    def __sub__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] - other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] - other
+        return new_molecule
+
+
+    def __rsub__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = other[:, coords] - self[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = other - self[:, coords]
+        return new_molecule
+
+    def __mul__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] * other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] * other
+        return new_molecule
+
+    def __rmul__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] * other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] * other
+        return new_molecule
+
+    def __truediv__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self[:, coords] / other[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = self[:, coords] / other
+        return new_molecule
+
+    def __rtruediv__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        try:
+            assert set(self.index) == set(other.index)
+            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = other[:, coords] / self[:, coords]
+        except (TypeError, IndexError, AttributeError):
+            # It is a shape=3 vector or list
+            new_molecule[:, coords] = other / self[:, coords]
+        return new_molecule
+
+    def __pos__(self):
+        return self.copy()
+
+    def __abs__(self):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        new_molecule[:, coords] = abs(new_molecule[:, coords])
+        return new_molecule
+
+    def __neg__(self):
+        return -1 * self.copy()
+
+    def __rmatmul__(self, other):
+        coords = ['x', 'y', 'z']
+        new_molecule = self.copy()
+        new_molecule[:, coords] = (np.dot(other, new_molecule[:, coords].T)).T
+        return new_molecule
 
 
     def _to_Cartesian(self):
         return self.copy()
-
 
     def _to_ase_Atoms(self):
         import ase
@@ -147,17 +323,17 @@ class Cartesian(_common_class.common_methods):
             use_lookup=False,
             set_lookup=True,
             divide_et_impera=True,
-            atomic_radius_data=settings.atomic_radius_data):
+            atomic_radius_data=settings['defaults']['atomic_radius_data']):
         """Returns a dictionary representing the bonds.
 
         .. warning:: This function is **not sideeffect free**, since it
-            assigns the output to a variable ``self.__bond_dic`` if
+            assigns the output to a variable ``self._metadata['bond_dict']`` if
             ``set_lookup`` is ``True`` (which is the default). This is
             necessary for performance reasons.
 
-        The Cartesian().get_bonds() method will use or not use a lookup
-            depending on ``use_lookup``. Greatly increases performance if
-            True, but could introduce bugs in certain situations.
+        ``.get_bonds()`` will use or not use a lookup
+        depending on ``use_lookup``. Greatly increases performance if
+        True, but could introduce bugs in certain situations.
 
         Just imagine a situation where the ``Cartesian().frame`` is
         changed manually. If you apply lateron a method e.g. ``to_zmat()``
@@ -166,8 +342,8 @@ class Cartesian(_common_class.common_methods):
 
         You have two possibilities to cope with this problem.
         Either you just re-execute ``get_bonds`` on your specific instance,
-        or you change the ``internally_use_lookup`` option in the settings
-        submodule. Please note that the internal use of the lookup variable
+        or you change the ``internally_use_lookup`` option in the settings.
+        Please note that the internal use of the lookup variable
         greatly improves performance.
 
         Args:
@@ -200,7 +376,7 @@ class Cartesian(_common_class.common_methods):
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
                 ``atomic_radius_cc`` and can be changed with
-                :attr:`settings.atomic_radius_data`. Compare with
+                :attr:`settings['defaults']['atomic_radius_data']`. Compare with
                 :func:`add_data`.
 
         Returns:
@@ -212,16 +388,19 @@ class Cartesian(_common_class.common_methods):
                 zip(self.index, [set([]) for _ in range(self.n_atoms)]))
 
             molecule2 = self.add_data(['valency', atomic_radius_data])
-            valency_dic = dict(zip(molecule2.index, molecule2[:, 'valency'].astype('int64')))
+            valency_dic = dict(zip(
+                molecule2.index, molecule2[:, 'valency'].astype('int64')))
 
-            atomic_radius_dic = dict(zip(molecule2.index, molecule2[:, atomic_radius_data]))
+            atomic_radius_dic = dict(zip(molecule2.index,
+                                         molecule2[:, atomic_radius_data]))
 
             if modified_properties is None:
                 pass
             else:
                 for key in modified_properties:
                     valency_dic[key] = modified_properties[key]['valency']
-                    atomic_radius_dic[key] = modified_properties[key]['atomic_radius']
+                    atomic_radius_dic[key] = \
+                        modified_properties[key]['atomic_radius']
             return bond_dic, valency_dic, atomic_radius_dic
 
         def get_bonds_local(
@@ -231,7 +410,8 @@ class Cartesian(_common_class.common_methods):
                 atomic_radius_dic,
                 use_valency,
                 index_of_cube=self.index):
-            overlap_array, convert_to = self._overlap(atomic_radius_dic, index_of_cube)
+            overlap_array, convert_to = self._overlap(atomic_radius_dic,
+                                                      index_of_cube)
             np.fill_diagonal(overlap_array, -1.)
             bin_overlap_array = overlap_array > 0
             actual_valency = np.sum(bin_overlap_array, axis=1)
@@ -243,20 +423,22 @@ class Cartesian(_common_class.common_methods):
                 convert_to['frame'][index]
                 for index in indices_of_oversaturated_atoms]
 
+# TODO documentation
             if use_valency & (len(indices_of_oversaturated_atoms) > 0):
-                if settings.show_warnings['valency']:
+                if settings['show_warnings']['valency']:
                     warning_string = (
-                        'Warning: You specified use_valency=True '
+                        'You specified use_valency=True '
                         'and provided a geometry with over saturated '
                         'atoms. This means that the bonds with lowest '
                         'overlap will be cut, although the van der '
                         "Waals radii overlap. If you don't want to see "
-                        "this warning go to settings.py and edit the "
-                        "dictionary. Or execute "
-                        "cc.settings.show_warnings['valency'] = False."
+                        "this warning execute "
+                        "cc.settings['show_warnings']['valency'] = False. "
+                        "For a permament change have a look "
+                        "at the configuration submodule. "
                         "The problematic indices are:\n") \
                         + oversaturated_converted.__repr__()
-                    print(warning_string)
+                    warnings.warn(warning_string)
                 select = np.nonzero(overlap_array[
                     indices_of_oversaturated_atoms, :])
 
@@ -272,19 +454,21 @@ class Cartesian(_common_class.common_methods):
                     overlap_array[[cut_bonds_to], index] = -1
                     bin_overlap_array = overlap_array > 0
 
+# TODO documentation
             if (not use_valency) & (len(indices_of_oversaturated_atoms) > 0):
-                if settings.show_warnings['valency']:
+                if settings['show_warnings']['valency']:
                     warning_string = (
-                        "Warning: You specified use_valency=False (or "
+                        "You specified use_valency=False (or "
                         "used the default) and provided a geometry with "
                         "over saturated atoms. This means that bonds are "
                         "not cut even if their number exceeds the valency. "
-                        "If you don't want to see this warning go to "
-                        "settings.py and edit the dictionary. Or execute "
-                        "cc.settings.show_warnings['valency'] = False. "
-                        "The problematic indices are:\n"
-                    ) + oversaturated_converted.__repr__()
-                    print(warning_string)
+                        "If you don't want to see this warning execute "
+                        "cc.settings['show_warnings']['valency'] = False. "
+                        "For a permament change have a look "
+                        "at the configuration submodule. "
+                        "The problematic indices are:\n") \
+                        + oversaturated_converted.__repr__()
+                    warnings.warn(warning_string)
 
             def update_dic(bin_overlap_array):
                 a, b = np.nonzero(bin_overlap_array)
@@ -317,15 +501,15 @@ class Cartesian(_common_class.common_methods):
 
         if use_lookup:
             try:
-                bond_dic = self.__bond_dic
+                bond_dic = self._metadata['bond_dict']
             except AttributeError:
                 bond_dic = complete_calculation(divide_et_impera)
                 if set_lookup:
-                    self.__bond_dic = bond_dic
+                    self._metadata['bond_dict'] = bond_dic
         else:
             bond_dic = complete_calculation(divide_et_impera)
             if set_lookup:
-                self.__bond_dic = bond_dic
+                self._metadata['bond_dict'] = bond_dic
 
         return bond_dic
 
@@ -334,7 +518,7 @@ class Cartesian(_common_class.common_methods):
 
         If your algorithm scales with :math:`O(n^2)`.
         You can use this function as a preprocessing step to make it
-            scaling with :math:`O(n\log(n))`.
+        scaling with :math:`O(n\log(n))`.
 
         Args:
             maximum_edge_length (float): Maximum length of one edge
@@ -342,15 +526,15 @@ class Cartesian(_common_class.common_methods):
 
         Returns:
             dict: A dictionary mapping from a 3 tuple of integers
-                to a 2 tuple of sets. The 3 tuple gives the integer
-                numbered coordinates of the cuboids. The first set
-                contains the indices of atoms lying in the cube with
-                a maximum edge length of ``maximum_edge_length``. They
-                are pairwise disjunct and are referred to as small
-                cuboids. The second set contains the indices of atoms
-                lying in the cube with ``maximum_edge_length +
-                difference_edge``. They are a bit larger than the small
-                cuboids and overlap with ``difference_edge / 2``.
+            to a 2 tuple of sets. The 3 tuple gives the integer
+            numbered coordinates of the cuboids. The first set
+            contains the indices of atoms lying in the cube with
+            a maximum edge length of ``maximum_edge_length``. They
+            are pairwise disjunct and are referred to as small
+            cuboids. The second set contains the indices of atoms
+            lying in the cube with ``maximum_edge_length +
+            difference_edge``. They are a bit larger than the small
+            cuboids and overlap with ``difference_edge / 2``.
         """
         coordinates = ['x', 'y', 'z']
         sorted_series = dict(zip(
@@ -668,26 +852,33 @@ class Cartesian(_common_class.common_methods):
         Returns:
             np.array:
         """
-        mass_molecule = self.add_data('mass')
-        mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
-        location_array = mass_molecule.location()
-        barycenter = np.mean(location_array * mass_vector[:, None], axis=0)
+        try:
+            mass_vector = self[:, 'mass'].values.astype('float64')
+        except KeyError:
+            mass_molecule = self.add_data('mass')
+            mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
+        location_array = self.location()
+        barycenter = (np.sum(location_array * mass_vector[:, None], axis=0)
+                      / self.total_mass())
         return barycenter
 
     def move(
             self,
             vector=[0, 0, 0],
             matrix=np.identity(3),
+            matrix_first=True,
             indices=None,
             copy=False):
         """Move a Cartesian.
 
         The Cartesian is first rotated, mirrored... by the matrix
-        and afterwards translated by the vector
+        and afterwards translated by the vector.
 
         Args:
             vector (np.array): default is np.zeros(3)
             matrix (np.array): default is np.identity(3)
+            matrix_first (bool): If True the multiplication with the matrix
+            is the first operation.
             indices (list): Indices to be moved.
             copy (bool): Atoms are copied or translated to the new location.
 
@@ -698,8 +889,13 @@ class Cartesian(_common_class.common_methods):
 
         indices = self.index if (indices is None) else indices
         vectors = output[indices, ['x', 'y', 'z']]
-        vectors = np.dot(np.array(matrix), vectors.T).T
-        vectors = vectors + np.array(vector)
+
+        if matrix_first:
+            vectors = np.dot(np.array(matrix), vectors.T).T
+            vectors = vectors + np.array(vector)
+        else:
+            vectors = vectors + np.array(vector)
+            vectors = np.dot(np.array(matrix), vectors.T).T
 
         if copy:
             max_index = self.index.max()
@@ -863,7 +1059,8 @@ class Cartesian(_common_class.common_methods):
         if give_only_index:
             value_to_return = list_fragment_indices
         else:
-            value_to_return = [self[indices, :] for indices in list_fragment_indices]
+            value_to_return = [self[indices, :] for indices in
+                               list_fragment_indices]
         return value_to_return
 
     def get_fragment(self, list_of_indextuples, give_only_index=False):
@@ -937,7 +1134,8 @@ class Cartesian(_common_class.common_methods):
                 first_time=False,
                 third_time=False
                 ):
-            index_of_new_atom = distance_to_topologic_center[to_be_built, 'distance'].idxmin()
+            index_of_new_atom = distance_to_topologic_center[to_be_built,
+                                                            'distance'].idxmin()
             buildlist[row_in_buildlist, 0] = index_of_new_atom
             convert_index[index_of_new_atom] = row_in_buildlist
             if not first_time:
@@ -1207,7 +1405,8 @@ class Cartesian(_common_class.common_methods):
             dtype='float',
             index=indexlist)
 
-        zmat_frame.loc[:, additional_columns] = self[indexlist, additional_columns]
+        zmat_frame.loc[:, additional_columns] = self[indexlist,
+                                                     additional_columns]
 
         bonds = self.bond_lengths(buildlist, start_row=1)
         angles = self.angle_degrees(buildlist, start_row=2)
@@ -1231,47 +1430,49 @@ class Cartesian(_common_class.common_methods):
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
-            steps:
+        steps:
 
         1. Define an order of how to build.
+
         2. Check for problematic local linearity. In this algorithm an
-            angle with ``170 < angle < 10`` is assumed to be linear.
-            This is not the mathematical definition, but makes it safer
-            against "floating point noise"
+        angle with ``170 < angle < 10`` is assumed to be linear.
+        This is not the mathematical definition, but makes it safer
+        against "floating point noise"
+
         3. Calculate the bond lengths, angles and dihedrals using the
-            references defined in step 1 and 2.
+        references defined in step 1 and 2.
 
         In the first two steps a so called ``buildlist`` is created.
         This is basically a ``np.array`` of shape ``(n_atoms, 4)`` and
-            integer type.
+        integer type.
 
         The four columns are ``['own_index', 'bond_with', 'angle_with',
-            'dihedral_with']``.
+        'dihedral_with']``.
         This means that usually the upper right triangle can be any
-            number, because for example the first atom has no other
-            atom as reference.
+        number, because for example the first atom has no other
+        atom as reference.
 
         It is important to know, that getting the buildlist is a very
-            costly step since the algoritym tries to make some guesses
-            based on the connectivity to create a "chemical" zmatrix.
+        costly step since the algoritym tries to make some guesses
+        based on the connectivity to create a "chemical" zmatrix.
 
         If you create several zmatrices based on the same references
-            you can save the buildlist of a zmatrix with
-            :meth:`Zmat.build_list`.
+        you can save the buildlist of a zmatrix with
+        :meth:`Zmat.build_list`.
         If you then pass the buildlist as argument to ``to_zmat``,
-            then the algorithm directly starts with step 3.
+        then the algorithm directly starts with step 3.
 
 
         Another thing is that you can specify fragments.
         For this purpose the function :meth:`Cartesian.get_fragment`
-            is quite handy.
+        is quite handy.
         An element of fragment_list looks like::
 
             (fragment, connections)
 
         Fragment is a ``Cartesian`` instance and connections is a
-            ``(3, 4)`` numpy integer array, that defines how the
-            fragment is connected to the molecule.
+        ``(3, 4)`` numpy integer array, that defines how the
+        fragment is connected to the molecule.
 
         Args:
             buildlist (np.array):
@@ -1321,14 +1522,23 @@ class Cartesian(_common_class.common_methods):
             buildlist = self._clean_dihedral(buildlist)
 
         zmat = self._build_zmat(buildlist)
+        zmat.metadata = self.metadata
+        zmat._metadata = self.metadata.copy()
+        keys_not_to_keep = [] # Because they don't make **physically** sense for
+            # internal coordinates
+        for key in keys_not_to_keep:
+            try:
+                molecule._metadata.pop(key)
+            except KeyError:
+                pass
         return zmat
 
     def inertia(self):
         """Calculates the inertia tensor and transforms along
-            rotation axes.
+        rotation axes.
 
         This function calculates the inertia tensor and returns
-            a 4-tuple.
+        a 4-tuple.
 
         Args:
             None
@@ -1338,14 +1548,14 @@ class Cartesian(_common_class.common_methods):
 
             ``transformed_Cartesian``:
             A frame that is transformed to the basis spanned by
-                the eigenvectors of the inertia tensor. The x-axis
-                is the axis with the lowest inertia moment, the
-                z-axis the one with the highest. Contains also a
-                column for the mass
+            the eigenvectors of the inertia tensor. The x-axis
+            is the axis with the lowest inertia moment, the
+            z-axis the one with the highest. Contains also a
+            column for the mass
 
             ``diag_inertia_tensor``:
             A vector containing the sorted inertia moments after
-                diagonalization.
+            diagonalization.
 
             ``inertia_tensor``:
             The inertia tensor in the old basis.
@@ -1353,31 +1563,25 @@ class Cartesian(_common_class.common_methods):
             ``eigenvectors``:
             The eigenvectors of the inertia tensor in the old basis.
         """
-        Cartesian_mass = self.add_data('mass')
-
-        Cartesian_mass = Cartesian_mass.move(vector=-self.barycenter())
-        frame_mass = Cartesian_mass.frame
-
         coordinates = ['x', 'y', 'z']
+        try:
+            mass_vector = self[:, 'mass'].values.astype('float64')
+            molecule = self.copy()
+        except KeyError:
+            molecule = self.add_data('mass')
+            mass_vector = molecule[:, 'mass'].values.astype('float64')
 
-        def kronecker(i, j):
-            """Please note, that it also compares e.g. strings.
-            """
-            if i == j:
-                return 1
-            else:
-                return 0
+        molecule = molecule - molecule.barycenter()
+        locations = molecule.location()
 
-        inertia_tensor = np.zeros([3, 3])
-        for row_index, row_coordinate in enumerate(coordinates):
-            for column_index, column_coordinate in enumerate(coordinates):
-                inertia_tensor[row_index, column_index] = (
-                    frame_mass.loc[:, 'mass'] * (
-                        kronecker(row_index, column_index)
-                        * (frame_mass.loc[:, coordinates]**2).sum(axis=1)
-                        - (frame_mass.loc[:, row_coordinate]
-                            * frame_mass.loc[:, column_coordinate])
-                    )).sum()
+        diagonals = (np.sum(locations**2, axis=1)[:, None, None]
+                     * np.identity(3)[None, :, :])
+
+        dyadic_product = locations[:, :, None] * locations[:, None, :]
+
+        inertia_tensor = (mass_vector[:, None, None]
+                          * (diagonals - dyadic_product)).sum(axis=0)
+
 
         diag_inertia_tensor, eigenvectors = np.linalg.eig(inertia_tensor)
 
@@ -1474,7 +1678,10 @@ class Cartesian(_common_class.common_methods):
         array = self[indexlist, ['x', 'y', 'z']].values.astype(float)
         return array
 
-    def distance_to(self, origin=[0,0,0], indices_of_other_atoms=None, sort=False):
+    def distance_to(self,
+                    origin=[0,0,0],
+                    indices_of_other_atoms=None,
+                    sort=False):
         """Returns a Cartesian with a column for the distance from origin.
         """
         try:
@@ -1492,7 +1699,7 @@ class Cartesian(_common_class.common_methods):
             output.sort_values(by='distance', inplace=True)
         return output
 
-    
+
     def change_numbering(self, rename_dict, inplace=False):
         """Returns the reindexed version of Cartesian.
 
@@ -1503,12 +1710,13 @@ class Cartesian(_common_class.common_methods):
             Cartesian: A renamed copy according to the dictionary passed.
         """
         output = self if inplace else self.copy()
-        
+
         replace_list = list(rename_dict.keys())
         with_list = [rename_dict[key] for key in replace_list]
 
         output[:, 'temporary_column'] = output.index
-        output[:, 'temporary_column'].replace(replace_list, with_list, inplace=True)
+        output[:, 'temporary_column'].replace(replace_list,
+                                              with_list, inplace=True)
 
         output.set_index('temporary_column', drop=True, inplace=True)
         output.sort_index(inplace=True)
@@ -1519,33 +1727,33 @@ class Cartesian(_common_class.common_methods):
 
     def partition_chem_env(self, follow_bonds=4):
         """This function partitions the molecule into subsets of the
-            same chemical environment.
+        same chemical environment.
 
         A chemical environment is specified by the number of
-            surrounding atoms of a certain kind around an atom with a
-            certain atomic number represented by a tuple of a string
-            and a frozenset of tuples.
+        surrounding atoms of a certain kind around an atom with a
+        certain atomic number represented by a tuple of a string
+        and a frozenset of tuples.
         The ``follow_bonds`` option determines how many branches the
-            algorithm follows to determine the chemical environment.
+        algorithm follows to determine the chemical environment.
 
         Example:
         A carbon atom in ethane has bonds with three hydrogen (atomic
-            number 1) and one carbon atom (atomic number 6).
+        number 1) and one carbon atom (atomic number 6).
         If ``follow_bonds=1`` these are the only atoms we are
-            interested in and the chemical environment is::
+        interested in and the chemical environment is::
 
-            ('C', frozenset([('H', 3), ('C', 1)]))
+        ('C', frozenset([('H', 3), ('C', 1)]))
 
         If ``follow_bonds=2`` we follow every atom in the chemical
-            enviromment of ``follow_bonds=1`` to their direct neighbours.
+        enviromment of ``follow_bonds=1`` to their direct neighbours.
         In the case of ethane this gives::
 
-            ('C', frozenset([('H', 6), ('C', 1)]))
+        ('C', frozenset([('H', 6), ('C', 1)]))
 
         In the special case of ethane this is the whole molecule;
         in other cases you can apply this operation recursively and
-            stop after ``follow_bonds`` or after reaching the end of
-            branches.
+        stop after ``follow_bonds`` or after reaching the end of
+        branches.
 
 
         Args:
@@ -1554,12 +1762,11 @@ class Cartesian(_common_class.common_methods):
         Returns:
             dict: The output will look like this::
 
-                { (element_symbol, frozenset([tuples]))  :
-                    set([indices]) }
+                { (element_symbol, frozenset([tuples])) : set([indices]) }
 
                 A dictionary mapping from a chemical environment to
-                    the set of indices of atoms in this environment.
-        """
+                the set of indices of atoms in this environment.
+    """
         env_dict = {}
 
         def get_chem_env(self, atomseries, index, follow_bonds):
@@ -1604,8 +1811,10 @@ class Cartesian(_common_class.common_methods):
         """
         molecule1 = self.sort_index()
         molecule2 = Cartesian2.sort_index()
-        molecule1[:, 'x':'z'] = molecule1[:, 'x':'z'] - molecule1.topologic_center()
-        molecule2[:, 'x':'z'] = molecule2[:, 'x':'z'] - molecule2.topologic_center()
+        molecule1[:, 'x':'z'] = (molecule1[:, 'x':'z']
+                                 - molecule1.topologic_center())
+        molecule2[:, 'x':'z'] = (molecule2[:, 'x':'z']
+                                 - molecule2.topologic_center())
 
         if ignore_hydrogens:
             location1 = molecule1[molecule1[:, 'atom'] != 'H', :].location()
@@ -1624,25 +1833,25 @@ class Cartesian(_common_class.common_methods):
         """Similarizes two Cartesians.
 
         Returns a reindexed copy of ``Cartesian2`` that minimizes the
-            distance for each atom in the same chemical environemt
-            from ``self`` to ``Cartesian2``.
+        distance for each atom in the same chemical environemt
+        from ``self`` to ``Cartesian2``.
         Read more about the definition of the chemical environment in
-            :func:`Cartesian.partition_chem_env`
+        :func:`Cartesian.partition_chem_env`
 
         .. warning:: Please check the result with e.g.
-                :func:`Cartesian.move_to()`
+            :func:`Cartesian.move_to()`
             It is probably necessary to use the function
-                :func:`Cartesian.change_numbering()`.
+            :func:`Cartesian.change_numbering()`.
 
         Args:
             Cartesian2 (Cartesian):
             max_follow_bonds (int):
             prealign (bool): The method :func:`Cartesian.align()`
-                is applied before reindexing.
+            is applied before reindexing.
 
         Returns:
             tuple: Aligned copy of ``self`` and aligned + reindexed
-                version of ``Cartesian2``
+            version of ``Cartesian2``
         """
         if prealign:
             molecule1, molecule2_new = self.align(Cartesian2)
@@ -1664,7 +1873,8 @@ class Cartesian(_common_class.common_methods):
 
                 index_on_molecule2 = \
                     distances_to_atom_on_molecule1.frame.iloc[0].name
-                distance_new = distances_to_atom_on_molecule1[index_on_molecule2, 'distance']
+                distance_new = distances_to_atom_on_molecule1[
+                    index_on_molecule2, 'distance']
                 location_of_atom2 = distances_to_atom_on_molecule1.location(
                     index_on_molecule2)
 
@@ -1683,7 +1893,8 @@ class Cartesian(_common_class.common_methods):
                             index_on_molecule2 = \
                                 distances_to_atom_on_molecule1.frame.iloc[i].name
                             distance_new = \
-                                distances_to_atom_on_molecule1[index_on_molecule2, 'distance']
+                                distances_to_atom_on_molecule1[
+                                    index_on_molecule2, 'distance']
                             location_of_atom2 = \
                                 distances_to_atom_on_molecule1.location(
                                     index_on_molecule2)
@@ -1713,7 +1924,7 @@ class Cartesian(_common_class.common_methods):
 
     def move_to(self, Cartesian2, step=5, extrapolate=(0, 0)):
         """Returns list of Cartesians for the movement from
-            self to Cartesian2.
+        self to Cartesian2.
 
         Args:
             Cartesian2 (Cartesian):
@@ -1722,12 +1933,12 @@ class Cartesian(_common_class.common_methods):
 
         Returns:
             list: The list contains ``self`` as first and ``Cartesian2``
-                as last element.
+            as last element.
             The number of intermediate frames is defined by step.
             Please note, that for this reason: len(list) = (step + 1).
             The numbers in extrapolate define how many frames are
-                appended to the left and right of the list continuing
-                the movement.
+            appended to the left and right of the list continuing
+            the movement.
         """
         difference = Cartesian2[:, ['x', 'y', 'z']] - self[:, ['x', 'y', 'z']]
 
@@ -1738,11 +1949,12 @@ class Cartesian(_common_class.common_methods):
 
         for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
             temp_Cartesian[:, ['x', 'y', 'z']] = (
-                    self[:, ['x', 'y', 'z']] + step_frame.loc[:, ['x', 'y', 'z']] * t
+                    self[:, ['x', 'y', 'z']]
+                    + step_frame.loc[:, ['x', 'y', 'z']] * t
                     )
-            Cartesian_list.append(temp_Cartesian)
+            Cartesian_list.append(temp_Cartesian.copy())
 
-        return list_of_cartesians
+        return Cartesian_list
 
     def write(self, outputfile, sort_index=True):
         """Writes the Cartesian into a file.
@@ -1810,11 +2022,11 @@ class Cartesian(_common_class.common_methods):
 
         molecule = cls(frame)
         if get_bonds:
-            previous_warnings_bool = settings.show_warnings['valency']
-            settings.show_warnings['valency'] = False
+            previous_warnings_bool = settings['show_warnings']['valency']
+            settings['show_warnings']['valency'] = False
             molecule.get_bonds(
                 use_lookup=False, set_lookup=True, use_valency=False)
-            settings.show_warnings['valency'] = previous_warnings_bool
+            settings['show_warnings']['valency'] = previous_warnings_bool
         return molecule
 
 
@@ -1851,7 +2063,8 @@ class Cartesian(_common_class.common_methods):
             molecule_in = [f.readline() for j in range(number_of_atoms + 2)]
             molecule_in = ''.join(molecule_in)
             molecule_in = io.StringIO(molecule_in)
-            molecule = cls.read_xyz(molecule_in, pythonic_index=pythonic_index, get_bonds=get_bonds)
+            molecule = cls.read_xyz(molecule_in, pythonic_index=pythonic_index,
+                                    get_bonds=get_bonds)
             try:
                 list_of_cartesians.append(molecule)
             except NameError:
@@ -1905,6 +2118,95 @@ class Cartesian(_common_class.common_methods):
                 header=False,
                 mode='a')
 
+    def view(self, viewer=settings['defaults']['viewer'], use_curr_dir=False):
+        """View your molecule
+
+        .. note:: This function writes a temporary file and opens it with
+            an external viewer.
+            If you modify your molecule afterwards you have to recall view
+            in order to see the changes.
+
+        Args:
+            viewer (str): The external viewer to use. The default is
+                specified in cc.settings.settings['viewer']
+            use_curr_dir (bool): If True, the temporary file is written to
+                the current diretory. Otherwise it gets written to the
+                OS dependendent temporary directory.
+
+        Returns:
+            None:
+        """
+        if use_curr_dir:
+            TEMP_DIR = os.path.curdir
+        else:
+            TEMP_DIR = tempfile.gettempdir()
+
+        file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_molecule_' + str(i) + '.xyz')
+        i = 1
+        while os.path.exists(file(i)):
+            i = i + 1
+        self.write(file(i))
+
+        def open(i):
+            """Open file and close after being finished"""
+            try:
+                subprocess.check_call([viewer, file(i)])
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                raise
+            finally:
+                if use_curr_dir:
+                    pass
+                else:
+                    os.remove(file(i))
+
+        Thread(target = open, args=(i,)).start()
+
+
+def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
+    """View your molecule or list of molecules.
+
+    .. note:: This function writes a temporary file and opens it with
+        an external viewer.
+        If you modify your molecule afterwards you have to recall view
+        in order to see the changes.
+
+    Args:
+        molecule: Can be a cartesian, or a list of cartesians.
+        viewer (str): The external viewer to use. The default is
+            specified in settings.viewer
+        use_curr_dir (bool): If True, the temporary file is written to
+            the current diretory. Otherwise it gets written to the
+            OS dependendent temporary directory.
+
+    Returns:
+        None:
+    """
+    try:
+        molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
+    except AttributeError:
+        if use_curr_dir:
+            TEMP_DIR = os.path.curdir
+        else:
+            TEMP_DIR = tempfile.gettempdir()
+        file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_list_' + str(i) + '.molden')
+        i = 1
+        while os.path.exists(file(i)):
+            i = i + 1
+        write_molden(molecule, file(i))
+
+        def open(i):
+            """Open file and close after being finished"""
+            try:
+                subprocess.check_call([viewer, file(i)])
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                raise
+            finally:
+                if use_curr_dir:
+                    pass
+                else:
+                    os.remove(file(i))
+
+        Thread(target = open, args=(i,)).start()
 
 def write_molden(cartesian_list, outputfile):
     """Writes a list of Cartesians into a molden file.
