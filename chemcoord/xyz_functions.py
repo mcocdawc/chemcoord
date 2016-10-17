@@ -30,6 +30,10 @@ from io import open
 
 def pick(my_set):
     """Returns one element from a set.
+
+    **Do not** make any assumptions about the element to be returned.
+    ``pick`` just returns a random element,
+    could be the same, could be different.
     """
     assert type(my_set) is set, 'Pick can be applied only on sets.'
     x = my_set.pop()
@@ -1389,7 +1393,7 @@ class Cartesian(_common_class.common_methods):
             buildlist (np.array):
 
         Returns:
-            Zmat: A new instance of ``Zmat``.
+            Zmat: A new instance of :class:`zmat_functions.Zmat`.
         """
         indexlist = buildlist[:, 0]
 
@@ -1480,7 +1484,7 @@ class Cartesian(_common_class.common_methods):
             check_linearity (bool):
 
         Returns:
-            Zmat: A new instance of ``Zmat``.
+            Zmat: A new instance of :class:`~.zmat_functions.Zmat`.
         """
         if buildlist is None:
             if fragment_list is None:
@@ -1594,6 +1598,7 @@ class Cartesian(_common_class.common_methods):
         new_basis = utilities.orthormalize(new_basis)
         old_basis = np.identity(3)
         Cartesian_mass = self.basistransform(new_basis, old_basis)
+        Cartesian_mass = Cartesian_mass - Cartesian_mass.barycenter()
 
         dic_of_values = dict(zip([
             'transformed_Cartesian', 'diag_inertia_tensor',
@@ -1793,18 +1798,18 @@ class Cartesian(_common_class.common_methods):
         """Aligns two Cartesians.
 
         Searches for the optimal rotation matrix that minimizes
-            the RMSD (root mean squared deviation) of ``self`` to
-            Cartesian2.
+        the RMSD (root mean squared deviation) of ``self`` to
+        Cartesian2.
         Returns a tuple of copies of ``self`` and ``Cartesian2`` where
-            both are centered around their topologic center and
-            ``Cartesian2`` is aligned along ``self``.
-        Uses the Kabsch algorithm implemented with
-            :func:`utilities.kabsch`
+        both are centered around their topologic center and
+        ``Cartesian2`` is aligned along ``self``.
+        Uses the Kabsch algorithm implemented within
+        :func:`~.utilities.kabsch`
 
         Args:
             Cartesian2 (Cartesian):
             ignore_hydrogens (bool): Hydrogens are ignored for the
-                RMSD.
+            RMSD.
 
         Returns:
             tuple:
@@ -2208,6 +2213,7 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
 
         Thread(target = open, args=(i,)).start()
 
+@export
 def write_molden(cartesian_list, outputfile):
     """Writes a list of Cartesians into a molden file.
 
@@ -2225,6 +2231,7 @@ def write_molden(cartesian_list, outputfile):
     cartesian_list[0]._write_molden(cartesian_list, outputfile)
 
 
+@export
 def read_xyz(inputfile, pythonic_index=False, get_bonds=True):
     """Reads a xyz file.
 
@@ -2244,7 +2251,7 @@ def read_xyz(inputfile, pythonic_index=False, get_bonds=True):
         inputfile, pythonic_index=pythonic_index, get_bonds=get_bonds)
     return molecule
 
-
+@export
 def read_molden(inputfile, pythonic_index=False, get_bonds=True):
     """Reads a molden file.
 
@@ -2258,3 +2265,37 @@ def read_molden(inputfile, pythonic_index=False, get_bonds=True):
     list_of_cartesians = Cartesian.read_molden(
             inputfile, pythonic_index=pythonic_index, get_bonds=get_bonds)
     return list_of_cartesians
+
+
+@export
+def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
+    """Compares two molecules for numerical equality.
+
+    Args:
+        a (Cartesian):
+        b (Cartesian):
+        align (bool): a and b are
+            prealigned along their principal axes of inertia and moved to their
+            barycenters before comparing.
+        rtol (float): Relative tolerance for the numerical equality comparison
+            look into :func:`numpy.isclose` for furter explanation.
+        atol (float): Relative tolerance for the numerical equality comparison
+            look into :func:`numpy.isclose` for furter explanation.
+
+    Returns:
+        bool:
+    """
+    pretest = (set(a.index) == set(b.index)
+               and np.alltrue(a[:, 'atom'] == b[a.index, 'atom']))
+
+
+    if align and pretest:
+        A = a.inertia()['transformed_Cartesian'].location()
+        B = b.inertia()['transformed_Cartesian'][a.index, :].location()
+        return np.allclose(A, B, rtol=rtol, atol=atol)
+    elif pretest:
+        A = a.location()
+        B = b[a.index, :].location()
+        return np.allclose(A, B, rtol=rtol, atol=atol)
+    else:
+        return False

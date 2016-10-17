@@ -167,19 +167,22 @@ def kabsch(P, Q):
     the dimension of the space.
 
     The algorithm works in three steps:
-    - a translation of P and Q
-    - the computation of a covariance matrix C
-    - computation of the optimal rotation matrix U
+
+        - a translation of P and Q
+        - the computation of a covariance matrix C
+        - computation of the optimal rotation matrix U
 
     http://en.wikipedia.org/wiki/Kabsch_algorithm
 
-    Parameters:
-    P -- (N, number of points)x(D, dimension) matrix
-    Q -- (N, number of points)x(D, dimension) matrix
+
+    Args:
+        P (numpy.array): ``(N, number of points)*(D, dimension)`` matrix
+        Q (numpy.array): ``(N, number of points)*(D, dimension)`` matrix
+        ignore_hydrogens (bool): Hydrogens are ignored for the
+        RMSD.
 
     Returns:
-    U -- Rotation matrix
-
+        :func:`~numpy.array`: Rotation matrix
     """
 
     # Computation of the covariance matrix

@@ -5,13 +5,11 @@ Cartesian
 
 .. autoclass:: Cartesian
 
-   
-
     .. rubric:: Chemical Methods
-    
+
     .. autosummary::
          :toctree: Cartesian
-    
+
          ~Cartesian.get_bonds
          ~Cartesian.to_zmat
          ~Cartesian.location
@@ -36,7 +34,7 @@ Cartesian
          ~Cartesian.change_numbering
          ~Cartesian.move_to
          ~Cartesian.partition_chem_env
-         
+
 
     .. rubric:: Technical Methods
 
@@ -60,14 +58,12 @@ Cartesian
 
 
     .. rubric:: Advanced methods
-    
+
     .. autosummary::
          :toctree: Cartesian
-    
+
          ~Cartesian._divide_et_impera
          ~Cartesian._preserve_bonds
          ~Cartesian._get_buildlist
          ~Cartesian._clean_dihedral
          ~Cartesian._build_zmat
-       
-       
