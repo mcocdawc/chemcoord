@@ -13,4 +13,4 @@ Cartesian coordinates
     ~xyz_functions.read_molden
     ~xyz_functions.write_molden
     ~xyz_functions.view
-
+    ~xyz_functions.isclose

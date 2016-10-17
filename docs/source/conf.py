@@ -17,20 +17,8 @@ from __future__ import absolute_import
 import sys
 import os
 import inspect
-from unittest.mock import MagicMock    # if python ver >= 3.3
-#import shlex
 
 
-#class Mock(MagicMock):
-#    @classmethod
-#    def __getattr__(cls, name):
-#        return Mock()
-#
-#MOCK_MODULES = ['numpy'
-#                ]
-#
-#sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-#
 
 #__location__ = os.path.join(os.getcwd(), os.path.dirname(
 #    inspect.getfile(inspect.currentframe())))
@@ -68,7 +56,10 @@ extensions = [
     u'sphinx.ext.todo',
     u'sphinx.ext.mathjax',
     u'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx'
 ]
+
+intersphinx_mapping = {'numpy': ('http://docs.scipy.org/doc/numpy/', None)}
 
 
 # 'numpydoc'
