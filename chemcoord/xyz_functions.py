@@ -2096,8 +2096,8 @@ class Cartesian(_common_class.common_methods):
                 molecule_in = [f.readline() for j in range(number_of_atoms + 2)]
                 molecule_in = ''.join(molecule_in)
                 molecule_in = io.StringIO(molecule_in)
-                molecule = cls.read_xyz(molecule_in, pythonic_index=pythonic_index,
-                                        get_bonds=get_bonds)
+                molecule = cls.read(molecule_in, pythonic_index=pythonic_index,
+                                        get_bonds=get_bonds, filetype='xyz')
                 try:
                     list_of_cartesians.append(molecule)
                 except NameError:
@@ -2159,6 +2159,7 @@ class Cartesian(_common_class.common_methods):
         Thread(target = open, args=(i,)).start()
 
 
+@export
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     """View your molecule or list of molecules.
 
@@ -2185,11 +2186,12 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
             TEMP_DIR = os.path.curdir
         else:
             TEMP_DIR = tempfile.gettempdir()
-        file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_list_' + str(i) + '.molden')
+        file = lambda i : os.path.join(TEMP_DIR,
+                                       'ChemCoord_list_' + str(i) + '.molden')
         i = 1
         while os.path.exists(file(i)):
             i = i + 1
-        write_molden(molecule, file(i))
+        write(molecule, file(i), filetype='molden')
 
         def open(i):
             """Open file and close after being finished"""
@@ -2275,11 +2277,12 @@ def write(to_be_written, outputfile, sort_index=True, filetype='xyz'):
         else:
             framelist = [molecule.frame for molecule in to_be_written]
         n_frames = len(framelist)
-        n_atoms = molecule.n_atom
-        string = "[MOLDEN FORMAT]\n[N_GEO]"
+        n_atoms = to_be_written[0].n_atoms
         values = n_frames * '1\n'
-        string = (string + str(n_frames)
-                  + '\n[GEOCONV]\n'
+        string = ("[MOLDEN FORMAT]\n"
+                  + "[N_GEO]\n"
+                  + str(n_frames) + "\n"
+                  + '[GEOCONV]\n'
                   + 'energy\n' + values
                   + 'max-force\n' + values
                   + 'rms-force\n' + values
@@ -2303,7 +2306,7 @@ def write(to_be_written, outputfile, sort_index=True, filetype='xyz'):
     if filetype == 'xyz':
         write_xyz(to_be_written, outputfile, sort_index)
     elif filetype == 'molden':
-        write_molden(to_be_written, outputfile)
+        write_molden(to_be_written, outputfile, sort_index)
     else:
         raise NotImplementedError('The desired filetype is not implemented')
 
