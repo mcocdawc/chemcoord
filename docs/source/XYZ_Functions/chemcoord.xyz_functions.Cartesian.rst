@@ -51,8 +51,7 @@ Cartesian
          ~Cartesian.insert
          ~Cartesian.sort_values
          ~Cartesian.write
-         ~Cartesian.read_xyz
-         ~Cartesian.read_molden
+         ~Cartesian.read
          ~Cartesian.view
 
 

@@ -9,8 +9,7 @@ Cartesian coordinates
     :toctree: XYZ_Functions
 
     ~xyz_functions.Cartesian
-    ~xyz_functions.read_xyz
-    ~xyz_functions.read_molden
-    ~xyz_functions.write_molden
+    ~xyz_functions.read
+    ~xyz_functions.write
     ~xyz_functions.view
     ~xyz_functions.isclose
