@@ -85,6 +85,18 @@ class Cartesian(_common_class.common_methods):
     ``molecule[:, ['atom', 'x']]`` returns a ``pandas.DataFrame``.
 
     ``molecule[:, 'atom']`` returns a ``pandas.Series``.
+
+    **Comparison**:
+
+    Comparison for equality with ``==`` is supported.
+    It behaves exactly like the equality comparison of DataFrames in pandas.
+    Amongst other things this means that the index has to be the same and
+    the comparison of floating point numbers is exact and not numerical.
+    For this reason you rarely want to use ``==``.
+    Usually the question is "are two given molecules chemically the same".
+    For this comparison you have to use the function :func:`isclose`, which
+    moves to the barycenter, aligns along the principal axes of inertia and
+    compares numerically.
     """
     # Look into the numpy manual for description of __array_priority__
     __array_priority__ = 15.0
@@ -257,6 +269,8 @@ class Cartesian(_common_class.common_methods):
         new_molecule[:, coords] = (np.dot(other, new_molecule[:, coords].T)).T
         return new_molecule
 
+    def __eq__(self, other):
+        return np.alltrue(self.frame == other.frame)
 
     def _to_Cartesian(self):
         return self.copy()
