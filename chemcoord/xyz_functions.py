@@ -520,7 +520,7 @@ class Cartesian(_common_class.common_methods):
         if use_lookup:
             try:
                 bond_dic = self._metadata['bond_dict']
-            except AttributeError:
+            except KeyError:
                 bond_dic = complete_calculation(divide_et_impera)
                 if set_lookup:
                     self._metadata['bond_dict'] = bond_dic
@@ -1976,6 +1976,7 @@ class Cartesian(_common_class.common_methods):
 
         return Cartesian_list
 
+    # TODO implement filetype 'auto'
     def write(self, outputfile, sort_index=True, filetype='xyz'):
         """Writes the Cartesian into a file.
 
@@ -2025,7 +2026,7 @@ class Cartesian(_common_class.common_methods):
         else:
             raise NotImplementedError('The desired filetype is not implemented')
 
-
+    # TODO implement filetype 'auto'
     @classmethod
     def read(cls, inputfile, pythonic_index=False,
              get_bonds=True, filetype='xyz'):
@@ -2207,6 +2208,7 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
         Thread(target = open, args=(i,)).start()
 
 
+# TODO implement filetype 'auto'
 @export
 def write(to_be_written, outputfile, sort_index=True, filetype='xyz'):
     """Writes the coordinates into a file.
@@ -2311,6 +2313,7 @@ def write(to_be_written, outputfile, sort_index=True, filetype='xyz'):
         raise NotImplementedError('The desired filetype is not implemented')
 
 
+# TODO implement filetype 'auto'
 @export
 def read(inputfile, pythonic_index=False, get_bonds=True, filetype='xyz'):
     """Reads a file of coordinate information.
