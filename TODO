@@ -1,4 +1,14 @@
-documentation
-	tutorial splittin
+Tutorial view
+
+auto filetype
+
+.gitignore .ipynb_checkpoints
 
 
+metadata documentation
+
+
+to_ase_atoms with metadata
+
+
+from_ase_atoms with metadata
