@@ -26,6 +26,7 @@ from . import export
 from .configuration import settings
 import io
 from io import open
+import re
 
 
 def pick(my_set):
@@ -2210,7 +2211,7 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
 
 # TODO implement filetype 'auto'
 @export
-def write(to_be_written, outputfile, sort_index=True, filetype='xyz'):
+def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
     """Writes the coordinates into a file.
 
     .. note:: Since it permamently writes a file, this function is
@@ -2225,8 +2226,9 @@ def write(to_be_written, outputfile, sort_index=True, filetype='xyz'):
         sort_index (bool): If sort_index is true, the Cartesian
             is sorted by the index before writing.
         filetype (str): The filetype to be used.
-            The default is xyz.
-            Supported filetypes are: 'xyz' and 'molden'
+            The default is auto.
+            Supported filetypes are: 'xyz' and 'molden'.
+            'auto' uses the charakters after the last point as filetype.
 
     Returns:
         None:
@@ -2304,6 +2306,9 @@ def write(to_be_written, outputfile, sort_index=True, filetype='xyz'):
                 index=False,
                 header=False,
                 mode='a')
+
+    if filetype == 'auto':
+        filetype = re.split('\.', outputfile)[-1]
 
     if filetype == 'xyz':
         write_xyz(to_be_written, outputfile, sort_index)
