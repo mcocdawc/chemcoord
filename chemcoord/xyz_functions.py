@@ -126,6 +126,7 @@ class Cartesian(_common_class.common_methods):
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
             self.metadata = {}
+            """Test"""
             self._metadata = {}
 
     def __getitem__(self, key):
