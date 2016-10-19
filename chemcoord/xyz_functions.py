@@ -10,7 +10,6 @@ except ImportError:
     pass
 import numpy as np
 import pandas as pd
-import copy
 import collections
 from threading import Thread
 import subprocess
@@ -19,7 +18,6 @@ import tempfile
 import warnings
 from . import _common_class
 from ._exceptions import PhysicalMeaningError
-from . import constants
 from . import utilities
 from . import zmat_functions
 from . import export
@@ -30,7 +28,7 @@ import re
 
 
 def pick(my_set):
-    """Returns one element from a set.
+    """Return one element from a set.
 
     **Do not** make any assumptions about the element to be returned.
     ``pick`` just returns a random element,
@@ -40,6 +38,7 @@ def pick(my_set):
     x = my_set.pop()
     my_set.add(x)
     return x
+
 
 @export
 class Cartesian(_common_class.common_methods):
@@ -99,6 +98,7 @@ class Cartesian(_common_class.common_methods):
     moves to the barycenter, aligns along the principal axes of inertia and
     compares numerically.
     """
+
     # Look into the numpy manual for description of __array_priority__
     __array_priority__ = 15.0
 
@@ -119,9 +119,9 @@ class Cartesian(_common_class.common_methods):
         except AttributeError:
             # Create from pd.DataFrame
             if not self._is_physical(init.columns):
-                raise PhysicalMeaningError(
-                    'There are columns missing for a meaningful \
-                    description of a molecule')
+                error_string = 'There are columns missing for a \
+                                meaningful description of a molecule'
+                raise PhysicalMeaningError(error_string)
             self.frame = init.copy()
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
@@ -141,7 +141,7 @@ class Cartesian(_common_class.common_methods):
                 molecule.metadata = self.metadata
                 molecule._metadata = self.metadata.copy()
                 keys_not_to_keep = [
-                    'bond_dict' # You could end up with loose ends
+                    'bond_dict'   # You could end up with loose ends
                     ]
                 for key in keys_not_to_keep:
                     try:
@@ -154,7 +154,6 @@ class Cartesian(_common_class.common_methods):
         except AttributeError:
             # A series and not a DataFrame was returned
             return frame
-
 
     def copy(self):
         molecule = self.__class__(self.frame)
@@ -178,7 +177,6 @@ class Cartesian(_common_class.common_methods):
     def __radd__(self, other):
         return self.__add__(other)
 
-
     def __sub__(self, other):
         coords = ['x', 'y', 'z']
         new_molecule = self.copy()
@@ -190,7 +188,6 @@ class Cartesian(_common_class.common_methods):
             # It is a shape=3 vector or list
             new_molecule[:, coords] = self[:, coords] - other
         return new_molecule
-
 
     def __rsub__(self, other):
         coords = ['x', 'y', 'z']
@@ -280,6 +277,7 @@ class Cartesian(_common_class.common_methods):
         import ase
         atoms = ''.join(self[:, 'atom'])
         positions = self.location()
+        # test
         return ase.Atoms(atoms, positions)
 
 
@@ -322,9 +320,9 @@ class Cartesian(_common_class.common_methods):
         include = self.index if (include is None) else include
 
         def summed_bond_size_array(bond_size_dic):
-            bond_size_vector = np.array([bond_size_dic[key] for key in include])
-            A = np.expand_dims(bond_size_vector, axis=1)
-            B = np.expand_dims(bond_size_vector, axis=0)
+            bond_size = np.array([bond_size_dic[key] for key in include])
+            A = np.expand_dims(bond_size, axis=1)
+            B = np.expand_dims(bond_size, axis=0)
             C = A + B
             return C
 
@@ -343,7 +341,7 @@ class Cartesian(_common_class.common_methods):
             set_lookup=True,
             divide_et_impera=True,
             atomic_radius_data=settings['defaults']['atomic_radius_data']):
-        """Returns a dictionary representing the bonds.
+        """Return a dictionary representing the bonds.
 
         .. warning:: This function is **not sideeffect free**, since it
             assigns the output to a variable ``self._metadata['bond_dict']`` if
@@ -395,8 +393,8 @@ class Cartesian(_common_class.common_methods):
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
                 ``atomic_radius_cc`` and can be changed with
-                :attr:`settings['defaults']['atomic_radius_data']`. Compare with
-                :func:`add_data`.
+                :attr:`settings['defaults']['atomic_radius_data']`.
+                Compare with :func:`add_data`.
 
         Returns:
             dict: Dictionary mapping from an atom index to the indices of atoms
@@ -442,7 +440,6 @@ class Cartesian(_common_class.common_methods):
                 convert_to['frame'][index]
                 for index in indices_of_oversaturated_atoms]
 
-# TODO documentation
             if use_valency & (len(indices_of_oversaturated_atoms) > 0):
                 if settings['show_warnings']['valency']:
                     warning_string = (
@@ -458,8 +455,6 @@ class Cartesian(_common_class.common_methods):
                         "The problematic indices are:\n") \
                         + oversaturated_converted.__repr__()
                     warnings.warn(warning_string)
-                select = np.nonzero(overlap_array[
-                    indices_of_oversaturated_atoms, :])
 
                 for index in indices_of_oversaturated_atoms:
                     atoms_bonded_to = np.nonzero(
@@ -473,7 +468,6 @@ class Cartesian(_common_class.common_methods):
                     overlap_array[[cut_bonds_to], index] = -1
                     bin_overlap_array = overlap_array > 0
 
-# TODO documentation
             if (not use_valency) & (len(indices_of_oversaturated_atoms) > 0):
                 if settings['show_warnings']['valency']:
                     warning_string = (
@@ -533,7 +527,7 @@ class Cartesian(_common_class.common_methods):
         return bond_dic
 
     def _divide_et_impera(self, maximum_edge_length=25., difference_edge=6.):
-        """Returns a molecule split into cuboids.
+        """Return a molecule split into cuboids.
 
         If your algorithm scales with :math:`O(n^2)`.
         You can use this function as a preprocessing step to make it
@@ -568,13 +562,10 @@ class Cartesian(_common_class.common_methods):
             (key, sorted_series[key].values.astype(float))
             for key in coordinates)
 
-        list_of_cuboid_tuples = []
-        minimum = (
-            np.array([sorted_arrays[key][0] for key in coordinates])
-            - np.array([0.01, 0.01, 0.01]))
-        maximum = (
-            np.array([sorted_arrays[key][-1] for key in coordinates])
-            + np.array([0.01, 0.01, 0.01]))
+        minimum = (np.array([sorted_arrays[key][0] for key in coordinates])
+                   - np.array([0.01, 0.01, 0.01]))
+        maximum = (np.array([sorted_arrays[key][-1] for key in coordinates])
+                   + np.array([0.01, 0.01, 0.01]))
         extent = maximum - minimum
         steps = np.ceil(extent / maximum_edge_length).astype(int)
         cube_dic = {}
@@ -599,7 +590,8 @@ class Cartesian(_common_class.common_methods):
                 for y_counter in range(steps['y']):
                     for z_counter in range(steps['z']):
                         origin_array[x_counter, y_counter, z_counter] = (
-                            minimum + cuboid_diagonal / 2
+                            minimum
+                            + cuboid_diagonal / 2
                             + np.dot(
                                 np.diag([x_counter, y_counter, z_counter]),
                                 cuboid_diagonal))
@@ -641,25 +633,22 @@ class Cartesian(_common_class.common_methods):
             for x_counter in range(steps['x']):
                 for y_counter in range(steps['y']):
                     for z_counter in range(steps['z']):
-                        small_cube_index = (
-                            indices['x'][x_counter][0]
-                            & indices['y'][y_counter][0]
-                            & indices['z'][z_counter][0])
-                        big_cube_index = (
-                            indices['x'][x_counter][1]
-                            & indices['y'][y_counter][1]
-                            & indices['z'][z_counter][1])
+                        small_cube_index = (indices['x'][x_counter][0]
+                                            & indices['y'][y_counter][0]
+                                            & indices['z'][z_counter][0])
+                        big_cube_index = (indices['x'][x_counter][1]
+                                          & indices['y'][y_counter][1]
+                                          & indices['z'][z_counter][1])
                         cube_dic[(x_counter, y_counter, z_counter)] = (
                             small_cube_index, big_cube_index)
 
             def test_output(cube_dic):
                 for key in cube_dic.keys():
                     try:
-                        assert (
-                            cube_dic[key][0]
-                            & cube_dic[previous_key][0] == set([])), \
-                            ('I am sorry Dave. I made a mistake.'
-                             'Report a bug please.')
+                        assert (cube_dic[key][0]
+                                & cube_dic[previous_key][0] == set([])), \
+                                ('I am sorry Dave. I made a mistake.'
+                                    'Report a bug please.')
                     except UnboundLocalError:
                         pass
                     finally:
@@ -673,7 +662,7 @@ class Cartesian(_common_class.common_methods):
             exclude=None,
             give_only_index=False,
             follow_bonds=None):
-        """Returns a Cartesian of atoms connected to the specified
+        """Return a Cartesian of atoms connected to the specified
             one.
 
         Connected means that a path along covalent bonds exists.
@@ -748,7 +737,6 @@ class Cartesian(_common_class.common_methods):
         included_atoms_set = set(sliced_cartesian.index)
         assert included_atoms_set.issubset(set(self.index)), \
             'The sliced Cartesian has to be a subset of the bigger frame'
-        included_atoms_list = list(included_atoms_set)
         bond_dic = self.get_bonds(use_lookup=True)
         new_atoms = set([])
         for atom in included_atoms_set:
@@ -772,7 +760,7 @@ class Cartesian(_common_class.common_methods):
             origin=[0., 0., 0.],
             outside_sliced=True,
             preserve_bonds=False):
-        """Cuts a sphere specified by origin and radius.
+        """Cut a sphere specified by origin and radius.
 
         Args:
             radius (float):
@@ -810,7 +798,7 @@ class Cartesian(_common_class.common_methods):
             origin=[0, 0, 0],
             outside_sliced=True,
             preserve_bonds=False):
-        """Cuts a cuboid specified by edge and radius.
+        """Cut a cuboid specified by edge and radius.
 
         Args:
             a (float): Value of the a edge.
@@ -835,11 +823,9 @@ class Cartesian(_common_class.common_methods):
 
         origin = dict(zip(['x', 'y', 'z'], list(origin)))
 
-        boolean_vector = (
-                (np.abs((self[:, 'x'] - origin['x'])) < a / 2)
-                    & (np.abs((self[:, 'y'] - origin['y'])) < b / 2)
-                    & (np.abs((self[:, 'z'] - origin['z'])) < c / 2)
-                    )
+        boolean_vector = ((np.abs((self[:, 'x'] - origin['x'])) < a / 2)
+                          & (np.abs((self[:, 'y'] - origin['y'])) < b / 2)
+                          & (np.abs((self[:, 'z'] - origin['z'])) < c / 2))
         if outside_sliced:
             molecule = self[boolean_vector, :]
         else:
@@ -849,9 +835,8 @@ class Cartesian(_common_class.common_methods):
             molecule = self._preserve_bonds(molecule)
         return molecule
 
-
     def topologic_center(self):
-        """Returns the average location.
+        """Return the average location.
 
         Args:
             None
@@ -863,7 +848,7 @@ class Cartesian(_common_class.common_methods):
         return np.mean(location_array, axis=0)
 
     def barycenter(self):
-        """Returns the mass weighted average location.
+        """Return the mass weighted average location.
 
         Args:
             None
@@ -923,7 +908,7 @@ class Cartesian(_common_class.common_methods):
                 )
             temp = self[indices, :].copy()
             temp.index = index_for_copied_atoms
-            temp[index_for_copied_atoms , ['x', 'y', 'z']] = vectors
+            temp[index_for_copied_atoms, ['x', 'y', 'z']] = vectors
             output = output.append(temp)
 
         else:
@@ -1078,8 +1063,8 @@ class Cartesian(_common_class.common_methods):
         if give_only_index:
             value_to_return = list_fragment_indices
         else:
-            value_to_return = [self[indices, :] for indices in
-                               list_fragment_indices]
+            value_to_return = [self[indices, :] for
+                               indices in list_fragment_indices]
         return value_to_return
 
     def get_fragment(self, list_of_indextuples, give_only_index=False):
@@ -1122,7 +1107,7 @@ class Cartesian(_common_class.common_methods):
             np.array: buildlist
         """
         buildlist = np.zeros((self.n_atoms, 4)).astype('int64')
-        if not fixed_buildlist is None:
+        if fixed_buildlist is not None:
             buildlist[:fixed_buildlist.shape[0], :] = fixed_buildlist
             start_row = fixed_buildlist.shape[0]
             already_built = set(fixed_buildlist[:, 0])
@@ -1138,7 +1123,7 @@ class Cartesian(_common_class.common_methods):
         distance_to_topologic_center = self.distance_to(topologic_center)
 
         def update(already_built, to_be_built, new_atoms_set):
-            """NOT SIDEEFFECT FREE
+            """NOT SIDEEFFECT FREE.
             """
             for index in new_atoms_set:
                 already_built.add(index)
@@ -1153,8 +1138,8 @@ class Cartesian(_common_class.common_methods):
                 first_time=False,
                 third_time=False
                 ):
-            index_of_new_atom = distance_to_topologic_center[to_be_built,
-                                                            'distance'].idxmin()
+            index_of_new_atom = distance_to_topologic_center[
+                to_be_built, 'distance'].idxmin()
             buildlist[row_in_buildlist, 0] = index_of_new_atom
             convert_index[index_of_new_atom] = row_in_buildlist
             if not first_time:
@@ -1163,10 +1148,8 @@ class Cartesian(_common_class.common_methods):
                     already_built)[:, 'distance'].idxmin()
                 angle_with = self.distance_to(
                     bond_with,
-                    already_built - set([bond_with])
-                    )[:,'distance'].idxmin()
-                buildlist[row_in_buildlist, 1:3] = [
-                    bond_with, angle_with]
+                    already_built - set([bond_with]))[:, 'distance'].idxmin()
+                buildlist[row_in_buildlist, 1:3] = [bond_with, angle_with]
                 if not third_time:
                     dihedral_with = self.distance_to(
                         bond_with,
@@ -1227,8 +1210,9 @@ class Cartesian(_common_class.common_methods):
             else:
                 new_row_to_modify, already_built, to_be_built = \
                     from_topologic_center(
+                        # The two is hardcoded because of third atom.
                         self, 2, already_built, to_be_built, third_time=True)
-                    # The two is hardcoded because of third atom.
+
             if len(new_atoms_set) > 1:
                 use_index = use_index
             else:
@@ -1261,9 +1245,8 @@ class Cartesian(_common_class.common_methods):
                 list: List of modified rows.
             """
             if use_given_index is None:
-                new_atoms_set = (
-                    bond_dic[buildlist[row_in_buildlist-1, 0]]
-                    - already_built)
+                new_atoms_set = (bond_dic[buildlist[row_in_buildlist-1, 0]]
+                                 - already_built)
 
                 if new_atoms_set != set([]):
                     update(already_built, to_be_built, new_atoms_set)
@@ -1342,7 +1325,7 @@ class Cartesian(_common_class.common_methods):
         return buildlist
 
     def _clean_dihedral(self, buildlist_to_check):
-        """Reindexes the dihedral defining atom if colinear.
+        """Reindexe the dihedral defining atom if colinear.
 
         Args:
             buildlist (np.array):
@@ -1359,18 +1342,16 @@ class Cartesian(_common_class.common_methods):
         test_vector = np.logical_or(170 < angles, angles < 10)
         problematic_indices = np.nonzero(test_vector)[0]
 
-        converged = True if len(problematic_indices) == 0 else False
-
         # look for index + 3 because index start directly at dihedrals
         for index in problematic_indices:
             try:
                 already_tested = set([])
                 found = False
                 while not found:
-                    new_dihedral = pick(
-                        (bond_dic[buildlist[index + 3, 2]]
-                            - set(buildlist[index + 3, [0, 1, 3]]))
-                        - set(buildlist[(index + 3):, 0]) - already_tested)
+                    new_dihedral = pick(bond_dic[buildlist[index + 3, 2]]
+                                        - set(buildlist[index + 3, [0, 1, 3]])
+                                        - set(buildlist[(index + 3):, 0])
+                                        - already_tested)
                     already_tested.add(new_dihedral)
                     temp_buildlist = buildlist[index + 3]
                     temp_buildlist[3] = new_dihedral
@@ -1402,7 +1383,7 @@ class Cartesian(_common_class.common_methods):
         return buildlist
 
     def _build_zmat(self, buildlist):
-        """Creates the zmatrix from a buildlist.
+        """Create the zmatrix from a buildlist.
 
         Args:
             buildlist (np.array):
@@ -1415,9 +1396,8 @@ class Cartesian(_common_class.common_methods):
         default_columns = [
             'atom', 'bond_with', 'bond', 'angle_with',
             'angle', 'dihedral_with', 'dihedral']
-        additional_columns = list(
-            set(self.columns)
-            - set(['atom', 'x', 'y', 'z']))
+        additional_columns = list(set(self.columns)
+                                  - set(['atom', 'x', 'y', 'z']))
 
         zmat_frame = pd.DataFrame(
             columns=default_columns + additional_columns,
@@ -1440,7 +1420,6 @@ class Cartesian(_common_class.common_methods):
         zmat_frame.loc[indexlist[3:], 'dihedral'] = dihedrals
         return zmat_functions.Zmat(zmat_frame)
 
-# TODO docstring
     def to_zmat(
             self,
             buildlist=None,
@@ -1543,17 +1522,17 @@ class Cartesian(_common_class.common_methods):
         zmat = self._build_zmat(buildlist)
         zmat.metadata = self.metadata
         zmat._metadata = self.metadata.copy()
-        keys_not_to_keep = [] # Because they don't make **physically** sense for
-            # internal coordinates
+        keys_not_to_keep = []  # Because they don't make **physically** sense
+        # for internal coordinates
         for key in keys_not_to_keep:
             try:
-                molecule._metadata.pop(key)
+                zmat._metadata.pop(key)
             except KeyError:
                 pass
         return zmat
 
     def inertia(self):
-        """Calculates the inertia tensor and transforms along
+        """Calculate the inertia tensor and transforms along
         rotation axes.
 
         This function calculates the inertia tensor and returns
@@ -1582,7 +1561,6 @@ class Cartesian(_common_class.common_methods):
             ``eigenvectors``:
             The eigenvectors of the inertia tensor in the old basis.
         """
-        coordinates = ['x', 'y', 'z']
         try:
             mass_vector = self[:, 'mass'].values.astype('float64')
             molecule = self.copy()
@@ -1595,13 +1573,9 @@ class Cartesian(_common_class.common_methods):
 
         diagonals = (np.sum(locations**2, axis=1)[:, None, None]
                      * np.identity(3)[None, :, :])
-
         dyadic_product = locations[:, :, None] * locations[:, None, :]
-
         inertia_tensor = (mass_vector[:, None, None]
                           * (diagonals - dyadic_product)).sum(axis=0)
-
-
         diag_inertia_tensor, eigenvectors = np.linalg.eig(inertia_tensor)
 
         # Sort ascending
@@ -1626,7 +1600,7 @@ class Cartesian(_common_class.common_methods):
             self, new_basis,
             old_basis=np.identity(3),
             rotate_only=True):
-        """Transforms the frame to a new basis.
+        """Transform the frame to a new basis.
 
         This function transforms the cartesian coordinates from an
             old basis to a new one. Please note that old_basis and
@@ -1646,7 +1620,6 @@ class Cartesian(_common_class.common_methods):
         Returns:
             Cartesian: The transformed molecule.
         """
-        frame = self.frame.copy()
         old_basis = np.array(old_basis)
         new_basis = np.array(new_basis)
         # tuples are extracted row wise
@@ -1680,7 +1653,7 @@ class Cartesian(_common_class.common_methods):
         return new_cartesian
 
     def location(self, indexlist=None):
-        """Returns the location of an atom.
+        """Return the location of an atom.
 
         You can pass an indexlist or an index.
 
@@ -1699,10 +1672,10 @@ class Cartesian(_common_class.common_methods):
         return array
 
     def distance_to(self,
-                    origin=[0,0,0],
+                    origin=[0, 0, 0],
                     indices_of_other_atoms=None,
                     sort=False):
-        """Returns a Cartesian with a column for the distance from origin.
+        """Return a Cartesian with a column for the distance from origin.
         """
         try:
             origin[0]
@@ -1714,14 +1687,14 @@ class Cartesian(_common_class.common_methods):
 
         output = self[indices_of_other_atoms, :].copy()
         other_locations = output.location()
-        output[:, 'distance'] = np.linalg.norm(other_locations - origin, axis=1)
+        output[:, 'distance'] = np.linalg.norm(other_locations
+                                               - origin, axis=1)
         if sort:
             output.sort_values(by='distance', inplace=True)
         return output
 
-
     def change_numbering(self, rename_dict, inplace=False):
-        """Returns the reindexed version of Cartesian.
+        """Return the reindexed version of Cartesian.
 
         Args:
             rename_dict (dict): A dictionary mapping integers on integers.
@@ -1809,8 +1782,10 @@ class Cartesian(_common_class.common_methods):
                 env_dict[chem_env] = set([index])
         return env_dict
 
+# TODO still to rewrite
+#        U = utilities.kabsch(location2, location1)
     def align(self, Cartesian2, ignore_hydrogens=False):
-        """Aligns two Cartesians.
+        """Align two Cartesians.
 
         Searches for the optimal rotation matrix that minimizes
         the RMSD (root mean squared deviation) of ``self`` to
@@ -1844,14 +1819,11 @@ class Cartesian(_common_class.common_methods):
             location1 = molecule1.location()
             location2 = molecule2.location()
 
-# TODO still to rewrite
-#        U = utilities.kabsch(location2, location1)
-
         molecule2[:, ['x', 'y', 'z']] = utilities.rotate(location2, location1)
         return molecule1, molecule2
 
     def make_similar(self, Cartesian2, follow_bonds=4, prealign=True):
-        """Similarizes two Cartesians.
+        """Similarize two Cartesians.
 
         Returns a reindexed copy of ``Cartesian2`` that minimizes the
         distance for each atom in the same chemical environemt
@@ -1944,7 +1916,7 @@ class Cartesian(_common_class.common_methods):
         return molecule1, molecule2_new
 
     def move_to(self, Cartesian2, step=5, extrapolate=(0, 0)):
-        """Returns list of Cartesians for the movement from
+        """Return list of Cartesians for the movement from
         self to Cartesian2.
 
         Args:
@@ -1970,16 +1942,13 @@ class Cartesian(_common_class.common_methods):
 
         for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
             temp_Cartesian[:, ['x', 'y', 'z']] = (
-                    self[:, ['x', 'y', 'z']]
-                    + step_frame.loc[:, ['x', 'y', 'z']] * t
-                    )
+                self[:, ['x', 'y', 'z']]
+                + step_frame.loc[:, ['x', 'y', 'z']] * t)
             Cartesian_list.append(temp_Cartesian.copy())
-
         return Cartesian_list
 
-    # TODO implement filetype 'auto'
     def write(self, outputfile, sort_index=True, filetype='xyz'):
-        """Writes the Cartesian into a file.
+        """Write the Cartesian into a file.
 
         .. note:: Since it permamently writes a file, this function
             is strictly speaking **not sideeffect free**.
@@ -2016,7 +1985,8 @@ class Cartesian(_common_class.common_methods):
                     f.write(str(n_atoms) + 2 * '\n')
                 frame.to_csv(
                     outputfile,
-                    sep=str(' '), # https://github.com/pydata/pandas/issues/6035
+                    sep=str(' '),
+                    # https://github.com/pydata/pandas/issues/6035
                     index=False,
                     header=False,
                     mode='a')
@@ -2025,13 +1995,13 @@ class Cartesian(_common_class.common_methods):
             write_xyz(self, outputfile, sort_index)
         # elif filetype == other filetype:
         else:
-            raise NotImplementedError('The desired filetype is not implemented')
+            error_string = 'The desired filetype is not implemented'
+            raise NotImplementedError(error_string)
 
-    # TODO implement filetype 'auto'
     @classmethod
     def read(cls, inputfile, pythonic_index=False,
-             get_bonds=True, filetype='xyz'):
-        """Reads a file of coordinate information.
+             get_bonds=True, filetype='auto'):
+        """Read a file of coordinate information.
 
         Args:
             inputfile (str):
@@ -2039,6 +2009,7 @@ class Cartesian(_common_class.common_methods):
             filetype (str): The filetype to be read from.
                 The default is xyz.
                 Supported filetypes are: xyz and molden.
+                'auto' uses the charakters after the last point as filetype.
 
         Returns:
             Cartesian: Depending on the type of file returns a Cartesian,
@@ -2065,9 +2036,8 @@ class Cartesian(_common_class.common_methods):
                 settings['show_warnings']['valency'] = previous_warnings_bool
             return molecule
 
-
         def read_molden(cls, inputfile, pythonic_index, get_bonds):
-            """Reads a molden file.
+            """Read a molden file.
 
             Args:
                 inputfile (str):
@@ -2095,11 +2065,12 @@ class Cartesian(_common_class.common_methods):
                     f.seek(current_line)
 
             for i in range(number_of_molecules):
-                molecule_in = [f.readline() for j in range(number_of_atoms + 2)]
+                molecule_in = [f.readline()
+                               for j in range(number_of_atoms + 2)]
                 molecule_in = ''.join(molecule_in)
                 molecule_in = io.StringIO(molecule_in)
                 molecule = cls.read(molecule_in, pythonic_index=pythonic_index,
-                                        get_bonds=get_bonds, filetype='xyz')
+                                    get_bonds=get_bonds, filetype='xyz')
                 try:
                     list_of_cartesians.append(molecule)
                 except NameError:
@@ -2108,17 +2079,19 @@ class Cartesian(_common_class.common_methods):
             f.close()
             return list_of_cartesians
 
+        if filetype == 'auto':
+            filetype = re.split('\.', inputfile)[-1]
+
         if filetype == 'xyz':
             return read_xyz(cls, inputfile, pythonic_index, get_bonds)
         if filetype == 'molden':
             return read_molden(cls, inputfile, pythonic_index, get_bonds)
         else:
-            raise NotImplementedError('The desired filetype is not implemented')
-
-
+            error_string = 'The desired filetype is not implemented'
+            raise NotImplementedError(error_string)
 
     def view(self, viewer=settings['defaults']['viewer'], use_curr_dir=False):
-        """View your molecule
+        """View your molecule.
 
         .. note:: This function writes a temporary file and opens it with
             an external viewer.
@@ -2140,25 +2113,28 @@ class Cartesian(_common_class.common_methods):
         else:
             TEMP_DIR = tempfile.gettempdir()
 
-        file = lambda i : os.path.join(TEMP_DIR, 'ChemCoord_molecule_' + str(i) + '.xyz')
+        def give_filename(i):
+            filename = 'ChemCoord_list_' + str(i) + '.molden'
+            return os.path.join(TEMP_DIR, filename)
+
         i = 1
-        while os.path.exists(file(i)):
+        while os.path.exists(give_filename(i)):
             i = i + 1
-        self.write(file(i))
+        self.write(give_filename(i))
 
         def open(i):
-            """Open file and close after being finished"""
+            """Open file and close after being finished."""
             try:
-                subprocess.check_call([viewer, file(i)])
+                subprocess.check_call([viewer, give_filename(i)])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
             finally:
                 if use_curr_dir:
                     pass
                 else:
-                    os.remove(file(i))
+                    os.remove(give_filename(i))
 
-        Thread(target = open, args=(i,)).start()
+        Thread(target=open, args=(i,)).start()
 
 
 @export
@@ -2188,31 +2164,33 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
             TEMP_DIR = os.path.curdir
         else:
             TEMP_DIR = tempfile.gettempdir()
-        file = lambda i : os.path.join(TEMP_DIR,
-                                       'ChemCoord_list_' + str(i) + '.molden')
+
+        def give_filename(i):
+            filename = 'ChemCoord_list_' + str(i) + '.molden'
+            return os.path.join(TEMP_DIR, filename)
+
         i = 1
-        while os.path.exists(file(i)):
+        while os.path.exists(give_filename(i)(i)):
             i = i + 1
-        write(molecule, file(i), filetype='molden')
+        write(molecule, give_filename(i)(i), filetype='molden')
 
         def open(i):
-            """Open file and close after being finished"""
+            """Open file and close after being finished."""
             try:
-                subprocess.check_call([viewer, file(i)])
+                subprocess.check_call([viewer, give_filename(i)(i)])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
             finally:
                 if use_curr_dir:
                     pass
                 else:
-                    os.remove(file(i))
-        Thread(target = open, args=(i,)).start()
+                    os.remove(give_filename(i)(i))
+        Thread(target=open, args=(i,)).start()
 
 
-# TODO implement filetype 'auto'
 @export
 def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
-    """Writes the coordinates into a file.
+    """Write the coordinates into a file.
 
     .. note:: Since it permamently writes a file, this function is
         strictly speaking **not sideeffect free**.
@@ -2253,14 +2231,13 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
                 f.write(str(n_atoms) + 2 * '\n')
             frame.to_csv(
                 outputfile,
-                sep=str(' '), # https://github.com/pydata/pandas/issues/6035
+                sep=str(' '),  # https://github.com/pydata/pandas/issues/6035
                 index=False,
                 header=False,
                 mode='a')
 
-
     def write_molden(to_be_written, outputfile, sort_index):
-        """Writes a list of Cartesians into a molden file.
+        """Write a list of Cartesians into a molden file.
 
         .. note:: Since it permamently writes a file, this function
             is strictly speaking **not sideeffect free**.
@@ -2318,10 +2295,9 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
         raise NotImplementedError('The desired filetype is not implemented')
 
 
-# TODO implement filetype 'auto'
 @export
-def read(inputfile, pythonic_index=False, get_bonds=True, filetype='xyz'):
-    """Reads a file of coordinate information.
+def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
+    """Read a file of coordinate information.
 
     .. note:: This function calls in the background :func:`Cartesian.read`.
         If you inherited from :class:`Cartesian` to tailor it for your project,
@@ -2334,6 +2310,7 @@ def read(inputfile, pythonic_index=False, get_bonds=True, filetype='xyz'):
         filetype (str): The filetype to be read from.
             The default is xyz.
             Supported filetypes are: xyz and molden.
+            'auto' uses the charakters after the last point as filetype.
 
     Returns:
         Cartesian: Depending on the type of file returns a Cartesian,
@@ -2343,9 +2320,10 @@ def read(inputfile, pythonic_index=False, get_bonds=True, filetype='xyz'):
                               get_bonds=get_bonds, filetype=filetype)
     return molecule
 
+
 @export
 def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
-    """Compares two molecules for numerical equality.
+    """Compare two molecules for numerical equality.
 
     Args:
         a (Cartesian):
@@ -2363,7 +2341,6 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
     """
     pretest = (set(a.index) == set(b.index)
                and np.alltrue(a[:, 'atom'] == b[a.index, 'atom']))
-
 
     if align and pretest:
         A = a.inertia()['transformed_Cartesian'].location()
