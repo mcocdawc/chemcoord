@@ -50,6 +50,7 @@ nohup.out
 # ignore molecule files from the Tutorial
 *molden
 *xyz
+.ipynb_checkpoints
 
 
 cealign-0.8-RBS
