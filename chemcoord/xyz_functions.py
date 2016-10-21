@@ -17,7 +17,7 @@ from . import test
 from ._exceptions import PhysicalMeaningError
 from . import constants
 from . import utilities
-#from . import zmat_functions
+from . import zmat_functions
 from . import export
 from . import settings
 import io
