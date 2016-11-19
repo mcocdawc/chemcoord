@@ -126,6 +126,7 @@ class Cartesian(_common_class.common_methods):
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
             self.metadata = {}
+            """Test"""
             self._metadata = {}
 
     def __getitem__(self, key):
@@ -2170,21 +2171,22 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
             return os.path.join(TEMP_DIR, filename)
 
         i = 1
-        while os.path.exists(give_filename(i)(i)):
+        while os.path.exists(give_filename(i)):
             i = i + 1
-        write(molecule, give_filename(i)(i), filetype='molden')
+
+        write(molecule, give_filename(i), filetype='molden')
 
         def open(i):
             """Open file and close after being finished."""
             try:
-                subprocess.check_call([viewer, give_filename(i)(i)])
+                subprocess.check_call([viewer, give_filename(i)])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
             finally:
                 if use_curr_dir:
                     pass
                 else:
-                    os.remove(give_filename(i)(i))
+                    os.remove(give_filename(i))
         Thread(target=open, args=(i,)).start()
 
 

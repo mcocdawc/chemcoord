@@ -66,3 +66,11 @@ Cartesian
          ~Cartesian._get_buildlist
          ~Cartesian._clean_dihedral
          ~Cartesian._build_zmat
+
+    .. rubric:: Instance attributes
+
+    .. toctree::
+        :maxdepth: 2
+
+        metadata.rst
+        _metadata.rst
