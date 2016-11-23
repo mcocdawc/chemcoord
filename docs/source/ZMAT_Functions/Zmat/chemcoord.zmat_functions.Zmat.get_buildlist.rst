@@ -1,6 +1,6 @@
-build_list
+get_buildlist
 ========================================
 
 .. currentmodule:: chemcoord.zmat_functions
 
-.. automethod:: Zmat.build_list
+.. automethod:: Zmat.get_buildlist

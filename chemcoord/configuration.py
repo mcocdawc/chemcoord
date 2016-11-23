@@ -12,6 +12,7 @@ def _give_default_file_path():
 def provide_default_settings():
     settings = {}
     settings['show_warnings'] = {}
+    settings['show_warnings']['Polynomial_fit'] = False
     settings['show_warnings']['valency'] = True
     # The Cartesian().get_bonds() method will use or not use a lookup.
     # Greatly increases performance if True, but could introduce bugs
@@ -83,6 +84,7 @@ def read_configuration_file(filepath=_give_default_file_path()):
         special_actions = {} # Something different than a string is expected
         special_actions['show_warnings'] = {}
         special_actions['show_warnings']['valency'] = getboolean
+        special_actions['show_warnings']['Polynomial_fit'] = getboolean
         special_actions['defaults'] = {}
         special_actions['defaults']['use_lookup_internally'] = getboolean
         try:

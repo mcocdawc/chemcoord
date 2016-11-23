@@ -5,13 +5,13 @@ Zmat
 
 .. autoclass:: Zmat
 
-   
+
     .. rubric:: Chemical Methods
-    
+
     .. autosummary::
         :toctree: Zmat
-        
-        ~Zmat.build_list
+
+        ~Zmat.get_buildlist
         ~Zmat.change_numbering
         ~Zmat.add_data
         ~Zmat.read_zmat

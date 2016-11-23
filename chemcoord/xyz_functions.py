@@ -40,6 +40,8 @@ def pick(my_set):
     return x
 
 
+
+
 @export
 class Cartesian(_common_class.common_methods):
     """The main class for dealing with cartesian Coordinates.
@@ -1325,6 +1327,7 @@ class Cartesian(_common_class.common_methods):
 
         return buildlist
 
+
     def _clean_dihedral(self, buildlist_to_check):
         """Reindexe the dihedral defining atom if colinear.
 
@@ -1419,6 +1422,11 @@ class Cartesian(_common_class.common_methods):
         zmat_frame.loc[indexlist[2:], 'angle'] = angles
         zmat_frame.loc[indexlist[3:], 'dihedral_with'] = buildlist[3:, 3]
         zmat_frame.loc[indexlist[3:], 'dihedral'] = dihedrals
+
+        lines = np.full(self.n_atoms, True, dtype='bool')
+        lines[:3] = False
+        zmat_frame.loc[zmat_frame['dihedral'].isnull() & lines, 'dihedral'] = 0
+
         return zmat_functions.Zmat(zmat_frame)
 
     def to_zmat(
@@ -1457,7 +1465,7 @@ class Cartesian(_common_class.common_methods):
 
         If you create several zmatrices based on the same references
         you can save the buildlist of a zmatrix with
-        :meth:`Zmat.build_list`.
+        :meth:`Zmat.get_buildlist`.
         If you then pass the buildlist as argument to ``to_zmat``,
         then the algorithm directly starts with step 3.
 
@@ -2137,6 +2145,16 @@ class Cartesian(_common_class.common_methods):
 
         Thread(target=open, args=(i,)).start()
 
+    def has_same_sumformula(self, other):
+        same_atoms = True
+        for atom in set(self[:, 'atom']):
+            own_atom_number = self[self[:, 'atom'] == atom, :].shape[0]
+            other_atom_number = other[other[:, 'atom'] == atom, :].shape[0]
+            same_atoms = (own_atom_number == other_atom_number)
+            if not same_atoms:
+                break
+        return same_atoms
+
 
 @export
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
@@ -2354,3 +2372,23 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
         return np.allclose(A, B, rtol=rtol, atol=atol)
     else:
         return False
+
+
+
+@export
+def is_Cartesian(possible_Cartesian):
+    """Tests, if given instance is a Cartesian.
+
+    Args:
+        is_Cartesian (any type):
+
+    Returns:
+        bool:
+    """
+    columns = possible_Cartesian.columns.copy()
+    try:
+        assert type(columns) is not str
+        columns = set(columns)
+    except (TypeError, AssertionError):
+        columns = set([columns])
+    return {'atom', 'x', 'y', 'z'} <= columns

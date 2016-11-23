@@ -5,18 +5,18 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 import chemcoord as cc
-cc.settings.show_warnings['valency'] = False
+cc.settings['show_warnings']['valency'] = False
 import numpy as np
 from io import StringIO
 
 
 # Defines a maximum allowed deviation for conversion.
-DEVIATION_THRESHOLD = 10 ** -3
+DEVIATION_THRESHOLD = 5e-3
 
 
 files = {}
 
-files['Cd-S-lattice'] = StringIO(
+files['Cd-S-lattice.xyz'] = StringIO(
 """56
 
 S 2.96189704752 -0.692311265352 11.049431659
@@ -78,7 +78,7 @@ Cd 10.8676469689 4.20061361893 6.86963158451
 """)
 
 
-files['MIL-53'] = StringIO(
+files['MIL-53.xyz'] = StringIO(
 """99
 
  C     1.86997614  -0.00000000   2.36697799
@@ -182,21 +182,20 @@ Cr    -0.06283512  -1.70550000   0.69244277
  X    -0.06283512   0.00000000   0.69244277
 """)
 
-print('This small test suite converts from Cartesian space to internal coordinates and back.')
+print('This small test suite converts from cartesian space to '
+      + 'internal coordinates and back.')
 print('Afterwards the converted and the original molecule are aligned.')
-print('If the mean length of the difference vectors is less than', DEVIATION_THRESHOLD, 'the transformation worked.')
+print('If the deviation in each coordinate is less than',
+      DEVIATION_THRESHOLD, 'the transformation worked.')
 print()
 
 
 for name, molecule_in in files.items():
-    molecule1 = cc.xyz_functions.read_xyz(molecule_in)
+    molecule1 = cc.read(molecule_in, filetype='xyz')
     z_molecule = molecule1.to_zmat()
     molecule2 = z_molecule.to_xyz()
-    molecule1, molecule2 = molecule1.make_similar(molecule2)
-    difference = (molecule1[:, 'x': 'z'] - molecule2[:, 'x': 'z']).get_values().astype('float')
-    average_deviation = np.linalg.norm(difference, axis=1).sum() / difference.shape[0]
-    transformation_worked = (average_deviation < DEVIATION_THRESHOLD)
-    if transformation_worked:
+    if cc.isclose(*molecule1.make_similar(molecule2), atol=DEVIATION_THRESHOLD,
+                  align=False):
         print(name + ': transformation worked')
     else:
         print(name + ': transformation didn\'t work')

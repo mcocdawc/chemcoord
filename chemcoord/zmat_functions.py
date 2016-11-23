@@ -19,6 +19,27 @@ from . import utilities
 from .configuration import settings
 from ._exceptions import PhysicalMeaningError
 
+
+@export
+def is_Zmat(possible_Zmat):
+    """Tests, if given instance is a Zmat.
+
+    Args:
+        possible_Zmat (any type):
+
+    Returns:
+        bool:
+    """
+    try:
+        assert type(columns) is not str
+        columns = set(columns)
+    except (TypeError, AssertionError):
+        columns = set([columns])
+    is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle',
+               'dihedral_with', 'dihedral'} <= columns
+    return is_zmat
+
+
 @export
 class Zmat(_common_class.common_methods):
     """The main class for dealing with internal coordinates.
@@ -42,8 +63,8 @@ class Zmat(_common_class.common_methods):
             # Create from pd.DataFrame
             if not self._is_physical(init.columns):
                 raise PhysicalMeaningError(
-                    'There are columns missing for a meaningful \
-                    description of a molecule')
+                    "There are columns missing for a meaningful"
+                    + "description of a molecule")
             self.frame = init.copy()
             self.shape = self.frame.shape
             self.n_atoms = self.shape[0]
@@ -121,7 +142,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
         return self.copy()
 
 
-    def build_list(self):
+    def get_buildlist(self):
         """Return the buildlist which is necessary to create this Zmat
 
         Args:
@@ -206,7 +227,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
         from . import xyz_functions
 
         molecule = xyz_functions.Cartesian(xyz_frame)
-        buildlist = self.build_list()
+        buildlist = self.get_buildlist()
 
         normalize = utilities.normalize
         rotation_matrix = utilities.rotation_matrix
@@ -495,3 +516,14 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
                 header=False,
                 mode='w'
             )
+
+
+    def has_same_sumformula(self, other):
+        same_atoms = True
+        for atom in set(self[:, 'atom']):
+            own_atom_number = self[self[:, 'atom'] == atom, :].shape[0]
+            other_atom_number = other[other[:, 'atom'] == atom, :].shape[0]
+            same_atoms = (own_atom_number == other_atom_number)
+            if not same_atoms:
+                break
+        return same_atoms
