@@ -221,6 +221,18 @@ class mode(object):
 
 
     def give_structure(self, t):
+        """Calculates a concrete structure.
+
+        Args:
+            t (float): A real number that parametrises the movement along
+                the mode.
+                The equilibrium structure corresponds to :math:`t=0`,
+                the rightmost distortion to :math:`t=1` and
+                the leftmost distortion to :math:`t=-1`.
+
+        Returns:
+            Zmat:
+        """
         columns = ('bond', 'angle', 'dihedral')
         new_structure = self.eq_structure['zmat'].copy()
         give_displacements = self._give_displacement.loc[:, columns].values
