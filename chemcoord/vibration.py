@@ -179,7 +179,7 @@ class mode(object):
             for i in range(eq_strct_zmat.n_atoms):
                 for j in range(n_coord):
                     if (~np.isnan(Y[:, i, j])).all():
-                        if settings['show_warnings']['Polynomial_fit']:
+                        if settings['show_warnings']['polynomial_fit']:
                             P = fit(X, Y[:, i, j], degree)
                             if np.isclose(P.deriv().coef, 0).all():
                                 P = 0
@@ -276,6 +276,21 @@ class mode(object):
         new_mode.loc[:, columns] = (self._give_displacement.loc[:, columns]
                                     + other._give_displacement.loc[:, columns])
         return self.__class__(self.eq_structure['zmat'].copy(), new_mode)
+
+
+def screen_modes(vib):
+    """Returns keys for only vibrational modes.
+
+    Args:
+        vib (ase vibration instance):
+
+    Returns:
+        list: Returns a list of integers for those modes that are
+            real vibrational modes.
+    """
+    return key_list
+
+
 
 # class vibration(object):
 #     def __init__(equilibrium_structure):
