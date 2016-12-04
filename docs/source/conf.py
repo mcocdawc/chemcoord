@@ -59,7 +59,9 @@ extensions = [
     'sphinx.ext.intersphinx'
 ]
 
-intersphinx_mapping = {'numpy': ('http://docs.scipy.org/doc/numpy/', None)}
+intersphinx_mapping = {'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+                       'ase' : ('https://wiki.fysik.dtu.dk/ase/', None)}
+# intersphinx_mapping = {'ase' : ('https://wiki.fysik.dtu.dk/ase/', None)}
 
 
 # 'numpydoc'

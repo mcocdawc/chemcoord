@@ -194,7 +194,7 @@ class mode(object):
                                 if np.isclose(P.deriv().coef, 0).all():
                                     P = 0
                                 else:
-                                    P = P - P.coef[0]
+                                    P = P - P(0)
                                 functions[i, j] = P
                     else:
                         functions[i, j] = np.nan
@@ -278,17 +278,36 @@ class mode(object):
         return self.__class__(self.eq_structure['zmat'].copy(), new_mode)
 
 
-def screen_modes(vib):
-    """Returns keys for only vibrational modes.
+# TODO KELD
+# vib should be an ase.vibrations.Vibrations instance
+# Could you try to make it as modular as possible with many small functions
+# which just get called from give_distortions()
+
+def give_distortions(vib, screen_modes=True):
+    """Returns a dictionary of distorted structures for each mode.
 
     Args:
-        vib (ase vibration instance):
+        vib (:class:`ase.vibration.Vibrations`):
+        screen_modes (bool): Translations and rotations are filtered out.
 
     Returns:
-        list: Returns a list of integers for those modes that are
-            real vibrational modes.
+        dict: The keys of the dictionary are integers, corresponding to each
+        mode in the vib instance.
+        The value for each key is a 2-tuple consisting of a
+        :class:`~.xyz_functions.Cartesian` instance and a list of 2-tuples.
+        The first element of the tuples in the list
+        is a float denoting the mode parameter :math:`t`,
+        the second element is the distorted structure corresponding to the
+        value of :math:`t`.
+
+        See an example which gives the equilibrium structure and distorted
+        structures for the 5th mode in a given vib instance::
+
+            In: give_distortions(vib)[5]
+
+            Out: equilibrium_structure, [(1, leftmost_distorted_structure), (-1, rightmost_distorted_structure)]
     """
-    return key_list
+    return mode_dict
 
 
 

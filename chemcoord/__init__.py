@@ -15,5 +15,6 @@ from . import utilities
 from . import constants
 from . import configuration
 from . import zmat_functions
+from . import vibration
 
 globals()['settings'] = configuration.settings
