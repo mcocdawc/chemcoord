@@ -81,12 +81,12 @@ class mode(object):
         try:
             columns = ('bond', 'angle', 'dihedral')
             frame = self._give_displacement
-            selection = (~(frame.loc[:, columns] == 0)
-             & (~frame.loc[:, columns].isnull())).any(axis=1)
+            selection = (
+                ~(frame.loc[:, columns] == 0)
+                & (~frame.loc[:, columns].isnull())).any(axis=1)
             return self._give_displacement[selection]._repr_html_()
         except AttributeError:
             pass
-
 
     @classmethod
     def interpolate(cls, eq_strct_zmat, displaced_zmats,
@@ -136,7 +136,6 @@ class mode(object):
                  )
             Y = np.concatenate([A[None, :, :] for A in Y], axis=0)
             return X, Y
-
 
         def default_fit_function(eq_strct_zmat, displaced_zmats):
             """Interpolate a vibration mode.
@@ -214,11 +213,10 @@ class mode(object):
             raise PhysicalMeaningError(error_message)
 
         if fit_function == 'default':
-            calculate_structure = default_fit_function(eq_strct_zmat,
-                                                     displaced_zmats)
+            calculate_structure = default_fit_function(
+                eq_strct_zmat, displaced_zmats)
 
         return cls(eq_strct_zmat, calculate_structure)
-
 
     def give_structure(self, t):
         """Calculates a concrete structure.
@@ -278,18 +276,16 @@ class mode(object):
         return self.__class__(self.eq_structure['zmat'].copy(), new_mode)
 
 
-# TODO KELD
-# vib should be an ase.vibrations.Vibrations instance
-# Could you try to make it as modular as possible with many small functions
-# which just get called from give_distortions()
-
-def give_distortions(vib, screen_modes=True):
+def give_distortions(vib, screen_modes=True, step_size=1e-4):
     """Returns a dictionary of distorted structures for each mode.
 
     Args:
         vib (:class:`ase.vibration.Vibrations`):
         screen_modes (bool): Translations and rotations are filtered out.
-
+        step_size (float): Defines how far to follow the mode in Cartesian
+            coordinates in each direction to make the distortions that will
+            be used by chemcoord. Smaller should be better, as long as we
+            avoid numerical fluctuations.
     Returns:
         dict: The keys of the dictionary are integers, corresponding to each
         mode in the vib instance.
@@ -305,10 +301,29 @@ def give_distortions(vib, screen_modes=True):
 
             In: give_distortions(vib)[5]
 
-            Out: equilibrium_structure, [(1, leftmost_distorted_structure), (-1, rightmost_distorted_structure)]
+            Out: equilibrium_structure, [
+                (1, leftmost_distorted_structure),
+                (-1, rightmost_distorted_structure)]
     """
-    return mode_dict
 
+    # Positions of all the atoms in the molecule used for the
+    # vibrational analysis given as
+    # np.array([[x_1, y_1, z_1], [x_2, y_2, z_2], ...])
+    groundstate_positions = vib.atoms.get_positions()
+
+    mode_dict = {}
+    for n in range(len(vib.hnu)):
+        # Temperature * ase.units.kB
+        kT = 300 * 8.617330337217213e-05
+
+        # Mode from ase.vibrations object
+        mode = vib.get_mode(n) * np.sqrt(kT / abs(vib.hnu[n]))
+        mode_dict[n] = [
+            groundstate_positions,
+            (-step_size, groundstate_positions - step_size*mode),
+            (step_size, groundstate_positions + step_size*mode)]
+
+    return mode_dict
 
 
 # class vibration(object):
