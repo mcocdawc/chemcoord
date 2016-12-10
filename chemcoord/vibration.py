@@ -81,9 +81,8 @@ class mode(object):
         try:
             columns = ('bond', 'angle', 'dihedral')
             frame = self._give_displacement
-            selection = (
-                ~(frame.loc[:, columns] == 0)
-                & (~frame.loc[:, columns].isnull())).any(axis=1)
+            selection = (~(frame.loc[:, columns] == 0)
+                         & ~frame.loc[:, columns].isnull()).any(axis=1)
             return self._give_displacement[selection]._repr_html_()
         except AttributeError:
             pass
@@ -213,8 +212,8 @@ class mode(object):
             raise PhysicalMeaningError(error_message)
 
         if fit_function == 'default':
-            calculate_structure = default_fit_function(
-                eq_strct_zmat, displaced_zmats)
+            calculate_structure = default_fit_function(eq_strct_zmat,
+                                                       displaced_zmats)
 
         return cls(eq_strct_zmat, calculate_structure)
 
