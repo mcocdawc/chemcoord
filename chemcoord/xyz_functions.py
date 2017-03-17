@@ -2008,13 +2008,13 @@ class Cartesian(_common_class.common_methods):
             raise NotImplementedError(error_string)
 
     @classmethod
-    def read(cls, inputfile, pythonic_index=False,
+    def read(cls, inputfile, start_index=0,
              get_bonds=True, filetype='auto'):
         """Read a file of coordinate information.
 
         Args:
             inputfile (str):
-            pythonic_index (bool):
+            start_index (int):
             filetype (str): The filetype to be read from.
                 The default is xyz.
                 Supported filetypes are: xyz and molden.
@@ -2024,7 +2024,7 @@ class Cartesian(_common_class.common_methods):
             Cartesian: Depending on the type of file returns a Cartesian,
             or a list of Cartesians.
         """
-        def read_xyz(cls, inputfile, pythonic_index, get_bonds):
+        def read_xyz(cls, inputfile, start_index, get_bonds):
             frame = pd.read_table(
                 inputfile,
                 skiprows=2,
@@ -2032,9 +2032,9 @@ class Cartesian(_common_class.common_methods):
                 delim_whitespace=True,
                 names=['atom', 'x', 'y', 'z'])
 
-            if not pythonic_index:
+            if start_index != 0:
                 n_atoms = frame.shape[0]
-                frame.index = range(1, n_atoms+1)
+                frame.index = range(start_index, n_atoms+start_index)
 
             molecule = cls(frame)
             if get_bonds:
@@ -2045,12 +2045,12 @@ class Cartesian(_common_class.common_methods):
                 settings['show_warnings']['valency'] = previous_warnings_bool
             return molecule
 
-        def read_molden(cls, inputfile, pythonic_index, get_bonds):
+        def read_molden(cls, inputfile, start_index, get_bonds):
             """Read a molden file.
 
             Args:
                 inputfile (str):
-                pythonic_index (bool):
+                start_index (int):
 
             Returns:
                 list: A list containing Cartesian is returned.
@@ -2078,7 +2078,7 @@ class Cartesian(_common_class.common_methods):
                                for j in range(number_of_atoms + 2)]
                 molecule_in = ''.join(molecule_in)
                 molecule_in = io.StringIO(molecule_in)
-                molecule = cls.read(molecule_in, pythonic_index=pythonic_index,
+                molecule = cls.read(molecule_in, start_index=start_index,
                                     get_bonds=get_bonds, filetype='xyz')
                 try:
                     list_of_cartesians.append(molecule)
@@ -2092,9 +2092,9 @@ class Cartesian(_common_class.common_methods):
             filetype = re.split('\.', inputfile)[-1]
 
         if filetype == 'xyz':
-            return read_xyz(cls, inputfile, pythonic_index, get_bonds)
+            return read_xyz(cls, inputfile, start_index, get_bonds)
         if filetype == 'molden':
-            return read_molden(cls, inputfile, pythonic_index, get_bonds)
+            return read_molden(cls, inputfile, start_index, get_bonds)
         else:
             error_string = 'The desired filetype is not implemented'
             raise NotImplementedError(error_string)
@@ -2316,7 +2316,7 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
 
 
 @export
-def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
+def read(inputfile, start_index=0, get_bonds=True, filetype='auto'):
     """Read a file of coordinate information.
 
     .. note:: This function calls in the background :func:`Cartesian.read`.
@@ -2326,7 +2326,7 @@ def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
 
     Args:
         inputfile (str):
-        pythonic_index (bool):
+        start_index (int):
         filetype (str): The filetype to be read from.
             The default is xyz.
             Supported filetypes are: xyz and molden.
@@ -2336,7 +2336,7 @@ def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
         Cartesian: Depending on the type of file returns a Cartesian,
         or a list of Cartesians.
     """
-    molecule = Cartesian.read(inputfile, pythonic_index=pythonic_index,
+    molecule = Cartesian.read(inputfile, start_index=start_index,
                               get_bonds=get_bonds, filetype=filetype)
     return molecule
 
