@@ -397,7 +397,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
         return molecule
 
     @classmethod
-    def read_zmat(cls, inputfile, implicit_index=True):
+    def read_zmat(cls, inputfile, implicit_index=True, start_index=0):
         """Reads a zmat file.
 
         Lines beginning with ``#`` are ignored.
@@ -421,7 +421,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
                     'angle', 'dihedral_with', 'dihedral'], )
 
             n_atoms = zmat_frame.shape[0]
-            zmat_frame.index = range(1, n_atoms+1)
+            zmat_frame.index = range(start_index, n_atoms+start_index)
         else:
             zmat_frame = pd.read_table(
                 inputfile,
