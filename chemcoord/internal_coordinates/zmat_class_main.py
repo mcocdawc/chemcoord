@@ -164,8 +164,8 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
 
         output.index = new_index
 
-        output[:, ['bond_with', 'angle_with', 'dihedral_with']] = \
-            output[:, ['bond_with', 'angle_with', 'dihedral_with']].replace(old_index, new_index)
+        cols = ['bond_with', 'angle_with', 'dihedral_with']
+        output[:, cols] = output[:, cols].replace(old_index, new_index)
 
         if not inplace:
             return output

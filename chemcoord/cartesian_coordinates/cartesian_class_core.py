@@ -955,12 +955,12 @@ class Cartesian_core(_common_class):
         dihedral_with_location = self.location(buildlist[start_row:, 3])
         length = buildlist[start_row:].shape[0]
 
-        DA = dihedral_with_location - angle_with_location
-        AB = angle_with_location - bond_with_location
-        BI = bond_with_location - own_location
+        IB = bond_with_location - own_location
+        BA = angle_with_location - bond_with_location
+        AD = dihedral_with_location - angle_with_location
 
-        N1 = np.cross(DA, AB, axis=1)
-        N2 = np.cross(AB, BI, axis=1)
+        N1 = np.cross(IB, BA, axis=1)
+        N2 = np.cross(BA, AD, axis=1)
 
         n1 = N1 / np.linalg.norm(N1, axis=1)[:, None]
         n2 = N2 / np.linalg.norm(N2, axis=1)[:, None]
@@ -973,7 +973,7 @@ class Cartesian_core(_common_class):
         # the next lines are to test the direction of rotation.
         # is a dihedral really 90 or 270 degrees?
         test_where_to_modify = (
-            np.sum(AB * np.cross(n1, n2, axis=1), axis=1) > 0)
+            np.sum(BA * np.cross(n1, n2, axis=1), axis=1) < 0)
         where_to_modify = np.nonzero(test_where_to_modify)[0]
 
         sign = np.full(length, 1, dtype='float64')
