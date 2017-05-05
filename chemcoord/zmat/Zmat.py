@@ -12,12 +12,12 @@ except ImportError:
 import numpy as np
 import pandas as pd
 import math as m
-from . import _common_class
-from . import export
-from . import constants
-from . import utilities
-from .configuration import settings
-from ._exceptions import PhysicalMeaningError
+from chemcoord._generic_classes._common_class import _common_class
+from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord.algebra_utilities import utilities
+from chemcoord import export
+from chemcoord.configuration.configuration import settings
+# from chemcoord.constants import constants
 
 
 @export
@@ -41,7 +41,7 @@ def is_Zmat(possible_Zmat):
 
 
 @export
-class Zmat(_common_class.common_methods):
+class Zmat(_common_class):
     """The main class for dealing with internal coordinates.
     """
     def __init__(self, init):
@@ -84,7 +84,7 @@ class Zmat(_common_class.common_methods):
                 molecule.metadata = self.metadata
                 molecule._metadata = self.metadata.copy()
                 keys_not_to_keep = [
-                    'bond_dict' # You could end up with loose ends
+                    'bond_dict'  # You could end up with loose ends
                     ]
                 for key in keys_not_to_keep:
                     try:
@@ -98,6 +98,8 @@ class Zmat(_common_class.common_methods):
             # A series and not a DataFrame was returned
             return frame
 
+    def __setitem__(self, key, value):
+        self.frame.loc[key[0], key[1]] = value
 
     def copy(self):
         molecule = self.__class__(self.frame)
@@ -137,10 +139,8 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
     def __radd__(self, other):
         return self.__add__(other)
 
-
     def _to_Zmat(self):
         return self.copy()
-
 
     def get_buildlist(self):
         """Return the buildlist which is necessary to create this Zmat
@@ -516,7 +516,6 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
                 header=False,
                 mode='w'
             )
-
 
     def has_same_sumformula(self, other):
         same_atoms = True

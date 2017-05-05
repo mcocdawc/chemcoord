@@ -8,7 +8,7 @@ Cartesian coordinates
 .. autosummary::
     :toctree: XYZ_Functions
 
-    ~xyz_functions.Cartesian
+    ~Cartesian
     ~xyz_functions.read
     ~xyz_functions.write
     ~xyz_functions.view

@@ -11,14 +11,16 @@ except ImportError:
     pass
 import numpy as np
 import pandas as pd
-from ._exceptions import PhysicalMeaningError
-from . import _pandas_wrapper
-from . import constants
-from . import utilities
-from .configuration import settings
+from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord._generic_classes._pandas_wrapper import _pandas_wrapper
+from chemcoord.constants import constants
+from chemcoord.algebra_utilities import utilities
+from chemcoord.configuration.configuration import settings
 
 
-class common_methods(_pandas_wrapper.core):
+class _common_class(_pandas_wrapper):
+    """This class provides methods which are used by Zmat and Cartesian.
+    """
     def add_data(self, list_of_columns=None, inplace=False):
         """Adds a column with the requested data.
 
@@ -62,7 +64,6 @@ class common_methods(_pandas_wrapper.core):
         list_of_columns = (
             data.columns if (list_of_columns is None) else list_of_columns)
 
-
         if isinstance(list_of_columns, six.string_types):
             assert list_of_columns not in set(self.columns), \
                 'Column is already present'
@@ -80,7 +81,6 @@ class common_methods(_pandas_wrapper.core):
             self.frame = frame
         else:
             return self.__class__(frame)
-
 
     def total_mass(self):
         """Returns the total mass in g/mol.

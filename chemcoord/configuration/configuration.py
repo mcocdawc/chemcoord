@@ -4,10 +4,12 @@ import copy
 import warnings
 from warnings import warn
 
+
 def _give_default_file_path():
     HOME = os.path.expanduser('~')
     filepath = os.path.join(HOME, '.chemcoordrc')
     return filepath
+
 
 def provide_default_settings():
     settings = {}
@@ -25,6 +27,7 @@ def provide_default_settings():
     # settings['viewer'] = 'molden'
     # settings['viewer'] = 'jmol'
     return settings
+
 
 def write_configuration_file(filepath=_give_default_file_path(),
                              overwrite=False):
@@ -49,7 +52,7 @@ def write_configuration_file(filepath=_give_default_file_path(),
     if os.path.isfile(filepath) and not overwrite:
         try:
             raise FileExistsError
-        except NameError: # because of python2
+        except NameError:  # because of python2
             warn('File exists already and overwrite is False (default).')
     else:
         with open(filepath, 'w') as configfile:
@@ -71,17 +74,21 @@ def read_configuration_file(filepath=_give_default_file_path()):
     """
     config = configparser.ConfigParser()
     config.read(filepath)
+
     def get_correct_type(section, key, config):
         """ Gives e.g. the boolean True for the string 'True'"""
         def getstring(section, key, config):
             return config[section][key]
+
         def getinteger(section, key, config):
             return config[section].getint(key)
+
         def getboolean(section, key, config):
             return config[section].getboolean(key)
+
         def getfloat(section, key, config):
             return config[section].getfloat(key)
-        special_actions = {} # Something different than a string is expected
+        special_actions = {}  # Something different than a string is expected
         special_actions['show_warnings'] = {}
         special_actions['show_warnings']['valency'] = getboolean
         special_actions['show_warnings']['polynomial_fit'] = getboolean
@@ -96,6 +103,7 @@ def read_configuration_file(filepath=_give_default_file_path()):
         for key in config[section]:
             settings[section][key] = get_correct_type(section, key, config)
     return settings
+
 
 settings = provide_default_settings()
 read_configuration_file()

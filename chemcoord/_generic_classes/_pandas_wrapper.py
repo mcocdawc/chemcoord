@@ -4,25 +4,14 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-#try:
-#    # import itertools.imap as map
-#    import itertools.izip as zip
-#except ImportError:
-#    pass
 import numpy as np
 import pandas as pd
-# import collections
-# import copy
-from . import constants
-from . import utilities
-from . import export
-from .configuration import settings
-from ._exceptions import PhysicalMeaningError
-#from io import open
+from chemcoord.configuration.configuration import settings
+from chemcoord._exceptions import PhysicalMeaningError
 
 
 # TODO replace all *kwargs
-class core(object):
+class _pandas_wrapper(object):
     """This class provides wrappers for pd.DataFrame methods.
     """
     # PLEASE NOTE: It is written under the assumption that there exists an
@@ -45,7 +34,6 @@ class core(object):
     def index(self, value):
         self.frame.index = value
 
-
     @property
     def columns(self):
         """Returns the columns.
@@ -57,7 +45,6 @@ class core(object):
     @columns.setter
     def columns(self, value):
         self.frame.columns = value
-
 
     def __repr__(self):
         return self.frame.__repr__()
@@ -80,6 +67,7 @@ class core(object):
                    'dihedral_with', 'dihedral'} <= columns
         return (is_cartesian or is_zmat)
 
+    # TODO delete
     def __getitem__(self, key):
         frame = self.frame.loc[key[0], key[1]]
         try:
@@ -90,10 +78,6 @@ class core(object):
         except AttributeError:
             # A series and not a DataFrame was returned
             return frame
-
-
-    def __setitem__(self, key, value):
-        self.frame.loc[key[0], key[1]] = value
 
     def sort_values(self, by, axis=0, ascending=True, inplace=False,
                     kind='quicksort', na_position='last'):
@@ -124,15 +108,18 @@ class core(object):
         sorted_obj : Cartesian
         """
         if inplace:
-                self.frame.sort_values(by, axis=axis, ascending=ascending,
+                self.frame.sort_values(
+                    by, axis=axis, ascending=ascending,
                     inplace=inplace, kind=kind, na_position=na_position)
         else:
             return self.__class__(
-                self.frame.sort_values(by, axis=axis, ascending=ascending,
+                self.frame.sort_values(
+                    by, axis=axis, ascending=ascending,
                     inplace=inplace, kind=kind, na_position=na_position))
 
-
-    def sort_index(self, axis=0, level=None, ascending=True, inplace=False, kind='quicksort', na_position='last', sort_remaining=True, by=None):
+    def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
+                   kind='quicksort', na_position='last',
+                   sort_remaining=True, by=None):
         """Sort object by labels (along an axis)
 
         The description is taken from the pandas project.
@@ -164,15 +151,17 @@ class core(object):
         if inplace:
             self.frame.sort_index(
                 axis=axis, level=level, ascending=ascending, inplace=inplace,
-                kind=kind, na_position=na_position, sort_remaining=sort_remaining, by=by)
+                kind=kind, na_position=na_position,
+                sort_remaining=sort_remaining, by=by)
         else:
             return self.__class__(
                 self.frame.sort_index(
-                    axis=axis, level=level, ascending=ascending, inplace=inplace,
-                    kind=kind, na_position=na_position, sort_remaining=sort_remaining, by=by))
+                    axis=axis, level=level, ascending=ascending,
+                    inplace=inplace, kind=kind, na_position=na_position,
+                    sort_remaining=sort_remaining, by=by))
 
-
-    def replace(self, to_replace=None, value=None, inplace=False, limit=None, regex=False, method='pad', axis=None):
+    def replace(self, to_replace=None, value=None, inplace=False,
+                limit=None, regex=False, method='pad', axis=None):
         """Replace values given in 'to_replace' with 'value'.
 
         The description is taken from the pandas project.
@@ -269,12 +258,16 @@ class core(object):
           and play with this method to gain intuition about how it works.
         """
         if inplace:
-            self.frame.replace(to_replace=to_replace, value=value, inplace=inplace, limit=limit, regex=regex, method=method, axis=axis)
+            self.frame.replace(to_replace=to_replace, value=value,
+                               inplace=inplace, limit=limit,
+                               regex=regex, method=method, axis=axis)
         else:
-            return self.__class__(self.frame.replace(to_replace=to_replace, value=value, inplace=inplace, limit=limit, regex=regex, method=method, axis=axis))
+            return self.__class__(self.frame.replace(
+                to_replace=to_replace, value=value, inplace=inplace,
+                limit=limit, regex=regex, method=method, axis=axis))
 
-
-    def set_index(self, keys, drop=True, append=False, inplace=False, verify_integrity=False):
+    def set_index(self, keys, drop=True, append=False,
+                  inplace=False, verify_integrity=False):
         """Set the DataFrame index (row labels) using one or more existing
         columns. By default yields a new object.
 
@@ -305,7 +298,7 @@ class core(object):
         Cartesian : Cartesian
         """
 
-        if drop == True:
+        if drop is True:
             try:
                 assert type(keys) is not str
                 dropped_columns = set(keys)
@@ -313,13 +306,17 @@ class core(object):
                 dropped_columns = set([keys])
 
             if not self._is_physical(set(self.columns) - set(dropped_columns)):
-                raise PhysicalMeaningError('You drop a column that is needed to be a physical meaningful description of a molecule.')
+                raise PhysicalMeaningError('You drop a column that is needed \
+                    to be a physical meaningful description of a molecule.')
 
         if inplace:
-            self.frame.set_index(keys, drop=drop, append=append, inplace=inplace, verify_integrity=verify_integrity)
+            self.frame.set_index(
+                keys, drop=drop, append=append, inplace=inplace,
+                verify_integrity=verify_integrity)
         else:
-            return self.__class__(self.frame.set_index(keys, drop=drop, append=append, inplace=inplace, verify_integrity=verify_integrity))
-
+            return self.__class__(self.frame.set_index(
+                keys, drop=drop, append=append,
+                inplace=inplace, verify_integrity=verify_integrity))
 
     def append(self, other, ignore_index=False, verify_integrity=False):
         """Append rows of `other` to the end of this frame, returning a new object.
@@ -377,11 +374,11 @@ class core(object):
         3  7  8
         """
         new_frame = self.frame.append(other.frame, ignore_index=ignore_index,
-                verify_integrity=verify_integrity)
+                                      verify_integrity=verify_integrity)
         return self.__class__(new_frame)
 
-
-    def insert(self, loc, column, value, allow_duplicates=False, inplace=False):
+    def insert(self, loc, column, value, allow_duplicates=False,
+               inplace=False):
         """Insert column into DataFrame at specified location.
 
         If `allow_duplicates` is False, raises Exception if column
@@ -396,8 +393,10 @@ class core(object):
         inplace : bool
         """
         if inplace:
-            self.frame.insert(loc, column, value, allow_duplicates=allow_duplicates)
+            self.frame.insert(loc, column,
+                              value, allow_duplicates=allow_duplicates)
         else:
             output = self.copy()
-            output.frame.insert(loc, column, value, allow_duplicates=allow_duplicates)
+            output.frame.insert(loc, column,
+                                value, allow_duplicates=allow_duplicates)
             return output

@@ -1,7 +1,7 @@
 Cartesian
 =================================
 
-.. currentmodule:: chemcoord.xyz_functions
+.. currentmodule:: chemcoord
 
 .. autoclass:: Cartesian
 
