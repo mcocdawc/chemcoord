@@ -17,16 +17,16 @@ import subprocess
 import os
 import tempfile
 import warnings
-from . import _common_class
-from ._exceptions import PhysicalMeaningError
-from . import utilities
-from . import zmat_functions
-from . import xyz_functions
-from . import export
-from .configuration import settings
 import io
 from io import open
 import re
+from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord.algebra_utilities import utilities
+from chemcoord.internal_coordinates import zmat_functions
+from chemcoord.internal_coordinates.zmat_class_main import Zmat
+from chemcoord.cartesian_coordinates import xyz_functions
+from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
+from chemcoord.configuration.configuration import settings
 
 # TODO Change perhaps the _give_displacement representation to np.array
 # and rely on same indices.

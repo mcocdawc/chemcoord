@@ -20,8 +20,7 @@ from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.algebra_utilities import utilities
 from chemcoord.cartesian_coordinates.cartesian_class_core import Cartesian_core
-from chemcoord.zmat import zmat_functions
-from chemcoord.zmat.Zmat import Zmat
+from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from chemcoord.configuration.configuration import settings
 import io
 from io import open

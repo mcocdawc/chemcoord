@@ -18,8 +18,6 @@ import tempfile
 import warnings
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
-from chemcoord.zmat import zmat_functions
-from chemcoord.zmat.Zmat import Zmat
 from chemcoord import export
 from chemcoord.configuration.configuration import settings
 import io
@@ -27,7 +25,6 @@ from io import open
 import re
 
 
-@export
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     """View your molecule or list of molecules.
 
@@ -79,7 +76,6 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
         Thread(target=open, args=(i,)).start()
 
 
-@export
 def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
     """Write the coordinates into a file.
 
@@ -186,7 +182,6 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
         raise NotImplementedError('The desired filetype is not implemented')
 
 
-@export
 def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
     """Read a file of coordinate information.
 
@@ -212,7 +207,6 @@ def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
     return molecule
 
 
-@export
 def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
     """Compare two molecules for numerical equality.
 
@@ -245,7 +239,6 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
         return False
 
 
-@export
 def is_Cartesian(possible_Cartesian):
     """Tests, if given instance is a Cartesian.
 

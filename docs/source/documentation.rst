@@ -8,8 +8,8 @@ Contents:
 .. toctree::
     :maxdepth: 1
 
-    xyz_functions
-    utilities
-    zmat_functions
-    vibration
-    configuration
+    cartesian_coordinates
+#    utilities
+#    internal_coordinates
+#    vibration
+#    configuration

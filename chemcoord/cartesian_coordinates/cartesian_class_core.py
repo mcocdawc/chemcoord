@@ -19,8 +19,6 @@ import warnings
 from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.algebra_utilities import utilities
-from chemcoord.zmat import zmat_functions
-from chemcoord.zmat.Zmat import Zmat
 from chemcoord.configuration.configuration import settings
 import io
 from io import open

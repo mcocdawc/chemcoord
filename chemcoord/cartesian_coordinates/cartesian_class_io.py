@@ -241,7 +241,7 @@ class Cartesian_io(Cartesian_core):
             TEMP_DIR = tempfile.gettempdir()
 
         def give_filename(i):
-            filename = 'ChemCoord_list_' + str(i) + '.xyz'
+            filename = 'ChemCoord_' + str(i) + '.xyz'
             return os.path.join(TEMP_DIR, filename)
 
         i = 1
