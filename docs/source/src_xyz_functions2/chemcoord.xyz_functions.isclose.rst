@@ -1,5 +1,5 @@
-chemcoord\.xyz\_functions\.isclose
-==================================
+chemcoord.xyz_functions.isclose
+===============================
 
 .. currentmodule:: chemcoord.xyz_functions
 

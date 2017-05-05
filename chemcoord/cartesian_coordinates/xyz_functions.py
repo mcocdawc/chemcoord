@@ -25,6 +25,7 @@ from io import open
 import re
 
 
+@export
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     """View your molecule or list of molecules.
 
@@ -62,7 +63,7 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
 
         write(molecule, give_filename(i), filetype='molden')
 
-        def open(i):
+        def open_file(i):
             """Open file and close after being finished."""
             try:
                 subprocess.check_call([viewer, give_filename(i)])
@@ -73,9 +74,10 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
                     pass
                 else:
                     os.remove(give_filename(i))
-        Thread(target=open, args=(i,)).start()
+        Thread(target=open_file, args=(i,)).start()
 
 
+@export
 def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
     """Write the coordinates into a file.
 
@@ -182,6 +184,7 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
         raise NotImplementedError('The desired filetype is not implemented')
 
 
+@export
 def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
     """Read a file of coordinate information.
 
@@ -207,6 +210,7 @@ def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
     return molecule
 
 
+@export
 def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
     """Compare two molecules for numerical equality.
 
