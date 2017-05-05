@@ -1,6 +1,5 @@
 import configparser
 import os
-import copy
 import warnings
 from warnings import warn
 
