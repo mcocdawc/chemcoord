@@ -15,7 +15,7 @@ from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord._generic_classes._pandas_wrapper import _pandas_wrapper
 from chemcoord.constants import constants
 from chemcoord.algebra_utilities import utilities
-from chemcoord.configuration.configuration import settings
+from chemcoord.configuration import settings
 
 
 class _common_class(_pandas_wrapper):

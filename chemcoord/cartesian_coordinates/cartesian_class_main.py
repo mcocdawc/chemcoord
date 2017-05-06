@@ -22,7 +22,7 @@ from chemcoord.cartesian_coordinates.cartesian_class_io import Cartesian_io
 from chemcoord.cartesian_coordinates.cartesian_class_to_zmat \
     import Cartesian_to_zmat
 from chemcoord import export
-from chemcoord.configuration.configuration import settings
+from chemcoord.configuration import settings
 import io
 from io import open
 import re

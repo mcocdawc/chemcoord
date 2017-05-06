@@ -6,7 +6,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import numpy as np
 import pandas as pd
-from chemcoord.configuration.configuration import settings
+from chemcoord.configuration import settings
 from chemcoord._exceptions import PhysicalMeaningError
 
 

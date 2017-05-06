@@ -1,4 +1,4 @@
-write_configuration_file
+chemcoord.configuration.write_configuration_file
 ================================================
 
 .. currentmodule:: chemcoord.configuration

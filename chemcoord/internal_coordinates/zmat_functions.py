@@ -15,7 +15,7 @@ import math as m
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.algebra_utilities import utilities
 from chemcoord import export
-from chemcoord.configuration.configuration import settings
+from chemcoord.configuration import settings
 # from chemcoord.constants import constants
 
 

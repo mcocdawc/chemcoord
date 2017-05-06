@@ -19,7 +19,7 @@ import warnings
 from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.algebra_utilities import utilities
-from chemcoord.configuration.configuration import settings
+from chemcoord.configuration import settings
 import io
 from io import open
 import re

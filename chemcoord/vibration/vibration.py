@@ -26,7 +26,7 @@ from chemcoord.internal_coordinates import zmat_functions
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from chemcoord.cartesian_coordinates import xyz_functions
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
-from chemcoord.configuration.configuration import settings
+from chemcoord.configuration import settings
 
 # TODO Change perhaps the _give_displacement representation to np.array
 # and rely on same indices.

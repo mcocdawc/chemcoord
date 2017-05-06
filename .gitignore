@@ -47,6 +47,12 @@ nohup.out
 # Pdfs
 *pdf
 
+# Tex auxiliary files
+*aux
+*fdb_latexmk
+*fls
+*log
+
 # ignore molecule files from the Tutorial
 *molden
 *xyz

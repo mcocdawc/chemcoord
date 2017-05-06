@@ -21,7 +21,7 @@ from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.algebra_utilities import utilities
 from chemcoord.cartesian_coordinates.cartesian_class_core import Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
-from chemcoord.configuration.configuration import settings
+from chemcoord.configuration import settings
 import io
 from io import open
 import re

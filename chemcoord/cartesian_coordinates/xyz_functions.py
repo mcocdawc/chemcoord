@@ -19,7 +19,7 @@ import warnings
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord import export
-from chemcoord.configuration.configuration import settings
+from chemcoord.configuration import settings
 import io
 from io import open
 import re

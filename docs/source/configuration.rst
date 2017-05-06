@@ -26,7 +26,7 @@ The possible settings and their defaults are::
 
 
 .. autosummary::
-    :toctree: CONFIGURATION
+    :toctree: src_configuration
 
     ~configuration.write_configuration_file
     ~configuration.read_configuration_file

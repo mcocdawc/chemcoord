@@ -16,8 +16,8 @@ from chemcoord.cartesian_coordinates import xyz_functions
 from chemcoord.cartesian_coordinates import xyz_functions as pew
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from chemcoord.internal_coordinates import zmat_functions
-from chemcoord.configuration import configuration
-from chemcoord.configuration.configuration import settings
+from chemcoord import configuration
+from chemcoord.configuration import settings
 from chemcoord.vibration import vibration
 
 

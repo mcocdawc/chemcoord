@@ -9,7 +9,5 @@ Contents:
     :maxdepth: 1
 
     cartesian_coordinates
-#    utilities
-#    internal_coordinates
-#    vibration
-#    configuration
+    configuration
+    internal_coordinates
