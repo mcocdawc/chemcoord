@@ -11,31 +11,11 @@ except ImportError:
 import numpy as np
 import pandas as pd
 import collections
-from threading import Thread
-import subprocess
-import os
-import tempfile
-import warnings
 from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaningError
-from chemcoord.algebra_utilities import utilities
+from chemcoord.utilities import algebra_utilities
+from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
-import io
-from io import open
-import re
-
-
-def pick(my_set):
-    """Return one element from a set.
-
-    **Do not** make any assumptions about the element to be returned.
-    ``pick`` just returns a random element,
-    could be the same, could be different.
-    """
-    assert type(my_set) is set, 'Pick can be applied only on sets.'
-    x = my_set.pop()
-    my_set.add(x)
-    return x
 
 
 class Cartesian_core(_common_class):
@@ -1091,7 +1071,7 @@ class Cartesian_core(_common_class):
         eigenvectors = eigenvectors[:, sorted_index]
 
         new_basis = eigenvectors
-        new_basis = utilities.orthormalize(new_basis)
+        new_basis = algebra_utilities.orthormalize(new_basis)
         old_basis = np.identity(3)
         Cartesian_mass = self.basistransform(new_basis, old_basis)
         Cartesian_mass = Cartesian_mass - Cartesian_mass.barycenter()
@@ -1117,7 +1097,7 @@ class Cartesian_core(_common_class):
             handed. Besides all involved matrices are transposed
             instead of inverted.
         In some applications this may require the function
-            :func:`utilities.orthonormalize` as a previous step.
+            :func:`algebra_utilities.orthonormalize` as a previous step.
 
         Args:
             old_basis (np.array):
@@ -1290,7 +1270,7 @@ class Cartesian_core(_common_class):
         return env_dict
 
 # TODO still to rewrite
-#        U = utilities.kabsch(location2, location1)
+#        U = algebra_utilities.kabsch(location2, location1)
     def align(self, Cartesian2, ignore_hydrogens=False):
         """Align two Cartesians.
 
@@ -1301,7 +1281,7 @@ class Cartesian_core(_common_class):
         both are centered around their topologic center and
         ``Cartesian2`` is aligned along ``self``.
         Uses the Kabsch algorithm implemented within
-        :func:`~.utilities.kabsch`
+        :func:`~.algebra_utilities.kabsch`
 
         Args:
             Cartesian2 (Cartesian):
@@ -1326,7 +1306,8 @@ class Cartesian_core(_common_class):
             location1 = molecule1.location()
             location2 = molecule2.location()
 
-        molecule2[:, ['x', 'y', 'z']] = utilities.rotate(location2, location1)
+        molecule2[:, ['x', 'y', 'z']] = algebra_utilities.rotate(location2,
+                                                                 location1)
         return molecule1, molecule2
 
     def make_similar(self, Cartesian2, follow_bonds=4, prealign=True):
@@ -1383,7 +1364,7 @@ class Cartesian_core(_common_class):
                     if index_on_molecule2 in index_dic.keys():
                         location_of_old_atom1 = molecule1.location(
                             index_dic[index_on_molecule2])
-                        distance_old = utilities.distance(
+                        distance_old = algebra_utilities.distance(
                             location_of_old_atom1, location_of_atom2)
                         if distance_new < distance_old:
                             indexlist1.append(index_dic[index_on_molecule2])

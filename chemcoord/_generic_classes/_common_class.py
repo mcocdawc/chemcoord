@@ -4,18 +4,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 import six
-try:
-    # import itertools.imap as map
-    import itertools.izip as zip
-except ImportError:
-    pass
-import numpy as np
 import pandas as pd
-from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord._generic_classes._pandas_wrapper import _pandas_wrapper
 from chemcoord.constants import constants
-from chemcoord.algebra_utilities import utilities
-from chemcoord.configuration import settings
 
 
 class _common_class(_pandas_wrapper):

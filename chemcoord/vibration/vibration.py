@@ -4,25 +4,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 import six
-try:
-    # import itertools.imap as map
-    import itertools.izip as zip
-except ImportError:
-    pass
 import numpy as np
-import pandas as pd
-import collections
-from threading import Thread
-import subprocess
-import os
-import tempfile
 import warnings
-import io
-from io import open
 import re
 from chemcoord._exceptions import PhysicalMeaningError
-from chemcoord.algebra_utilities import utilities
-from chemcoord.internal_coordinates import zmat_functions
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from chemcoord.cartesian_coordinates import xyz_functions
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian

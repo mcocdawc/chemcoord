@@ -1,44 +1,9 @@
-from __future__ import with_statement
-from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    # import itertools.imap as map
-    import itertools.izip as zip
-except ImportError:
-    pass
-import numpy as np
-import pandas as pd
-import collections
-from threading import Thread
-import subprocess
-import os
-import tempfile
-import warnings
-from chemcoord._exceptions import PhysicalMeaningError
-from chemcoord.algebra_utilities import utilities
+
 from chemcoord.cartesian_coordinates.cartesian_class_io import Cartesian_io
 from chemcoord.cartesian_coordinates.cartesian_class_to_zmat \
     import Cartesian_to_zmat
-from chemcoord import export
-from chemcoord.configuration import settings
-import io
-from io import open
-import re
-
-
-def pick(my_set):
-    """Return one element from a set.
-
-    **Do not** make any assumptions about the element to be returned.
-    ``pick`` just returns a random element,
-    could be the same, could be different.
-    """
-    assert type(my_set) is set, 'Pick can be applied only on sets.'
-    x = my_set.pop()
-    my_set.add(x)
-    return x
 
 
 class Cartesian(Cartesian_io, Cartesian_to_zmat):

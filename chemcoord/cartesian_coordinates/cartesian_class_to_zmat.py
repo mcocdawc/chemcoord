@@ -4,40 +4,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 try:
-    # import itertools.imap as map
     import itertools.izip as zip
 except ImportError:
     pass
 import numpy as np
 import pandas as pd
-import collections
-from threading import Thread
-import subprocess
-import os
-import tempfile
-import warnings
-from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaningError
-from chemcoord.algebra_utilities import utilities
 from chemcoord.cartesian_coordinates.cartesian_class_core import Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
+from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
-import io
-from io import open
-import re
-
-
-def pick(my_set):
-    """Return one element from a set.
-
-    **Do not** make any assumptions about the element to be returned.
-    ``pick`` just returns a random element,
-    could be the same, could be different.
-    """
-    assert type(my_set) is set, 'Pick can be applied only on sets.'
-    x = my_set.pop()
-    my_set.add(x)
-    return x
 
 
 class Cartesian_to_zmat(Cartesian_core):
@@ -369,7 +345,7 @@ class Cartesian_to_zmat(Cartesian_core):
         lines[:3] = False
         zmat_frame.loc[zmat_frame['dihedral'].isnull() & lines, 'dihedral'] = 0
 
-        return zmat_functions.Zmat(zmat_frame)
+        return Zmat(zmat_frame)
 
     def to_zmat(
             self,

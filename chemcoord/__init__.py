@@ -10,7 +10,7 @@ def export(func):
         __all__ = [func.__name__]
     return func
 
-from chemcoord.algebra_utilities import utilities
+from chemcoord.utilities import algebra_utilities
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord.cartesian_coordinates import xyz_functions
 from chemcoord.cartesian_coordinates import xyz_functions as pew
