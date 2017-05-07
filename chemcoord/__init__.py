@@ -10,15 +10,18 @@ def export(func):
         __all__ = [func.__name__]
     return func
 
-from chemcoord.utilities import algebra_utilities
+import chemcoord.utilities.algebra_utilities
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
-from chemcoord.cartesian_coordinates import xyz_functions
-from chemcoord.cartesian_coordinates import xyz_functions as pew
+import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
-from chemcoord.internal_coordinates import zmat_functions
-from chemcoord import configuration
+import chemcoord.internal_coordinates.zmat_functions as zmat_functions
+import chemcoord.configuration
 from chemcoord.configuration import settings
 from chemcoord.vibration import vibration
+
+import sys
+sys.modules['chemcoord.xyz_functions'] = xyz_functions
+sys.modules['chemcoord.zmat_functions'] = zmat_functions
 
 
 # globals()['xyz_functions'] = cartesian_coordinates.xyz_functions

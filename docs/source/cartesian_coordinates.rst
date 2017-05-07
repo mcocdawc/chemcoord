@@ -71,29 +71,3 @@ Here I use::
     ~xyz_functions.read
     ~xyz_functions.write
     ~xyz_functions.view
-
-
-chemcoord.pew
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Here I use::
-
-  .. currentmodule:: chemcoord
-
-  .. autosummary::
-      :toctree: src_xyz_functions3
-
-      ~pew.isclose
-      ~pew.read
-      ~pew.write
-      ~pew.view
-
-
-.. currentmodule:: chemcoord
-
-.. autosummary::
-    :toctree: src_xyz_functions3
-
-    ~pew.isclose
-    ~pew.read
-    ~pew.write
-    ~pew.view
