@@ -264,7 +264,7 @@ def give_distortions(vib, screen_modes=True, step_size=1e-4):
     """Returns a dictionary of distorted structures for each mode.
 
     Args:
-        vib (:class:`ase.vibration.Vibrations`):
+        vib (:class:`ase.vibrations.Vibrations`):
         screen_modes (bool): Translations and rotations are filtered out.
         step_size (float): Defines how far to follow the mode in Cartesian
             coordinates in each direction to make the distortions that will

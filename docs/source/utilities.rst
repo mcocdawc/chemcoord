@@ -1,11 +1,13 @@
-Utilities for euclidean geometry
-================================
+Utilities
+=========
 
+Algebra Utilities
+------------------
 
-.. currentmodule:: chemcoord.utilities
+.. currentmodule:: chemcoord.utilities.algebra_utilities
 
 .. autosummary::
-    :toctree: Utilities
+    :toctree: src_algebra_utilities
 
     rotation_matrix
     give_angle
@@ -13,3 +15,14 @@ Utilities for euclidean geometry
     normalize
     distance
     kabsch
+
+
+Set Utilities
+------------------
+
+.. currentmodule:: chemcoord.utilities.set_utilities
+
+.. autosummary::
+    :toctree: src_set_utilities
+
+    pick

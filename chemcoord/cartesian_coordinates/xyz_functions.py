@@ -83,14 +83,15 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
 
     .. note:: Since it permamently writes a file, this function is
         strictly speaking **not sideeffect free**.
-        The frame to be written is of course not changed.
+        The :class:`~chemcoord.Cartesian`
+        to be written is of course not changed.
 
     Args:
-        to_be_written (Cartesian): This can be a :class:`Cartesian` for
-            xyz files
-            and a :class:`list` of :class:`Cartesian` for molden files.
+        to_be_written (Cartesian): This can be
+            a :class:`~chemcoord.Cartesian` for xyz files or
+            a :class:`list` of :class:`~chemcoord.Cartesian` for molden files.
         outputfile (str):
-        sort_index (bool): If sort_index is true, the Cartesian
+        sort_index (bool): If sort_index is true, the :class:`~chemcoord.Cartesian`
             is sorted by the index before writing.
         filetype (str): The filetype to be used.
             The default is auto.
@@ -188,10 +189,11 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
 def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
     """Read a file of coordinate information.
 
-    .. note:: This function calls in the background :func:`Cartesian.read`.
-        If you inherited from :class:`Cartesian` to tailor it for your project,
+    .. note:: This function calls in the background
+        :func:`chemcoord.Cartesian.read`.
+        If you inherited from :class:`~chemcoord.Cartesian`
+        to tailor it for your project,
         you have to use this method as a constructor.
-        Otherwise you can choose.
 
     Args:
         inputfile (str):
@@ -221,9 +223,9 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
             prealigned along their principal axes of inertia and moved to their
             barycenters before comparing.
         rtol (float): Relative tolerance for the numerical equality comparison
-            look into :func:`numpy.isclose` for furter explanation.
+            look into :func:`numpy.isclose` for further explanation.
         atol (float): Relative tolerance for the numerical equality comparison
-            look into :func:`numpy.isclose` for furter explanation.
+            look into :func:`numpy.isclose` for further explanation.
 
     Returns:
         bool:

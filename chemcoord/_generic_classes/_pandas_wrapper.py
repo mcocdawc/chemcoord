@@ -103,7 +103,7 @@ class _pandas_wrapper(object):
 
         Returns
         -------
-        sorted_obj : Cartesian
+        sorted_obj : :class:`self.__class__`
         """
         if inplace:
                 self.frame.sort_values(
@@ -144,7 +144,7 @@ class _pandas_wrapper(object):
 
         Returns
         -------
-        sorted_obj : Cartesian
+        sorted_obj : :class:`self.__class__`
         """
         if inplace:
             self.frame.sort_index(
@@ -228,7 +228,7 @@ class _pandas_wrapper(object):
 
         Returns
         -------
-        filled : Cartesian
+        filled : :class:`self.__class__`
 
         Raises
         ------
@@ -293,7 +293,7 @@ class _pandas_wrapper(object):
 
         Returns
         -------
-        Cartesian : Cartesian
+        reindexed_obj : :class:`self.__class__`
         """
 
         if drop is True:
@@ -333,7 +333,7 @@ class _pandas_wrapper(object):
 
         Returns
         -------
-        appended : Cartesian
+        appended : :class:`self.__class__`
 
         Notes
         -----

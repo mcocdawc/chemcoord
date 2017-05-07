@@ -11,3 +11,5 @@ Contents:
     cartesian_coordinates
     configuration
     internal_coordinates
+    utilities
+    vibration
