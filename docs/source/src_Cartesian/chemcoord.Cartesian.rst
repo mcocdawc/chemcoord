@@ -5,7 +5,7 @@ chemcoord\.Cartesian
 
 .. autoclass:: Cartesian
 
-   
+
     .. rubric:: Chemical Methods
 
     .. autosummary::
@@ -51,8 +51,12 @@ chemcoord\.Cartesian
          ~Cartesian.append
          ~Cartesian.insert
          ~Cartesian.sort_values
+         ~Cartesian.determine_filetype
          ~Cartesian.write
+         ~Cartesian.write_xyz
          ~Cartesian.read
+         ~Cartesian.read_xyz
+         ~Cartesian.read_molden
          ~Cartesian.view
 
 
@@ -68,14 +72,12 @@ chemcoord\.Cartesian
          ~Cartesian._clean_dihedral
          ~Cartesian._build_zmat
 
-   
-   
+
+
    .. rubric:: Attributes
 
    .. autosummary::
          :toctree: src_Cartesian
-   
+
       ~Cartesian.columns
       ~Cartesian.index
-   
-   

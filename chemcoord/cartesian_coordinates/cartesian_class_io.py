@@ -32,37 +32,67 @@ class Cartesian_io(Cartesian_core):
     """
     @staticmethod
     def determine_filetype(filepath):
+        """Determine filetype
+
+        The charakters after the last point are interpreted as the filetype.
+
+        Args:
+            filepath (str):
+
+        Returns:
+            str:
+        """
         filetype = re.split('\.', filepath)[-1]
         return filetype
 
-    def write(self, outputfile, sort_index=True, filetype='xyz'):
-        """Write the Cartesian into a file.
+    def write(self, outputfile=None, filetype='xyz', **kwargs):
+        """Write Cartesian into a file.
+
+        This is the generic function for file writing.
+        Depending on ``filetype`` the possible keyword arguments
+        may differ because different writing methods are used.
+        The following filetypes are implemented:
+
+        ``'auto'``
+            The method :meth:`~Cartesian.determine_filetype()` is used
+            to guess filetype.
+        ``'xyz'``
+            Uses :meth:`~Cartesian.write_xyz` to write file.
 
         .. note:: Since it permamently writes a file, this function
             is strictly speaking **not sideeffect free**.
-            The frame to be written is of course not changed.
+            The :class:`~chemcoord.Cartesian`
+            to be written is of course not changed.
 
         Args:
-            outputfile (str):
-            sort_index (bool): If sort_index is true, the Cartesian
-                is sorted by the index before writing.
-            filetype (str): The filetype to be used.
-                The default is xyz.
-                Supported filetypes are: 'xyz'
+            outputfile (str): If ``'outputfile'`` is ``None``,
+                the file is not written, but the text/bytestream is returned.
+            filetype (str):
 
         Returns:
-            None: None
+            Depending :
         """
         if filetype == 'auto':
             filetype = self.determine_filetype(outputfile)
 
         if filetype == 'xyz':
-            self.write_xyz(outputfile, sort_index)
+            self.write_xyz(outputfile, **kwargs)
         else:
             error_string = 'The desired filetype is not implemented'
             raise NotImplementedError(error_string)
 
-    def write_xyz(self, outputfile, sort_index):
+    # TODO outputfile is None
+    def write_xyz(self, outputfile, sort_index=True):
+        """Write xyz-file
+
+        Args:
+            outputfile (str):
+            pythonic_index (bool):
+            get_bonds (bool):
+
+        Returns:
+            Depending :
+        """
         frame = self.frame[['atom', 'x', 'y', 'z']].copy()
         if sort_index:
             frame = frame.sort_index()
@@ -92,30 +122,26 @@ class Cartesian_io(Cartesian_core):
     def read(cls, inputfile, filetype='auto', **kwargs):
         """Read a file of coordinate information.
 
-        +------------+------------+-----------+
-        | Header 1   | Header 2   | Header 3  |
-        +============+============+===========+
-        | body row 1 | column 2   | column 3  |
-        +------------+------------+-----------+
-        | body row 2 | Cells may span columns.|
-        +------------+------------+-----------+
-        | body row 3 | Cells may  | - Cells   |
-        +------------+ span rows. | - contain |
-        | body row 4 |            | - blocks. |
-        +------------+------------+-----------+
+        This is the generic function for file reading.
+        Depending on ``filetype`` the possible keyword arguments
+        and return types may differ because different
+        parsing methods are used.
+        The following filetypes are implemented:
+
+        ``'auto'``
+            The method :meth:`~Cartesian.determine_filetype()` is used
+            to guess filetype.
+        ``'xyz'``
+            Uses :meth:`~Cartesian.read_xyz` to read file.
+        ``'molden'``
+            Uses :meth:`~Cartesian.read_molden` to read file.
 
         Args:
             inputfile (str):
-            pythonic_index (bool):
-            filetype (str): The filetype to be read from.
-                The default is ``'auto'``.
-                Supported filetypes are: xyz and molden.
-                With the option 'auto'  ``determine_filetype()`` is used.
-                the charakters after the last point as filetype.
+            filetype (str):
 
         Returns:
-            Cartesian: Depending on the type of file returns a Cartesian,
-            or a list of Cartesians.
+            depending : Depending on type of file returns different objects.
         """
         if filetype == 'auto':
             filetype = cls.determine_filetype(inputfile)
@@ -131,6 +157,18 @@ class Cartesian_io(Cartesian_core):
 
     @classmethod
     def read_xyz(cls, inputfile, pythonic_index=False, get_bonds=True):
+        """Read a file of coordinate information.
+
+        Reads xyz-files.
+
+        Args:
+            inputfile (str):
+            pythonic_index (bool):
+            get_bonds (bool):
+
+        Returns:
+            Cartesian:
+        """
         frame = pd.read_table(
             inputfile,
             skiprows=2,
