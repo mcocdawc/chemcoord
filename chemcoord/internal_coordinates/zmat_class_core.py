@@ -17,6 +17,7 @@ from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.configuration import settings
 
 
+# TODO implement is_physical
 class Zmat_core(_common_class):
     """The main class for dealing with internal coordinates.
     """

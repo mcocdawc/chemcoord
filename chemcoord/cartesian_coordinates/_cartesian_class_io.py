@@ -10,7 +10,7 @@ import subprocess
 import os
 import tempfile
 import warnings
-from chemcoord.cartesian_coordinates.cartesian_class_core import Cartesian_core
+from chemcoord.cartesian_coordinates._cartesian_class_core import Cartesian_core
 from chemcoord.configuration import settings
 import io
 from io import open
@@ -82,7 +82,7 @@ class Cartesian_io(Cartesian_core):
             raise NotImplementedError(error_string)
 
     # TODO outputfile is None
-    def write_xyz(self, outputfile, sort_index=True):
+    def write_xyz(self, outputfile=None, sort_index=True):
         """Write xyz-file
 
         Args:
@@ -93,30 +93,44 @@ class Cartesian_io(Cartesian_core):
         Returns:
             Depending :
         """
-        frame = self.frame[['atom', 'x', 'y', 'z']].copy()
-        if sort_index:
-            frame = frame.sort_index()
-            n_atoms = frame.shape[0]
-            with open(outputfile, mode='w') as f:
-                f.write(str(n_atoms) + 2 * '\n')
-            frame.to_csv(
-                outputfile,
-                sep=str(' '),
-                index=False,
-                header=False,
-                mode='a')
-        else:
-            frame = frame.sort_values(by='atom')
-            n_atoms = frame.shape[0]
-            with open(outputfile, mode='w') as f:
-                f.write(str(n_atoms) + 2 * '\n')
-            frame.to_csv(
-                outputfile,
-                sep=str(' '),
-                # https://github.com/pydata/pandas/issues/6035
-                index=False,
-                header=False,
-                mode='a')
+        create_string = '{n}\n{message}\n{alignment}{frame_string}'.format
+
+        message = 'Created by chemcoord \
+http://chemcoord.readthedocs.io/en/latest/'
+        frame_string = self.frame.to_string(header=False, index=False)
+
+        def give_alignment_space(self):
+            space = ' ' * (self[:, 'atom'].str.len().max()
+                           - len(self.frame.iloc[0, 0]))
+            return space
+
+        output = create_string(n=self.n_atoms, message=message,
+                               alignment=give_alignment_space(self),
+                               frame_string=frame_string)
+        return output
+        #
+        # if sort_index:
+        #     frame = frame.sort_index()
+        #     n_atoms = frame.shape[0]
+        #     with open(outputfile, mode='w') as f:
+        #         f.write(str(n_atoms) + 2 * '\n')
+        #     frame.to_string(
+        #         outputfile,
+        #         index=False,
+        #         header=False,
+        #         mode='a')
+        # else:
+        #     frame = frame.sort_values(by='atom')
+        #     n_atoms = frame.shape[0]
+        #     with open(outputfile, mode='w') as f:
+        #         f.write(str(n_atoms) + 2 * '\n')
+        #     frame.to_csv(
+        #         outputfile,
+        #         sep=str(' '),
+        #         # https://github.com/pydata/pandas/issues/6035
+        #         index=False,
+        #         header=False,
+        #         mode='a')
 
     @classmethod
     def read(cls, inputfile, filetype='auto', **kwargs):

@@ -44,6 +44,14 @@ class _pandas_wrapper(object):
     def columns(self, value):
         self.frame.columns = value
 
+    @property
+    def shape(self):
+        return self.frame.shape
+
+    @property
+    def n_atoms(self):
+        return self.shape[0]
+
     def __repr__(self):
         return self.frame.__repr__()
 
@@ -53,17 +61,18 @@ class _pandas_wrapper(object):
         except AttributeError:
             pass
 
-    def _is_physical(self, columns):
-        try:
-            assert type(columns) is not str
-            columns = set(columns)
-        except (TypeError, AssertionError):
-            columns = set([columns])
-
-        is_cartesian = {'atom', 'x', 'y', 'z'} <= columns
-        is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle',
-                   'dihedral_with', 'dihedral'} <= columns
-        return (is_cartesian or is_zmat)
+    # TODO delete
+    # def _is_physical(self, columns):
+    #     try:
+    #         assert type(columns) is not str
+    #         columns = set(columns)
+    #     except (TypeError, AssertionError):
+    #         columns = set([columns])
+    #
+    #     is_cartesian = {'atom', 'x', 'y', 'z'} <= columns
+    #     is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle',
+    #                'dihedral_with', 'dihedral'} <= columns
+    #     return (is_cartesian or is_zmat)
 
     # TODO delete
     def __getitem__(self, key):

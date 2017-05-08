@@ -11,14 +11,18 @@ except ImportError:
 import numpy as np
 import pandas as pd
 import collections
+import warnings
 from chemcoord._generic_classes._common_class import _common_class
+import chemcoord.cartesian_coordinates._indexers_for_cartesian_class as indexers
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
 
 
+# TODO implement is_physical
 class Cartesian_core(_common_class):
+
     def __init__(self, init):
         """How to initialize a Cartesian instance.
 
@@ -35,28 +39,66 @@ class Cartesian_core(_common_class):
 
         except AttributeError:
             # Create from pd.DataFrame
-            if not self._is_physical(init.columns):
+            if not self._is_physical(init):
                 error_string = 'There are columns missing for a \
                                 meaningful description of a molecule'
                 raise PhysicalMeaningError(error_string)
             self.frame = init.copy()
-            self.shape = self.frame.shape
-            self.n_atoms = self.shape[0]
             self.metadata = {}
             """Test"""
             self._metadata = {}
 
+        self.iloc = indexers._ILoc(self)
+        self.loc = indexers._Loc(self)
+
+    @staticmethod
+    def _is_physical(frame):
+        """Test if a given DataFrame may represent a molecule.
+        """
+        return {'atom', 'x', 'y', 'z'} <= set(frame.columns)
+
+    # new method
+    # def __getitem__(self, key):
+    #     # overwrites the method defined in _pandas_wrapper
+    #     if isinstance(key, tuple):
+    #         selected = self.frame[key[0], key[1]]
+    #     else:
+    #         selected = self.frame[key]
+    #
+    #     if isinstance(selected, pd.Series):
+    #         return selected
+    #     elif self._is_physical(selected):
+    #         molecule = self.__class__(selected)
+    #         # NOTE here is the difference to the _pandas_wrapper definition
+    #         # TODO make clear in documentation that metadata is an
+    #         # alias/pointer
+    #         # TODO persistent attributes have to be inserted here
+    #         molecule.metadata = self.metadata.copy()
+    #         molecule._metadata = self.metadata.copy()
+    #         keys_not_to_keep = [
+    #             'bond_dict'   # You could end up with loose ends
+    #             ]
+    #         for key in keys_not_to_keep:
+    #             try:
+    #                 molecule._metadata.pop(key)
+    #             except KeyError:
+    #                 pass
+    #         return molecule
+    #     else:
+    #         return selected
+
+    # old method
     def __getitem__(self, key):
         # overwrites the method defined in _pandas_wrapper
         frame = self.frame.loc[key[0], key[1]]
         try:
-            if self._is_physical(frame.columns):
+            if self._is_physical(frame):
                 molecule = self.__class__(frame)
                 # NOTE here is the difference to the _pandas_wrapper definition
                 # TODO make clear in documentation that metadata is an
                 # alias/pointer
                 # TODO persistent attributes have to be inserted here
-                molecule.metadata = self.metadata
+                molecule.metadata = self.metadata.copy()
                 molecule._metadata = self.metadata.copy()
                 keys_not_to_keep = [
                     'bond_dict'   # You could end up with loose ends

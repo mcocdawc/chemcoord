@@ -10,7 +10,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 from chemcoord._exceptions import PhysicalMeaningError
-from chemcoord.cartesian_coordinates.cartesian_class_core import Cartesian_core
+from chemcoord.cartesian_coordinates._cartesian_class_core import Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
