@@ -10,7 +10,8 @@ import subprocess
 import os
 import tempfile
 import warnings
-from chemcoord.cartesian_coordinates._cartesian_class_core import Cartesian_core
+from chemcoord.cartesian_coordinates._cartesian_class_core \
+    import Cartesian_core
 from chemcoord.configuration import settings
 import io
 from io import open
@@ -82,22 +83,34 @@ class Cartesian_io(Cartesian_core):
             raise NotImplementedError(error_string)
 
     # TODO outputfile is None
-    def write_xyz(self, outputfile=None, sort_index=True):
+    def write_xyz(self, outputfile=None, sort_index=True,
+                  index=False, header=False, float_format=None):
         """Write xyz-file
 
         Args:
-            outputfile (str):
-            pythonic_index (bool):
-            get_bonds (bool):
+            outputfile (str): If ``'outputfile'`` is ``None``,
+                the file is not written, but the formatted string is returned.
+            sort_index (bool): If sort_index is true, the
+                :class:`~chemcoord.Cartesian`
+                is sorted by the index before writing.
+            float_format (one-parameter function): Formatter function
+                to apply to columns’ elements if they are floats,
+                default None.
+                The result of this function must be a unicode string.
 
         Returns:
-            Depending :
+            string : If ``outputfile`` is given ``None`` is returned.
         """
         create_string = '{n}\n{message}\n{alignment}{frame_string}'.format
 
+        # TODO automatically insert last stable version
         message = 'Created by chemcoord \
 http://chemcoord.readthedocs.io/en/latest/'
-        frame_string = self.frame.to_string(header=False, index=False)
+
+        frame = self.sort_index().frame if sort_index else self.frame.copy()
+
+        frame_string = frame.to_string(header=header, index=index,
+                                       float_format=float_format)
 
         def give_alignment_space(self):
             space = ' ' * (self[:, 'atom'].str.len().max()
@@ -107,30 +120,12 @@ http://chemcoord.readthedocs.io/en/latest/'
         output = create_string(n=self.n_atoms, message=message,
                                alignment=give_alignment_space(self),
                                frame_string=frame_string)
-        return output
-        #
-        # if sort_index:
-        #     frame = frame.sort_index()
-        #     n_atoms = frame.shape[0]
-        #     with open(outputfile, mode='w') as f:
-        #         f.write(str(n_atoms) + 2 * '\n')
-        #     frame.to_string(
-        #         outputfile,
-        #         index=False,
-        #         header=False,
-        #         mode='a')
-        # else:
-        #     frame = frame.sort_values(by='atom')
-        #     n_atoms = frame.shape[0]
-        #     with open(outputfile, mode='w') as f:
-        #         f.write(str(n_atoms) + 2 * '\n')
-        #     frame.to_csv(
-        #         outputfile,
-        #         sep=str(' '),
-        #         # https://github.com/pydata/pandas/issues/6035
-        #         index=False,
-        #         header=False,
-        #         mode='a')
+
+        if outputfile is not None:
+            with open(outputfile, mode='w') as f:
+                f.write(output)
+        else:
+            return output
 
     @classmethod
     def read(cls, inputfile, filetype='auto', **kwargs):

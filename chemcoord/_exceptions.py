@@ -5,3 +5,7 @@ class PhysicalMeaningError(Exception):
 
     def __str__(self):
         return repr(self.parameter)
+
+
+class IllegalArgumentCombination(ValueError):
+    pass

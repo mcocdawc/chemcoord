@@ -52,10 +52,13 @@ class Cartesian_core(_common_class):
         self.loc = indexers._Loc(self)
 
     @staticmethod
-    def _is_physical(frame):
-        """Test if a given DataFrame may represent a molecule.
+    def _is_physical(x):
+        """Test if a given input may represent a molecule.
         """
-        return {'atom', 'x', 'y', 'z'} <= set(frame.columns)
+        if isinstance(x, pd.DataFrame):
+            return {'atom', 'x', 'y', 'z'} <= set(x.columns)
+        else:
+            return False
 
     # new method
     # def __getitem__(self, key):
@@ -89,34 +92,16 @@ class Cartesian_core(_common_class):
 
     # old method
     def __getitem__(self, key):
-        # overwrites the method defined in _pandas_wrapper
-        frame = self.frame.loc[key[0], key[1]]
-        try:
-            if self._is_physical(frame):
-                molecule = self.__class__(frame)
-                # NOTE here is the difference to the _pandas_wrapper definition
-                # TODO make clear in documentation that metadata is an
-                # alias/pointer
-                # TODO persistent attributes have to be inserted here
-                molecule.metadata = self.metadata.copy()
-                molecule._metadata = self.metadata.copy()
-                keys_not_to_keep = [
-                    'bond_dict'   # You could end up with loose ends
-                    ]
-                for key in keys_not_to_keep:
-                    try:
-                        molecule._metadata.pop(key)
-                    except KeyError:
-                        pass
-                return molecule
-            else:
-                return frame
-        except AttributeError:
-            # A series and not a DataFrame was returned
-            return frame
+        if isinstance(key, tuple):
+            return self.loc[key[0], key[1]]
+        else:
+            return self.loc[key]
 
     def __setitem__(self, key, value):
-        self.frame.loc[key[0], key[1]] = value
+        if isinstance(key, tuple):
+            self.loc[key[0], key[1]] = value
+        else:
+            self.loc[key] = value
 
     def copy(self):
         molecule = self.__class__(self.frame)

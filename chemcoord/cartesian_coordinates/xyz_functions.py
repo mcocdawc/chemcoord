@@ -16,7 +16,7 @@ import subprocess
 import os
 import tempfile
 import warnings
-from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord._exceptions import PhysicalMeaningError, IllegalArgumentCombination
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord import export
 from chemcoord.configuration import settings
@@ -77,8 +77,79 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
         Thread(target=open_file, args=(i,)).start()
 
 
+# replace
+def _determine_filetype(filepath):
+    """Determine filetype from filepath
+
+    The charakters after the last point are interpreted as the filetype.
+
+    Args:
+        filepath (str):
+
+    Returns:
+        str:
+    """
+    filetype = re.split('\.', filepath)[-1]
+    return filetype
+
+
+def _give_possible_filetypes(to_be_written):
+    """Determine possible filetypes for object
+
+
+    Determine possible filetypes for writing the ``to_be_written``
+    object.
+
+    The charakters after the last point are interpreted as the filetype.
+
+    :class:`~chemcoord.Cartesian`
+        Possible filetypes are ``{'xyz'}``
+
+    ``list_like_class``
+        Possible filetypes are ``{'molden'}``
+
+    Args:
+        to_be_written :
+
+    Returns:
+        set: A set of strings encoding the filetypes.
+    """
+    if isinstance(to_be_written, Cartesian):
+        possible_filetypes = set(['xyz'])
+    elif pd.api.types.is_list_like(to_be_written):
+        possible_filetypes = set(['molden'])
+    return possible_filetypes
+
+
+def _give_default_filetypes(to_be_written):
+    """Determine possible filetypes for object
+
+
+    Determine possible filetypes for writing the ``to_be_written``
+    object.
+
+    The charakters after the last point are interpreted as the filetype.
+
+    :class:`~chemcoord.Cartesian`
+        Possible filetypes are ``{'xyz'}``
+
+    ``list_like_class``
+        Possible filetypes are ``{'molden'}``
+
+    Args:
+        to_be_written :
+
+    Returns:
+        set: A set of strings encoding the filetypes.
+    """
+    if isinstance(to_be_written, Cartesian):
+        return 'xyz'
+    elif pd.api.types.is_list_like(to_be_written):
+        return 'molden'
+
+
 @export
-def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
+def write(to_be_written, filepath=None, filetype='auto', *kwargs):
     """Write the coordinates into a file.
 
     .. note:: Since it permamently writes a file, this function is
@@ -90,8 +161,9 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
         to_be_written (Cartesian): This can be
             a :class:`~chemcoord.Cartesian` for xyz files or
             a :class:`list` of :class:`~chemcoord.Cartesian` for molden files.
-        outputfile (str):
-        sort_index (bool): If sort_index is true, the :class:`~chemcoord.Cartesian`
+        filepath (str):
+        sort_index (bool): If sort_index is true, the
+            :class:`~chemcoord.Cartesian`
             is sorted by the index before writing.
         filetype (str): The filetype to be used.
             The default is auto.
@@ -101,88 +173,74 @@ def write(to_be_written, outputfile, sort_index=True, filetype='auto'):
     Returns:
         None:
     """
-    def write_xyz(to_be_written, outputfile, sort_index):
-        frame = to_be_written.frame[['atom', 'x', 'y', 'z']].copy()
-        if sort_index:
-            frame = frame.sort_index()
-            n_atoms = frame.shape[0]
-            with open(outputfile, mode='w') as f:
-                f.write(str(n_atoms) + 2 * '\n')
-            frame.to_csv(
-                outputfile,
-                sep=str(' '),
-                index=False,
-                header=False,
-                mode='a')
-        else:
-            frame = frame.sort_values(by='atom')
-            n_atoms = frame.shape[0]
-            with open(outputfile, mode='w') as f:
-                f.write(str(n_atoms) + 2 * '\n')
-            frame.to_csv(
-                outputfile,
-                sep=str(' '),  # https://github.com/pydata/pandas/issues/6035
-                index=False,
-                header=False,
-                mode='a')
+    if filepath is None:
+        filetype = _give_default_filetypes(to_be_written)
+    elif filetype == 'auto':
+        filetype = _determine_filetype(filepath)
 
-    def write_molden(to_be_written, outputfile, sort_index):
-        """Write a list of Cartesians into a molden file.
-
-        .. note:: Since it permamently writes a file, this function
-            is strictly speaking **not sideeffect free**.
-            The frame to be written is of course not changed.
-
-        Args:
-            cartesian_list (list):
-            outputfile (str):
-            sort_index (bool): If sort_index is true, the Cartesian
-                is sorted by the index before writing.
-
-        Returns:
-            None:
-        """
-        if sort_index:
-            framelist = [molecule.sort_index().frame
-                         for molecule in to_be_written]
-        else:
-            framelist = [molecule.frame for molecule in to_be_written]
-        n_frames = len(framelist)
-        n_atoms = to_be_written[0].n_atoms
-        values = n_frames * '1\n'
-        string = ("[MOLDEN FORMAT]\n"
-                  + "[N_GEO]\n"
-                  + str(n_frames) + "\n"
-                  + '[GEOCONV]\n'
-                  + 'energy\n' + values
-                  + 'max-force\n' + values
-                  + 'rms-force\n' + values
-                  + '[GEOMETRIES] (XYZ)\n')
-
-        with open(outputfile, mode='w') as f:
-            f.write(string)
-
-        for frame in framelist:
-            frame = frame.sort_index()
-            n_atoms = frame.shape[0]
-            with open(outputfile, mode='a') as f:
-                f.write(str(n_atoms) + 2 * '\n')
-            frame.to_csv(
-                outputfile,
-                sep=str(' '),
-                index=False,
-                header=False,
-                mode='a')
-
-    if filetype == 'auto':
-        filetype = re.split('\.', outputfile)[-1]
+    # TODO message
+    if filetype not in _give_possible_filetypes(to_be_written):
+        raise IllegalArgumentCombination
 
     if filetype == 'xyz':
-        write_xyz(to_be_written, outputfile, sort_index)
+        write_xyz(to_be_written, filepath)
     elif filetype == 'molden':
-        write_molden(to_be_written, outputfile, sort_index)
+        write_molden(to_be_written, filepath, sort_index)
     else:
         raise NotImplementedError('The desired filetype is not implemented')
+
+
+def write_xyz(to_be_written, **kwargs):
+    return to_be_written.write_xyz(**kwargs)
+
+
+def write_molden(to_be_written, outputfile, sort_index):
+    """Write a list of Cartesians into a molden file.
+
+    .. note:: Since it permamently writes a file, this function
+        is strictly speaking **not sideeffect free**.
+        The frame to be written is of course not changed.
+
+    Args:
+        cartesian_list (list):
+        outputfile (str):
+        sort_index (bool): If sort_index is true, the Cartesian
+            is sorted by the index before writing.
+
+    Returns:
+        None:
+    """
+    if sort_index:
+        framelist = [molecule.sort_index().frame
+                     for molecule in to_be_written]
+    else:
+        framelist = [molecule.frame for molecule in to_be_written]
+    n_frames = len(framelist)
+    n_atoms = to_be_written[0].n_atoms
+    values = n_frames * '1\n'
+    string = ("[MOLDEN FORMAT]\n"
+              + "[N_GEO]\n"
+              + str(n_frames) + "\n"
+              + '[GEOCONV]\n'
+              + 'energy\n' + values
+              + 'max-force\n' + values
+              + 'rms-force\n' + values
+              + '[GEOMETRIES] (XYZ)\n')
+
+    with open(outputfile, mode='w') as f:
+        f.write(string)
+
+    for frame in framelist:
+        frame = frame.sort_index()
+        n_atoms = frame.shape[0]
+        with open(outputfile, mode='a') as f:
+            f.write(str(n_atoms) + 2 * '\n')
+        frame.to_csv(
+            outputfile,
+            sep=str(' '),
+            index=False,
+            header=False,
+            mode='a')
 
 
 @export

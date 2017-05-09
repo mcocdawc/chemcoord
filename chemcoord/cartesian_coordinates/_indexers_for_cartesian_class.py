@@ -7,8 +7,13 @@ class _generic_Indexer(object):
 
     def return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
-            return selected
-        elif self.molecule._is_physical(selected):
+            series_like_frame = pd.DataFrame(selected).T
+            if self.molecule._is_physical(series_like_frame) is not True:
+                return selected
+            else:
+                selected = series_like_frame
+
+        if self.molecule._is_physical(selected):
             molecule = self.molecule.__class__(selected)
             # NOTE here is the difference to the _pandas_wrapper definition
             # TODO make clear in documentation that metadata is an
@@ -38,6 +43,12 @@ class _Loc(_generic_Indexer):
             selected = self.molecule.frame.loc[key]
         return self.return_appropiate_type(selected)
 
+    def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            self.molecule.frame.loc[key[0], key[1]] = value
+        else:
+            self.molecule.frame.loc[key] = value
+
 
 class _ILoc(_generic_Indexer):
 
@@ -47,3 +58,9 @@ class _ILoc(_generic_Indexer):
         else:
             selected = self.molecule.frame.iloc[key]
         return self.return_appropiate_type(selected)
+
+    def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            self.molecule.frame.iloc[key[0], key[1]] = value
+        else:
+            self.molecule.frame.iloc[key] = value
