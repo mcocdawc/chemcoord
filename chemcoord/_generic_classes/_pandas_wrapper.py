@@ -379,11 +379,11 @@ class _pandas_wrapper(object):
                                 value, allow_duplicates=allow_duplicates)
             return output
 
-    def write_string(self, buf=None, columns=None, col_space=None, header=True,
-                     index=True, na_rep='NaN', formatters=None,
-                     float_format=None, sparsify=None, index_names=True,
-                     justify=None, line_width=None, max_rows=None,
-                     max_cols=None, show_dimensions=False):
+    def to_string(self, buf=None, columns=None, col_space=None, header=True,
+                  index=True, na_rep='NaN', formatters=None,
+                  float_format=None, sparsify=None, index_names=True,
+                  justify=None, line_width=None, max_rows=None,
+                  max_cols=None, show_dimensions=False):
         """Render a DataFrame to a console-friendly tabular output.
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.

@@ -11,14 +11,12 @@ from io import open
 
 MAIN_PACKAGE = 'chemcoord'
 DESCRIPTION = "Python module for dealing with chemical coordinates."
-VERSION = '1.2.0'
+VERSION = '1.3.0'
 LICENSE = 'LGPLv3'
 AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
 URL = 'https://github.com/mcocdawc/chemcoord'
-REQUIRES = [
-    'numpy', 'pandas', 'copy', 'math', 'collections', 'os', 'sys',
-    'io']
+INSTALL_REQUIRES = ['numpy', 'pandas>=0.20']
 KEYWORDS = [
     'chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
     'zmatrix', 'xyz', 'zmat', 'coordinates', 'coordinate system']
@@ -27,9 +25,7 @@ CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
     'Environment :: Console',
     'Intended Audience :: Science/Research',
-    (
-        'License :: OSI Approved :: '
-        'GNU Lesser General Public License v3 (LGPLv3)'),
+    'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
     'Natural Language :: English',
     'Programming Language :: Python',
     'Topic :: Scientific/Engineering :: Chemistry',
@@ -56,7 +52,8 @@ def setup_package():
         long_description=readme(),
         classifiers=CLASSIFIERS,
         packages=find_packages(),
-        requires=REQUIRES
+        # requires=INSTALL_REQUIRES
+        install_requires=INSTALL_REQUIRES
     )
 
 
