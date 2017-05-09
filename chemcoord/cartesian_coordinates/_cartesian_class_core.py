@@ -50,6 +50,7 @@ class Cartesian_core(_common_class):
 
         self.iloc = indexers._ILoc(self)
         self.loc = indexers._Loc(self)
+        self.loc_set_copy = indexers._Loc_Set_Copy(self)
 
     @staticmethod
     def _is_physical(x):
@@ -102,6 +103,11 @@ class Cartesian_core(_common_class):
             self.loc[key[0], key[1]] = value
         else:
             self.loc[key] = value
+
+    # def loc_set_copy(self, key, value):
+    #     new = self.copy()
+    #     new.loc[key[0], key[1]] = value
+    #     return new
 
     def copy(self):
         molecule = self.__class__(self.frame)

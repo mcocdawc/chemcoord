@@ -50,6 +50,15 @@ class _Loc(_generic_Indexer):
             self.molecule.frame.loc[key] = value
 
 
+class _Loc_Set_Copy(_generic_Indexer):
+
+    def __getitem__(self, key):
+        new = self.molecule.copy()
+        # if isinstance(key, tuple):
+        new.loc[key[0], key[1]] = key[2]
+        return new
+
+
 class _ILoc(_generic_Indexer):
 
     def __getitem__(self, key):
