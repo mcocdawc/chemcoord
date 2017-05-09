@@ -48,10 +48,6 @@ class _pandas_wrapper(object):
     def shape(self):
         return self.frame.shape
 
-    @property
-    def n_atoms(self):
-        return self.shape[0]
-
     def __repr__(self):
         return self.frame.__repr__()
 
@@ -60,31 +56,6 @@ class _pandas_wrapper(object):
             return self.frame._repr_html_()
         except AttributeError:
             pass
-
-    # TODO delete
-    # def _is_physical(self, columns):
-    #     try:
-    #         assert type(columns) is not str
-    #         columns = set(columns)
-    #     except (TypeError, AssertionError):
-    #         columns = set([columns])
-    #
-    #     is_cartesian = {'atom', 'x', 'y', 'z'} <= columns
-    #     is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle',
-    #                'dihedral_with', 'dihedral'} <= columns
-    #     return (is_cartesian or is_zmat)
-
-    # TODO delete
-    def __getitem__(self, key):
-        frame = self.frame.loc[key[0], key[1]]
-        try:
-            if self._is_physical(frame.columns):
-                return self.__class__(frame)
-            else:
-                return frame
-        except AttributeError:
-            # A series and not a DataFrame was returned
-            return frame
 
     def sort_values(self, by, axis=0, ascending=True, inplace=False,
                     kind='quicksort', na_position='last'):
@@ -407,3 +378,54 @@ class _pandas_wrapper(object):
             output.frame.insert(loc, column,
                                 value, allow_duplicates=allow_duplicates)
             return output
+
+    def write_string(self, buf=None, columns=None, col_space=None, header=True,
+                     index=True, na_rep='NaN', formatters=None,
+                     float_format=None, sparsify=None, index_names=True,
+                     justify=None, line_width=None, max_rows=None,
+                     max_cols=None, show_dimensions=False):
+        """Render a DataFrame to a console-friendly tabular output.
+
+        Wrapper around the :meth:`pandas.DataFrame.to_string` method.
+        """
+        return self.frame.to_string(buf=buf,
+                                    columns=columns,
+                                    col_space=col_space,
+                                    header=header,
+                                    index=index,
+                                    na_rep=na_rep,
+                                    formatters=formatters,
+                                    float_format=float_format,
+                                    sparsify=sparsify,
+                                    index_names=index_names,
+                                    justify=justify,
+                                    line_width=line_width,
+                                    max_rows=max_rows,
+                                    max_cols=max_cols,
+                                    show_dimensions=show_dimensions)
+
+    def to_latex(self, buf=None, columns=None, col_space=None, header=True,
+                 index=True, na_rep='NaN', formatters=None, float_format=None,
+                 sparsify=None, index_names=True, bold_rows=True,
+                 column_format=None, longtable=None, escape=None,
+                 encoding=None, decimal='.', multicolumn=None,
+                 multicolumn_format=None, multirow=None):
+        """ Render a DataFrame to a tabular environment table.
+
+        You can splice this into a LaTeX document.
+        Requires \\usepackage{booktabs}.
+        Wrapper around the :meth:`pandas.DataFrame.to_latex` method.
+        """
+        return self.frame.to_latex(buf=buf, columns=columns,
+                                   col_space=col_space, header=header,
+                                   index=index, na_rep=na_rep,
+                                   formatters=formatters,
+                                   float_format=float_format,
+                                   sparsify=sparsify, index_names=index_names,
+                                   bold_rows=bold_rows,
+                                   column_format=column_format,
+                                   longtable=longtable, escape=escape,
+                                   encoding=encoding, decimal=decimal,
+                                   multicolumn=multicolumn,
+                                   multicolumn_format=multicolumn_format,
+                                   multirow=multirow)

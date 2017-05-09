@@ -31,6 +31,9 @@ class Cartesian_io(Cartesian_core):
     The ``view`` method uses external viewers to display a temporarily
     written xyz-file.
     """
+    _possible_filetypes = frozenset(['xyz'])
+    _default_filetype = 'xyz'
+
     @staticmethod
     def determine_filetype(filepath):
         """Determine filetype
@@ -107,10 +110,12 @@ class Cartesian_io(Cartesian_core):
         message = 'Created by chemcoord \
 http://chemcoord.readthedocs.io/en/latest/'
 
-        frame = self.sort_index().frame if sort_index else self.frame.copy()
-
-        frame_string = frame.to_string(header=header, index=index,
-                                       float_format=float_format)
+        if sort_index:
+            molecule_string = self.sort_index().write_string(
+                header=header, index=index, float_format=float_format)
+        else:
+            molecule_string = self.write_string(header=header, index=index,
+                                             float_format=float_format)
 
         def give_alignment_space(self):
             space = ' ' * (self[:, 'atom'].str.len().max()
@@ -119,7 +124,7 @@ http://chemcoord.readthedocs.io/en/latest/'
 
         output = create_string(n=self.n_atoms, message=message,
                                alignment=give_alignment_space(self),
-                               frame_string=frame_string)
+                               frame_string=molecule_string)
 
         if outputfile is not None:
             with open(outputfile, mode='w') as f:

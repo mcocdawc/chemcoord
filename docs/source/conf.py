@@ -60,7 +60,8 @@ extensions = [
 ]
 
 intersphinx_mapping = {'numpy': ('http://docs.scipy.org/doc/numpy/', None),
-                       'ase' : ('https://wiki.fysik.dtu.dk/ase/', None)}
+                       'ase' : ('https://wiki.fysik.dtu.dk/ase/', None),
+                       'pandas' : ('http://pandas.pydata.org/pandas-docs/stable/', None)}
 # intersphinx_mapping = {'ase' : ('https://wiki.fysik.dtu.dk/ase/', None)}
 
 

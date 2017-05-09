@@ -12,6 +12,10 @@ from chemcoord.constants import constants
 class _common_class(_pandas_wrapper):
     """This class provides methods which are used by Zmat and Cartesian.
     """
+    @property
+    def n_atoms(self):
+        return self.shape[0]
+
     def add_data(self, list_of_columns=None, inplace=False):
         """Adds a column with the requested data.
 

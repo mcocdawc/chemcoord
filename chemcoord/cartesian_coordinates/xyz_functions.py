@@ -23,6 +23,7 @@ from chemcoord.configuration import settings
 import io
 from io import open
 import re
+import textwrap
 
 
 @export
@@ -94,58 +95,39 @@ def _determine_filetype(filepath):
 
 
 def _give_possible_filetypes(to_be_written):
-    """Determine possible filetypes for object
-
-
-    Determine possible filetypes for writing the ``to_be_written``
-    object.
-
-    The charakters after the last point are interpreted as the filetype.
-
-    :class:`~chemcoord.Cartesian`
-        Possible filetypes are ``{'xyz'}``
-
-    ``list_like_class``
-        Possible filetypes are ``{'molden'}``
-
-    Args:
-        to_be_written :
-
-    Returns:
-        set: A set of strings encoding the filetypes.
-    """
-    if isinstance(to_be_written, Cartesian):
-        possible_filetypes = set(['xyz'])
-    elif pd.api.types.is_list_like(to_be_written):
-        possible_filetypes = set(['molden'])
+    try:
+        possible_filetypes = to_be_written._possible_filetypes
+    except AttributeError:
+        if pd.api.types.is_list_like(to_be_written):
+            possible_filetypes = set(['molden'])
+        else:
+            possible_filetypes = None
     return possible_filetypes
 
 
-def _give_default_filetypes(to_be_written):
-    """Determine possible filetypes for object
+def _give_default_filetype(to_be_written):
+    try:
+        default_filetype = to_be_written._default_filetype
+    except AttributeError:
+        if pd.api.types.is_list_like(to_be_written):
+            default_filetype = 'molden'
+        else:
+            default_filetype = None
+    return default_filetype
 
 
-    Determine possible filetypes for writing the ``to_be_written``
-    object.
-
-    The charakters after the last point are interpreted as the filetype.
-
-    :class:`~chemcoord.Cartesian`
-        Possible filetypes are ``{'xyz'}``
-
-    ``list_like_class``
-        Possible filetypes are ``{'molden'}``
-
-    Args:
-        to_be_written :
-
-    Returns:
-        set: A set of strings encoding the filetypes.
-    """
-    if isinstance(to_be_written, Cartesian):
-        return 'xyz'
-    elif pd.api.types.is_list_like(to_be_written):
-        return 'molden'
+def _check_if_filetype_appropiate(to_be_written, filetype):
+    if filetype not in _give_possible_filetypes(to_be_written):
+        give_message = """\
+            The possible filetypes for
+            {0}
+            are: {1}
+            You want to use the the filetype: '{2}'""".format
+        message = give_message(to_be_written.__class__,
+                               _give_possible_filetypes(to_be_written),
+                               filetype)
+        message = textwrap.dedent(message)
+        raise IllegalArgumentCombination(message)
 
 
 @export
@@ -174,20 +156,17 @@ def write(to_be_written, filepath=None, filetype='auto', *kwargs):
         None:
     """
     if filepath is None:
-        filetype = _give_default_filetypes(to_be_written)
+        filetype = _give_default_filetype(to_be_written)
     elif filetype == 'auto':
         filetype = _determine_filetype(filepath)
-
-    # TODO message
-    if filetype not in _give_possible_filetypes(to_be_written):
-        raise IllegalArgumentCombination
+        _check_if_filetype_appropiate(to_be_written, filetype)
+    else:
+        _check_if_filetype_appropiate(to_be_written, filetype)
 
     if filetype == 'xyz':
         write_xyz(to_be_written, filepath)
     elif filetype == 'molden':
         write_molden(to_be_written, filepath, sort_index)
-    else:
-        raise NotImplementedError('The desired filetype is not implemented')
 
 
 def write_xyz(to_be_written, **kwargs):
