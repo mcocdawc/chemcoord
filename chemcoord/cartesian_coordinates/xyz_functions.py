@@ -16,7 +16,6 @@ import subprocess
 import os
 import tempfile
 import warnings
-from chemcoord._exceptions import PhysicalMeaningError, IllegalArgumentCombination
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord import export
 from chemcoord.configuration import settings
@@ -26,7 +25,6 @@ import re
 import textwrap
 
 
-@export
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     """View your molecule or list of molecules.
 
@@ -49,6 +47,10 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     try:
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
     except AttributeError:
+        if pd.api.types.is_list_like(molecule):
+            cartesian_list = molecule
+        else:
+            raise ValueError('Argument is neither list nor Cartesian.')
         if use_curr_dir:
             TEMP_DIR = os.path.curdir
         else:
@@ -62,7 +64,7 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
         while os.path.exists(give_filename(i)):
             i = i + 1
 
-        write(molecule, give_filename(i), filetype='molden')
+        to_molden(cartesian_list, buf=give_filename(i))
 
         def open_file(i):
             """Open file and close after being finished."""
@@ -78,178 +80,116 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
         Thread(target=open_file, args=(i,)).start()
 
 
-# replace
-def _determine_filetype(filepath):
-    """Determine filetype from filepath
-
-    The charakters after the last point are interpreted as the filetype.
-
-    Args:
-        filepath (str):
-
-    Returns:
-        str:
-    """
-    filetype = re.split('\.', filepath)[-1]
-    return filetype
-
-
-def _give_possible_filetypes(to_be_written):
-    try:
-        possible_filetypes = to_be_written._possible_filetypes
-    except AttributeError:
-        if pd.api.types.is_list_like(to_be_written):
-            possible_filetypes = set(['molden'])
-        else:
-            possible_filetypes = None
-    return possible_filetypes
-
-
-def _give_default_filetype(to_be_written):
-    try:
-        default_filetype = to_be_written._default_filetype
-    except AttributeError:
-        if pd.api.types.is_list_like(to_be_written):
-            default_filetype = 'molden'
-        else:
-            default_filetype = None
-    return default_filetype
-
-
-def _check_if_filetype_appropiate(to_be_written, filetype):
-    if filetype not in _give_possible_filetypes(to_be_written):
-        give_message = """\
-            The possible filetypes for
-            {0}
-            are: {1}
-            You want to use the the filetype: '{2}'""".format
-        message = give_message(to_be_written.__class__,
-                               _give_possible_filetypes(to_be_written),
-                               filetype)
-        message = textwrap.dedent(message)
-        raise IllegalArgumentCombination(message)
-
-
-@export
-def write(to_be_written, filepath=None, filetype='auto', *kwargs):
-    """Write the coordinates into a file.
-
-    .. note:: Since it permamently writes a file, this function is
-        strictly speaking **not sideeffect free**.
-        The :class:`~chemcoord.Cartesian`
-        to be written is of course not changed.
-
-    Args:
-        to_be_written (Cartesian): This can be
-            a :class:`~chemcoord.Cartesian` for xyz files or
-            a :class:`list` of :class:`~chemcoord.Cartesian` for molden files.
-        filepath (str):
-        sort_index (bool): If sort_index is true, the
-            :class:`~chemcoord.Cartesian`
-            is sorted by the index before writing.
-        filetype (str): The filetype to be used.
-            The default is auto.
-            Supported filetypes are: 'xyz' and 'molden'.
-            'auto' uses the charakters after the last point as filetype.
-
-    Returns:
-        None:
-    """
-    if filepath is None:
-        filetype = _give_default_filetype(to_be_written)
-    elif filetype == 'auto':
-        filetype = _determine_filetype(filepath)
-        _check_if_filetype_appropiate(to_be_written, filetype)
-    else:
-        _check_if_filetype_appropiate(to_be_written, filetype)
-
-    if filetype == 'xyz':
-        write_xyz(to_be_written, filepath)
-    elif filetype == 'molden':
-        write_molden(to_be_written, filepath, sort_index)
-
-
-def write_xyz(to_be_written, **kwargs):
-    return to_be_written.write_xyz(**kwargs)
-
-
-def write_molden(to_be_written, outputfile, sort_index):
+def to_molden(cartesian_list, buf=None, sort_index=True,
+              overwrite=True):
     """Write a list of Cartesians into a molden file.
 
     .. note:: Since it permamently writes a file, this function
         is strictly speaking **not sideeffect free**.
-        The frame to be written is of course not changed.
+        The list to be written is of course not changed.
 
     Args:
         cartesian_list (list):
-        outputfile (str):
+        buf (str): StringIO-like, optional buffer to write to
         sort_index (bool): If sort_index is true, the Cartesian
             is sorted by the index before writing.
+        overwrite (bool): May overwrite existing files.
 
     Returns:
-        None:
+        formatted : string (or unicode, depending on data and options)
     """
     if sort_index:
-        framelist = [molecule.sort_index().frame
-                     for molecule in to_be_written]
+        cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
+
+    give_header = ("[MOLDEN FORMAT]\n"
+                   + "[N_GEO]\n"
+                   + str(len(cartesian_list)) + "\n"
+                   + '[GEOCONV]\n'
+                   + 'energy\n{energy}'
+                   + 'max-force\n{max_force}'
+                   + 'rms-force\n{rms_force}'
+                   + '[GEOMETRIES] (XYZ)\n').format
+
+    values = len(cartesian_list) * '1\n'
+    header = give_header(energy=values, max_force=values, rms_force=values)
+
+    coordinates = [x.to_xyz(sort_index=sort_index) for x in cartesian_list]
+    output = header + '\n'.join(coordinates)
+
+    if buf is not None:
+        if overwrite:
+            with open(buf, mode='w') as f:
+                f.write(output)
+        else:
+            with open(buf, mode='x') as f:
+                f.write(output)
     else:
-        framelist = [molecule.frame for molecule in to_be_written]
-    n_frames = len(framelist)
-    n_atoms = to_be_written[0].n_atoms
-    values = n_frames * '1\n'
-    string = ("[MOLDEN FORMAT]\n"
-              + "[N_GEO]\n"
-              + str(n_frames) + "\n"
-              + '[GEOCONV]\n'
-              + 'energy\n' + values
-              + 'max-force\n' + values
-              + 'rms-force\n' + values
-              + '[GEOMETRIES] (XYZ)\n')
-
-    with open(outputfile, mode='w') as f:
-        f.write(string)
-
-    for frame in framelist:
-        frame = frame.sort_index()
-        n_atoms = frame.shape[0]
-        with open(outputfile, mode='a') as f:
-            f.write(str(n_atoms) + 2 * '\n')
-        frame.to_csv(
-            outputfile,
-            sep=str(' '),
-            index=False,
-            header=False,
-            mode='a')
+        return output
 
 
-@export
-def read(inputfile, pythonic_index=False, get_bonds=True, filetype='auto'):
-    """Read a file of coordinate information.
+def write_molden(*args, **kwargs):
+    """Deprecated, use :func:`~chemcoord.xyz_functions.to_molden`
+    """
+    message = 'Will be removed in the future. Please use to_molden().'
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.warn(message, DeprecationWarning)
+    return to_molden(*args, **kwargs)
 
-    .. note:: This function calls in the background
-        :func:`chemcoord.Cartesian.read`.
-        If you inherited from :class:`~chemcoord.Cartesian`
-        to tailor it for your project,
-        you have to use this method as a constructor.
+
+def from_molden(inputfile, start_index=0, get_bonds=True):
+    """Read a molden file.
 
     Args:
         inputfile (str):
-        pythonic_index (bool):
-        filetype (str): The filetype to be read from.
-            The default is xyz.
-            Supported filetypes are: xyz and molden.
-            'auto' uses the charakters after the last point as filetype.
+        start_index (int):
 
     Returns:
-        Cartesian: Depending on the type of file returns a Cartesian,
-        or a list of Cartesians.
+        list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
-    molecule = Cartesian.read(inputfile, pythonic_index=pythonic_index,
-                              get_bonds=get_bonds, filetype=filetype)
-    return molecule
+    f = open(inputfile, 'r')
+
+    found = False
+    while not found:
+        line = f.readline()
+        if line.strip() == '[N_GEO]':
+            found = True
+            number_of_molecules = int(f.readline().strip())
+
+    found = False
+    while not found:
+        line = f.readline()
+        if line.strip() == '[GEOMETRIES] (XYZ)':
+            found = True
+            current_line = f.tell()
+            number_of_atoms = int(f.readline().strip())
+            f.seek(current_line)
+
+    list_of_cartesians = []
+    for i in range(number_of_molecules):
+        molecule_in = [f.readline()
+                       for j in range(number_of_atoms + 2)]
+        molecule_in = ''.join(molecule_in)
+        molecule_in = io.StringIO(molecule_in)
+        molecule = Cartesian.from_xyz(molecule_in,
+                                      start_index=start_index,
+                                      get_bonds=get_bonds)
+        list_of_cartesians.append(molecule)
+
+    f.close()
+    return list_of_cartesians
 
 
-@export
+def read_molden(*args, **kwargs):
+    """Deprecated, use :func:`~chemcoord.xyz_functions.from_molden`
+    """
+    message = 'Will be removed in the future. Please use from_molden().'
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.warn(message, DeprecationWarning)
+    return from_molden(*args, **kwargs)
+
+
 def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
     """Compare two molecules for numerical equality.
 
@@ -280,21 +220,3 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
         return np.allclose(A, B, rtol=rtol, atol=atol)
     else:
         return False
-
-
-def is_Cartesian(possible_Cartesian):
-    """Tests, if given instance is a Cartesian.
-
-    Args:
-        is_Cartesian (any type):
-
-    Returns:
-        bool:
-    """
-    columns = possible_Cartesian.columns.copy()
-    try:
-        assert type(columns) is not str
-        columns = set(columns)
-    except (TypeError, AssertionError):
-        columns = set([columns])
-    return {'atom', 'x', 'y', 'z'} <= columns

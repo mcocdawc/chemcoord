@@ -57,8 +57,10 @@ class _pandas_wrapper(object):
         except AttributeError:
             pass
 
-    def sort_values(self, by, axis=0, ascending=True, inplace=False,
+    def sort_values(self, by, ascending=True, inplace=False,
                     kind='quicksort', na_position='last'):
+        # axis=0
+        # axis : index, columns to direct sorting
         """Sort by the values along either axis
 
         The description is taken from the pandas project.
@@ -66,7 +68,6 @@ class _pandas_wrapper(object):
         Parameters
         ----------
         by : string name or list of names which refer to the axis items
-        axis : index, columns to direct sorting
         ascending : bool or list of bool
              Sort ascending vs. descending. Specify list for multiple sort
              orders.  If this is a list of bools, must match the length of
@@ -95,16 +96,17 @@ class _pandas_wrapper(object):
                     by, axis=axis, ascending=ascending,
                     inplace=inplace, kind=kind, na_position=na_position))
 
-    def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
+    def sort_index(self, level=None, ascending=True, inplace=False,
                    kind='quicksort', na_position='last',
                    sort_remaining=True, by=None):
+        # axis=0
+        # axis : index, columns to direct sorting
         """Sort object by labels (along an axis)
 
         The description is taken from the pandas project.
 
         Parameters
         ----------
-        axis : index, columns to direct sorting
         level : int or level name or list of ints or list of level names
             if not None, sort on values in specified index level(s)
         ascending : boolean, default True
@@ -379,11 +381,11 @@ class _pandas_wrapper(object):
                                 value, allow_duplicates=allow_duplicates)
             return output
 
-    def write_string(self, buf=None, columns=None, col_space=None, header=True,
-                     index=True, na_rep='NaN', formatters=None,
-                     float_format=None, sparsify=None, index_names=True,
-                     justify=None, line_width=None, max_rows=None,
-                     max_cols=None, show_dimensions=False):
+    def to_string(self, buf=None, columns=None, col_space=None, header=True,
+                  index=True, na_rep='NaN', formatters=None,
+                  float_format=None, sparsify=None, index_names=True,
+                  justify=None, line_width=None, max_rows=None,
+                  max_cols=None, show_dimensions=False):
         """Render a DataFrame to a console-friendly tabular output.
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.

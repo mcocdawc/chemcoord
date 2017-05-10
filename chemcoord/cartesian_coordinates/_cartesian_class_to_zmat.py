@@ -40,7 +40,7 @@ class Cartesian_to_zmat(Cartesian_core):
             already_built, to_be_built = set([]), set(self.index)
             convert_index = {}
 
-        bond_dic = self.get_bonds(use_lookup=True)
+        bond_dic = self.get_bonds(use_lookup=cc.settings['defaults']['use_lookup_internally'])
         topologic_center = self.topologic_center()
         distance_to_topologic_center = self.distance_to(topologic_center)
 
@@ -257,7 +257,7 @@ class Cartesian_to_zmat(Cartesian_core):
         """
         buildlist = buildlist_to_check.copy()
 
-        bond_dic = self.get_bonds(use_lookup=True)
+        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
 
         angles = self.angle_degrees(buildlist[3:, 1:])
 

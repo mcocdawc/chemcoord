@@ -48,18 +48,44 @@ class Cartesian_core(_common_class):
             """Test"""
             self._metadata = {}
 
-        self.iloc = indexers._ILoc(self)
-        self.loc = indexers._Loc(self)
-        self.loc_set_copy = indexers._Loc_Set_Copy(self)
-
     @staticmethod
     def _is_physical(x):
-        """Test if a given input may represent a molecule.
+        """Test if a given input is a DataFrame and may represent
+        a molecule in cartesian coordinates.
         """
         if isinstance(x, pd.DataFrame):
             return {'atom', 'x', 'y', 'z'} <= set(x.columns)
         else:
             return False
+
+    @property
+    def loc(self):
+        """pew pew
+        """
+        return indexers._Loc(self)
+
+    @property
+    def iloc(self):
+        """pew pew
+        """
+        return indexers._ILoc(self)
+
+    def loc_set_copy(self, key, value):
+        new = self.copy()
+        if pd.api.types.is_list_like(key):
+            new.loc[key[0], key[1]] = value
+        else:
+            new.loc[key] = value
+        return new
+
+    def iloc_set_copy(self, key, value):
+        new = self.copy()
+        if pd.api.types.is_list_like(key):
+            new.iloc[key[0], key[1]] = value
+        else:
+            new.iloc[key] = value
+        return new
+
 
     # new method
     # def __getitem__(self, key):
@@ -91,7 +117,6 @@ class Cartesian_core(_common_class):
     #     else:
     #         return selected
 
-    # old method
     def __getitem__(self, key):
         if isinstance(key, tuple):
             return self.loc[key[0], key[1]]
@@ -103,11 +128,6 @@ class Cartesian_core(_common_class):
             self.loc[key[0], key[1]] = value
         else:
             self.loc[key] = value
-
-    # def loc_set_copy(self, key, value):
-    #     new = self.copy()
-    #     new.loc[key[0], key[1]] = value
-    #     return new
 
     def copy(self):
         molecule = self.__class__(self.frame)
@@ -296,7 +316,8 @@ class Cartesian_core(_common_class):
             use_lookup=False,
             set_lookup=True,
             divide_et_impera=True,
-            atomic_radius_data=settings['defaults']['atomic_radius_data']):
+            atomic_radius_data=settings['defaults']['atomic_radius_data'],
+            warn_valency=False):
         """Return a dictionary representing the bonds.
 
         .. warning:: This function is **not sideeffect free**, since it
@@ -351,6 +372,8 @@ class Cartesian_core(_common_class):
                 ``atomic_radius_cc`` and can be changed with
                 :attr:`settings['defaults']['atomic_radius_data']`.
                 Compare with :func:`add_data`.
+            warn_valency (bool): Warn if atoms are over- or undersaturated
+                in their valency.
 
         Returns:
             dict: Dictionary mapping from an atom index to the indices of atoms
@@ -382,7 +405,9 @@ class Cartesian_core(_common_class):
                 valency_dic,
                 atomic_radius_dic,
                 use_valency,
-                index_of_cube=self.index):
+                warn_valency,
+                index_of_cube=self.index
+                ):
             overlap_array, convert_to = self._overlap(atomic_radius_dic,
                                                       index_of_cube)
             np.fill_diagonal(overlap_array, -1.)
@@ -397,17 +422,13 @@ class Cartesian_core(_common_class):
                 for index in indices_of_oversaturated_atoms]
 
             if use_valency & (len(indices_of_oversaturated_atoms) > 0):
-                if settings['show_warnings']['valency']:
+                if warn_valency:
                     warning_string = (
                         'You specified use_valency=True '
                         'and provided a geometry with over saturated '
                         'atoms. This means that the bonds with lowest '
                         'overlap will be cut, although the van der '
-                        "Waals radii overlap. If you don't want to see "
-                        "this warning execute "
-                        "cc.settings['show_warnings']['valency'] = False. "
-                        "For a permament change have a look "
-                        "at the configuration submodule. "
+                        "Waals radii overlap. "
                         "The problematic indices are:\n") \
                         + oversaturated_converted.__repr__()
                     warnings.warn(warning_string)
@@ -425,16 +446,12 @@ class Cartesian_core(_common_class):
                     bin_overlap_array = overlap_array > 0
 
             if (not use_valency) & (len(indices_of_oversaturated_atoms) > 0):
-                if settings['show_warnings']['valency']:
+                if warn_valency:
                     warning_string = (
                         "You specified use_valency=False (or "
                         "used the default) and provided a geometry with "
                         "over saturated atoms. This means that bonds are "
                         "not cut even if their number exceeds the valency. "
-                        "If you don't want to see this warning execute "
-                        "cc.settings['show_warnings']['valency'] = False. "
-                        "For a permament change have a look "
-                        "at the configuration submodule. "
                         "The problematic indices are:\n") \
                         + oversaturated_converted.__repr__()
                     warnings.warn(warning_string)
@@ -460,12 +477,12 @@ class Cartesian_core(_common_class):
                 for number, key in enumerate(cuboid_dic):
                     get_bonds_local(
                         self, bond_dic, valency_dic,
-                        atomic_radius_dic, use_valency,
+                        atomic_radius_dic, use_valency, warn_valency,
                         index_of_cube=cuboid_dic[key][1])
             else:
                 get_bonds_local(
                     self, bond_dic, valency_dic,
-                    atomic_radius_dic, use_valency)
+                    atomic_radius_dic, use_valency, warn_valency)
             return bond_dic
 
         if use_lookup:
@@ -637,7 +654,7 @@ class Cartesian_core(_common_class):
         Returns:
             A set of indices or a new Cartesian instance.
         """
-        bond_dic = self.get_bonds(use_lookup=True)
+        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
         exclude = set([]) if (exclude is None) else set(exclude)
 
         previous_atoms = (
@@ -693,7 +710,7 @@ class Cartesian_core(_common_class):
         included_atoms_set = set(sliced_cartesian.index)
         assert included_atoms_set.issubset(set(self.index)), \
             'The sliced Cartesian has to be a subset of the bigger frame'
-        bond_dic = self.get_bonds(use_lookup=True)
+        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
         new_atoms = set([])
         for atom in included_atoms_set:
             new_atoms = new_atoms | bond_dic[atom]
@@ -1213,6 +1230,7 @@ class Cartesian_core(_common_class):
             output.sort_values(by='distance', inplace=True)
         return output
 
+    # TODO remove
     def change_numbering(self, rename_dict, inplace=False):
         """Return the reindexed version of Cartesian.
 

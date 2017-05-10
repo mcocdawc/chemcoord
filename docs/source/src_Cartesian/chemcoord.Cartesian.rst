@@ -37,6 +37,20 @@ chemcoord\.Cartesian
          ~Cartesian.partition_chem_env
 
 
+    .. rubric:: IO
+
+    .. autosummary::
+         :toctree: src_Cartesian
+
+         ~Cartesian.write_xyz
+         ~Cartesian.to_xyz
+         ~Cartesian.read_xyz
+         ~Cartesian.from_xyz
+         ~Cartesian.view
+         ~Cartesian.to_string
+         ~Cartesian.to_latex
+
+
     .. rubric:: Technical Methods
 
     .. autosummary::
@@ -51,14 +65,8 @@ chemcoord\.Cartesian
          ~Cartesian.append
          ~Cartesian.insert
          ~Cartesian.sort_values
-         ~Cartesian.determine_filetype
-         ~Cartesian.write
-         ~Cartesian.write_xyz
-         ~Cartesian.read
-         ~Cartesian.read_xyz
-         ~Cartesian.read_molden
-         ~Cartesian.view
-         ~Cartesian.write_string
+         ~Cartesian.loc
+         ~Cartesian.iloc
 
 
 

@@ -12,17 +12,17 @@ that is read automatically while importing the module.
 The configuration file is in the INI format and
 can be changed with any text editor.
 
-The possible settings and their defaults are::
+The possible settings and their defaults are:
 
-  [defaults]
-  atomic_radius_data = atomic_radius_cc # determines which atomic radius
-    # is used for calculating if atoms are bonded
-  use_lookup_internally = True # Look into Cartesian.get_bonds() for explanation
-  viewer = gv.exe # Which one is the default viewer
+``['defaults']``
 
-  [show_warnings]
-  valency = True # If a geometry has oversaturated atoms, Cartesian.get_bonds()
-  # will throw a warning.
+  ``['atomic_radius_data'] = 'atomic_radius_cc'``
+    Determines which atomic radius is used for calculating if atoms are bonded
+  ``['use_lookup_internally'] = True``
+    Look into :meth:`~chemcoord.Cartesian.get_bonds()` for an explanation
+  ``['viewer'] = 'gv.exe'``
+    Which one is the default viewer used in :meth:`chemcoord.Cartesian.view`
+    and :func:`chemcoord.xyz_functions.view`.
 
 
 .. autosummary::

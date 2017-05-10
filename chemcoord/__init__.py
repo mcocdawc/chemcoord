@@ -10,6 +10,7 @@ def export(func):
         __all__ = [func.__name__]
     return func
 
+# have to be imported after export definition
 import chemcoord.utilities
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
