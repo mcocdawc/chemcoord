@@ -13,7 +13,7 @@ import pandas as pd
 import collections
 import warnings
 from chemcoord._generic_classes._common_class import _common_class
-# import chemcoord.cartesian_coordinates._indexers_for_cartesian_class as indexers
+import chemcoord.cartesian_coordinates._indexers_for_cartesian_class as indexers
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
@@ -26,7 +26,6 @@ class Cartesian_core(_common_class):
     _required_cols = frozenset({'atom', 'x', 'y', 'z'})
     # Look into the numpy manual for description of __array_priority__
     __array_priority__ = 15.0
-
 
     def __init__(self, frame):
         """How to initialize a Cartesian instance.
@@ -49,17 +48,17 @@ class Cartesian_core(_common_class):
         # TODO watch
         self._metadata = {}
 
-    # @property
-    # def loc(self):
-    #     """pew pew
-    #     """
-    #     return indexers._Loc(self)
-    #
-    # @property
-    # def iloc(self):
-    #     """pew pew
-    #     """
-    #     return indexers._ILoc(self)
+    @property
+    def loc(self):
+        """pew pew
+        """
+        return indexers._Loc(self)
+
+    @property
+    def iloc(self):
+        """pew pew
+        """
+        return indexers._ILoc(self)
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
@@ -133,28 +132,28 @@ class Cartesian_core(_common_class):
     #     else:
     #         return selected
 
-    def __getitem__(self, key):
-        if isinstance(key, tuple):
-            return self.loc[key[0], key[1]]
-        else:
-            return self.loc[key]
-
-    def __setitem__(self, key, value):
-        if isinstance(key, tuple):
-            self.loc[key[0], key[1]] = value
-        else:
-            self.loc[key] = value
+    # def __getitem__(self, key):
+    #     if isinstance(key, tuple):
+    #         return self.loc[key[0], key[1]]
+    #     else:
+    #         return self.loc[key]
+    #
+    # def __setitem__(self, key, value):
+    #     if isinstance(key, tuple):
+    #         self.loc[key[0], key[1]] = value
+    #     else:
+    #         self.loc[key] = value
 
     def __add__(self, other):
         coords = ['x', 'y', 'z']
         new_molecule = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self[:, coords] + other[:, coords]
+            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self.loc[:, coords] + other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self[:, coords] + other
+            new_molecule[:, coords] = self.loc[:, coords] + other
         return new_molecule
 
     def __radd__(self, other):
@@ -165,11 +164,11 @@ class Cartesian_core(_common_class):
         new_molecule = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self[:, coords] - other[:, coords]
+            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self.loc[:, coords] - other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self[:, coords] - other
+            new_molecule[:, coords] = self.loc[:, coords] - other
         return new_molecule
 
     def __rsub__(self, other):
@@ -177,11 +176,11 @@ class Cartesian_core(_common_class):
         new_molecule = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = other[:, coords] - self[:, coords]
+            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = other[:, coords] - self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = other - self[:, coords]
+            new_molecule[:, coords] = other - self.loc[:, coords]
         return new_molecule
 
     def __mul__(self, other):
@@ -189,11 +188,11 @@ class Cartesian_core(_common_class):
         new_molecule = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self[:, coords] * other[:, coords]
+            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self.loc[:, coords] * other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self[:, coords] * other
+            new_molecule[:, coords] = self.loc[:, coords] * other
         return new_molecule
 
     def __rmul__(self, other):
@@ -201,11 +200,11 @@ class Cartesian_core(_common_class):
         new_molecule = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self[:, coords] * other[:, coords]
+            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self.loc[:, coords] * other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self[:, coords] * other
+            new_molecule[:, coords] = self.loc[:, coords] * other
         return new_molecule
 
     def __truediv__(self, other):
@@ -213,11 +212,11 @@ class Cartesian_core(_common_class):
         new_molecule = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self[:, coords] / other[:, coords]
+            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = self.loc[:, coords] / other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self[:, coords] / other
+            new_molecule[:, coords] = self.loc[:, coords] / other
         return new_molecule
 
     def __rtruediv__(self, other):
@@ -225,11 +224,11 @@ class Cartesian_core(_common_class):
         new_molecule = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = other[:, coords] / self[:, coords]
+            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            new_molecule[:, coords] = other[:, coords] / self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = other / self[:, coords]
+            new_molecule[:, coords] = other / self.loc[:, coords]
         return new_molecule
 
     def __pos__(self):
@@ -255,7 +254,7 @@ class Cartesian_core(_common_class):
 
     def _to_ase_Atoms(self):
         import ase
-        atoms = ''.join(self[:, 'atom'])
+        atoms = ''.join(self.loc[:, 'atom'])
         positions = self.location()
         # test
         return ase.Atoms(atoms, positions)
@@ -266,7 +265,7 @@ class Cartesian_core(_common_class):
         convert_to = {
             'frame': dict(zip(range(self.n_atoms), self.index)),
             'array': dict(zip(self.index, range(self.n_atoms)))}
-        location_array = self[:, ['x', 'y', 'z']].values.astype(float)
+        location_array = self.loc[:, ['x', 'y', 'z']].values.astype(float)
         A = np.expand_dims(location_array, axis=1)
         B = np.expand_dims(location_array, axis=0)
         C = A - B
@@ -306,7 +305,7 @@ class Cartesian_core(_common_class):
             return C
 
         bond_size_array = summed_bond_size_array(bond_size_dic)
-        distance_array, convert_to = self[include, :]._give_distance_array()
+        distance_array, convert_to = self.loc[include, :]._give_distance_array()
         overlap_array = bond_size_array - distance_array
         return overlap_array, convert_to
 
@@ -388,10 +387,10 @@ class Cartesian_core(_common_class):
 
             molecule2 = self.add_data(['valency', atomic_radius_data])
             valency_dic = dict(zip(
-                molecule2.index, molecule2[:, 'valency'].astype('int64')))
+                molecule2.index, molecule2.loc[:, 'valency'].astype('int64')))
 
             atomic_radius_dic = dict(zip(molecule2.index,
-                                         molecule2[:, atomic_radius_data]))
+                                         molecule2.loc[:, atomic_radius_data]))
 
             if modified_properties is None:
                 pass
@@ -528,7 +527,7 @@ class Cartesian_core(_common_class):
         coordinates = ['x', 'y', 'z']
         sorted_series = dict(zip(
             coordinates, [
-                self[:, axis].sort_values().copy()
+                self.loc[:, axis].sort_values().copy()
                 for axis in coordinates]))
 
         convert = dict(
@@ -691,7 +690,7 @@ class Cartesian_core(_common_class):
         if give_only_index:
             to_return = fixed_atoms
         else:
-            to_return = self[fixed_atoms, :]
+            to_return = self.loc[fixed_atoms, :]
         return to_return
 
     def _preserve_bonds(self, sliced_cartesian):
@@ -727,7 +726,7 @@ class Cartesian_core(_common_class):
                     exclude=included_atoms_set,
                     give_only_index=True))
             new_atoms = new_atoms - included_atoms_set
-        molecule = self[included_atoms_set, :]
+        molecule = self.loc[included_atoms_set, :]
         return molecule
 
     def cutsphere(
@@ -799,13 +798,13 @@ class Cartesian_core(_common_class):
 
         origin = dict(zip(['x', 'y', 'z'], list(origin)))
 
-        boolean_vector = ((np.abs((self[:, 'x'] - origin['x'])) < a / 2)
-                          & (np.abs((self[:, 'y'] - origin['y'])) < b / 2)
-                          & (np.abs((self[:, 'z'] - origin['z'])) < c / 2))
+        boolean_vector = ((np.abs((self.loc[:, 'x'] - origin['x'])) < a / 2)
+                          & (np.abs((self.loc[:, 'y'] - origin['y'])) < b / 2)
+                          & (np.abs((self.loc[:, 'z'] - origin['z'])) < c / 2))
         if outside_sliced:
-            molecule = self[boolean_vector, :]
+            molecule = self.loc[boolean_vector, :]
         else:
-            molecule = self[~boolean_vector, :]
+            molecule = self.loc[~boolean_vector, :]
 
         if preserve_bonds:
             molecule = self._preserve_bonds(molecule)
@@ -833,7 +832,7 @@ class Cartesian_core(_common_class):
             np.array:
         """
         try:
-            mass_vector = self[:, 'mass'].values.astype('float64')
+            mass_vector = self.loc[:, 'mass'].values.astype('float64')
         except KeyError:
             mass_molecule = self.add_data('mass')
             mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
@@ -868,7 +867,7 @@ class Cartesian_core(_common_class):
         output = self.copy()
 
         indices = self.index if (indices is None) else indices
-        vectors = output[indices, ['x', 'y', 'z']]
+        vectors = output.loc[indices, ['x', 'y', 'z']]
 
         if matrix_first:
             vectors = np.dot(np.array(matrix), vectors.T).T
@@ -882,13 +881,13 @@ class Cartesian_core(_common_class):
             index_for_copied_atoms = range(
                 max_index + 1, max_index + len(indices) + 1
                 )
-            temp = self[indices, :].copy()
+            temp = self.loc[indices, :].copy()
             temp.index = index_for_copied_atoms
             temp[index_for_copied_atoms, ['x', 'y', 'z']] = vectors
             output = output.append(temp)
 
         else:
-            output[indices, ['x', 'y', 'z']] = vectors
+            output.loc[indices, ['x', 'y', 'z']] = vectors
         return output
 
     def bond_lengths(self, buildlist, start_row=0):
@@ -1039,7 +1038,7 @@ class Cartesian_core(_common_class):
         if give_only_index:
             value_to_return = list_fragment_indices
         else:
-            value_to_return = [self[indices, :] for
+            value_to_return = [self.loc[indices, :] for
                                indices in list_fragment_indices]
         return value_to_return
 
@@ -1068,7 +1067,7 @@ class Cartesian_core(_common_class):
         if give_only_index:
             value_to_return = fragment_index
         else:
-            value_to_return = self[fragment_index, :]
+            value_to_return = self.loc[fragment_index, :]
         return value_to_return
 
     def inertia(self):
@@ -1102,7 +1101,7 @@ class Cartesian_core(_common_class):
             The eigenvectors of the inertia tensor in the old basis.
         """
         try:
-            mass_vector = self[:, 'mass'].values.astype('float64')
+            mass_vector = self.loc[:, 'mass'].values.astype('float64')
             molecule = self.copy()
         except KeyError:
             molecule = self.add_data('mass')
@@ -1208,7 +1207,7 @@ class Cartesian_core(_common_class):
             given a 3D vector is returned one index.
         """
         indexlist = self.index if indexlist is None else indexlist
-        array = self[indexlist, ['x', 'y', 'z']].values.astype(float)
+        array = self.loc[indexlist, ['x', 'y', 'z']].values.astype(float)
         return array
 
     def distance_to(self,
@@ -1225,10 +1224,9 @@ class Cartesian_core(_common_class):
             indices_of_other_atoms = self.index
         origin = np.array(origin, dtype=float)
 
-        output = self[indices_of_other_atoms, :].copy()
+        output = self.loc[indices_of_other_atoms, :].copy()
         other_locations = output.location()
-        output[:, 'distance'] = np.linalg.norm(other_locations
-                                               - origin, axis=1)
+        output.loc[:, 'distance'] = np.linalg.norm(other_locations - origin, axis=1)
         if sort:
             output.sort_values(by='distance', inplace=True)
         return output
@@ -1248,9 +1246,8 @@ class Cartesian_core(_common_class):
         replace_list = list(rename_dict.keys())
         with_list = [rename_dict[key] for key in replace_list]
 
-        output[:, 'temporary_column'] = output.index
-        output[:, 'temporary_column'].replace(replace_list,
-                                              with_list, inplace=True)
+        output.loc[:, 'temporary_column'] = output.index
+        output.loc[:, 'temporary_column'].replace(replace_list, with_list, inplace=True)
 
         output.set_index('temporary_column', drop=True, inplace=True)
         output.sort_index(inplace=True)
@@ -1313,7 +1310,7 @@ class Cartesian_core(_common_class):
             environment = frozenset(environment)
             return (own_symbol, environment)
 
-        atomseries = self[:, 'atom']
+        atomseries = self.loc[:, 'atom']
 
         for index in self.index:
             chem_env = get_chem_env(self, atomseries, index, follow_bonds)
@@ -1348,19 +1345,19 @@ class Cartesian_core(_common_class):
         # TODO rewrite with C function
         molecule1 = self.sort_index()
         molecule2 = Cartesian2.sort_index()
-        molecule1[:, 'x':'z'] = (molecule1[:, 'x':'z']
+        molecule1.loc[:, 'x':'z'] = (molecule1.loc[:, 'x':'z']
                                  - molecule1.topologic_center())
-        molecule2[:, 'x':'z'] = (molecule2[:, 'x':'z']
+        molecule2.loc[:, 'x':'z'] = (molecule2.loc[:, 'x':'z']
                                  - molecule2.topologic_center())
 
         if ignore_hydrogens:
             location1 = molecule1[molecule1[:, 'atom'] != 'H', :].location()
-            location2 = molecule2[molecule2[:, 'atom'] != 'H', :].location()
+            location2 = molecule2.loc[molecule2.loc[:, 'atom'] != 'H', :].location()
         else:
             location1 = molecule1.location()
             location2 = molecule2.location()
 
-        molecule2[:, ['x', 'y', 'z']] = algebra_utilities.rotate(location2,
+        molecule2.loc[:, ['x', 'y', 'z']] = algebra_utilities.rotate(location2,
                                                                  location1)
         return molecule1, molecule2
 
@@ -1475,7 +1472,7 @@ class Cartesian_core(_common_class):
             appended to the left and right of the list continuing
             the movement.
         """
-        difference = Cartesian2[:, ['x', 'y', 'z']] - self[:, ['x', 'y', 'z']]
+        difference = Cartesian2[:, ['x', 'y', 'z']] - self.loc[:, ['x', 'y', 'z']]
 
         step_frame = difference.copy() / step
 
@@ -1484,15 +1481,15 @@ class Cartesian_core(_common_class):
 
         for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
             temp_Cartesian[:, ['x', 'y', 'z']] = (
-                self[:, ['x', 'y', 'z']]
+                self.loc[:, ['x', 'y', 'z']]
                 + step_frame.loc[:, ['x', 'y', 'z']] * t)
             Cartesian_list.append(temp_Cartesian.copy())
         return Cartesian_list
 
     def has_same_sumformula(self, other):
         same_atoms = True
-        for atom in set(self[:, 'atom']):
-            own_atom_number = self[self[:, 'atom'] == atom, :].shape[0]
+        for atom in set(self.loc[:, 'atom']):
+            own_atom_number = self.loc[self.loc[:, 'atom'] == atom, :].shape[0]
             other_atom_number = other[other[:, 'atom'] == atom, :].shape[0]
             same_atoms = (own_atom_number == other_atom_number)
             if not same_atoms:

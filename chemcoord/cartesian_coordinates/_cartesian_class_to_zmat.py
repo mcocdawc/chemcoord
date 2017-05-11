@@ -60,23 +60,23 @@ class Cartesian_to_zmat(Cartesian_core):
                 first_time=False,
                 third_time=False
                 ):
-            index_of_new_atom = distance_to_topologic_center[
+            index_of_new_atom = distance_to_topologic_center.loc[
                 to_be_built, 'distance'].idxmin()
             buildlist[row_in_buildlist, 0] = index_of_new_atom
             convert_index[index_of_new_atom] = row_in_buildlist
             if not first_time:
                 bond_with = self.distance_to(
                     index_of_new_atom,
-                    already_built)[:, 'distance'].idxmin()
+                    already_built).loc[:, 'distance'].idxmin()
                 angle_with = self.distance_to(
                     bond_with,
-                    already_built - set([bond_with]))[:, 'distance'].idxmin()
+                    already_built - set([bond_with])).loc[:, 'distance'].idxmin()
                 buildlist[row_in_buildlist, 1:3] = [bond_with, angle_with]
                 if not third_time:
                     dihedral_with = self.distance_to(
                         bond_with,
                         already_built - set([bond_with, angle_with])
-                        )[:, 'distance'].idxmin()
+                        ).loc[:, 'distance'].idxmin()
                     buildlist[row_in_buildlist, 1:] = [
                         bond_with, angle_with, dihedral_with]
             new_row_to_modify = row_in_buildlist + 1
@@ -326,14 +326,13 @@ class Cartesian_to_zmat(Cartesian_core):
             dtype='float',
             index=indexlist)
 
-        zmat_frame.loc[:, additional_columns] = self[indexlist,
-                                                     additional_columns]
+        zmat_frame.loc[:, additional_columns] = self.loc[indexlist, additional_columns]
 
         bonds = self.bond_lengths(buildlist, start_row=1)
         angles = self.angle_degrees(buildlist, start_row=2)
         dihedrals = self.dihedral_degrees(buildlist, start_row=3)
 
-        zmat_frame.loc[indexlist, 'atom'] = self[indexlist, 'atom']
+        zmat_frame.loc[indexlist, 'atom'] = self.loc[indexlist, 'atom']
         zmat_frame.loc[indexlist[1:], 'bond_with'] = buildlist[1:, 1]
         zmat_frame.loc[indexlist[1:], 'bond'] = bonds
         zmat_frame.loc[indexlist[2:], 'angle_with'] = buildlist[2:, 2]
@@ -425,7 +424,7 @@ class Cartesian_to_zmat(Cartesian_core):
                         return buildlist, big_molecule_index
                     buildlist, big_molecule_index = prepare_variables(
                         self, fragment_list)
-                    big_molecule = self[big_molecule_index, :]
+                    big_molecule = self.loc[big_molecule_index, :]
                     row = big_molecule.n_atoms
                     buildlist[: row, :] = big_molecule._get_buildlist()
                     return buildlist, big_molecule, row

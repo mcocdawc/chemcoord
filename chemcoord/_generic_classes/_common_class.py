@@ -8,6 +8,8 @@ import pandas as pd
 from chemcoord._generic_classes._pandas_wrapper import _pandas_wrapper
 from chemcoord.constants import constants
 
+# NOTE does not work on its own, because loc and iloc are not implemented.
+
 
 class _common_class(_pandas_wrapper):
     """This class provides methods which are used by Zmat and Cartesian.

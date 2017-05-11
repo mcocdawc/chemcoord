@@ -6,18 +6,12 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import pandas as pd
 from chemcoord._exceptions import PhysicalMeaningError
-from chemcoord._generic_classes import _indexers as indexers
-
 
 
 # TODO replace all *kwargs
 class _pandas_wrapper(object):
     """This class provides wrappers for pd.DataFrame methods.
     """
-    # PLEASE NOTE: It is written under the assumption that there exists an
-    # attribute self.frame.
-    # So you have to provide it in the __init__ of an inheriting class.
-
     def __init__(self, frame):
         self.frame = frame
 
@@ -61,19 +55,6 @@ class _pandas_wrapper(object):
         except AttributeError:
             pass
 
-    @property
-    def loc(self):
-        """pew pew
-        """
-        return indexers._Loc(self)
-
-    @property
-    def iloc(self):
-        """pew pew
-        """
-        return indexers._ILoc(self)
-
-    # TODO metadata
     def copy(self):
         molecule = self.__class__(self.frame)
         molecule.metadata = self.metadata.copy()
@@ -323,7 +304,6 @@ class _pandas_wrapper(object):
             return self.__class__(self.frame.set_index(
                 keys, drop=drop, append=append,
                 inplace=inplace, verify_integrity=verify_integrity))
-
 
     def append(self, other, ignore_index=False, verify_integrity=False):
         """Append rows of `other` to the end of this frame, returning a new object.
