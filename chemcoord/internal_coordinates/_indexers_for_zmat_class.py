@@ -18,9 +18,7 @@ class _generic_Indexer(object):
             molecule = self.molecule.__class__(selected)
             molecule.metadata = self.molecule.metadata.copy()
             molecule._metadata = self.molecule.metadata.copy()
-            keys_not_to_keep = [
-                'bond_dict'   # You could end up with loose ends
-                ]
+            keys_not_to_keep = []
             for key in keys_not_to_keep:
                 try:
                     molecule._metadata.pop(key)

@@ -40,7 +40,7 @@ class Cartesian_to_zmat(Cartesian_core):
             already_built, to_be_built = set([]), set(self.index)
             convert_index = {}
 
-        bond_dic = self.get_bonds(use_lookup=cc.settings['defaults']['use_lookup_internally'])
+        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
         topologic_center = self.topologic_center()
         distance_to_topologic_center = self.distance_to(topologic_center)
 
@@ -345,6 +345,8 @@ class Cartesian_to_zmat(Cartesian_core):
         lines[:3] = False
         zmat_frame.loc[zmat_frame['dihedral'].isnull() & lines, 'dihedral'] = 0
 
+        # return zmat_frame
+        # TODO
         return Zmat(zmat_frame)
 
     def to_zmat(

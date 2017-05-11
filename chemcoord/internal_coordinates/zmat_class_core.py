@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import math as m
 from chemcoord._generic_classes._common_class import _common_class
+import chemcoord.internal_coordinates._indexers_for_zmat_class as indexers
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.configuration import settings
 
@@ -21,7 +22,11 @@ from chemcoord.configuration import settings
 class Zmat_core(_common_class):
     """The main class for dealing with internal coordinates.
     """
-    def __init__(self, init):
+    _required_cols = frozenset({
+        'atom', 'bond_with', 'bond', 'angle_with', 'angle',
+        'dihedral_with', 'dihedral'})
+
+    def __init__(self, frame):
         """How to initialize a Zmat instance.
 
         Args:
@@ -33,58 +38,56 @@ class Zmat_core(_common_class):
         Returns:
             Zmat: A new zmat instance.
         """
-        try:
-            self = init._to_Zmat()
+        if not isinstance(frame, pd.DataFrame):
+            raise ValueError('Need a pd.DataFrame as input')
+        if not self._required_cols <= set(frame.columns):
+            raise PhysicalMeaningError('There are columns missing for a \
+                                       meaningful description of a molecule')
+        self.frame = frame.copy()
+        self.metadata = {}
+        self._metadata = {}
 
-        except AttributeError:
-            # Create from pd.DataFrame
-            if not self._is_physical(init.columns):
-                raise PhysicalMeaningError(
-                    "There are columns missing for a meaningful"
-                    + "description of a molecule")
-            self.frame = init.copy()
-            self.shape = self.frame.shape
-            self.n_atoms = self.shape[0]
-            self.metadata = {}
-            self._metadata = {}
+    @property
+    def loc(self):
+        """pew pew
+        """
+        return indexers._Loc(self)
 
-    def __getitem__(self, key):
-        # overwrites the method defined in _pandas_wrapper
-        frame = self.frame.loc[key[0], key[1]]
-        try:
-            if self._is_physical(frame.columns):
-                molecule = self.__class__(frame)
-                # NOTE here is the difference to the _pandas_wrapper definition
-                # TODO make clear in documentation that metadata is an
-                # alias/pointer
-                # TODO persistent attributes have to be inserted here
-                molecule.metadata = self.metadata
-                molecule._metadata = self.metadata.copy()
-                keys_not_to_keep = [
-                    'bond_dict'  # You could end up with loose ends
-                    ]
-                for key in keys_not_to_keep:
-                    try:
-                        molecule._metadata.pop(key)
-                    except KeyError:
-                        pass
-                return molecule
-            else:
-                return frame
-        except AttributeError:
-            # A series and not a DataFrame was returned
-            return frame
+    @property
+    def iloc(self):
+        """pew pew
+        """
+        return indexers._ILoc(self)
 
-    def __setitem__(self, key, value):
-        self.frame.loc[key[0], key[1]] = value
-
-    def copy(self):
-        molecule = self.__class__(self.frame)
-        # TODO persistent attributes have to be inserted here
-        molecule.metadata = self.metadata
-        for key in self._metadata.keys():
-            molecule._metadata[key] = self._metadata[key]
-        return molecule
+    # def __getitem__(self, key):
+    #     # overwrites the method defined in _pandas_wrapper
+    #     frame = self.frame.loc[key[0], key[1]]
+    #     try:
+    #         if self._required_cols <= (frame.columns):
+    #             molecule = self.__class__(frame)
+    #             # NOTE here is the difference to the _pandas_wrapper definition
+    #             # TODO make clear in documentation that metadata is an
+    #             # alias/pointer
+    #             # TODO persistent attributes have to be inserted here
+    #             molecule.metadata = self.metadata
+    #             molecule._metadata = self.metadata.copy()
+    #             keys_not_to_keep = [
+    #                 'bond_dict'  # You could end up with loose ends
+    #                 ]
+    #             for key in keys_not_to_keep:
+    #                 try:
+    #                     molecule._metadata.pop(key)
+    #                 except KeyError:
+    #                     pass
+    #             return molecule
+    #         else:
+    #             return frame
+    #     except AttributeError:
+    #         # A series and not a DataFrame was returned
+    #         return frame
+    #
+    # def __setitem__(self, key, value):
+    #     self.frame.loc[key[0], key[1]] = value
 
     def __add__(self, other):
         selection = ['atom', 'bond_with', 'angle_with', 'dihedral_with']
@@ -155,7 +158,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
         old_index = output.index
 
         if (new_index is None):
-            new_index = range(1, zmat_frame.shape[0]+1)
+            new_index = range(1, self.n_atoms + 1)
         else:
             new_index = new_index
         assert len(new_index) == len(old_index)

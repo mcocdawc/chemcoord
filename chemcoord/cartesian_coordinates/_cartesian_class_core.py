@@ -13,7 +13,7 @@ import pandas as pd
 import collections
 import warnings
 from chemcoord._generic_classes._common_class import _common_class
-import chemcoord.cartesian_coordinates._indexers_for_cartesian_class as indexers
+# import chemcoord.cartesian_coordinates._indexers_for_cartesian_class as indexers
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
@@ -23,7 +23,12 @@ from chemcoord.configuration import settings
 # TODO implement is_physical
 class Cartesian_core(_common_class):
 
-    def __init__(self, init):
+    _required_cols = frozenset({'atom', 'x', 'y', 'z'})
+    # Look into the numpy manual for description of __array_priority__
+    __array_priority__ = 15.0
+
+
+    def __init__(self, frame):
         """How to initialize a Cartesian instance.
 
         Args:
@@ -34,41 +39,52 @@ class Cartesian_core(_common_class):
         Returns:
             Cartesian: A new cartesian instance.
         """
-        try:
-            self = init._to_Cartesian()
+        if not isinstance(frame, pd.DataFrame):
+            raise ValueError('Need a pd.DataFrame as input')
+        if not self._required_cols <= set(frame.columns):
+            raise PhysicalMeaningError('There are columns missing for a \
+                                       meaningful description of a molecule')
+        self.frame = frame.copy()
+        self.metadata = {}
+        # TODO watch
+        self._metadata = {}
 
-        except AttributeError:
-            # Create from pd.DataFrame
-            if not self._is_physical(init):
-                error_string = 'There are columns missing for a \
-                                meaningful description of a molecule'
-                raise PhysicalMeaningError(error_string)
-            self.frame = init.copy()
-            self.metadata = {}
-            """Test"""
-            self._metadata = {}
+    # @property
+    # def loc(self):
+    #     """pew pew
+    #     """
+    #     return indexers._Loc(self)
+    #
+    # @property
+    # def iloc(self):
+    #     """pew pew
+    #     """
+    #     return indexers._ILoc(self)
 
-    @staticmethod
-    def _is_physical(x):
-        """Test if a given input is a DataFrame and may represent
-        a molecule in cartesian coordinates.
-        """
-        if isinstance(x, pd.DataFrame):
-            return {'atom', 'x', 'y', 'z'} <= set(x.columns)
+    def _return_appropiate_type(self, selected):
+        if isinstance(selected, pd.Series):
+            frame = pd.DataFrame(selected).T
+            if self._required_cols <= set(frame.columns):
+                selected = frame
+            else:
+                return selected
+
+        if (isinstance(selected, pd.DataFrame)
+                and self._required_cols <= set(selected.columns)):
+            molecule = self.__class__(selected)
+            molecule.metadata = self.metadata.copy()
+            molecule._metadata = self.metadata.copy()
+            keys_not_to_keep = [
+                'bond_dict'   # You could end up with loose ends
+                ]
+            for key in keys_not_to_keep:
+                try:
+                    molecule._metadata.pop(key)
+                except KeyError:
+                    pass
+            return molecule
         else:
-            return False
-
-    @property
-    def loc(self):
-        """pew pew
-        """
-        return indexers._Loc(self)
-
-    @property
-    def iloc(self):
-        """pew pew
-        """
-        return indexers._ILoc(self)
+            return selected
 
     def loc_set_copy(self, key, value):
         new = self.copy()
@@ -128,16 +144,6 @@ class Cartesian_core(_common_class):
             self.loc[key[0], key[1]] = value
         else:
             self.loc[key] = value
-
-    def copy(self):
-        molecule = self.__class__(self.frame)
-        molecule.metadata = self.metadata
-        for key in self._metadata.keys():
-            molecule._metadata[key] = self._metadata[key]
-        return molecule
-
-    # Look into the numpy manual for description of __array_priority__
-    __array_priority__ = 15.0
 
     def __add__(self, other):
         coords = ['x', 'y', 'z']
@@ -246,9 +252,6 @@ class Cartesian_core(_common_class):
 
     def __eq__(self, other):
         return np.alltrue(self.frame == other.frame)
-
-    def _to_Cartesian(self):
-        return self.copy()
 
     def _to_ase_Atoms(self):
         import ase

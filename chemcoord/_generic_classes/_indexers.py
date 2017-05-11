@@ -38,7 +38,11 @@ class _Loc(_generic_Indexer):
             selected = self.molecule.frame.loc[key[0], key[1]]
         else:
             selected = self.molecule.frame.loc[key]
-        return self.return_appropiate_type(selected)
+        try:
+            return self.molecule._return_appropiate_type(selected)
+        except AttributeError:
+            return selected
+        # return self.return_appropiate_type(selected)
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):

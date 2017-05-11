@@ -13,7 +13,7 @@ from chemcoord.configuration import settings
 
 class Zmat_io(Zmat_core):
     @classmethod
-    def read_zmat(cls, inputfile, implicit_index=True):
+    def from_zmat(cls, inputfile, implicit_index=True):
         """Reads a zmat file.
 
         Lines beginning with ``#`` are ignored.
@@ -27,30 +27,68 @@ class Zmat_io(Zmat_core):
         Returns:
             Zmat:
         """
+        cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
+                'dihedral_with', 'dihedral']
         if implicit_index:
-            zmat_frame = pd.read_table(
-                inputfile,
-                comment='#',
-                delim_whitespace=True,
-                names=[
-                    'atom', 'bond_with', 'bond', 'angle_with',
-                    'angle', 'dihedral_with', 'dihedral'], )
-
-            n_atoms = zmat_frame.shape[0]
-            zmat_frame.index = range(1, n_atoms+1)
+            zmat_frame = pd.read_table(inputfile, comment='#',
+                                       delim_whitespace=True,
+                                       names=cols)
+            Zmat = cls(zmat_frame)
+            Zmat.index = range(1, Zmat.n_atoms + 1)
         else:
-            zmat_frame = pd.read_table(
-                inputfile,
-                comment='#',
-                delim_whitespace=True,
-                names=[
-                    'temp_index', 'atom', 'bond_with',
-                    'bond', 'angle_with', 'angle',
-                    'dihedral_with', 'dihedral'],
-            )
-            zmat_frame.set_index('temp_index', drop=True, inplace=True)
-            zmat_frame.index.name = None
-        return cls(zmat_frame)
+            zmat_frame = pd.read_table(inputfile, comment='#',
+                                       delim_whitespace=True,
+                                       names=['temp_index'] + cols)
+            Zmat = cls(zmat_frame)
+            Zmat.set_index('temp_index', drop=True, inplace=True)
+            Zmat.index.name = None
+        return Zmat
+
+    @staticmethod
+    def _lost_precision(s):
+        """
+        The total amount of precision lost over Series `s`
+        during conversion to int64 dtype
+        """
+        COULD_BE_ANY_INTEGER = 0
+        try:
+            diff = (s - s.fillna(COULD_BE_ANY_INTEGER).astype(np.int64))
+            return diff.sum()
+        except ValueError:
+            return np.nan
+
+    def _prepare_nansafe_output(self):
+        COULD_BE_ANY_INTEGER = 0
+
+        def _lost_precision(s):
+            """
+            The total amount of precision lost over Series `s`
+            during conversion to int64 dtype
+            """
+            try:
+                diff = (s - s.fillna(COULD_BE_ANY_INTEGER).astype(np.int64))
+                return diff.sum()
+            except ValueError:
+                return np.nan
+
+        def _nansafe_integer_convert(s, epsilon=1e-9):
+            """
+            Convert Series `s` to an object type with `np.nan`
+            represented as an empty string ""
+            """
+            if _lost_precision(s) < epsilon:
+                # Here's where the magic happens
+                as_object = s.fillna(COULD_BE_ANY_INTEGER)
+                as_object = as_object.astype(np.int64).astype(np.object)
+                as_object[s.isnull()] = ""
+                return as_object
+            else:
+                return s
+
+        return self.frame.apply(_nansafe_integer_convert)
+
+
+    # def to_zmat(self, buf=None, implicit_index=True)
 
     def write(self, outputfile, implicit_index=True):
         """Writes the zmatrix into a file.
@@ -75,30 +113,7 @@ class Zmat_io(Zmat_core):
         # http://stackoverflow.com/questions/25789354/
         # exporting-ints-with-missing-values-to-csv-in-pandas/31208873#31208873
         # Begin of the copied code snippet
-        EPSILON = 1e-9
 
-        def _lost_precision(s):
-            """
-            The total amount of precision lost over Series `s`
-            during conversion to int64 dtype
-            """
-            try:
-                return (s - s.fillna(0).astype(np.int64)).sum()
-            except ValueError:
-                return np.nan
-
-        def _nansafe_integer_convert(s):
-            """
-            Convert Series `s` to an object type with `np.nan`
-            represented as an empty string ""
-            """
-            if _lost_precision(s) < EPSILON:
-                # Here's where the magic happens
-                as_object = s.fillna(0).astype(np.int64).astype(np.object)
-                as_object[s.isnull()] = ""
-                return as_object
-            else:
-                return s
 
         def nansafe_to_csv(df, *args, **kwargs):
             """

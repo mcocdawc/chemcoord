@@ -16,7 +16,7 @@ class _common_class(_pandas_wrapper):
     def n_atoms(self):
         return self.shape[0]
 
-    def add_data(self, list_of_columns=None, inplace=False):
+    def add_data(self, list_of_columns=None):
         """Adds a column with the requested data.
 
         If you want to see for example the mass, the colormap used in
@@ -54,8 +54,6 @@ class _common_class(_pandas_wrapper):
         """
         data = constants.elements
 
-        frame = self.frame.copy()
-
         list_of_columns = (
             data.columns if (list_of_columns is None) else list_of_columns)
 
@@ -67,15 +65,11 @@ class _common_class(_pandas_wrapper):
                 assert column not in set(self.columns), \
                     'Column is already present'
 
-        atom_symbols = frame['atom']
+        atom_symbols = self.loc[:, 'atom']
         new_columns = data.loc[atom_symbols, list_of_columns]
-        new_columns.index = frame.index
-        frame = pd.concat([frame, new_columns], axis=1)
+        new_columns.index = self.index
 
-        if inplace:
-            self.frame = frame
-        else:
-            return self.__class__(frame)
+        return self.__class__(pd.concat([self.frame, new_columns], axis=1))
 
     def total_mass(self):
         """Returns the total mass in g/mol.
