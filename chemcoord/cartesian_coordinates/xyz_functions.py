@@ -208,15 +208,15 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
         bool:
     """
     pretest = (set(a.index) == set(b.index)
-               and np.alltrue(a[:, 'atom'] == b[a.index, 'atom']))
+               and np.alltrue(a.loc[:, 'atom'] == b.loc[a.index, 'atom']))
 
     if align and pretest:
         A = a.inertia()['transformed_Cartesian'].location()
-        B = b.inertia()['transformed_Cartesian'][a.index, :].location()
+        B = b.inertia()['transformed_Cartesian'].loc[a.index, :].location()
         return np.allclose(A, B, rtol=rtol, atol=atol)
     elif pretest:
         A = a.location()
-        B = b[a.index, :].location()
+        B = b.loc[a.index, :].location()
         return np.allclose(A, B, rtol=rtol, atol=atol)
     else:
         return False

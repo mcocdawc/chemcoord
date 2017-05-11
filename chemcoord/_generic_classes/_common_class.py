@@ -83,8 +83,8 @@ class _common_class(_pandas_wrapper):
             float:
         """
         try:
-            mass = self[:, 'mass'].sum()
+            mass = self.loc[:, 'mass'].sum()
         except KeyError:
             mass_molecule = self.add_data('mass')
-            mass = mass_molecule[:, 'mass'].sum()
+            mass = mass_molecule.loc[:, 'mass'].sum()
         return mass

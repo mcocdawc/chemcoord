@@ -63,10 +63,8 @@ class _pandas_wrapper(object):
             molecule._metadata[key] = self._metadata[key]
         return molecule
 
-    def sort_values(self, by, ascending=True, inplace=False,
+    def sort_values(self, by, axis=0, ascending=True, inplace=False,
                     kind='quicksort', na_position='last'):
-        # axis=0
-        # axis : index, columns to direct sorting
         """Sort by the values along either axis
 
         The description is taken from the pandas project.
@@ -74,6 +72,7 @@ class _pandas_wrapper(object):
         Parameters
         ----------
         by : string name or list of names which refer to the axis items
+        axis : index, columns to direct sorting
         ascending : bool or list of bool
              Sort ascending vs. descending. Specify list for multiple sort
              orders.  If this is a list of bools, must match the length of
@@ -102,17 +101,16 @@ class _pandas_wrapper(object):
                     by, axis=axis, ascending=ascending,
                     inplace=inplace, kind=kind, na_position=na_position))
 
-    def sort_index(self, level=None, ascending=True, inplace=False,
+    def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
                    kind='quicksort', na_position='last',
                    sort_remaining=True, by=None):
-        # axis=0
-        # axis : index, columns to direct sorting
         """Sort object by labels (along an axis)
 
         The description is taken from the pandas project.
 
         Parameters
         ----------
+        axis : index, columns to direct sorting
         level : int or level name or list of ints or list of level names
             if not None, sort on values in specified index level(s)
         ascending : boolean, default True

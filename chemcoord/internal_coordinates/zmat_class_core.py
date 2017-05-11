@@ -99,17 +99,17 @@ class Zmat_core(_common_class):
             assert (self.index == other.index).all()
             # TODO default values for _metadata
             if new._metadata['absolute_zmat']:
-                assert np.alltrue(self[:, selection] == other[:, selection])
+                assert np.alltrue(self.loc[:, selection] == other.loc[:, selection])
             else:
-                self[:, selection].isnull()
-                tested_where_equal = (self[:, selection] == other[:, selection])
-                tested_where_nan = (self[:, selection].isnull()
-                                    | other[:, selection].isnull())
+                self.loc[:, selection].isnull()
+                tested_where_equal = (self.loc[:, selection] == other.loc[:, selection])
+                tested_where_nan = (self.loc[:, selection].isnull()
+                                    | other.loc[:, selection].isnull())
                 for column in selection:
                     tested_where_equal[tested_where_nan[column], column] = True
                 assert np.alltrue(tested_where_equal)
 
-            new[:, coords] = self[:, coords] + other[:, coords]
+            new[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         except AssertionError:
             raise PhysicalMeaningError("You can add only those zmatrices that \
 have the same index, use the same buildlist, have the same ordering... \
@@ -133,7 +133,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
         """
         columns = ['temporary_index', 'bond_with', 'angle_with', 'dihedral_with']
         tmp = self.insert(0, 'temporary_index', self.index)
-        buildlist = tmp[:, columns].values.astype('int64')
+        buildlist = tmp.loc[:, columns].values.astype('int64')
         buildlist[0, 1:] = 0
         buildlist[1, 2:] = 0
         buildlist[2, 3:] = 0
@@ -166,16 +166,16 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
         output.index = new_index
 
         cols = ['bond_with', 'angle_with', 'dihedral_with']
-        output[:, cols] = output[:, cols].replace(old_index, new_index)
+        output.loc[:, cols] = output.loc[:, cols].replace(old_index, new_index)
 
         if not inplace:
             return output
 
     def has_same_sumformula(self, other):
         same_atoms = True
-        for atom in set(self[:, 'atom']):
-            own_atom_number = self[self[:, 'atom'] == atom, :].shape[0]
-            other_atom_number = other[other[:, 'atom'] == atom, :].shape[0]
+        for atom in set(self.loc[:, 'atom']):
+            own_atom_number = self.loc[self.loc[:, 'atom'] == atom, :].shape[0]
+            other_atom_number = other.loc[other.loc[:, 'atom'] == atom, :].shape[0]
             same_atoms = (own_atom_number == other_atom_number)
             if not same_atoms:
                 break

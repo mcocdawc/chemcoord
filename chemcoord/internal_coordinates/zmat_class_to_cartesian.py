@@ -62,17 +62,17 @@ class Zmat_to_cartesian(Zmat_core):
         def add_first_atom():
             index = buildlist[0, 0]
             # Change of nonlocal variables
-            molecule[index, :] = [self[index, 'atom'], 0., 0., 0.]
+            molecule.loc[index, :] = [self.loc[index, 'atom'], 0., 0., 0.]
 
         def add_second_atom():
             index = buildlist[1, 0]
-            atom, bond = self[index, ['atom', 'bond']]
+            atom, bond = self.loc[index, ['atom', 'bond']]
             # Change of nonlocal variables
-            molecule[index, :] = [atom, bond, 0., 0.]
+            molecule.loc[index, :] = [atom, bond, 0., 0.]
 
         def add_third_atom():
             index, bond_with, angle_with = buildlist[2, :3]
-            atom, bond, angle = self[index, ['atom', 'bond', 'angle']]
+            atom, bond, angle = self.loc[index, ['atom', 'bond', 'angle']]
             angle = m.radians(angle)
 
             # vb is the vector of the atom bonding to,
@@ -92,11 +92,11 @@ class Zmat_to_cartesian(Zmat_core):
             p = vb + d
 
             # Change of nonlocal variables
-            molecule[index, :] = [atom] + list(p)
+            molecule.loc[index, :] = [atom] + list(p)
 
         def add_atom(row):
             index, bond_with, angle_with, dihedral_with = buildlist[row, :]
-            atom, bond, angle, dihedral = self[
+            atom, bond, angle, dihedral = self.loc[
                 index, ['atom', 'bond', 'angle', 'dihedral']]
 
             angle, dihedral = [m.radians(x) for x in (angle, dihedral)]
@@ -112,7 +112,7 @@ class Zmat_to_cartesian(Zmat_core):
                 d = bond * ab
 
                 p = vb + d
-                molecule[index, :] = [atom] + list(p)
+                molecule.loc[index, :] = [atom] + list(p)
 
             else:
                 AB = vb - va
@@ -133,7 +133,7 @@ class Zmat_to_cartesian(Zmat_core):
                 p = vb + d
 
                 # Change of nonlocal variables
-                molecule[index, :] = [atom] + list(p)
+                molecule.loc[index, :] = [atom] + list(p)
 
         def add_atom_SN_NeRF(row):
             normalize = algebra_utilities.normalize
@@ -144,7 +144,7 @@ class Zmat_to_cartesian(Zmat_core):
 #            index = None  # Should be added
 
             index, bond_with, angle_with, dihedral_with = buildlist[row, :]
-            atom, bond, angle, dihedral = self[
+            atom, bond, angle, dihedral = self.loc[
                 index, ['atom', 'bond', 'angle', 'dihedral']]
             angle, dihedral = [m.radians(x) for x in (angle, dihedral)]
             bond_with, angle_with, dihedral_with = buildlist[row, 1:]
@@ -172,7 +172,7 @@ class Zmat_to_cartesian(Zmat_core):
                 d = bond * ab
 
                 p = vb + d
-                molecule[index, :] = [atom] + list(p)
+                molecule.loc[index, :] = [atom] + list(p)
 
             else:
                 D2 = bond * np.array([
@@ -191,7 +191,7 @@ class Zmat_to_cartesian(Zmat_core):
                     n])
                 D = np.dot(np.transpose(M), D2) + vb
 
-                molecule[index, :] = [atom] + list(D)
+                molecule.loc[index, :] = [atom] + list(D)
 
         if self.n_atoms == 1:
             add_first_atom()

@@ -150,10 +150,10 @@ class Cartesian_core(_common_class):
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self.loc[:, coords] + other[:, coords]
+            new_molecule.loc[:, coords] = self.loc[:, coords] + other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self.loc[:, coords] + other
+            new_molecule.loc[:, coords] = self.loc[:, coords] + other
         return new_molecule
 
     def __radd__(self, other):
@@ -165,10 +165,10 @@ class Cartesian_core(_common_class):
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self.loc[:, coords] - other[:, coords]
+            new_molecule.loc[:, coords] = self.loc[:, coords] - other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self.loc[:, coords] - other
+            new_molecule.loc[:, coords] = self.loc[:, coords] - other
         return new_molecule
 
     def __rsub__(self, other):
@@ -177,10 +177,10 @@ class Cartesian_core(_common_class):
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = other[:, coords] - self.loc[:, coords]
+            new_molecule.loc[:, coords] = other[:, coords] - self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = other - self.loc[:, coords]
+            new_molecule.loc[:, coords] = other - self.loc[:, coords]
         return new_molecule
 
     def __mul__(self, other):
@@ -189,10 +189,10 @@ class Cartesian_core(_common_class):
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self.loc[:, coords] * other[:, coords]
+            new_molecule.loc[:, coords] = self.loc[:, coords] * other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self.loc[:, coords] * other
+            new_molecule.loc[:, coords] = self.loc[:, coords] * other
         return new_molecule
 
     def __rmul__(self, other):
@@ -201,10 +201,10 @@ class Cartesian_core(_common_class):
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self.loc[:, coords] * other[:, coords]
+            new_molecule.loc[:, coords] = self.loc[:, coords] * other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self.loc[:, coords] * other
+            new_molecule.loc[:, coords] = self.loc[:, coords] * other
         return new_molecule
 
     def __truediv__(self, other):
@@ -213,10 +213,10 @@ class Cartesian_core(_common_class):
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = self.loc[:, coords] / other[:, coords]
+            new_molecule.loc[:, coords] = self.loc[:, coords] / other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = self.loc[:, coords] / other
+            new_molecule.loc[:, coords] = self.loc[:, coords] / other
         return new_molecule
 
     def __rtruediv__(self, other):
@@ -225,10 +225,10 @@ class Cartesian_core(_common_class):
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule[:, coords] = other[:, coords] / self.loc[:, coords]
+            new_molecule.loc[:, coords] = other[:, coords] / self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule[:, coords] = other / self.loc[:, coords]
+            new_molecule.loc[:, coords] = other / self.loc[:, coords]
         return new_molecule
 
     def __pos__(self):
@@ -237,7 +237,7 @@ class Cartesian_core(_common_class):
     def __abs__(self):
         coords = ['x', 'y', 'z']
         new_molecule = self.copy()
-        new_molecule[:, coords] = abs(new_molecule[:, coords])
+        new_molecule.loc[:, coords] = abs(new_molecule.loc[:, coords])
         return new_molecule
 
     def __neg__(self):
@@ -246,7 +246,7 @@ class Cartesian_core(_common_class):
     def __rmatmul__(self, other):
         coords = ['x', 'y', 'z']
         new_molecule = self.copy()
-        new_molecule[:, coords] = (np.dot(other, new_molecule[:, coords].T)).T
+        new_molecule.loc[:, coords] = (np.dot(other, new_molecule.loc[:, coords].T)).T
         return new_molecule
 
     def __eq__(self, other):
@@ -756,9 +756,9 @@ class Cartesian_core(_common_class):
 
         molecule = self.distance_to(origin)
         if outside_sliced:
-            molecule = molecule[molecule[:, 'distance'] < radius, :]
+            molecule = molecule.loc[molecule.loc[:, 'distance'] < radius, :]
         else:
-            molecule = molecule[molecule[:, 'distance'] > radius, :]
+            molecule = molecule.loc[molecule.loc[:, 'distance'] > radius, :]
 
         if preserve_bonds:
             molecule = self._preserve_bonds(molecule)
@@ -835,7 +835,7 @@ class Cartesian_core(_common_class):
             mass_vector = self.loc[:, 'mass'].values.astype('float64')
         except KeyError:
             mass_molecule = self.add_data('mass')
-            mass_vector = mass_molecule[:, 'mass'].values.astype('float64')
+            mass_vector = mass_molecule.loc[:, 'mass'].values.astype('float64')
         location_array = self.location()
         barycenter = (np.sum(location_array * mass_vector[:, None], axis=0)
                       / self.total_mass())
@@ -1105,7 +1105,7 @@ class Cartesian_core(_common_class):
             molecule = self.copy()
         except KeyError:
             molecule = self.add_data('mass')
-            mass_vector = molecule[:, 'mass'].values.astype('float64')
+            mass_vector = molecule.loc[:, 'mass'].values.astype('float64')
 
         molecule = molecule - molecule.barycenter()
         locations = molecule.location()
