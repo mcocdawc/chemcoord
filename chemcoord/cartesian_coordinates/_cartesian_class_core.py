@@ -41,8 +41,8 @@ class Cartesian_core(_common_class):
         if not isinstance(frame, pd.DataFrame):
             raise ValueError('Need a pd.DataFrame as input')
         if not self._required_cols <= set(frame.columns):
-            raise PhysicalMeaningError('There are columns missing for a \
-                                       meaningful description of a molecule')
+            raise PhysicalMeaningError('There are columns missing for a '
+                                       'meaningful description of a molecule')
         self.frame = frame.copy()
         self.metadata = {}
         # TODO watch
@@ -101,48 +101,43 @@ class Cartesian_core(_common_class):
             new.iloc[key] = value
         return new
 
+    def _return_appropiate_type(self, selected):
+        if isinstance(selected, pd.Series):
+            frame = pd.DataFrame(selected).T
+            if self._required_cols <= set(frame.columns):
+                selected = frame
+            else:
+                return selected
 
-    # new method
-    # def __getitem__(self, key):
-    #     # overwrites the method defined in _pandas_wrapper
-    #     if isinstance(key, tuple):
-    #         selected = self.frame[key[0], key[1]]
-    #     else:
-    #         selected = self.frame[key]
-    #
-    #     if isinstance(selected, pd.Series):
-    #         return selected
-    #     elif self._is_physical(selected):
-    #         molecule = self.__class__(selected)
-    #         # NOTE here is the difference to the _pandas_wrapper definition
-    #         # TODO make clear in documentation that metadata is an
-    #         # alias/pointer
-    #         # TODO persistent attributes have to be inserted here
-    #         molecule.metadata = self.metadata.copy()
-    #         molecule._metadata = self.metadata.copy()
-    #         keys_not_to_keep = [
-    #             'bond_dict'   # You could end up with loose ends
-    #             ]
-    #         for key in keys_not_to_keep:
-    #             try:
-    #                 molecule._metadata.pop(key)
-    #             except KeyError:
-    #                 pass
-    #         return molecule
-    #     else:
-    #         return selected
+        if (isinstance(selected, pd.DataFrame)
+                and self._required_cols <= set(selected.columns)):
+            molecule = self.__class__(selected)
+            molecule.metadata = self.metadata.copy()
+            molecule._metadata = self.metadata.copy()
+            keys_not_to_keep = [
+                'bond_dict'   # You could end up with loose ends
+                ]
+            for key in keys_not_to_keep:
+                try:
+                    molecule._metadata.pop(key)
+                except KeyError:
+                    pass
+            return molecule
+        else:
+            return selected
 
-    # def __getitem__(self, key):
-    #     if isinstance(key, tuple):
-    #         return self.loc[key[0], key[1]]
-    #     else:
-    #         return self.loc[key]
-    #
-    # def __setitem__(self, key, value):
-    #     if isinstance(key, tuple):
-    #         self.loc[key[0], key[1]] = value
-    #     else:
-    #         self.loc[key] = value
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            selected = self.frame[key[0], key[1]]
+        else:
+            selected = self.frame[key]
+        return self._return_appropiate_type(selected)
+
+    def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            self.frame[key[0], key[1]] = value
+        else:
+            self.frame[key] = value
 
     def __add__(self, other):
         coords = ['x', 'y', 'z']
@@ -1242,17 +1237,8 @@ class Cartesian_core(_common_class):
             Cartesian: A renamed copy according to the dictionary passed.
         """
         output = self if inplace else self.copy()
-
-        replace_list = list(rename_dict.keys())
-        with_list = [rename_dict[key] for key in replace_list]
-
-        output.loc[:, 'temporary_column'] = output.index
-        output.loc[:, 'temporary_column'].replace(replace_list, with_list, inplace=True)
-
-        output.set_index('temporary_column', drop=True, inplace=True)
-        output.sort_index(inplace=True)
-        output.index.name = None
-
+        new_index = [rename_dict.get(key, key) for key in self.index]
+        output.index = new_index
         if not inplace:
             return output
 
@@ -1371,7 +1357,7 @@ class Cartesian_core(_common_class):
         :func:`Cartesian.partition_chem_env`
 
         .. warning:: Please check the result with e.g.
-            :func:`Cartesian.move_to()`
+            :func:`Cartesian.get_movement_to()`
             It is probably necessary to use the function
             :func:`Cartesian.change_numbering()`.
 
@@ -1454,7 +1440,7 @@ class Cartesian_core(_common_class):
 
         return molecule1, molecule2_new
 
-    def move_to(self, Cartesian2, step=5, extrapolate=(0, 0)):
+    def get_movement_to(self, Cartesian2, step=5, extrapolate=(0, 0)):
         """Return list of Cartesians for the movement from
         self to Cartesian2.
 

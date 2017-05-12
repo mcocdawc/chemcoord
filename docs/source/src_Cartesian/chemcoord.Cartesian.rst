@@ -11,31 +11,45 @@ chemcoord\.Cartesian
     .. autosummary::
          :toctree: src_Cartesian
 
+         ~Cartesian.__init__
          ~Cartesian.get_bonds
          ~Cartesian.give_zmat
          ~Cartesian.to_zmat
-         ~Cartesian.location
-         ~Cartesian.bond_lengths
-         ~Cartesian.angle_degrees
-         ~Cartesian.dihedral_degrees
-         ~Cartesian.move
-         ~Cartesian.basistransform
          ~Cartesian.add_data
          ~Cartesian.total_mass
-         ~Cartesian.barycenter
-         ~Cartesian.inertia
-         ~Cartesian.topologic_center
+         ~Cartesian.connected_to
+         ~Cartesian.get_movement_to
+         ~Cartesian.partition_chem_env
+
+
+    .. rubric:: Manipulate
+
+    .. autosummary::
+         :toctree: src_Cartesian
+
          ~Cartesian.cutcuboid
          ~Cartesian.cutsphere
-         ~Cartesian.connected_to
-         ~Cartesian.distance_to
+         ~Cartesian.move
+         ~Cartesian.basistransform
          ~Cartesian.get_fragment
          ~Cartesian.fragmentate
          ~Cartesian.make_similar
          ~Cartesian.align
          ~Cartesian.change_numbering
-         ~Cartesian.move_to
-         ~Cartesian.partition_chem_env
+
+    .. rubric:: Geometry
+
+    .. autosummary::
+         :toctree: src_Cartesian
+
+         ~Cartesian.location
+         ~Cartesian.bond_lengths
+         ~Cartesian.angle_degrees
+         ~Cartesian.dihedral_degrees
+         ~Cartesian.barycenter
+         ~Cartesian.inertia
+         ~Cartesian.topologic_center
+         ~Cartesian.distance_to
 
 
     .. rubric:: IO
@@ -52,12 +66,12 @@ chemcoord\.Cartesian
          ~Cartesian.to_latex
 
 
-    .. rubric:: Technical Methods
+    .. rubric:: Pandas DataFrame Wrapper
 
     .. autosummary::
          :toctree: src_Cartesian
 
-         ~Cartesian.__init__
+         ~Cartesian.copy
          ~Cartesian.index
          ~Cartesian.columns
          ~Cartesian.replace
@@ -68,7 +82,6 @@ chemcoord\.Cartesian
          ~Cartesian.sort_values
          ~Cartesian.loc
          ~Cartesian.iloc
-
 
 
     .. rubric:: Advanced methods

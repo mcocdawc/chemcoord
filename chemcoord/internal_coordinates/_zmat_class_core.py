@@ -41,8 +41,8 @@ class Zmat_core(_common_class):
         if not isinstance(frame, pd.DataFrame):
             raise ValueError('Need a pd.DataFrame as input')
         if not self._required_cols <= set(frame.columns):
-            raise PhysicalMeaningError('There are columns missing for a \
-                                       meaningful description of a molecule')
+            raise PhysicalMeaningError('There are columns missing for a '
+                                       'meaningful description of a molecule')
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
