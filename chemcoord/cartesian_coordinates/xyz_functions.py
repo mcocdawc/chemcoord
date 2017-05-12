@@ -81,7 +81,7 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
 
 
 def to_molden(cartesian_list, buf=None, sort_index=True,
-              overwrite=True):
+              overwrite=True, float_format='{:.6f}'.format):
     """Write a list of Cartesians into a molden file.
 
     .. note:: Since it permamently writes a file, this function
@@ -94,6 +94,9 @@ def to_molden(cartesian_list, buf=None, sort_index=True,
         sort_index (bool): If sort_index is true, the Cartesian
             is sorted by the index before writing.
         overwrite (bool): May overwrite existing files.
+        float_format (one-parameter function): Formatter function
+            to apply to column’s elements if they are floats.
+            The result of this function must be a unicode string.
 
     Returns:
         formatted : string (or unicode, depending on data and options)
@@ -113,7 +116,8 @@ def to_molden(cartesian_list, buf=None, sort_index=True,
     values = len(cartesian_list) * '1\n'
     header = give_header(energy=values, max_force=values, rms_force=values)
 
-    coordinates = [x.to_xyz(sort_index=sort_index) for x in cartesian_list]
+    coordinates = [x.to_xyz(sort_index=sort_index, float_format=float_format)
+                   for x in cartesian_list]
     output = header + '\n'.join(coordinates)
 
     if buf is not None:

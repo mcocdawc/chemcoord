@@ -32,7 +32,7 @@ class Cartesian_io(Cartesian_core):
     written xyz-file.
     """
     def to_xyz(self, buf=None, sort_index=True,
-               index=False, header=False, float_format=None,
+               index=False, header=False, float_format='{:.6f}'.format,
                overwrite=True):
         """Write xyz-file
 
@@ -42,8 +42,7 @@ class Cartesian_io(Cartesian_core):
                 :class:`~chemcoord.Cartesian`
                 is sorted by the index before writing.
             float_format (one-parameter function): Formatter function
-                to apply to column’s elements if they are floats,
-                default None.
+                to apply to column’s elements if they are floats.
                 The result of this function must be a unicode string.
             overwrite (bool): May overwrite existing files.
 
@@ -63,8 +62,9 @@ http://chemcoord.readthedocs.io/en/latest/'
             molecule_string = self.to_string(header=header, index=index,
                                              float_format=float_format)
 
-        # NOTE the following might be removed in the future
-        # introduced because of a suspected formatting bug in pandas
+        # TODO the following might be removed in the future
+        # introduced because of formatting bug in pandas
+        # See https://github.com/pandas-dev/pandas/issues/13032
         space = ' ' * (self.loc[:, 'atom'].str.len().max()
                        - len(self.iloc[0, 0]))
 

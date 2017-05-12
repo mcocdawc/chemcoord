@@ -12,6 +12,7 @@ chemcoord\.Cartesian
          :toctree: src_Cartesian
 
          ~Cartesian.get_bonds
+         ~Cartesian.give_zmat
          ~Cartesian.to_zmat
          ~Cartesian.location
          ~Cartesian.bond_lengths

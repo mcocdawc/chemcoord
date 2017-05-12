@@ -427,7 +427,7 @@ class _pandas_wrapper(object):
         """ Render a DataFrame to a tabular environment table.
 
         You can splice this into a LaTeX document.
-        Requires \\usepackage{booktabs}.
+        Requires ``\\usepackage{booktabs}``.
         Wrapper around the :meth:`pandas.DataFrame.to_latex` method.
         """
         return self.frame.to_latex(buf=buf, columns=columns,

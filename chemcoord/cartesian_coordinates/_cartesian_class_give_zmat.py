@@ -9,6 +9,7 @@ except ImportError:
     pass
 import numpy as np
 import pandas as pd
+import warnings
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.cartesian_coordinates._cartesian_class_core import Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
@@ -16,7 +17,7 @@ from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
 
 
-class Cartesian_to_zmat(Cartesian_core):
+class Cartesian_give_zmat(Cartesian_core):
     def _get_buildlist(self, fixed_buildlist=None):
         """Create a buildlist for a Zmatrix.
 
@@ -348,11 +349,8 @@ class Cartesian_to_zmat(Cartesian_core):
         # TODO
         return Zmat(zmat_frame)
 
-    def to_zmat(
-            self,
-            buildlist=None,
-            fragment_list=None,
-            check_linearity=True):
+    def give_zmat(self, buildlist=None, fragment_list=None,
+                  check_linearity=True):
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
@@ -458,3 +456,12 @@ class Cartesian_to_zmat(Cartesian_core):
             except KeyError:
                 pass
         return zmat
+
+    def to_zmat(self, *args, **kwargs):
+        """Deprecated, use :meth:`~chemcoord.Zmat.give_zmat`
+        """
+        message = 'Will be removed in the future. Please use give_zmat.'
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(message, DeprecationWarning)
+        return self.give_zmat(*args, **kwargs)

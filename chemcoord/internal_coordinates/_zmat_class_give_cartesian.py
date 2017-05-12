@@ -7,15 +7,16 @@ from __future__ import unicode_literals
 import numpy as np
 import pandas as pd
 import math as m
-from chemcoord.internal_coordinates.zmat_class_core import Zmat_core
+import warnings
+from chemcoord.internal_coordinates._zmat_class_core import Zmat_core
 from chemcoord.utilities import algebra_utilities
 from chemcoord.configuration import settings
 
 
-class Zmat_to_cartesian(Zmat_core):
+class Zmat_give_cartesian(Zmat_core):
     """The main class for dealing with internal coordinates.
     """
-    def to_xyz(self, SN_NeRF=False):
+    def give_cartesian(self, SN_NeRF=False):
         """Transforms to cartesian space.
 
         Args:
@@ -29,7 +30,7 @@ class Zmat_to_cartesian(Zmat_core):
                 implemented in ``Fortran``.
 
         Returns:
-            Cartesian: Reindexed version of the zmatrix.
+            Cartesian:
 
         .. [1] Parsons J, Holmes JB, Rojas JM, Tsai J, Strauss CE (2005).
             Practical conversion from torsion space to Cartesian space for in
@@ -39,10 +40,8 @@ class Zmat_to_cartesian(Zmat_core):
         """
         # zmat = self.zmat_frame.copy()
         # n_atoms = self.n_atoms
-        xyz_frame = pd.DataFrame(
-            columns=['atom', 'x', 'y', 'z'],
-            dtype='float',
-            index=self.index)
+        xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
+                                 dtype='float', index=self.index)
 
         # TODO correct
         # Cannot import globally in python 2, so we will only import here.
@@ -222,3 +221,12 @@ class Zmat_to_cartesian(Zmat_core):
 
         molecule.metadata = self.metadata
         return molecule
+
+    def to_xyz(self, *args, **kwargs):
+        """Deprecated, use :meth:`~chemcoord.Zmat.give_cartesian`
+        """
+        message = 'Will be removed in the future. Please use give_cartesian.'
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(message, DeprecationWarning)
+        return self.give_cartesian(*args, **kwargs)
