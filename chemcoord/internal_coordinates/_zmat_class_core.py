@@ -13,12 +13,10 @@ import numpy as np
 import pandas as pd
 import math as m
 from chemcoord._generic_classes._common_class import _common_class
-import chemcoord.internal_coordinates._indexers_for_zmat_class as indexers
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.configuration import settings
 
 
-# TODO implement is_physical
 class Zmat_core(_common_class):
     """The main class for dealing with internal coordinates.
     """
@@ -47,47 +45,28 @@ class Zmat_core(_common_class):
         self.metadata = {}
         self._metadata = {}
 
-    @property
-    def loc(self):
-        """pew pew
-        """
-        return indexers._Loc(self)
+    def _return_appropiate_type(self, selected):
+        if isinstance(selected, pd.Series):
+            frame = pd.DataFrame(selected).T
+            if self._required_cols <= set(frame.columns):
+                selected = frame
+            else:
+                return selected
 
-    @property
-    def iloc(self):
-        """pew pew
-        """
-        return indexers._ILoc(self)
-
-    # def __getitem__(self, key):
-    #     # overwrites the method defined in _pandas_wrapper
-    #     frame = self.frame.loc[key[0], key[1]]
-    #     try:
-    #         if self._required_cols <= (frame.columns):
-    #             molecule = self.__class__(frame)
-    #             # NOTE here is the difference to the _pandas_wrapper definition
-    #             # TODO make clear in documentation that metadata is an
-    #             # alias/pointer
-    #             # TODO persistent attributes have to be inserted here
-    #             molecule.metadata = self.metadata
-    #             molecule._metadata = self.metadata.copy()
-    #             keys_not_to_keep = [
-    #                 'bond_dict'  # You could end up with loose ends
-    #                 ]
-    #             for key in keys_not_to_keep:
-    #                 try:
-    #                     molecule._metadata.pop(key)
-    #                 except KeyError:
-    #                     pass
-    #             return molecule
-    #         else:
-    #             return frame
-    #     except AttributeError:
-    #         # A series and not a DataFrame was returned
-    #         return frame
-    #
-    # def __setitem__(self, key, value):
-    #     self.frame.loc[key[0], key[1]] = value
+        if (isinstance(selected, pd.DataFrame)
+                and self._required_cols <= set(selected.columns)):
+            molecule = self.__class__(selected)
+            molecule.metadata = self.metadata.copy()
+            molecule._metadata = self.metadata.copy()
+            keys_not_to_keep = []
+            for key in keys_not_to_keep:
+                try:
+                    molecule._metadata.pop(key)
+                except KeyError:
+                    pass
+            return molecule
+        else:
+            return selected
 
     def __add__(self, other):
         selection = ['atom', 'bond_with', 'angle_with', 'dihedral_with']

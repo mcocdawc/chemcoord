@@ -9,12 +9,46 @@ import numpy as np
 from chemcoord._generic_classes._pandas_wrapper import _pandas_wrapper
 from chemcoord.constants import constants
 
-# NOTE does not work on its own, because loc and iloc are not implemented.
-
 
 class _common_class(_pandas_wrapper):
     """This class provides methods which are used by Zmat and Cartesian.
     """
+
+    _required_cols = set(['atom'])
+
+    def _return_appropiate_type(self, selected):
+        if isinstance(selected, pd.Series):
+            frame = pd.DataFrame(selected).T
+            if self._required_cols <= set(frame.columns):
+                selected = frame
+            else:
+                return selected
+        if (isinstance(selected, pd.DataFrame)
+                and self._required_cols <= set(selected.columns)):
+            return self.__class__(selected)
+        else:
+            return selected
+
+    def loc_set_copy(self, key, value):
+        """asdf
+        """
+        new = self.copy()
+        if pd.api.types.is_list_like(key):
+            new.loc[key[0], key[1]] = value
+        else:
+            new.loc[key] = value
+        return new
+
+    def iloc_set_copy(self, key, value):
+        """asdf
+        """
+        new = self.copy()
+        if pd.api.types.is_list_like(key):
+            new.iloc[key[0], key[1]] = value
+        else:
+            new.iloc[key] = value
+        return new
+
     @property
     def n_atoms(self):
         return self.shape[0]

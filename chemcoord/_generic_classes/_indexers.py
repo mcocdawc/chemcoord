@@ -13,7 +13,10 @@ class _Loc(_generic_Indexer):
             selected = self.molecule.frame.loc[key[0], key[1]]
         else:
             selected = self.molecule.frame.loc[key]
-        return self.molecule._return_appropiate_type(selected)
+        try:
+            return self.molecule._return_appropiate_type(selected)
+        except AttributeError:
+            return selected
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
@@ -29,7 +32,10 @@ class _ILoc(_generic_Indexer):
             selected = self.molecule.frame.iloc[key[0], key[1]]
         else:
             selected = self.molecule.frame.iloc[key]
-        return self.molecule._return_appropiate_type(selected)
+        try:
+            return self.molecule._return_appropiate_type(selected)
+        except AttributeError:
+            return selected
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):

@@ -6,17 +6,31 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import pandas as pd
 from chemcoord._exceptions import PhysicalMeaningError
+import chemcoord._generic_classes._indexers as indexers
 
 
-# TODO replace all *kwargs
 class _pandas_wrapper(object):
     """This class provides wrappers for pd.DataFrame methods.
     """
     def __init__(self, frame):
-        self.frame = frame
+        self.frame = frame.copy()
+        self.metadata = {}
+        self._metadata = {}
 
     def __len__(self):
         return self.shape[0]
+
+    @property
+    def loc(self):
+        """pew pew
+        """
+        return indexers._Loc(self)
+
+    @property
+    def iloc(self):
+        """pew pew
+        """
+        return indexers._ILoc(self)
 
     @property
     def index(self):
@@ -25,6 +39,22 @@ class _pandas_wrapper(object):
         Assigning a value to it changes the index.
         """
         return self.frame.index
+
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            selected = self.frame[key[0], key[1]]
+        else:
+            selected = self.frame[key]
+        try:
+            return self._return_appropiate_type(selected)
+        except AttributeError:
+            return selected
+
+    def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            self.frame[key[0], key[1]] = value
+        else:
+            self.frame[key] = value
 
     @index.setter
     def index(self, value):
@@ -62,8 +92,6 @@ class _pandas_wrapper(object):
         molecule = self.__class__(self.frame)
         molecule.metadata = self.metadata.copy()
         molecule._metadata = self._metadata.copy()
-        for key in self._metadata.keys():
-            molecule._metadata[key] = self._metadata[key]
         return molecule
 
     def sort_values(self, by, axis=0, ascending=True, inplace=False,

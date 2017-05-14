@@ -13,7 +13,6 @@ import pandas as pd
 import collections
 import warnings
 from chemcoord._generic_classes._common_class import _common_class
-import chemcoord.cartesian_coordinates._indexers_for_cartesian_class as indexers
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
@@ -45,21 +44,8 @@ class Cartesian_core(_common_class):
                                        'meaningful description of a molecule')
         self.frame = frame.copy()
         self.metadata = {}
-        # TODO watch
         self._metadata = {}
 
-    @property
-    def loc(self):
-        """pew pew
-        """
-        return indexers._Loc(self)
-
-    @property
-    def iloc(self):
-        """pew pew
-        """
-        return indexers._ILoc(self)
-
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
             frame = pd.DataFrame(selected).T
@@ -84,165 +70,111 @@ class Cartesian_core(_common_class):
             return molecule
         else:
             return selected
-
-    def loc_set_copy(self, key, value):
-        new = self.copy()
-        if pd.api.types.is_list_like(key):
-            new.loc[key[0], key[1]] = value
-        else:
-            new.loc[key] = value
-        return new
-
-    def iloc_set_copy(self, key, value):
-        new = self.copy()
-        if pd.api.types.is_list_like(key):
-            new.iloc[key[0], key[1]] = value
-        else:
-            new.iloc[key] = value
-        return new
-
-    def _return_appropiate_type(self, selected):
-        if isinstance(selected, pd.Series):
-            frame = pd.DataFrame(selected).T
-            if self._required_cols <= set(frame.columns):
-                selected = frame
-            else:
-                return selected
-
-        if (isinstance(selected, pd.DataFrame)
-                and self._required_cols <= set(selected.columns)):
-            molecule = self.__class__(selected)
-            molecule.metadata = self.metadata.copy()
-            molecule._metadata = self.metadata.copy()
-            keys_not_to_keep = [
-                'bond_dict'   # You could end up with loose ends
-                ]
-            for key in keys_not_to_keep:
-                try:
-                    molecule._metadata.pop(key)
-                except KeyError:
-                    pass
-            return molecule
-        else:
-            return selected
-
-    def __getitem__(self, key):
-        if isinstance(key, tuple):
-            selected = self.frame[key[0], key[1]]
-        else:
-            selected = self.frame[key]
-        return self._return_appropiate_type(selected)
-
-    def __setitem__(self, key, value):
-        if isinstance(key, tuple):
-            self.frame[key[0], key[1]] = value
-        else:
-            self.frame[key] = value
 
     def __add__(self, other):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
+        new = self.copy()
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule.loc[:, coords] = self.loc[:, coords] + other[:, coords]
+            new.loc[:, coords] = self.loc[:, coords] + other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule.loc[:, coords] = self.loc[:, coords] + other
-        return new_molecule
+            new.loc[:, coords] = self.loc[:, coords] + other
+        return new
 
     def __radd__(self, other):
         return self.__add__(other)
 
     def __sub__(self, other):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
+        new = self.copy()
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule.loc[:, coords] = self.loc[:, coords] - other[:, coords]
+            new.loc[:, coords] = self.loc[:, coords] - other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule.loc[:, coords] = self.loc[:, coords] - other
-        return new_molecule
+            new.loc[:, coords] = self.loc[:, coords] - other
+        return new
 
     def __rsub__(self, other):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
+        new = self.copy()
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule.loc[:, coords] = other[:, coords] - self.loc[:, coords]
+            new.loc[:, coords] = other[:, coords] - self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule.loc[:, coords] = other - self.loc[:, coords]
-        return new_molecule
+            new.loc[:, coords] = other - self.loc[:, coords]
+        return new
 
     def __mul__(self, other):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
+        new = self.copy()
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule.loc[:, coords] = self.loc[:, coords] * other[:, coords]
+            new.loc[:, coords] = self.loc[:, coords] * other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule.loc[:, coords] = self.loc[:, coords] * other
-        return new_molecule
+            new.loc[:, coords] = self.loc[:, coords] * other
+        return new
 
     def __rmul__(self, other):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
+        new = self.copy()
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule.loc[:, coords] = self.loc[:, coords] * other[:, coords]
+            new.loc[:, coords] = self.loc[:, coords] * other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule.loc[:, coords] = self.loc[:, coords] * other
-        return new_molecule
+            new.loc[:, coords] = self.loc[:, coords] * other
+        return new
 
     def __truediv__(self, other):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
+        new = self.copy()
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule.loc[:, coords] = self.loc[:, coords] / other[:, coords]
+            new.loc[:, coords] = self.loc[:, coords] / other[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule.loc[:, coords] = self.loc[:, coords] / other
-        return new_molecule
+            new.loc[:, coords] = self.loc[:, coords] / other
+        return new
 
     def __rtruediv__(self, other):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
+        new = self.copy()
         try:
             assert set(self.index) == set(other.index)
             assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new_molecule.loc[:, coords] = other[:, coords] / self.loc[:, coords]
+            new.loc[:, coords] = other[:, coords] / self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
-            new_molecule.loc[:, coords] = other / self.loc[:, coords]
-        return new_molecule
+            new.loc[:, coords] = other / self.loc[:, coords]
+        return new
 
     def __pos__(self):
         return self.copy()
 
     def __abs__(self):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
-        new_molecule.loc[:, coords] = abs(new_molecule.loc[:, coords])
-        return new_molecule
+        new = self.copy()
+        new.loc[:, coords] = abs(new.loc[:, coords])
+        return new
 
     def __neg__(self):
         return -1 * self.copy()
 
     def __rmatmul__(self, other):
         coords = ['x', 'y', 'z']
-        new_molecule = self.copy()
-        new_molecule.loc[:, coords] = (np.dot(other, new_molecule.loc[:, coords].T)).T
-        return new_molecule
+        new = self.copy()
+        new.loc[:, coords] = (np.dot(other, new.loc[:, coords].T)).T
+        return new
 
     def __eq__(self, other):
         return np.alltrue(self.frame == other.frame)
