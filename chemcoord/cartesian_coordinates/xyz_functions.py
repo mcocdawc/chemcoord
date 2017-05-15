@@ -24,6 +24,17 @@ from io import open
 import re
 import textwrap
 
+from setuptools_scm import get_version
+version = get_version(root='..', relative_to=__file__)
+
+# from pkg_resources import get_distribution, DistributionNotFound
+# __version__ = get_distribution(__name__).version
+# try:
+#     __version__ = get_distribution(__name__).version
+# except DistributionNotFound:
+#    # package is not installed
+#    pass
+
 
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     """View your molecule or list of molecules.
