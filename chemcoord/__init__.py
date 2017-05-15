@@ -32,15 +32,15 @@ sys.modules['chemcoord.zmat_functions'] = zmat_functions
 sys.modules['chemcoord.vibration'] = vibration
 
 
-# TODO
-def show_versions(as_json=False):
-    import imp
-    import os
-    fn = __file__
-    this_dir = os.path.dirname(fn)
-    sv_path = os.path.join(this_dir, 'chemcoord', 'util')
-    mod = imp.load_module('pvmod', *imp.find_module('print_versions', [sv_path]))
-    return mod.show_versions(as_json)
+# # TODO
+# def show_versions(as_json=False):
+#     import imp
+#     import os
+#     fn = __file__
+#     this_dir = os.path.dirname(fn)
+#     sv_path = os.path.join(this_dir, 'chemcoord', 'util')
+#     mod = imp.load_module('pvmod', *imp.find_module('print_versions', [sv_path]))
+#     return mod.show_versions(as_json)
 
 
 # def show_versions():

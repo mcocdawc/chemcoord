@@ -6,9 +6,6 @@
 from __future__ import with_statement
 from __future__ import absolute_import
 from setuptools import setup, find_packages
-from setuptools_scm import get_version
-import setuptools_scm
-from setuptools_scm import get_version
 from io import open
 
 MAIN_PACKAGE = 'chemcoord'
@@ -35,6 +32,7 @@ CLASSIFIERS = [
 
 
 def give_version():
+    import setuptools_scm
     release = setuptools_scm.get_version(root='.', relative_to=__file__)
     return '.'.join(release.split('.')[:3])
 
