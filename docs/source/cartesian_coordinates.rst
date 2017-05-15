@@ -29,6 +29,8 @@ A collection of functions operating on instances of
     :toctree: src_xyz_functions
 
     ~xyz_functions.isclose
-    ~xyz_functions.read
-    ~xyz_functions.write
+    ~xyz_functions.write_molden
+    ~xyz_functions.to_molden
+    ~xyz_functions.read_molden
+    ~xyz_functions.from_molden
     ~xyz_functions.view

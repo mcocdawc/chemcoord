@@ -9,6 +9,7 @@ except ImportError:
     pass
 import numpy as np
 import pandas as pd
+import warnings
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.cartesian_coordinates._cartesian_class_core import Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
@@ -16,7 +17,7 @@ from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
 
 
-class Cartesian_to_zmat(Cartesian_core):
+class Cartesian_give_zmat(Cartesian_core):
     def _get_buildlist(self, fixed_buildlist=None):
         """Create a buildlist for a Zmatrix.
 
@@ -40,7 +41,7 @@ class Cartesian_to_zmat(Cartesian_core):
             already_built, to_be_built = set([]), set(self.index)
             convert_index = {}
 
-        bond_dic = self.get_bonds(use_lookup=True)
+        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
         topologic_center = self.topologic_center()
         distance_to_topologic_center = self.distance_to(topologic_center)
 
@@ -60,23 +61,23 @@ class Cartesian_to_zmat(Cartesian_core):
                 first_time=False,
                 third_time=False
                 ):
-            index_of_new_atom = distance_to_topologic_center[
+            index_of_new_atom = distance_to_topologic_center.loc[
                 to_be_built, 'distance'].idxmin()
             buildlist[row_in_buildlist, 0] = index_of_new_atom
             convert_index[index_of_new_atom] = row_in_buildlist
             if not first_time:
                 bond_with = self.distance_to(
                     index_of_new_atom,
-                    already_built)[:, 'distance'].idxmin()
+                    already_built).loc[:, 'distance'].idxmin()
                 angle_with = self.distance_to(
                     bond_with,
-                    already_built - set([bond_with]))[:, 'distance'].idxmin()
+                    already_built - set([bond_with])).loc[:, 'distance'].idxmin()
                 buildlist[row_in_buildlist, 1:3] = [bond_with, angle_with]
                 if not third_time:
                     dihedral_with = self.distance_to(
                         bond_with,
                         already_built - set([bond_with, angle_with])
-                        )[:, 'distance'].idxmin()
+                        ).loc[:, 'distance'].idxmin()
                     buildlist[row_in_buildlist, 1:] = [
                         bond_with, angle_with, dihedral_with]
             new_row_to_modify = row_in_buildlist + 1
@@ -257,7 +258,7 @@ class Cartesian_to_zmat(Cartesian_core):
         """
         buildlist = buildlist_to_check.copy()
 
-        bond_dic = self.get_bonds(use_lookup=True)
+        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
 
         angles = self.angle_degrees(buildlist[3:, 1:])
 
@@ -326,14 +327,13 @@ class Cartesian_to_zmat(Cartesian_core):
             dtype='float',
             index=indexlist)
 
-        zmat_frame.loc[:, additional_columns] = self[indexlist,
-                                                     additional_columns]
+        zmat_frame.loc[:, additional_columns] = self.loc[indexlist, additional_columns]
 
         bonds = self.bond_lengths(buildlist, start_row=1)
         angles = self.angle_degrees(buildlist, start_row=2)
         dihedrals = self.dihedral_degrees(buildlist, start_row=3)
 
-        zmat_frame.loc[indexlist, 'atom'] = self[indexlist, 'atom']
+        zmat_frame.loc[indexlist, 'atom'] = self.loc[indexlist, 'atom']
         zmat_frame.loc[indexlist[1:], 'bond_with'] = buildlist[1:, 1]
         zmat_frame.loc[indexlist[1:], 'bond'] = bonds
         zmat_frame.loc[indexlist[2:], 'angle_with'] = buildlist[2:, 2]
@@ -345,13 +345,12 @@ class Cartesian_to_zmat(Cartesian_core):
         lines[:3] = False
         zmat_frame.loc[zmat_frame['dihedral'].isnull() & lines, 'dihedral'] = 0
 
+        # return zmat_frame
+        # TODO
         return Zmat(zmat_frame)
 
-    def to_zmat(
-            self,
-            buildlist=None,
-            fragment_list=None,
-            check_linearity=True):
+    def give_zmat(self, buildlist=None, fragment_list=None,
+                  check_linearity=True):
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
@@ -423,7 +422,7 @@ class Cartesian_to_zmat(Cartesian_core):
                         return buildlist, big_molecule_index
                     buildlist, big_molecule_index = prepare_variables(
                         self, fragment_list)
-                    big_molecule = self[big_molecule_index, :]
+                    big_molecule = self.loc[big_molecule_index, :]
                     row = big_molecule.n_atoms
                     buildlist[: row, :] = big_molecule._get_buildlist()
                     return buildlist, big_molecule, row
@@ -457,3 +456,12 @@ class Cartesian_to_zmat(Cartesian_core):
             except KeyError:
                 pass
         return zmat
+
+    def to_zmat(self, *args, **kwargs):
+        """Deprecated, use :meth:`~chemcoord.Zmat.give_zmat`
+        """
+        message = 'Will be removed in the future. Please use give_zmat.'
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(message, DeprecationWarning)
+        return self.give_zmat(*args, **kwargs)

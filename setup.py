@@ -6,20 +6,33 @@
 from __future__ import with_statement
 from __future__ import absolute_import
 from setuptools import setup, find_packages
+from setuptools_scm import get_version
+import setuptools_scm
+from setuptools_scm import get_version
 from io import open
-
 
 MAIN_PACKAGE = 'chemcoord'
 DESCRIPTION = "Python module for dealing with chemical coordinates."
+<<<<<<< HEAD
 VERSION = '1.3.0'
+=======
+>>>>>>> experimental
 LICENSE = 'LGPLv3'
 AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
 URL = 'https://github.com/mcocdawc/chemcoord'
+<<<<<<< HEAD
 INSTALL_REQUIRES = ['numpy', 'pandas>=0.20']
 KEYWORDS = [
     'chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
     'zmatrix', 'xyz', 'zmat', 'coordinates', 'coordinate system']
+=======
+INSTALL_REQUIRES = ['numpy', 'pandas', 'setuptools_scm']
+SETUP_REQUIRES = ['setuptools_scm']
+KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
+            'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
+            'coordinate system']
+>>>>>>> experimental
 
 CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
@@ -32,6 +45,11 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Physics']
 
 
+def give_version():
+    release = setuptools_scm.get_version(root='.', relative_to=__file__)
+    return '.'.join(release.split('.')[:3])
+
+
 def readme():
     '''Return the contents of the README.md file.'''
     with open('README.md') as freadme:
@@ -41,7 +59,8 @@ def readme():
 def setup_package():
     setup(
         name=MAIN_PACKAGE,
-        version=VERSION,
+        version=give_version(),
+        setup_requires=SETUP_REQUIRES,
         url=URL,
         description=DESCRIPTION,
         author=AUTHOR,
@@ -52,9 +71,13 @@ def setup_package():
         long_description=readme(),
         classifiers=CLASSIFIERS,
         packages=find_packages(),
+<<<<<<< HEAD
         # requires=INSTALL_REQUIRES
         install_requires=INSTALL_REQUIRES
     )
+=======
+        install_requires=INSTALL_REQUIRES)
+>>>>>>> experimental
 
 
 if __name__ == "__main__":

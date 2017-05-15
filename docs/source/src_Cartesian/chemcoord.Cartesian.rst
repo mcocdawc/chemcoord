@@ -11,38 +11,67 @@ chemcoord\.Cartesian
     .. autosummary::
          :toctree: src_Cartesian
 
+         ~Cartesian.__init__
          ~Cartesian.get_bonds
+         ~Cartesian.give_zmat
          ~Cartesian.to_zmat
-         ~Cartesian.location
-         ~Cartesian.bond_lengths
-         ~Cartesian.angle_degrees
-         ~Cartesian.dihedral_degrees
-         ~Cartesian.move
-         ~Cartesian.basistransform
          ~Cartesian.add_data
          ~Cartesian.total_mass
-         ~Cartesian.barycenter
-         ~Cartesian.inertia
-         ~Cartesian.topologic_center
+         ~Cartesian.connected_to
+         ~Cartesian.get_movement_to
+         ~Cartesian.partition_chem_env
+
+
+    .. rubric:: Manipulate
+
+    .. autosummary::
+         :toctree: src_Cartesian
+
          ~Cartesian.cutcuboid
          ~Cartesian.cutsphere
-         ~Cartesian.connected_to
-         ~Cartesian.distance_to
+         ~Cartesian.move
+         ~Cartesian.basistransform
          ~Cartesian.get_fragment
          ~Cartesian.fragmentate
          ~Cartesian.make_similar
          ~Cartesian.align
          ~Cartesian.change_numbering
-         ~Cartesian.move_to
-         ~Cartesian.partition_chem_env
 
-
-    .. rubric:: Technical Methods
+    .. rubric:: Geometry
 
     .. autosummary::
          :toctree: src_Cartesian
 
-         ~Cartesian.__init__
+         ~Cartesian.location
+         ~Cartesian.bond_lengths
+         ~Cartesian.angle_degrees
+         ~Cartesian.dihedral_degrees
+         ~Cartesian.barycenter
+         ~Cartesian.inertia
+         ~Cartesian.topologic_center
+         ~Cartesian.distance_to
+
+
+    .. rubric:: IO
+
+    .. autosummary::
+         :toctree: src_Cartesian
+
+         ~Cartesian.write_xyz
+         ~Cartesian.to_xyz
+         ~Cartesian.read_xyz
+         ~Cartesian.from_xyz
+         ~Cartesian.view
+         ~Cartesian.to_string
+         ~Cartesian.to_latex
+
+
+    .. rubric:: Pandas DataFrame Wrapper
+
+    .. autosummary::
+         :toctree: src_Cartesian
+
+         ~Cartesian.copy
          ~Cartesian.index
          ~Cartesian.columns
          ~Cartesian.replace
@@ -51,15 +80,8 @@ chemcoord\.Cartesian
          ~Cartesian.append
          ~Cartesian.insert
          ~Cartesian.sort_values
-         ~Cartesian.determine_filetype
-         ~Cartesian.write
-         ~Cartesian.write_xyz
-         ~Cartesian.read
-         ~Cartesian.read_xyz
-         ~Cartesian.read_molden
-         ~Cartesian.view
-         ~Cartesian.write_string
-
+         ~Cartesian.loc
+         ~Cartesian.iloc
 
 
     .. rubric:: Advanced methods

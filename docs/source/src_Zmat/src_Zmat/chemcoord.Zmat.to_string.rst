@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.write
+chemcoord\.Zmat\.to\_string
 ===========================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.write
+.. automethod:: Zmat.to_string

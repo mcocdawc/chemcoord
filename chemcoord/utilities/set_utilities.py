@@ -13,3 +13,12 @@ def pick(my_set):
     x = my_set.pop()
     my_set.add(x)
     return x
+
+
+# NOTE probably own module necessary
+# class SliceMaker(object):
+#     def __getitem__(self, key):
+#         return key
+#
+#
+# make_slice = SliceMaker()

@@ -31,78 +31,23 @@ class Cartesian_io(Cartesian_core):
     The ``view`` method uses external viewers to display a temporarily
     written xyz-file.
     """
-    _possible_filetypes = frozenset(['xyz'])
-    _default_filetype = 'xyz'
-
-    @staticmethod
-    def determine_filetype(filepath):
-        """Determine filetype
-
-        The charakters after the last point are interpreted as the filetype.
-
-        Args:
-            filepath (str):
-
-        Returns:
-            str:
-        """
-        filetype = re.split('\.', filepath)[-1]
-        return filetype
-
-    def write(self, outputfile=None, filetype='xyz', **kwargs):
-        """Write Cartesian into a file.
-
-        This is the generic function for file writing.
-        Depending on ``filetype`` the possible keyword arguments
-        may differ because different writing methods are used.
-        The following filetypes are implemented:
-
-        ``'auto'``
-            The method :meth:`~Cartesian.determine_filetype()` is used
-            to guess filetype.
-        ``'xyz'``
-            Uses :meth:`~Cartesian.write_xyz` to write file.
-
-        .. note:: Since it permamently writes a file, this function
-            is strictly speaking **not sideeffect free**.
-            The :class:`~chemcoord.Cartesian`
-            to be written is of course not changed.
-
-        Args:
-            outputfile (str): If ``'outputfile'`` is ``None``,
-                the file is not written, but the text/bytestream is returned.
-            filetype (str):
-
-        Returns:
-            Depending :
-        """
-        if filetype == 'auto':
-            filetype = self.determine_filetype(outputfile)
-
-        if filetype == 'xyz':
-            self.write_xyz(outputfile, **kwargs)
-        else:
-            error_string = 'The desired filetype is not implemented'
-            raise NotImplementedError(error_string)
-
-    # TODO outputfile is None
-    def write_xyz(self, outputfile=None, sort_index=True,
-                  index=False, header=False, float_format=None):
+    def to_xyz(self, buf=None, sort_index=True,
+               index=False, header=False, float_format='{:.6f}'.format,
+               overwrite=True):
         """Write xyz-file
 
         Args:
-            outputfile (str): If ``'outputfile'`` is ``None``,
-                the file is not written, but the formatted string is returned.
+            buf (str): StringIO-like, optional buffer to write to
             sort_index (bool): If sort_index is true, the
                 :class:`~chemcoord.Cartesian`
                 is sorted by the index before writing.
             float_format (one-parameter function): Formatter function
-                to apply to columns’ elements if they are floats,
-                default None.
+                to apply to column’s elements if they are floats.
                 The result of this function must be a unicode string.
+            overwrite (bool): May overwrite existing files.
 
         Returns:
-            string : If ``outputfile`` is given ``None`` is returned.
+            formatted : string (or unicode, depending on data and options)
         """
         create_string = '{n}\n{message}\n{alignment}{frame_string}'.format
 
@@ -111,141 +56,79 @@ class Cartesian_io(Cartesian_core):
 http://chemcoord.readthedocs.io/en/latest/'
 
         if sort_index:
-            molecule_string = self.sort_index().write_string(
+            molecule_string = self.sort_index().to_string(
                 header=header, index=index, float_format=float_format)
         else:
-            molecule_string = self.write_string(header=header, index=index,
+            molecule_string = self.to_string(header=header, index=index,
                                              float_format=float_format)
 
-        def give_alignment_space(self):
-            space = ' ' * (self[:, 'atom'].str.len().max()
-                           - len(self.frame.iloc[0, 0]))
-            return space
+        # TODO the following might be removed in the future
+        # introduced because of formatting bug in pandas
+        # See https://github.com/pandas-dev/pandas/issues/13032
+        space = ' ' * (self.loc[:, 'atom'].str.len().max()
+                       - len(self.iloc[0, 0]))
 
         output = create_string(n=self.n_atoms, message=message,
-                               alignment=give_alignment_space(self),
+                               alignment=space,
                                frame_string=molecule_string)
 
-        if outputfile is not None:
-            with open(outputfile, mode='w') as f:
-                f.write(output)
+        if buf is not None:
+            if overwrite:
+                with open(buf, mode='w') as f:
+                    f.write(output)
+            else:
+                with open(buf, mode='x') as f:
+                    f.write(output)
         else:
             return output
 
-    @classmethod
-    def read(cls, inputfile, filetype='auto', **kwargs):
-        """Read a file of coordinate information.
-
-        This is the generic function for file reading.
-        Depending on ``filetype`` the possible keyword arguments
-        and return types may differ because different
-        parsing methods are used.
-        The following filetypes are implemented:
-
-        ``'auto'``
-            The method :meth:`~Cartesian.determine_filetype()` is used
-            to guess filetype.
-        ``'xyz'``
-            Uses :meth:`~Cartesian.read_xyz` to read file.
-        ``'molden'``
-            Uses :meth:`~Cartesian.read_molden` to read file.
-
-        Args:
-            inputfile (str):
-            filetype (str):
-
-        Returns:
-            depending : Depending on type of file returns different objects.
+    def write_xyz(self, *args, **kwargs):
+        """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`
         """
-        if filetype == 'auto':
-            filetype = cls.determine_filetype(inputfile)
-
-        if filetype == 'xyz':
-            molecule = cls.read_xyz(inputfile, **kwargs)
-        elif filetype == 'molden':
-            molecule = cls.read_molden(inputfile, **kwargs)
-        else:
-            error_string = 'The desired filetype is not implemented'
-            raise NotImplementedError(error_string)
-        return molecule
+        message = 'Will be removed in the future. Please use to_xyz().'
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(message, DeprecationWarning)
+        return self.to_xyz(*args, **kwargs)
 
     @classmethod
-    def read_xyz(cls, inputfile, pythonic_index=False, get_bonds=True):
+    def from_xyz(cls, inputfile, start_index=0, get_bonds=True,
+                 warn_valency=False):
         """Read a file of coordinate information.
 
         Reads xyz-files.
 
         Args:
             inputfile (str):
-            pythonic_index (bool):
+            start_index (int):
             get_bonds (bool):
+            warn_valency (bool): Warn if atoms are over- or undersaturated
+                in their valency.
 
         Returns:
             Cartesian:
         """
-        frame = pd.read_table(
-            inputfile,
-            skiprows=2,
-            comment='#',
-            delim_whitespace=True,
-            names=['atom', 'x', 'y', 'z'])
-
-        if not pythonic_index:
-            n_atoms = frame.shape[0]
-            frame.index = range(1, n_atoms+1)
+        frame = pd.read_table(inputfile, skiprows=2, comment='#',
+                              delim_whitespace=True,
+                              names=['atom', 'x', 'y', 'z'])
 
         molecule = cls(frame)
+        molecule.index = range(start_index, start_index + molecule.n_atoms)
+
         if get_bonds:
-            previous_warnings_bool = settings['show_warnings']['valency']
-            settings['show_warnings']['valency'] = False
-            molecule.get_bonds(
-                use_lookup=False, set_lookup=True, use_valency=False)
-            settings['show_warnings']['valency'] = previous_warnings_bool
+            molecule.get_bonds(use_lookup=False, set_lookup=True,
+                               use_valency=False, warn_valency=warn_valency)
         return molecule
 
     @classmethod
-    def read_molden(cls, inputfile, pythonic_index=False, get_bonds=True):
-        """Read a molden file.
-
-        Args:
-            inputfile (str):
-            pythonic_index (bool):
-
-        Returns:
-            list: A list containing Cartesian is returned.
+    def read_xyz(cls, *args, **kwargs):
+        """Deprecated, use :meth:`~chemcoord.Cartesian.from_xyz`
         """
-        f = open(inputfile, 'r')
-
-        found = False
-        while not found:
-            line = f.readline()
-            if line.strip() == '[N_GEO]':
-                found = True
-                number_of_molecules = int(f.readline().strip())
-
-        found = False
-        while not found:
-            line = f.readline()
-            if line.strip() == '[GEOMETRIES] (XYZ)':
-                found = True
-                current_line = f.tell()
-                number_of_atoms = int(f.readline().strip())
-                f.seek(current_line)
-
-        for i in range(number_of_molecules):
-            molecule_in = [f.readline()
-                           for j in range(number_of_atoms + 2)]
-            molecule_in = ''.join(molecule_in)
-            molecule_in = io.StringIO(molecule_in)
-            molecule = cls.read(molecule_in, pythonic_index=pythonic_index,
-                                get_bonds=get_bonds, filetype='xyz')
-            try:
-                list_of_cartesians.append(molecule)
-            except NameError:
-                list_of_cartesians = [molecule]
-
-        f.close()
-        return list_of_cartesians
+        message = 'Will be removed in the future. Please use from_xyz().'
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(message, DeprecationWarning)
+        return cls.from_xyz(*args, **kwargs)
 
     def view(self, viewer=settings['defaults']['viewer'], use_curr_dir=False):
         """View your molecule.
@@ -277,7 +160,7 @@ http://chemcoord.readthedocs.io/en/latest/'
         i = 1
         while os.path.exists(give_filename(i)):
             i = i + 1
-        self.write(give_filename(i))
+        self.to_xyz(give_filename(i))
 
         def open_file(i):
             """Open file and close after being finished."""

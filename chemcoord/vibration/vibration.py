@@ -74,25 +74,36 @@ class mode(object):
 
     @classmethod
     def interpolate(cls, eq_strct_zmat, displaced_zmats,
-                    fit_function='default'):
+                    fit_function='default',
+                    warn_condition=False):
         """Interpolate a vibration mode.
 
         Args:
             eq_strct_zmat (Zmat): This is the equilibrium structure from which
                 the vibration starts.
             displaced_zmats (list): The displaced_zmats are a list of tuples.
-                The first element of the tuple is a parameter $t \in [-1, 1]$.
-                the second element is a Zmat.
-                The variable $t$ is implicitly assumed to be zero for the
+                The first element of the tuple is a parameter
+                :math:`t \in [-1, 1]` the second element is a
+                :class:`~chemcoord.Zmat`.
+                The variable :math:`t` is implicitly assumed to be zero for the
                 equilibrium structure and parametrises the vibrational mode.
                 This means that the most distorted structure in one direction
-                corresponds to $t=1$ and the most distorted structure in the
-                other direction corresponds to $t=-1$.
-                The values in between $t \in (-1, 1)$  define the exact
+                corresponds to :math:`t=1` and the most distorted structure in
+                the other direction corresponds to :math:`t=-1`.
+                The values in between :math:`t \in (-1, 1)`  define the exact
                 parametrisation; depending on the fit function this may lead
                 to the same curves.
             fit_function (fit_function): The default fit_function is a
-                polynomial fit with the length of displaced_zmats as degree.
+                polynomial fit using
+                :func:`numpy.polynomial.polynomial.Polynomial.fit`
+                with the size of displaced_zmats as degree.
+            warn_condition (bool): If the fit_function raises
+                a warning that the problem is not well conditioned
+                (which happens often although not being a problem in these
+                cases), it gets suppressed.
+
+
+
         Returns:
             mode:
         """
@@ -162,7 +173,7 @@ class mode(object):
             for i in range(eq_strct_zmat.n_atoms):
                 for j in range(n_coord):
                     if (~np.isnan(Y[:, i, j])).all():
-                        if settings['show_warnings']['polynomial_fit']:
+                        if warn_condition:
                             P = fit(X, Y[:, i, j], degree)
                             if np.isclose(P.deriv().coef, 0).all():
                                 P = 0

@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.read
+chemcoord\.Zmat\.to\_latex
 ==========================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.read
+.. automethod:: Zmat.to_latex

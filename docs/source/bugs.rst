@@ -12,4 +12,3 @@ Previous Contribution
 * Main Work: Oskar Weser
 
 * Python2 compatibility: Keld Lundgaard
-
