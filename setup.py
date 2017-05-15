@@ -13,26 +13,15 @@ from io import open
 
 MAIN_PACKAGE = 'chemcoord'
 DESCRIPTION = "Python module for dealing with chemical coordinates."
-<<<<<<< HEAD
-VERSION = '1.3.0'
-=======
->>>>>>> experimental
 LICENSE = 'LGPLv3'
 AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
 URL = 'https://github.com/mcocdawc/chemcoord'
-<<<<<<< HEAD
-INSTALL_REQUIRES = ['numpy', 'pandas>=0.20']
-KEYWORDS = [
-    'chemcoord', 'transformation', 'cartesian', 'internal', 'chemistry',
-    'zmatrix', 'xyz', 'zmat', 'coordinates', 'coordinate system']
-=======
-INSTALL_REQUIRES = ['numpy', 'pandas', 'setuptools_scm']
+INSTALL_REQUIRES = ['numpy', 'pandas>=0.20', 'setuptools_scm']
 SETUP_REQUIRES = ['setuptools_scm']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
             'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
             'coordinate system']
->>>>>>> experimental
 
 CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
@@ -71,13 +60,8 @@ def setup_package():
         long_description=readme(),
         classifiers=CLASSIFIERS,
         packages=find_packages(),
-<<<<<<< HEAD
-        # requires=INSTALL_REQUIRES
         install_requires=INSTALL_REQUIRES
     )
-=======
-        install_requires=INSTALL_REQUIRES)
->>>>>>> experimental
 
 
 if __name__ == "__main__":
