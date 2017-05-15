@@ -6,12 +6,13 @@
 from __future__ import with_statement
 from __future__ import absolute_import
 from setuptools import setup, find_packages
+from setuptools_scm import get_version
+import setuptools_scm
+from setuptools_scm import get_version
 from io import open
-
 
 MAIN_PACKAGE = 'chemcoord'
 DESCRIPTION = "Python module for dealing with chemical coordinates."
-# VERSION = '1.2.0'
 LICENSE = 'LGPLv3'
 AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
@@ -33,6 +34,11 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Physics']
 
 
+def give_version():
+    release = setuptools_scm.get_version(root='.', relative_to=__file__)
+    return '.'.join(release.split('.')[:3])
+
+
 def readme():
     '''Return the contents of the README.md file.'''
     with open('README.md') as freadme:
@@ -42,7 +48,7 @@ def readme():
 def setup_package():
     setup(
         name=MAIN_PACKAGE,
-        use_scm_version=True,
+        version=give_version(),
         setup_requires=SETUP_REQUIRES,
         url=URL,
         description=DESCRIPTION,
