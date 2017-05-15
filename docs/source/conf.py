@@ -98,9 +98,9 @@ author = u'Oskar Weser'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = chemcoord.__version__
-# The short X.Y version.
-version = '.'.join(release.split('\.')[:2])
+# release = chemcoord.__version__
+# # The short X.Y version.
+# version = '.'.join(release.split('\.')[:2])
 # The full version, including alpha/beta/rc tags.
 release = '1.3.0'
 # The short X.Y version.
