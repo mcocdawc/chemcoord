@@ -2,8 +2,8 @@ from __future__ import absolute_import
 
 import os
 
-# import pkg_resources  # part of setuptools
-# __version__ = pkg_resources.get_distribution("chemcoord").version
+import pkg_resources  # part of setuptools
+__version__ = pkg_resources.get_distribution("chemcoord").version
 
 
 def export(func):
@@ -17,6 +17,8 @@ def export(func):
 
 # have to be imported after export definition
 import chemcoord.utilities
+from chemcoord.utilities._print_versions import show_versions
+import chemcoord._generic_classes
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
@@ -31,7 +33,7 @@ sys.modules['chemcoord.zmat_functions'] = zmat_functions
 sys.modules['chemcoord.vibration'] = vibration
 
 
-# # TODO
+# TODO
 # def show_versions(as_json=False):
 #     import imp
 #     import os
@@ -40,7 +42,7 @@ sys.modules['chemcoord.vibration'] = vibration
 #     # sv_path = os.path.join(this_dir, 'chemcoord', 'util')
 #     # mod = imp.load_module('pvmod', *imp.find_module('print_versions', [sv_path]))
 #     return this_dir
-    # return mod.show_versions(as_json)
+#     # return mod.show_versions(as_json)
 
 
 # def show_versions():
