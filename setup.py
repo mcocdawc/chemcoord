@@ -15,8 +15,7 @@ LICENSE = 'LGPLv3'
 AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
 URL = 'https://github.com/mcocdawc/chemcoord'
-INSTALL_REQUIRES = ['numpy', 'pandas>=0.20', 'setuptools-scm']
-SETUP_REQUIRES = ['setuptools-scm']
+INSTALL_REQUIRES = ['numpy', 'pandas>=0.20']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
             'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
             'coordinate system']
@@ -60,7 +59,6 @@ def setup_package():
     setup(
         name=MAIN_PACKAGE,
         version=give_version(),
-        setup_requires=SETUP_REQUIRES,
         url=URL,
         description=DESCRIPTION,
         author=AUTHOR,
