@@ -35,7 +35,7 @@ import inspect
 
 
 def give_version():
-    version_py = os.path.join('.', 'version.py')
+    version_py = os.path.join('../../', 'version.py')
     with open(version_py, 'r') as f:
         version_git = f.read().strip().split('=')[-1]
     return version_git
