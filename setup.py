@@ -42,7 +42,6 @@ def readme():
 def setup_package():
     setup(
         name=MAIN_PACKAGE,
-        # version=VERSION,
         use_scm_version=True,
         setup_requires=SETUP_REQUIRES,
         url=URL,
@@ -55,9 +54,7 @@ def setup_package():
         long_description=readme(),
         classifiers=CLASSIFIERS,
         packages=find_packages(),
-        install_requires=INSTALL_REQUIRES
-        # requires=REQUIRES
-    )
+        install_requires=INSTALL_REQUIRES)
 
 
 if __name__ == "__main__":
