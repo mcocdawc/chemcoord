@@ -160,49 +160,49 @@ def get_version(pep440=False):
     return git_version
 
 
-def call_git_hash():
-    """return the string output of git rev-parse HEAD"""
-    try:
-        with open(devnull, "w") as fnull:
-            arguments = [GIT_COMMAND, 'rev-parse', 'HEAD']
-            return check_output(arguments, cwd=CURRENT_DIRECTORY,
-                                stderr=fnull).decode("ascii").strip()
-    except (OSError, CalledProcessError):
-        return None
-
-
-def read_git_hash():
-    """Read version information from VERSION file"""
-    try:
-        with open(CC_INIT, "r") as f:
-            found = False
-            while not found:
-                line = f.readline().strip().split()
-                try:
-                    found = True if line[0] == '_git_hash' else False
-                except IndexError:
-                    pass
-        git_hash = line[2].replace('"', '')
-        if len(git_hash) == 0:
-            git_hash = None
-        return git_hash
-    except IOError:
-        return None
-
-
-def update_git_hash():
-    """Update cc.__init__.py"""
-    git_hash = get_git_hash()
-    sed_inplace(CC_INIT, '_git_hash = .*', '_git_hash = "{}"'.format(git_hash))
-
-
-def get_git_hash():
-    """Get git hash
-    """
-    git_hash = call_git_hash()
-    if git_hash is None:  # not a git repository
-        git_hash = read_git_hash()
-    return git_hash
+# def call_git_hash():
+#     """return the string output of git rev-parse HEAD"""
+#     try:
+#         with open(devnull, "w") as fnull:
+#             arguments = [GIT_COMMAND, 'rev-parse', 'HEAD']
+#             return check_output(arguments, cwd=CURRENT_DIRECTORY,
+#                                 stderr=fnull).decode("ascii").strip()
+#     except (OSError, CalledProcessError):
+#         return None
+#
+#
+# def read_git_hash():
+#     """Read version information from VERSION file"""
+#     try:
+#         with open(CC_INIT, "r") as f:
+#             found = False
+#             while not found:
+#                 line = f.readline().strip().split()
+#                 try:
+#                     found = True if line[0] == '_git_hash' else False
+#                 except IndexError:
+#                     pass
+#         git_hash = line[2].replace('"', '')
+#         if len(git_hash) == 0:
+#             git_hash = None
+#         return git_hash
+#     except IOError:
+#         return None
+#
+#
+# def update_git_hash():
+#     """Update cc.__init__.py"""
+#     git_hash = get_git_hash()
+#     sed_inplace(CC_INIT, '_git_hash = .*', '_git_hash = "{}"'.format(git_hash))
+#
+#
+# def get_git_hash():
+#     """Get git hash
+#     """
+#     git_hash = call_git_hash()
+#     if git_hash is None:  # not a git repository
+#         git_hash = read_git_hash()
+#     return git_hash
 
 
 def call_git_branch():
@@ -261,7 +261,6 @@ def update_doc_tutorial_url():
 
 
 if __name__ == "__main__":
-    update_git_hash()
     update_git_branch()
     update_release_version()
     update_doc_tutorial_url()

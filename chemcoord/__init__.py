@@ -4,7 +4,6 @@ import os
 
 import pkg_resources  # part of setuptools
 __version__ = pkg_resources.get_distribution("chemcoord").version
-_git_hash = "0ee74d6559a5e8e7757cead2f24a882aabb2173b"
 _git_branch = "experimental"
 
 
