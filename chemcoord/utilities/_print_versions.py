@@ -16,22 +16,20 @@ def get_sys_info():
     # get full commit hash
     # TODO
     commit = None
-    if os.path.isdir(".git") and os.path.isdir("chemcoord"):
+    version_py = os.path.join('../../', 'version.py')
+    try:
+        git_hash = subprocess.check_output(
+            ['git', 'log', '--format="%H"', '-n', '1']).rstrip()
+        git_hash = bytes.decode(git_hash).replace('"', '')
+    except subprocess.CalledProcessError:
         try:
-            pipe = subprocess.Popen('git log --format="%H" -n 1'.split(" "),
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-            so, serr = pipe.communicate()
-        except:
+            with open(version_py, 'r') as f:
+                f.readline()
+                version_git = f.readline().strip().split('=')[-1]
+                git_hash = f.readline().strip().split('=')[-1]
+        except FileNotFoundError:
             pass
-        else:
-            if pipe.returncode == 0:
-                commit = so
-                try:
-                    commit = so.decode('utf-8')
-                except ValueError:
-                    pass
-                commit = commit.strip().strip('"')
+
 
     blob.append(('commit', commit))
 

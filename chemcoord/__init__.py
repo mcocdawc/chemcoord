@@ -4,7 +4,8 @@ import os
 
 import pkg_resources  # part of setuptools
 __version__ = pkg_resources.get_distribution("chemcoord").version
-
+_git_hash = "49bd37b51a6182d77bf759146cbdcea1c8f8bd60"
+_git_branch = "experimental"
 
 def export(func):
     if callable(func) and hasattr(func, '__name__'):
@@ -31,19 +32,3 @@ import sys
 sys.modules['chemcoord.xyz_functions'] = xyz_functions
 sys.modules['chemcoord.zmat_functions'] = zmat_functions
 sys.modules['chemcoord.vibration'] = vibration
-
-
-# TODO
-# def show_versions(as_json=False):
-#     import imp
-#     import os
-#     fn = __file__
-#     this_dir = os.path.dirname(fn)
-#     # sv_path = os.path.join(this_dir, 'chemcoord', 'util')
-#     # mod = imp.load_module('pvmod', *imp.find_module('print_versions', [sv_path]))
-#     return this_dir
-#     # return mod.show_versions(as_json)
-
-
-# def show_versions():
-#     return output
