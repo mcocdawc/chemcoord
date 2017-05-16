@@ -160,8 +160,8 @@ def get_version(pep440=False):
     return git_version
 
 
-def get_git_hash():
-    """return the string output of git desribe"""
+def call_git_hash():
+    """return the string output of git rev-parse HEAD"""
     try:
         with open(devnull, "w") as fnull:
             arguments = [GIT_COMMAND, 'rev-parse', 'HEAD']
@@ -171,13 +171,41 @@ def get_git_hash():
         return None
 
 
+def read_git_hash():
+    """Read version information from VERSION file"""
+    try:
+        with open(CC_INIT, "r") as f:
+            found = False
+            while not found:
+                line = f.readline().strip().split()
+                try:
+                    found = True if line[0] == '_git_hash' else False
+                except IndexError:
+                    pass
+        git_hash = line[2].replace('"', '')
+        if len(git_hash) == 0:
+            git_hash = None
+        return git_hash
+    except IOError:
+        return None
+
+
 def update_git_hash():
     """Update cc.__init__.py"""
     git_hash = get_git_hash()
     sed_inplace(CC_INIT, '_git_hash = .*', '_git_hash = "{}"'.format(git_hash))
 
 
-def get_git_branch():
+def get_git_hash():
+    """Get git hash
+    """
+    git_hash = call_git_hash()
+    if git_hash is None:  # not a git repository
+        git_hash = read_git_hash()
+    return git_hash
+
+
+def call_git_branch():
     """return the string output of git desribe"""
     try:
         with open(devnull, "w") as fnull:
@@ -188,11 +216,39 @@ def get_git_branch():
         return None
 
 
+def read_git_branch():
+    """Read version information from VERSION file"""
+    try:
+        with open(CC_INIT, "r") as f:
+            found = False
+            while not found:
+                line = f.readline().strip().split()
+                try:
+                    found = True if line[0] == '_git_branch' else False
+                except IndexError:
+                    pass
+        branch = line[2].replace('"', '')
+        if len(branch) == 0:
+            branch = None
+        return branch
+    except IOError:
+        return None
+
+
 def update_git_branch():
     """Update cc.__init__.py"""
     branch = get_git_branch()
     sed_inplace(CC_INIT, '_git_branch = .*',
                 '_git_branch = "{}"'.format(branch))
+
+
+def get_git_branch():
+    """Get git branch name
+    """
+    git_branch = call_git_branch()
+    if git_branch is None:  # not a git repository
+        git_branch = read_git_branch()
+    return git_branch
 
 
 def update_doc_tutorial_url():
