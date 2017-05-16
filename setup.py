@@ -58,8 +58,4 @@ def setup_package():
 
 
 if __name__ == "__main__":
-    version.update_git_hash()
-    version.update_git_branch()
-    version.update_release_version()
-    version.update_doc_tutorial_url()
     setup_package()

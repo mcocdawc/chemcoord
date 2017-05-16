@@ -261,4 +261,7 @@ def update_doc_tutorial_url():
 
 
 if __name__ == "__main__":
-    print(get_version())
+    update_git_hash()
+    update_git_branch()
+    update_release_version()
+    update_doc_tutorial_url()
