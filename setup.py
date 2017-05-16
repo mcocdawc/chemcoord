@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 from io import open
 import os
 import subprocess
-from version import get_version
+import version
 
 MAIN_PACKAGE = 'chemcoord'
 DESCRIPTION = "Python module for dealing with chemical coordinates."
@@ -32,6 +32,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Chemistry',
     'Topic :: Scientific/Engineering :: Physics']
 
+
 def readme():
     '''Return the contents of the README.md file.'''
     with open('README.md') as freadme:
@@ -41,7 +42,7 @@ def readme():
 def setup_package():
     setup(
         name=MAIN_PACKAGE,
-        version=get_version(pep440=True),
+        version=version.get_version(pep440=True),
         url=URL,
         description=DESCRIPTION,
         author=AUTHOR,
@@ -57,4 +58,8 @@ def setup_package():
 
 
 if __name__ == "__main__":
+    version.update_git_hash()
+    version.update_git_branch()
+    version.update_release_version()
+    version.update_doc_tutorial_url()
     setup_package()

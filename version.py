@@ -43,6 +43,7 @@ __all__ = ("get_version",)
 CURRENT_DIRECTORY = path.dirname(path.abspath(__file__))
 VERSION_FILE = path.join(CURRENT_DIRECTORY, "VERSION")
 CC_INIT = path.join(CURRENT_DIRECTORY, 'chemcoord', '__init__.py')
+CC_TUTORIAL = path.join(CURRENT_DIRECTORY, 'docs', 'source', 'tutorial.rst')
 
 GIT_COMMAND = "git"
 
@@ -193,6 +194,15 @@ def update_git_branch():
     sed_inplace(CC_INIT, '_git_branch = .*',
                 '_git_branch = "{}"'.format(branch))
 
+
+def update_doc_tutorial_url():
+    branch = get_git_branch()
+    fixed_beginning = '<http://nbviewer.jupyter.org/github/mcocdawc/chemcoord/'
+    pattern = fixed_beginning + 'blob/.*/Tutorial/Tutorial.ipynb>'
+    replacement = (fixed_beginning
+                   + 'blob/{}/Tutorial/Tutorial.ipynb>'.format(branch))
+    sed_inplace(CC_TUTORIAL, pattern, replacement)
+
+
 if __name__ == "__main__":
     print(get_version())
-    update_git_hash()

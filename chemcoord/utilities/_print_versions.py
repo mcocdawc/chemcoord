@@ -6,6 +6,7 @@ import subprocess
 import codecs
 import locale
 import importlib
+import chemcoord as cc
 
 
 def get_sys_info():
@@ -13,24 +14,7 @@ def get_sys_info():
 
     blob = []
 
-    # get full commit hash
-    # TODO
-    commit = None
-    version_py = os.path.join('../../', 'version.py')
-    try:
-        git_hash = subprocess.check_output(
-            ['git', 'log', '--format="%H"', '-n', '1']).rstrip()
-        git_hash = bytes.decode(git_hash).replace('"', '')
-    except subprocess.CalledProcessError:
-        try:
-            with open(version_py, 'r') as f:
-                f.readline()
-                version_git = f.readline().strip().split('=')[-1]
-                git_hash = f.readline().strip().split('=')[-1]
-        except FileNotFoundError:
-            pass
-
-
+    commit = cc._git_hash
     blob.append(('commit', commit))
 
     try:
@@ -48,7 +32,6 @@ def get_sys_info():
             ("LC_ALL", "%s" % os.environ.get('LC_ALL', "None")),
             ("LANG", "%s" % os.environ.get('LANG', "None")),
             ("LOCALE", "%s.%s" % locale.getlocale()),
-
         ])
     except:
         pass
