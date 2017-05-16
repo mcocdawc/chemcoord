@@ -33,12 +33,10 @@ import inspect
 #else:
 #    sys.path.append(os.path.dirname(os.path.normpath(module_dir)))
 
-
 def give_version():
-    version_py = os.path.join('../../', 'version.py')
-    with open(version_py, 'r') as f:
-        f.readline()
-        version_git = f.readline().strip().split('=')[-1]
+    version_file = os.path.join('../../', 'VERSION')
+    with open(version_file, 'r') as f:
+        version_git = f.readline().strip()
     return version_git
 
 
