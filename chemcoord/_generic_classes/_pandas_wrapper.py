@@ -10,7 +10,22 @@ import chemcoord._generic_classes._indexers as indexers
 
 
 class _pandas_wrapper(object):
-    """This class provides wrappers for pd.DataFrame methods.
+    """This class provides wrappers for :class:`pandas.DataFrame` methods.
+
+    It has the same behaviour as the :class:`~pandas.DataFrame`
+    with two exceptions:
+
+    Slicing
+        The slicing operations try to call the method
+        :method:`_return_appropiate_type`.
+        This means that a class that inherited from :class:`_pandas_wrapper`
+        may control the type which is returned when a slicing is done.
+        Look into :class:`_common_class` for an example.
+
+    Metadata
+        There are two dictionaris as attributes
+        called `metadata` and `_metadata`
+        which are passed on when doing slices...
     """
     def __init__(self, frame):
         self.frame = frame.copy()
@@ -22,23 +37,93 @@ class _pandas_wrapper(object):
 
     @property
     def loc(self):
-        """pew pew
+        """Label based indexing
+
+        The indexing behaves like
+        `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        The only question is about the return type.
+        If the information in the columns is enough to draw a molecule,
+        an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
+        is returned.
+        If the information in the columns is not enough to draw a molecule
+        a :class:`~pandas.Series` instance is returned for one dimensional
+        slices and a :class:`~pandas.DataFrame` instance in all other cases.
+
+        Cartesian:
+            In the case of a :class:`~chemcoord.Cartesian` class this means:
+
+                ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
+                :class:`~chemcoord.Cartesian`.
+
+                ``molecule.loc[:, ['atom', 'x']]`` returns a
+                :class:`~pandas.DataFrame`.
+
+                ``molecule.loc[:, 'atom']`` returns a
+                :class:`~pandas.Series`.
+
+        Zmat:
+            If the following definition is used::
+
+                cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
+                        'dihedral_with', 'dihedral']
+
+            The return types in the case of a :class:`~chemcoord.Zmat`
+            instance are:
+
+                ``molecule.loc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
+
+                ``molecule.loc[:, ['atom', 'bond_with']]`` returns a
+                :class:`~pandas.DataFrame`.
+
+                ``molecule.loc[:, 'atom']`` returns a
+                :class:`~pandas.Series`.
         """
         return indexers._Loc(self)
 
     @property
     def iloc(self):
-        """pew pew
+        """Row based indexing
+
+        The indexing behaves like
+        `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        The only question is about the return type.
+        If the information in the columns is enough to draw a molecule,
+        an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
+        is returned.
+        If the information in the columns is not enough to draw a molecule
+        a :class:`~pandas.Series` instance is returned for one dimensional
+        slices and a :class:`~pandas.DataFrame` instance in all other cases.
+
+        Cartesian:
+            In the case of a :class:`~chemcoord.Cartesian` class this means:
+
+                ``molecule.iloc[:, ['atom', 'x', 'y', 'z']]`` returns a
+                :class:`~chemcoord.Cartesian`.
+
+                ``molecule.iloc[:, ['atom', 'x']]`` returns a
+                :class:`~pandas.DataFrame`.
+
+                ``molecule.iloc[:, 'atom']`` returns a
+                :class:`~pandas.Series`.
+
+        Zmat:
+            If the following definition is used::
+
+                cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
+                        'dihedral_with', 'dihedral']
+
+            The return types in the case of a :class:`~chemcoord.Zmat`
+            instance are:
+
+                ``molecule.iloc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
+
+                ``molecule.iloc[:, ['atom', 'bond_with']]`` returns a
+                :class:`~pandas.DataFrame`.
+
+                ``molecule.iloc[:, 'atom']`` returns a
+                :class:`~pandas.Series`.
         """
         return indexers._ILoc(self)
-
-    @property
-    def index(self):
-        """Returns the index.
-
-        Assigning a value to it changes the index.
-        """
-        return self.frame.index
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
@@ -55,6 +140,14 @@ class _pandas_wrapper(object):
             self.frame[key[0], key[1]] = value
         else:
             self.frame[key] = value
+
+    @property
+    def index(self):
+        """Returns the index.
+
+        Assigning a value to it changes the index.
+        """
+        return self.frame.index
 
     @index.setter
     def index(self, value):
