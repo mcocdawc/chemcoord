@@ -92,7 +92,7 @@ http://chemcoord.readthedocs.io/en/latest/'
         return self.to_xyz(*args, **kwargs)
 
     @classmethod
-    def from_xyz(cls, inputfile, start_index=0, get_bonds=True):
+    def read_xyz(cls, inputfile, start_index=0, get_bonds=True):
         """Read a file of coordinate information.
 
         Reads xyz-files.
@@ -115,16 +115,6 @@ http://chemcoord.readthedocs.io/en/latest/'
         if get_bonds:
             molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
-
-    @classmethod
-    def read_xyz(cls, *args, **kwargs):
-        """Deprecated, use :meth:`~chemcoord.Cartesian.from_xyz`
-        """
-        message = 'Will be removed in the future. Please use from_xyz().'
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(message, DeprecationWarning)
-        return cls.from_xyz(*args, **kwargs)
 
     def view(self, viewer=settings['defaults']['viewer'], use_curr_dir=False):
         """View your molecule.

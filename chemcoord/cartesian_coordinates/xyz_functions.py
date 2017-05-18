@@ -141,7 +141,7 @@ def write_molden(*args, **kwargs):
     return to_molden(*args, **kwargs)
 
 
-def from_molden(inputfile, start_index=0, get_bonds=True):
+def read_molden(inputfile, start_index=0, get_bonds=True):
     """Read a molden file.
 
     Args:
@@ -182,16 +182,6 @@ def from_molden(inputfile, start_index=0, get_bonds=True):
 
     f.close()
     return list_of_cartesians
-
-
-def read_molden(*args, **kwargs):
-    """Deprecated, use :func:`~chemcoord.xyz_functions.from_molden`
-    """
-    message = 'Will be removed in the future. Please use from_molden().'
-    with warnings.catch_warnings():
-        warnings.simplefilter("always")
-        warnings.warn(message, DeprecationWarning)
-    return from_molden(*args, **kwargs)
 
 
 def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):

@@ -32,5 +32,4 @@ A collection of functions operating on instances of
     ~xyz_functions.write_molden
     ~xyz_functions.to_molden
     ~xyz_functions.read_molden
-    ~xyz_functions.from_molden
     ~xyz_functions.view
