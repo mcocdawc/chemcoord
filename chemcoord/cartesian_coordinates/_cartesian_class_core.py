@@ -334,22 +334,35 @@ class Cartesian_core(_common_class):
                 Compare with :func:`add_data`.
 
         Returns:
-            dict: Dictionary mapping from an atom index to the indices of atoms
-            bonded to.
+            dict: Dictionary mapping from an atom index to the set of
+                indices of atoms bonded to.
         """
-        fragments = self._divide_et_impera(n_atoms_per_set=n_atoms_per_set,
-                                           offset=offset)
-        full_bond_dict = {}
-        convert_dict = dict(zip(range(self.n_atoms), self.index))
-        for i, j, k in product(*[range(x) for x in fragments.shape]):
-            # The following call is not side effect free and changes
-            # full_bond_dict
-            fragments[i, j, k]._update_bond_dict(
-                full_bond_dict, dtype=dtype,
-                modified_properties=modified_properties,
-                atomic_radius_data=atomic_radius_data,
-                self_bonding_allowed=self_bonding_allowed,
-                convert_dict=convert_dict)
+        def complete_calculation():
+            fragments = self._divide_et_impera(offset=offset)
+            full_bond_dict = {}
+            convert_dict = dict(zip(range(self.n_atoms), self.index))
+            for i, j, k in product(*[range(x) for x in fragments.shape]):
+                # The following call is not side effect free and changes
+                # full_bond_dict
+                fragments[i, j, k]._update_bond_dict(
+                    full_bond_dict, dtype=dtype,
+                    modified_properties=modified_properties,
+                    atomic_radius_data=atomic_radius_data,
+                    self_bonding_allowed=self_bonding_allowed,
+                    convert_dict=convert_dict)
+            return full_bond_dict
+
+        if use_lookup:
+            try:
+                full_bond_dict = self._metadata['bond_dict']
+            except KeyError:
+                full_bond_dict = complete_calculation()
+                if set_lookup:
+                    self._metadata['bond_dict'] = full_bond_dict
+        else:
+            full_bond_dict = complete_calculation()
+            if set_lookup:
+                self._metadata['bond_dict'] = full_bond_dict
         return full_bond_dict
 
     def connected_to(
@@ -1149,9 +1162,8 @@ class Cartesian_core(_common_class):
 
         for key in partition1.keys():
             assert len(partition1[key]) == len(partition2[key]), \
-                (
-                    'You have chemically different molecules, regarding the'
-                    'topology of their connectivity.'
+                ('You have chemically different molecules, regarding the'
+                 'topology of their connectivity.')
             index_dic = make_subset_similar(
                 molecule1, partition1[key], molecule2_new,
                 partition2[key], index_dic)

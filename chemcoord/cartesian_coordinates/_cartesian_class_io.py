@@ -92,8 +92,7 @@ http://chemcoord.readthedocs.io/en/latest/'
         return self.to_xyz(*args, **kwargs)
 
     @classmethod
-    def from_xyz(cls, inputfile, start_index=0, get_bonds=True,
-                 warn_valency=False):
+    def from_xyz(cls, inputfile, start_index=0, get_bonds=True):
         """Read a file of coordinate information.
 
         Reads xyz-files.
@@ -102,8 +101,6 @@ http://chemcoord.readthedocs.io/en/latest/'
             inputfile (str):
             start_index (int):
             get_bonds (bool):
-            warn_valency (bool): Warn if atoms are over- or undersaturated
-                in their valency.
 
         Returns:
             Cartesian:
@@ -116,8 +113,7 @@ http://chemcoord.readthedocs.io/en/latest/'
         molecule.index = range(start_index, start_index + molecule.n_atoms)
 
         if get_bonds:
-            molecule.get_bonds(use_lookup=False, set_lookup=True,
-                               use_valency=False, warn_valency=warn_valency)
+            molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
 
     @classmethod
