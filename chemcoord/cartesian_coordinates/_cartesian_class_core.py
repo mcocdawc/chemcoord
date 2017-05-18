@@ -8,6 +8,7 @@ try:
     import itertools.izip as zip
 except ImportError:
     pass
+from itertools import product
 import numpy as np
 import pandas as pd
 import collections
@@ -194,25 +195,30 @@ class Cartesian_core(_common_class):
         return np.sum((pos[None, :, :] - pos[:, None, :]) ** 2, axis=2)
 
     def _give_summed_radius(self, dtype='float32',
-                            atomic_radius_data=None):
+                            atomic_radius_data=None,
+                            modified_properties=None):
         """Calculate the summed van der Waals radii for each atom pair.
         """
         if atomic_radius_data is None:
             atomic_radius_data = settings['defaults']['atomic_radius_data']
         bond_radius = self.add_data(atomic_radius_data)[atomic_radius_data]
+        if modified_properties is not None:
+            bond_radius.update(pd.Series(modified_properties))
         bond_radius = bond_radius.values.astype(dtype)
         return np.add.outer(bond_radius, bond_radius)
 
     def _give_bond_array(self, dtype='float32',
                          atomic_radius_data=None,
+                         modified_properties=None,
                          self_bonding_allowed=False):
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
         """
         if atomic_radius_data is None:
             atomic_radius_data = settings['defaults']['atomic_radius_data']
-        radii = self._give_summed_radius(dtype=dtype,
-                                         atomic_radius_data=atomic_radius_data)
+        radii = self._give_summed_radius(
+            dtype=dtype, atomic_radius_data=atomic_radius_data,
+            modified_properties=modified_properties)
         squared_distances = self._give_squared_distances(dtype=dtype)
         overlap = radii ** 2 - squared_distances
         bond_array = overlap >= 0
@@ -223,12 +229,14 @@ class Cartesian_core(_common_class):
     def _update_bond_dict(self, bond_dict=None, dtype='float32',
                           atomic_radius_data=None,
                           self_bonding_allowed=False,
+                          modified_properties=None,
                           convert_dict=None):
         """If bond_dict is provided, this function is not side effect free"""
         if atomic_radius_data is None:
             atomic_radius_data = settings['defaults']['atomic_radius_data']
         bond_array = self._give_bond_array(
             dtype=dtype, atomic_radius_data=atomic_radius_data,
+            modified_properties=modified_properties,
             self_bonding_allowed=self_bonding_allowed)
         a, b = bond_array.nonzero()
         if convert_dict is None:
@@ -280,7 +288,6 @@ class Cartesian_core(_common_class):
 
     def get_bonds(self, dtype='float32',
                   self_bonding_allowed=False,
-                  n_atoms_per_set=500,
                   offset=3,
                   modified_properties=None,
                   use_lookup=False,
@@ -311,38 +318,20 @@ class Cartesian_core(_common_class):
 
         Args:
             modified_properties (dic): If you want to change the van der
-                Vaals radius or valency of one or more specific atoms, pass a
+                Vaals radius of one or more specific atoms, pass a
                 dictionary that looks like::
 
-                    modified_properties = {index1 :
-                        {'atomic_radius' : 1.5, 'valency' : 8}, ...}
+                    modified_properties = {index1: 1.5}
 
-                For global changes use the constants.py module.
-            maximum_edge_length (float): Maximum length of one edge of a
-            cuboid if ``divide_et_impera`` is ``True``.
-            difference_edge (float):
-            use_valency (bool): If ``True`` atoms can't have more bonds than
-                their valency. This means that the bonds, exceeding the number
-                of valency, with lowest overlap will be cut, although the
-                van der Waals radii overlap.
+                For global changes use the constants module.
+            offset (float):
             use_lookup (bool):
             set_lookup (bool):
-            divide_et_impera (bool): Since the calculation of overlaps or
-                distances between atoms scale with :math:`O(n^2)`, it is
-                recommended to split the molecule in smaller cuboids and
-                calculate the bonds in each cuboid. The scaling becomes
-                then :math:`O(n\log(n))`. This approach can lead to problems
-                if ``use_valency`` is ``True``. Bonds from one cuboid to
-                another can not be counted for the valency.. This means that
-                in certain situations some atoms can be oversaturated, although
-                ``use_valency`` is ``True``.
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
                 ``atomic_radius_cc`` and can be changed with
                 :attr:`settings['defaults']['atomic_radius_data']`.
                 Compare with :func:`add_data`.
-            warn_valency (bool): Warn if atoms are over- or undersaturated
-                in their valency.
 
         Returns:
             dict: Dictionary mapping from an atom index to the indices of atoms
@@ -363,78 +352,6 @@ class Cartesian_core(_common_class):
                 convert_dict=convert_dict)
         return full_bond_dict
 
-    def get_bonds2(
-            self,
-            modified_properties=None,
-            maximum_edge_length=25,
-            difference_edge=6,
-            use_valency=False,
-            use_lookup=False,
-            set_lookup=True,
-            divide_et_impera=True,
-            atomic_radius_data=settings['defaults']['atomic_radius_data'],
-            warn_valency=False):
-        """Return a dictionary representing the bonds.
-
-        .. warning:: This function is **not sideeffect free**, since it
-            assigns the output to a variable ``self._metadata['bond_dict']`` if
-            ``set_lookup`` is ``True`` (which is the default). This is
-            necessary for performance reasons.
-
-        ``.get_bonds()`` will use or not use a lookup
-        depending on ``use_lookup``. Greatly increases performance if
-        True, but could introduce bugs in certain situations.
-
-        Just imagine a situation where the ``Cartesian().frame`` is
-        changed manually. If you apply lateron a method e.g. ``to_zmat()``
-        that makes use of ``get_bonds()`` the dictionary of the bonds
-        may not represent the actual situation anymore.
-
-        You have two possibilities to cope with this problem.
-        Either you just re-execute ``get_bonds`` on your specific instance,
-        or you change the ``internally_use_lookup`` option in the settings.
-        Please note that the internal use of the lookup variable
-        greatly improves performance.
-
-        Args:
-            modified_properties (dic): If you want to change the van der
-                Vaals radius or valency of one or more specific atoms, pass a
-                dictionary that looks like::
-
-                    modified_properties = {index1 :
-                        {'atomic_radius' : 1.5, 'valency' : 8}, ...}
-
-                For global changes use the constants.py module.
-            maximum_edge_length (float): Maximum length of one edge of a
-            cuboid if ``divide_et_impera`` is ``True``.
-            difference_edge (float):
-            use_valency (bool): If ``True`` atoms can't have more bonds than
-                their valency. This means that the bonds, exceeding the number
-                of valency, with lowest overlap will be cut, although the
-                van der Waals radii overlap.
-            use_lookup (bool):
-            set_lookup (bool):
-            divide_et_impera (bool): Since the calculation of overlaps or
-                distances between atoms scale with :math:`O(n^2)`, it is
-                recommended to split the molecule in smaller cuboids and
-                calculate the bonds in each cuboid. The scaling becomes
-                then :math:`O(n\log(n))`. This approach can lead to problems
-                if ``use_valency`` is ``True``. Bonds from one cuboid to
-                another can not be counted for the valency.. This means that
-                in certain situations some atoms can be oversaturated, although
-                ``use_valency`` is ``True``.
-            atomic_radius_data (str): Defines which column of
-                :attr:`constants.elements` is used. The default is
-                ``atomic_radius_cc`` and can be changed with
-                :attr:`settings['defaults']['atomic_radius_data']`.
-                Compare with :func:`add_data`.
-            warn_valency (bool): Warn if atoms are over- or undersaturated
-                in their valency.
-
-        Returns:
-            dict: Dictionary mapping from an atom index to the indices of atoms
-            bonded to.
-        """
     def connected_to(
             self, index_of_atom,
             exclude=None,
@@ -1234,8 +1151,7 @@ class Cartesian_core(_common_class):
             assert len(partition1[key]) == len(partition2[key]), \
                 (
                     'You have chemically different molecules, regarding the'
-                    'topology of their connectivity. Perhaps'
-                    ' get_bonds(use_valency=False) helps.')
+                    'topology of their connectivity.'
             index_dic = make_subset_similar(
                 molecule1, partition1[key], molecule2_new,
                 partition2[key], index_dic)
