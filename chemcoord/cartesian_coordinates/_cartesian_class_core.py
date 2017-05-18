@@ -464,7 +464,8 @@ class Cartesian_core(_common_class):
                 self.connected_to(
                     index_of_interest,
                     exclude=included_atoms_set,
-                    give_only_index=True))
+                    give_only_index=True,
+                    use_lookup=use_lookup))
             new_atoms = new_atoms - included_atoms_set
         molecule = self.loc[included_atoms_set, :]
         return molecule
@@ -756,12 +757,15 @@ class Cartesian_core(_common_class):
         dihedrals = to_add + sign * dihedrals
         return dihedrals
 
-    def fragmentate(self, give_only_index=False):
+    def fragmentate(self, give_only_index=False,
+                    use_lookup=settings['defaults']['use_lookup']):
         """Get the indices of non bonded parts in the molecule.
 
         Args:
             give_only_index (bool): If ``True`` a set of indices is returned.
                 Otherwise a new Cartesian instance.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             list: A list of sets of indices or new Cartesian instances.
@@ -769,9 +773,9 @@ class Cartesian_core(_common_class):
         list_fragment_indices = []
         still_to_check = set(self.index)
         while still_to_check != set([]):
-            indices = self.connected_to(
-                pick(still_to_check),
-                give_only_index=True)
+            indices = self.connected_to(pick(still_to_check),
+                                        use_lookup=use_lookup,
+                                        give_only_index=True)
             still_to_check = still_to_check - indices
             list_fragment_indices.append(indices)
 
@@ -782,7 +786,8 @@ class Cartesian_core(_common_class):
                                indices in list_fragment_indices]
         return value_to_return
 
-    def get_fragment(self, list_of_indextuples, give_only_index=False):
+    def get_fragment(self, list_of_indextuples, give_only_index=False,
+                     use_lookup=settings['defaults']['use_lookup']):
         """Get the indices of the atoms in a fragment.
 
         The list_of_indextuples contains all bondings from the
@@ -796,14 +801,17 @@ class Cartesian_core(_common_class):
             list_of_indextuples (list):
             give_only_index (bool): If ``True`` a set of indices
                 is returned. Otherwise a new Cartesian instance.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
         exclude = [tuple[0] for tuple in list_of_indextuples]
         index_of_atom = list_of_indextuples[0][1]
-        fragment_index = self.connected_to(
-            index_of_atom, exclude=exclude, give_only_index=True)
+        fragment_index = self.connected_to(index_of_atom, exclude=exclude,
+                                           give_only_index=True,
+                                           use_lookup=use_lookup)
         if give_only_index:
             value_to_return = fragment_index
         else:
@@ -966,7 +974,8 @@ class Cartesian_core(_common_class):
 
         output = self.loc[indices_of_other_atoms, :].copy()
         other_locations = output.location()
-        output.loc[:, 'distance'] = np.linalg.norm(other_locations - origin, axis=1)
+        output.loc[:, 'distance'] = np.linalg.norm(other_locations - origin,
+                                                   axis=1)
         if sort:
             output.sort_values(by='distance', inplace=True)
         return output
@@ -987,7 +996,8 @@ class Cartesian_core(_common_class):
         if not inplace:
             return output
 
-    def partition_chem_env(self, follow_bonds=4):
+    def partition_chem_env(self, follow_bonds=4,
+                           use_lookup=settings['defaults']['use_lookup']):
         """This function partitions the molecule into subsets of the
         same chemical environment.
 
@@ -1020,6 +1030,8 @@ class Cartesian_core(_common_class):
 
         Args:
             follow_bonds (int):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             dict: The output will look like this::
@@ -1031,24 +1043,24 @@ class Cartesian_core(_common_class):
     """
         env_dict = {}
 
-        def get_chem_env(self, atomseries, index, follow_bonds):
-            indices_of_env_atoms = self.connected_to(
-                index, follow_bonds=follow_bonds, give_only_index=True)
-            indices_of_env_atoms.remove(index)
+        def get_chem_env(self, i, follow_bonds):
+            indices_of_env_atoms = self.connected_to(i,
+                                                     follow_bonds=follow_bonds,
+                                                     give_only_index=True,
+                                                     use_lookup=use_lookup)
+            indices_of_env_atoms.remove(i)
             own_symbol, atoms = (
-                atomseries[index], atomseries[indices_of_env_atoms])
+                self.loc[i, 'atom'], self.loc[indices_of_env_atoms, 'atom'])
             environment = collections.Counter(atoms).most_common()
             environment = frozenset(environment)
             return (own_symbol, environment)
 
-        atomseries = self.loc[:, 'atom']
-
-        for index in self.index:
-            chem_env = get_chem_env(self, atomseries, index, follow_bonds)
+        for i in self.index:
+            chem_env = get_chem_env(self, i, follow_bonds)
             try:
-                env_dict[chem_env].add(index)
+                env_dict[chem_env].add(i)
             except KeyError:
-                env_dict[chem_env] = set([index])
+                env_dict[chem_env] = set([i])
         return env_dict
 
 # TODO still to rewrite
@@ -1074,22 +1086,23 @@ class Cartesian_core(_common_class):
             tuple:
         """
         # TODO rewrite with C function
+        coords = ['x', 'y', 'z']
         molecule1 = self.sort_index()
         molecule2 = Cartesian2.sort_index()
-        molecule1.loc[:, 'x':'z'] = (molecule1.loc[:, 'x':'z']
-                                 - molecule1.topologic_center())
-        molecule2.loc[:, 'x':'z'] = (molecule2.loc[:, 'x':'z']
-                                 - molecule2.topologic_center())
+        molecule1.loc[:, coords] = (molecule1.loc[:, coords]
+                                    - molecule1.topologic_center())
+        molecule2.loc[:, coords] = (molecule2.loc[:, coords]
+                                    - molecule2.topologic_center())
 
         if ignore_hydrogens:
-            location1 = molecule1[molecule1[:, 'atom'] != 'H', :].location()
-            location2 = molecule2.loc[molecule2.loc[:, 'atom'] != 'H', :].location()
+            location1 = molecule1[molecule1['atom'] != 'H'].location()
+            location2 = molecule2[molecule2['atom'] != 'H'].location()
         else:
             location1 = molecule1.location()
             location2 = molecule2.location()
 
-        molecule2.loc[:, ['x', 'y', 'z']] = algebra_utilities.rotate(location2,
-                                                                 location1)
+        molecule2.loc[:, coords] = algebra_utilities.rotate(location2,
+                                                            location1)
         return molecule1, molecule2
 
     def make_similar(self, Cartesian2, follow_bonds=4, prealign=True):
@@ -1154,7 +1167,7 @@ class Cartesian_core(_common_class):
                             break
                         else:
                             index_on_molecule2 = \
-                                distances_to_atom_on_molecule1.frame.iloc[i].name
+                                distances_to_atom_on_molecule1.iloc[i].name
                             distance_new = \
                                 distances_to_atom_on_molecule1[
                                     index_on_molecule2, 'distance']
@@ -1201,7 +1214,8 @@ class Cartesian_core(_common_class):
             appended to the left and right of the list continuing
             the movement.
         """
-        difference = Cartesian2[:, ['x', 'y', 'z']] - self.loc[:, ['x', 'y', 'z']]
+        coords = ['x', 'y', 'z']
+        difference = Cartesian2.loc[:, coords] - self.loc[:, coords]
 
         step_frame = difference.copy() / step
 
@@ -1209,17 +1223,17 @@ class Cartesian_core(_common_class):
         temp_Cartesian = self.copy()
 
         for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
-            temp_Cartesian[:, ['x', 'y', 'z']] = (
-                self.loc[:, ['x', 'y', 'z']]
-                + step_frame.loc[:, ['x', 'y', 'z']] * t)
+            temp_Cartesian.loc[:, coords] = (
+                self.loc[:, coords]
+                + step_frame.loc[:, coords] * t)
             Cartesian_list.append(temp_Cartesian.copy())
         return Cartesian_list
 
     def has_same_sumformula(self, other):
         same_atoms = True
-        for atom in set(self.loc[:, 'atom']):
-            own_atom_number = self.loc[self.loc[:, 'atom'] == atom, :].shape[0]
-            other_atom_number = other[other[:, 'atom'] == atom, :].shape[0]
+        for atom in set(self['atom']):
+            own_atom_number = self[self['atom'] == atom].n_atoms
+            other_atom_number = other[other['atom'] == atom].n_atoms
             same_atoms = (own_atom_number == other_atom_number)
             if not same_atoms:
                 break
