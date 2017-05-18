@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 import warnings
 from chemcoord._exceptions import PhysicalMeaningError
-from chemcoord.cartesian_coordinates._cartesian_class_core import Cartesian_core
+from chemcoord.cartesian_coordinates._cartesian_class_core import \
+    Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
@@ -74,7 +75,7 @@ class Cartesian_give_zmat(Cartesian_core):
                     already_built).loc[:, 'distance'].idxmin()
                 angle_with = self.distance_to(
                     bond_with,
-                    already_built - set([bond_with])).loc[:, 'distance'].idxmin()
+                    already_built - set([bond_with])).loc['distance'].idxmin()
                 buildlist[row_in_buildlist, 1:3] = [bond_with, angle_with]
                 if not third_time:
                     dihedral_with = self.distance_to(
@@ -333,7 +334,8 @@ class Cartesian_give_zmat(Cartesian_core):
             dtype='float',
             index=indexlist)
 
-        zmat_frame.loc[:, additional_columns] = self.loc[indexlist, additional_columns]
+        zmat_frame.loc[:, additional_columns] = self.loc[indexlist,
+                                                         additional_columns]
 
         bonds = self.bond_lengths(buildlist, start_row=1)
         angles = self.angle_degrees(buildlist, start_row=2)

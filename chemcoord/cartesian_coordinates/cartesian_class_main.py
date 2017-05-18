@@ -39,7 +39,8 @@ class Cartesian(Cartesian_io, Cartesian_give_zmat):
 
     The indexing behaves like
     `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
-    You can slice with :meth:`~chemcoord.Cartesian.loc`, :meth:`~chemcoord.Cartesian.iloc`
+    You can slice with :meth:`~chemcoord.Cartesian.loc`,
+    :meth:`~chemcoord.Cartesian.iloc`
     and ``[key]``.
     The only question is about the return type.
     If the information in the columns is enough to draw a molecule,
