@@ -18,13 +18,16 @@ from chemcoord.configuration import settings
 
 
 class Cartesian_give_zmat(Cartesian_core):
-    def _get_buildlist(self, fixed_buildlist=None):
+    def _get_buildlist(self, fixed_buildlist=None,
+                       use_lookup=settings['defaults']['use_lookup']):
         """Create a buildlist for a Zmatrix.
 
         Args:
             fixed_buildlist (np.array): It is possible to provide the
                 beginning of the buildlist. The rest is "figured" out
                 automatically.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             np.array: buildlist
@@ -41,7 +44,7 @@ class Cartesian_give_zmat(Cartesian_core):
             already_built, to_be_built = set([]), set(self.index)
             convert_index = {}
 
-        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
+        bond_dic = self.get_bonds(use_lookup=use_lookup)
         topologic_center = self.topologic_center()
         distance_to_topologic_center = self.distance_to(topologic_center)
 
@@ -247,18 +250,21 @@ class Cartesian_give_zmat(Cartesian_core):
 
         return buildlist
 
-    def _clean_dihedral(self, buildlist_to_check):
+    def _clean_dihedral(self, buildlist_to_check,
+                        use_lookup=settings['defaults']['use_lookup']):
         """Reindexe the dihedral defining atom if colinear.
 
         Args:
             buildlist (np.array):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             np.array: modified_buildlist
         """
         buildlist = buildlist_to_check.copy()
 
-        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
+        bond_dic = self.get_bonds(use_lookup=use_lookup)
 
         angles = self.angle_degrees(buildlist[3:, 1:])
 
@@ -350,7 +356,8 @@ class Cartesian_give_zmat(Cartesian_core):
         return Zmat(zmat_frame)
 
     def give_zmat(self, buildlist=None, fragment_list=None,
-                  check_linearity=True):
+                  check_linearity=True,
+                  use_lookup=settings['defaults']['use_lookup']):
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
@@ -402,13 +409,15 @@ class Cartesian_give_zmat(Cartesian_core):
             buildlist (np.array):
             fragment_list (list):
             check_linearity (bool):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             Zmat: A new instance of :class:`~.zmat_functions.Zmat`.
         """
         if buildlist is None:
             if fragment_list is None:
-                buildlist = self._get_buildlist()
+                buildlist = self._get_buildlist(use_lookup=use_lookup)
             else:
                 def create_big_molecule(self, fragment_list):
                     def prepare_variables(self, fragment_list):
@@ -424,7 +433,8 @@ class Cartesian_give_zmat(Cartesian_core):
                         self, fragment_list)
                     big_molecule = self.loc[big_molecule_index, :]
                     row = big_molecule.n_atoms
-                    buildlist[: row, :] = big_molecule._get_buildlist()
+                    buildlist[: row, :] = big_molecule._get_buildlist(
+                        use_lookup=use_lookup)
                     return buildlist, big_molecule, row
 
                 def add_fragment(
@@ -432,7 +442,7 @@ class Cartesian_give_zmat(Cartesian_core):
                     next_row = row + fragment_tpl[0].n_atoms
                     buildlist[row: next_row, :] = \
                         fragment_tpl[0]._get_buildlist(
-                            fragment_tpl[1])
+                            fragment_tpl[1], use_lookup=use_lookup)
                     return buildlist, big_molecule, row
 
                 buildlist, big_molecule, row = create_big_molecule(
@@ -443,7 +453,7 @@ class Cartesian_give_zmat(Cartesian_core):
                         self, fragment_tpl, big_molecule, buildlist, row)
 
         if check_linearity:
-            buildlist = self._clean_dihedral(buildlist)
+            buildlist = self._clean_dihedral(buildlist, use_lookup=True)
 
         zmat = self._build_zmat(buildlist)
         zmat.metadata = self.metadata

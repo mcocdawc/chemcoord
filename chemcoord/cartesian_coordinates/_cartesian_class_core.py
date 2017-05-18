@@ -286,7 +286,7 @@ class Cartesian_core(_common_class):
             array_of_fragments[i, j, k] = self.loc[selection, :]
         return array_of_fragments
 
-    def get_bonds(self, dtype='float32',
+    def get_bonds(self,
                   self_bonding_allowed=False,
                   offset=3,
                   modified_properties=None,
@@ -305,7 +305,7 @@ class Cartesian_core(_common_class):
         depending on ``use_lookup``. Greatly increases performance if
         True, but could introduce bugs in certain situations.
 
-        Just imagine a situation where the ``Cartesian().frame`` is
+        Just imagine a situation where the ``Cartesian`` is
         changed manually. If you apply lateron a method e.g. ``to_zmat()``
         that makes use of ``get_bonds()`` the dictionary of the bonds
         may not represent the actual situation anymore.
@@ -327,6 +327,7 @@ class Cartesian_core(_common_class):
             offset (float):
             use_lookup (bool):
             set_lookup (bool):
+            self_bonding_allowed (bool):
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
                 ``atomic_radius_cc`` and can be changed with
@@ -335,7 +336,7 @@ class Cartesian_core(_common_class):
 
         Returns:
             dict: Dictionary mapping from an atom index to the set of
-                indices of atoms bonded to.
+            indices of atoms bonded to.
         """
         def complete_calculation():
             fragments = self._divide_et_impera(offset=offset)
@@ -345,7 +346,7 @@ class Cartesian_core(_common_class):
                 # The following call is not side effect free and changes
                 # full_bond_dict
                 fragments[i, j, k]._update_bond_dict(
-                    full_bond_dict, dtype=dtype,
+                    full_bond_dict,
                     modified_properties=modified_properties,
                     atomic_radius_data=atomic_radius_data,
                     self_bonding_allowed=self_bonding_allowed,
@@ -369,7 +370,8 @@ class Cartesian_core(_common_class):
             self, index_of_atom,
             exclude=None,
             give_only_index=False,
-            follow_bonds=None):
+            follow_bonds=None,
+            use_lookup=settings['defaults']['use_lookup']):
         """Return a Cartesian of atoms connected to the specified
             one.
 
@@ -385,11 +387,13 @@ class Cartesian_core(_common_class):
                 after reaching the end in every branch. If you have a
                 single molecule this usually means, that the whole
                 molecule is recovered.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
-        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
+        bond_dic = self.get_bonds(use_lookup=use_lookup)
         exclude = set([]) if (exclude is None) else set(exclude)
 
         previous_atoms = (
@@ -426,7 +430,8 @@ class Cartesian_core(_common_class):
             to_return = self.loc[fixed_atoms, :]
         return to_return
 
-    def _preserve_bonds(self, sliced_cartesian):
+    def _preserve_bonds(self, sliced_cartesian,
+                        use_lookup=settings['defaults']['use_lookup']):
         """Is called after cutting geometric shapes.
 
         If you want to change the rules how bonds are preserved, when
@@ -438,6 +443,8 @@ class Cartesian_core(_common_class):
 
         Args:
             sliced_frame (Cartesian):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             Cartesian:
@@ -445,7 +452,7 @@ class Cartesian_core(_common_class):
         included_atoms_set = set(sliced_cartesian.index)
         assert included_atoms_set.issubset(set(self.index)), \
             'The sliced Cartesian has to be a subset of the bigger frame'
-        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
+        bond_dic = self.get_bonds(use_lookup=use_lookup)
         new_atoms = set([])
         for atom in included_atoms_set:
             new_atoms = new_atoms | bond_dic[atom]

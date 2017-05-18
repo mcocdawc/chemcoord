@@ -16,7 +16,7 @@ def provide_default_settings():
     # Greatly increases performance if True, but could introduce bugs
     # if the Cartesian().xyz_frame is changed manually.
     settings['defaults'] = {}
-    settings['defaults']['use_lookup_internally'] = True
+    settings['defaults']['use_lookup'] = False
     settings['defaults']['atomic_radius_data'] = 'atomic_radius_cc'
     settings['defaults']['viewer'] = 'gv.exe'
     # settings['viewer'] = 'avogadro'
@@ -86,7 +86,7 @@ def read_configuration_file(filepath=_give_default_file_path()):
             return config[section].getfloat(key)
         special_actions = {}  # Something different than a string is expected
         special_actions['defaults'] = {}
-        special_actions['defaults']['use_lookup_internally'] = getboolean
+        special_actions['defaults']['use_lookup'] = getboolean
         try:
             return special_actions[section][key](section, key, config)
         except KeyError:
