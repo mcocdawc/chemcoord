@@ -77,8 +77,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] + other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] + other
@@ -92,8 +92,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] - other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] - other
@@ -104,8 +104,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = other[:, coords] - self.loc[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = other - self.loc[:, coords]
@@ -116,8 +116,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] * other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] * other
@@ -128,8 +128,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] * other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] * other
@@ -140,8 +140,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] / other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] / other
@@ -152,7 +152,7 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
             new.loc[:, coords] = other[:, coords] / self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
@@ -320,7 +320,10 @@ class Cartesian_core(_common_class):
             indices of atoms bonded to.
         """
         def complete_calculation():
+            old_index = self.index
+            self.index = range(self.n_atoms)
             fragments = self._divide_et_impera(offset=offset)
+            self.index = old_index
             positions = np.array(
                 self.loc[:, ['x', 'y', 'z']], dtype='float32', order='F')
             bond_radii = self.add_data(atomic_radius_data)[atomic_radius_data]
@@ -1134,8 +1137,7 @@ class Cartesian_core(_common_class):
                 distances_to_atom_on_molecule1 = molecule2_new.distance_to(
                     molecule1.location(index_on_molecule1), subset2, sort=True)
 
-                index_on_molecule2 = \
-                    distances_to_atom_on_molecule1.frame.iloc[0].name
+                index_on_molecule2 = distances_to_atom_on_molecule1.index[0]
                 distance_new = distances_to_atom_on_molecule1[
                     index_on_molecule2, 'distance']
                 location_of_atom2 = distances_to_atom_on_molecule1.location(

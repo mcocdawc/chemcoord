@@ -52,7 +52,7 @@ def through(functions, value, recurse_level=np.infty):
 class mode(object):
     def __init__(self, equilibrium_structure, calculate_structure):
         self.eq_structure = {}
-        if xyz_functions.is_Cartesian(equilibrium_structure):
+        if isinstance(equilibrium_structure, Cartesian):
             self.eq_structure['xyz'] = equilibrium_structure
             self.eq_structure['zmat'] = equilibrium_structure.to_zmat()
         else:
@@ -118,15 +118,15 @@ class mode(object):
             index = eq_strct_zmat.index
             buildlist = eq_strct_zmat.get_buildlist()
             for t, zmat in displaced_zmats:
-                if not (buildlist == zmat[index, :].get_buildlist()).all():
+                if not (buildlist == (zmat.loc[index, :].get_buildlist())).all():
                     return False
             return True
 
         def give_arrays(eq_strct_zmat, displaced_zmats):
             X = np.array([0] + [item[0] for item in displaced_zmats])
             columns = ('bond', 'angle', 'dihedral')
-            Y = ([eq_strct_zmat[:, columns].values]
-                 + [item[1][eq_strct_zmat.index, columns].values for
+            Y = ([eq_strct_zmat.loc[:, columns].values]
+                 + [item[1].loc[eq_strct_zmat.index, columns].values for
                     item in displaced_zmats]
                  )
             Y = np.concatenate([A[None, :, :] for A in Y], axis=0)
@@ -230,7 +230,8 @@ class mode(object):
         new_structure = self.eq_structure['zmat'].copy()
         give_displacements = self._give_displacement.loc[:, columns].values
         displacements = np.array(through(give_displacements, t))
-        new_structure[:, columns] = new_structure[:, columns] + displacements
+        new_structure.loc[:, columns] = (new_structure.loc[:, columns]
+                                         + displacements)
         return new_structure
 
     def copy(self):

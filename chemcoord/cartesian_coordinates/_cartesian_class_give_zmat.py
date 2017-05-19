@@ -75,13 +75,13 @@ class Cartesian_give_zmat(Cartesian_core):
                     already_built).loc[:, 'distance'].idxmin()
                 angle_with = self.distance_to(
                     bond_with,
-                    already_built - set([bond_with])).loc['distance'].idxmin()
+                    already_built - set([bond_with]))['distance'].idxmin()
                 buildlist[row_in_buildlist, 1:3] = [bond_with, angle_with]
                 if not third_time:
                     dihedral_with = self.distance_to(
                         bond_with,
                         already_built - set([bond_with, angle_with])
-                        ).loc[:, 'distance'].idxmin()
+                        )['distance'].idxmin()
                     buildlist[row_in_buildlist, 1:] = [
                         bond_with, angle_with, dihedral_with]
             new_row_to_modify = row_in_buildlist + 1
