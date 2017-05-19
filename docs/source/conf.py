@@ -46,6 +46,7 @@ def give_version():
 # sys.path.insert(0, os.path.abspath(u'.'))
 # sys.path.insert(0, os.path.abspath(u'..'))
 sys.path.insert(0, os.path.abspath(u'../../'))
+sys.path.insert(0, os.path.abspath(u'../../src'))
 
 
 # -- General configuration ------------------------------------------------
