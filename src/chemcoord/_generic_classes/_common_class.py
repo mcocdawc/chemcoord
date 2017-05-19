@@ -7,7 +7,7 @@ import six
 import pandas as pd
 import numpy as np
 from chemcoord._generic_classes._pandas_wrapper import _pandas_wrapper
-import chemcoord.constants
+import chemcoord.constants as constants
 
 
 class _common_class(_pandas_wrapper):
