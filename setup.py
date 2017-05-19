@@ -52,7 +52,8 @@ def setup_package():
         license=LICENSE,
         long_description=readme(),
         classifiers=CLASSIFIERS,
-        packages=find_packages(),
+        packages=find_packages('src'),
+        package_dir={'': 'src'},
         install_requires=INSTALL_REQUIRES
     )
 
