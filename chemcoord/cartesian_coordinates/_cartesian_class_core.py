@@ -280,13 +280,17 @@ class Cartesian_core(_common_class):
             positions = np.array(
                 self.loc[:, ['x', 'y', 'z']], dtype='float32', order='F')
             bond_radii = self.add_data(atomic_radius_data)[atomic_radius_data]
+            if modified_properties is not None:
+                bond_radii.update(pd.Series(modified_properties))
             bond_radii = bond_radii.values.astype('float32')
             bond_dict = collections.defaultdict(set)
             for i, j, k in product(*[range(x) for x in fragments.shape]):
                 # The following call is not side effect free and changes
                 # bond_dict
-                self._update_bond_dict(fragments[i, j, k], positions,
-                                       bond_radii, bond_dict=bond_dict)
+                self._update_bond_dict(
+                    fragments[i, j, k], positions, bond_radii,
+                    bond_dict=bond_dict,
+                    self_bonding_allowed=self_bonding_allowed)
 
             rename = dict(enumerate(self.index))
             bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
