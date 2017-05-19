@@ -187,72 +187,53 @@ class Cartesian_core(_common_class):
         # test
         return ase.Atoms(atoms, positions)
 
-    def _give_squared_distances(self, dtype='float32'):
-        """Calculate a float array where ``A[i,j]`` is the squared
-        distance between the i-th and j-th atom.
-        """
-        pos = self[['x', 'y', 'z']].values.astype(dtype)
-        return np.sum((pos[None, :, :] - pos[:, None, :]) ** 2, axis=2)
-
-    def _give_summed_radius(self, dtype='float32',
-                            atomic_radius_data=None,
-                            modified_properties=None):
-        """Calculate the summed van der Waals radii for each atom pair.
-        """
-        if atomic_radius_data is None:
-            atomic_radius_data = settings['defaults']['atomic_radius_data']
-        bond_radius = self.add_data(atomic_radius_data)[atomic_radius_data]
-        if modified_properties is not None:
-            bond_radius.update(pd.Series(modified_properties))
-        bond_radius = bond_radius.values.astype(dtype)
-        return np.add.outer(bond_radius, bond_radius)
-
-    def _give_bond_array(self, dtype='float32',
-                         atomic_radius_data=None,
-                         modified_properties=None,
-                         self_bonding_allowed=False):
+    @staticmethod
+    def _give_bond_array(positions, bond_radii, self_bonding_allowed=False):
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
         """
-        if atomic_radius_data is None:
-            atomic_radius_data = settings['defaults']['atomic_radius_data']
-        radii = self._give_summed_radius(
-            dtype=dtype, atomic_radius_data=atomic_radius_data,
-            modified_properties=modified_properties)
-        squared_distances = self._give_squared_distances(dtype=dtype)
-        overlap = radii ** 2 - squared_distances
+        coords = ['x', 'y', 'z']
+        radii = np.add.outer(bond_radii, bond_radii)
+        squared_radii = radii ** 2
+        delta = {axis: None for axis in coords}
+        for i, axis in enumerate(coords):
+            coord = positions[:, i]
+            delta[axis] = coord - coord.reshape((len(coord), 1))
+        squared_distances = delta['x']**2 + delta['y']**2 + delta['z']**2
+        overlap = squared_radii - squared_distances
         bond_array = overlap >= 0
         if not self_bonding_allowed:
             np.fill_diagonal(bond_array, False)
         return bond_array
 
-    def _update_bond_dict(self, bond_dict=None, dtype='float32',
-                          atomic_radius_data=None,
+    def _update_bond_dict(self, fragment_indices,
+                          positions,
+                          bond_radii,
+                          bond_dict=None,
                           self_bonding_allowed=False,
-                          modified_properties=None,
-                          convert_dict=None):
+                          convert_index=None):
         """If bond_dict is provided, this function is not side effect free
         bond_dict has to be a collections.defaultdict(set)"""
-        assert isinstance(bond_dict, collections.defaultdict) or bond_dict is None
+        assert (isinstance(bond_dict, collections.defaultdict)
+                or bond_dict is None)
+        fragment_indices = list(fragment_indices)
+        if convert_index is None:
+            convert_index = dict(enumerate(fragment_indices))
         if bond_dict is None:
             bond_dict = collections.defaultdict(set)
-        if convert_dict is None:
-            convert_dict = dict(zip(range(self.n_atoms), self.index))
-        if atomic_radius_data is None:
-            atomic_radius_data = settings['defaults']['atomic_radius_data']
 
-        bond_array = self._give_bond_array(
-            dtype=dtype, atomic_radius_data=atomic_radius_data,
-            modified_properties=modified_properties,
-            self_bonding_allowed=self_bonding_allowed)
+        frag_pos = positions[fragment_indices, :]
+        frag_bond_radii = bond_radii[fragment_indices]
+
+        bond_array = self._give_bond_array(frag_pos, frag_bond_radii)
         a, b = bond_array.nonzero()
-        # a, b = [convert_dict[i] for i in a], [convert_dict[i] for i in b]
+        a, b = [convert_index[i] for i in a], [convert_index[i] for i in b]
         for row, index in enumerate(a):
             # bond_dict is a collections.defaultdict(set)
-            bond_dict[convert_dict[index]].add(convert_dict[b[row]])
+            bond_dict[index].add(b[row])
         return bond_dict
 
-    def _divide_et_impera(self, n_atoms_per_set=1000, offset=3):
+    def _divide_et_impera(self, n_atoms_per_set=500, offset=3):
         coords = ['x', 'y', 'z']
         sorted_series = dict(zip(
             coords, [self[axis].sort_values() for axis in coords]))
@@ -283,10 +264,10 @@ class Cartesian_core(_common_class):
             selection = (indices_at_axis['x'][i]
                          & indices_at_axis['y'][j]
                          & indices_at_axis['z'][k])
-            array_of_fragments[i, j, k] = self.loc[selection, :]
+            array_of_fragments[i, j, k] = selection
         return array_of_fragments
 
-    def get_bond2(self,
+    def get_bonds(self,
                   self_bonding_allowed=False,
                   offset=3,
                   modified_properties=None,
@@ -294,21 +275,37 @@ class Cartesian_core(_common_class):
                   set_lookup=True,
                   atomic_radius_data=settings['defaults']['atomic_radius_data']
                   ):
-        fragments = self._divide_et_impera(offset=offset)
-        full_bond_dict = collections.defaultdict(set)
-        convert_dict = dict(zip(range(self.n_atoms), self.index))
-        for i, j, k in product(*[range(x) for x in fragments.shape]):
-            # The following call is not side effect free and changes
-            # full_bond_dict
-            fragments[i, j, k]._update_bond_dict(
-                full_bond_dict,
-                modified_properties=modified_properties,
-                atomic_radius_data=atomic_radius_data,
-                self_bonding_allowed=self_bonding_allowed,
-                convert_dict=convert_dict)
-        return full_bond_dict
+        def complete_calculation():
+            fragments = self._divide_et_impera(offset=offset)
+            positions = np.array(
+                self.loc[:, ['x', 'y', 'z']], dtype='float32', order='F')
+            bond_radii = self.add_data(atomic_radius_data)[atomic_radius_data]
+            bond_radii = bond_radii.values.astype('float32')
+            bond_dict = collections.defaultdict(set)
+            for i, j, k in product(*[range(x) for x in fragments.shape]):
+                # The following call is not side effect free and changes
+                # bond_dict
+                self._update_bond_dict(fragments[i, j, k], positions,
+                                       bond_radii, bond_dict=bond_dict)
 
-    def get_bonds(self,
+            rename = dict(enumerate(self.index))
+            bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
+                         for key in bond_dict}
+            return bond_dict
+
+        if use_lookup:
+            try:
+                bond_dict = self._metadata['bond_dict']
+            except KeyError:
+                bond_dict = complete_calculation()
+        else:
+            bond_dict = complete_calculation()
+
+        if set_lookup:
+            self._metadata['bond_dict'] = bond_dict
+        return bond_dict
+
+    def get_bond3(self,
                   self_bonding_allowed=False,
                   offset=3,
                   modified_properties=None,
