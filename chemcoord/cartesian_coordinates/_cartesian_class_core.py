@@ -275,48 +275,6 @@ class Cartesian_core(_common_class):
                   set_lookup=True,
                   atomic_radius_data=settings['defaults']['atomic_radius_data']
                   ):
-        def complete_calculation():
-            fragments = self._divide_et_impera(offset=offset)
-            positions = np.array(
-                self.loc[:, ['x', 'y', 'z']], dtype='float32', order='F')
-            bond_radii = self.add_data(atomic_radius_data)[atomic_radius_data]
-            if modified_properties is not None:
-                bond_radii.update(pd.Series(modified_properties))
-            bond_radii = bond_radii.values.astype('float32')
-            bond_dict = collections.defaultdict(set)
-            for i, j, k in product(*[range(x) for x in fragments.shape]):
-                # The following call is not side effect free and changes
-                # bond_dict
-                self._update_bond_dict(
-                    fragments[i, j, k], positions, bond_radii,
-                    bond_dict=bond_dict,
-                    self_bonding_allowed=self_bonding_allowed)
-
-            rename = dict(enumerate(self.index))
-            bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
-                         for key in bond_dict}
-            return bond_dict
-
-        if use_lookup:
-            try:
-                bond_dict = self._metadata['bond_dict']
-            except KeyError:
-                bond_dict = complete_calculation()
-        else:
-            bond_dict = complete_calculation()
-
-        if set_lookup:
-            self._metadata['bond_dict'] = bond_dict
-        return bond_dict
-
-    def get_bond3(self,
-                  self_bonding_allowed=False,
-                  offset=3,
-                  modified_properties=None,
-                  use_lookup=False,
-                  set_lookup=True,
-                  atomic_radius_data=settings['defaults']['atomic_radius_data']
-                  ):
         """Return a dictionary representing the bonds.
 
         .. warning:: This function is **not sideeffect free**, since it
@@ -363,31 +321,37 @@ class Cartesian_core(_common_class):
         """
         def complete_calculation():
             fragments = self._divide_et_impera(offset=offset)
-            full_bond_dict = collections.defaultdict(set)
-            convert_dict = dict(zip(range(self.n_atoms), self.index))
+            positions = np.array(
+                self.loc[:, ['x', 'y', 'z']], dtype='float32', order='F')
+            bond_radii = self.add_data(atomic_radius_data)[atomic_radius_data]
+            if modified_properties is not None:
+                bond_radii.update(pd.Series(modified_properties))
+            bond_radii = bond_radii.values.astype('float32')
+            bond_dict = collections.defaultdict(set)
             for i, j, k in product(*[range(x) for x in fragments.shape]):
                 # The following call is not side effect free and changes
-                # full_bond_dict
-                fragments[i, j, k]._update_bond_dict(
-                    full_bond_dict,
-                    modified_properties=modified_properties,
-                    atomic_radius_data=atomic_radius_data,
-                    self_bonding_allowed=self_bonding_allowed,
-                    convert_dict=convert_dict)
-            return full_bond_dict
+                # bond_dict
+                self._update_bond_dict(
+                    fragments[i, j, k], positions, bond_radii,
+                    bond_dict=bond_dict,
+                    self_bonding_allowed=self_bonding_allowed)
+
+            rename = dict(enumerate(self.index))
+            bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
+                         for key in bond_dict}
+            return bond_dict
 
         if use_lookup:
             try:
-                full_bond_dict = self._metadata['bond_dict']
+                bond_dict = self._metadata['bond_dict']
             except KeyError:
-                full_bond_dict = complete_calculation()
-                if set_lookup:
-                    self._metadata['bond_dict'] = full_bond_dict
+                bond_dict = complete_calculation()
         else:
-            full_bond_dict = complete_calculation()
-            if set_lookup:
-                self._metadata['bond_dict'] = full_bond_dict
-        return full_bond_dict
+            bond_dict = complete_calculation()
+
+        if set_lookup:
+            self._metadata['bond_dict'] = bond_dict
+        return bond_dict
 
     def connected_to(
             self, index_of_atom,
