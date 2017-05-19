@@ -231,28 +231,28 @@ class Cartesian_core(_common_class):
                           self_bonding_allowed=False,
                           modified_properties=None,
                           convert_dict=None):
-        """If bond_dict is provided, this function is not side effect free"""
+        """If bond_dict is provided, this function is not side effect free
+        bond_dict has to be a collections.defaultdict(set)"""
+        assert isinstance(bond_dict, collections.defaultdict) or bond_dict is None
+        if bond_dict is None:
+            bond_dict = collections.defaultdict(set)
+        if convert_dict is None:
+            convert_dict = dict(zip(range(self.n_atoms), self.index))
         if atomic_radius_data is None:
             atomic_radius_data = settings['defaults']['atomic_radius_data']
+
         bond_array = self._give_bond_array(
             dtype=dtype, atomic_radius_data=atomic_radius_data,
             modified_properties=modified_properties,
             self_bonding_allowed=self_bonding_allowed)
         a, b = bond_array.nonzero()
-        if convert_dict is None:
-            convert_dict = dict(zip(range(self.n_atoms), self.index))
-        a, b = [convert_dict[i] for i in a], [convert_dict[i] for i in b]
-
-        if bond_dict is None:
-            bond_dict = {}
+        # a, b = [convert_dict[i] for i in a], [convert_dict[i] for i in b]
         for row, index in enumerate(a):
-            try:
-                bond_dict[index] |= set([b[row]])
-            except KeyError:
-                bond_dict[index] = set([b[row]])
+            # bond_dict is a collections.defaultdict(set)
+            bond_dict[convert_dict[index]].add(convert_dict[b[row]])
         return bond_dict
 
-    def _divide_et_impera(self, n_atoms_per_set=500, offset=3):
+    def _divide_et_impera(self, n_atoms_per_set=1000, offset=3):
         coords = ['x', 'y', 'z']
         sorted_series = dict(zip(
             coords, [self[axis].sort_values() for axis in coords]))
@@ -285,6 +285,28 @@ class Cartesian_core(_common_class):
                          & indices_at_axis['z'][k])
             array_of_fragments[i, j, k] = self.loc[selection, :]
         return array_of_fragments
+
+    def get_bond2(self,
+                  self_bonding_allowed=False,
+                  offset=3,
+                  modified_properties=None,
+                  use_lookup=False,
+                  set_lookup=True,
+                  atomic_radius_data=settings['defaults']['atomic_radius_data']
+                  ):
+        fragments = self._divide_et_impera(offset=offset)
+        full_bond_dict = collections.defaultdict(set)
+        convert_dict = dict(zip(range(self.n_atoms), self.index))
+        for i, j, k in product(*[range(x) for x in fragments.shape]):
+            # The following call is not side effect free and changes
+            # full_bond_dict
+            fragments[i, j, k]._update_bond_dict(
+                full_bond_dict,
+                modified_properties=modified_properties,
+                atomic_radius_data=atomic_radius_data,
+                self_bonding_allowed=self_bonding_allowed,
+                convert_dict=convert_dict)
+        return full_bond_dict
 
     def get_bonds(self,
                   self_bonding_allowed=False,
@@ -340,7 +362,7 @@ class Cartesian_core(_common_class):
         """
         def complete_calculation():
             fragments = self._divide_et_impera(offset=offset)
-            full_bond_dict = {}
+            full_bond_dict = collections.defaultdict(set)
             convert_dict = dict(zip(range(self.n_atoms), self.index))
             for i, j, k in product(*[range(x) for x in fragments.shape]):
                 # The following call is not side effect free and changes
