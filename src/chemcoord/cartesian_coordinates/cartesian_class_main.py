@@ -35,21 +35,29 @@ class Cartesian(Cartesian_io, Cartesian_give_zmat):
     ``np.diag([1, 1, -1]) @ cartesian_instance``
     to mirror on the x-y plane.
 
-    **Slicing**:
+    **Indexing**:
 
-    Slicing is supported and behaves like the ``.loc`` method of pandas.
-    The returned type depends on the remaining columns after the slice.
-    If the information of the remaining columns
-    is sufficient to describe the geometry
-    of a molecule, a Cartesian instance is returned.
-    Otherwise a ``pandas.DataFrame`` or in the case of one remaining column
-    a ``pandas.Series`` is returned.
+    The indexing behaves like
+    `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
+    You can slice with :meth:`~chemcoord.Cartesian.loc`,
+    :meth:`~chemcoord.Cartesian.iloc`
+    and ``[key]``.
+    The only question is about the return type.
+    If the information in the columns is enough to draw a molecule,
+    an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
+    is returned.
+    If the information in the columns is not enough to draw a molecule
+    a :class:`~pandas.Series` instance is returned for one dimensional
+    slices and a :class:`~pandas.DataFrame` instance in all other cases:
 
-    ``molecule[:, ['atom', 'x', 'y', 'z']]`` returns a ``Cartesian``.
+            ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
+            :class:`~chemcoord.Cartesian`.
 
-    ``molecule[:, ['atom', 'x']]`` returns a ``pandas.DataFrame``.
+            ``molecule.loc[:, ['atom', 'x']]`` returns a
+            :class:`~pandas.DataFrame`.
 
-    ``molecule[:, 'atom']`` returns a ``pandas.Series``.
+            ``molecule.loc[:, 'atom']`` returns a
+            :class:`~pandas.Series`.
 
     **Comparison**:
 

@@ -8,6 +8,7 @@ try:
     import itertools.izip as zip
 except ImportError:
     pass
+from itertools import product
 import numpy as np
 import pandas as pd
 import collections
@@ -76,8 +77,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] + other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] + other
@@ -91,8 +92,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] - other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] - other
@@ -103,8 +104,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = other[:, coords] - self.loc[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = other - self.loc[:, coords]
@@ -115,8 +116,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] * other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] * other
@@ -127,8 +128,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] * other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] * other
@@ -139,8 +140,8 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] / other[:, coords]
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+            new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
             new.loc[:, coords] = self.loc[:, coords] / other
@@ -151,7 +152,7 @@ class Cartesian_core(_common_class):
         new = self.copy()
         try:
             assert set(self.index) == set(other.index)
-            assert np.alltrue(self.loc[:, 'atom'] == other[self.index, 'atom'])
+            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
             new.loc[:, coords] = other[:, coords] / self.loc[:, coords]
         except (TypeError, IndexError, AttributeError):
             # It is a shape=3 vector or list
@@ -186,67 +187,94 @@ class Cartesian_core(_common_class):
         # test
         return ase.Atoms(atoms, positions)
 
-    def _give_distance_array(self):
-        """Returns a frame with a column for the distance from origin.
+    @staticmethod
+    def _give_bond_array(positions, bond_radii, self_bonding_allowed=False):
+        """Calculate a boolean array where ``A[i,j] is True`` indicates a
+        bond between the i-th and j-th atom.
         """
-        convert_to = {
-            'frame': dict(zip(range(self.n_atoms), self.index)),
-            'array': dict(zip(self.index, range(self.n_atoms)))}
-        location_array = self.loc[:, ['x', 'y', 'z']].values.astype(float)
-        A = np.expand_dims(location_array, axis=1)
-        B = np.expand_dims(location_array, axis=0)
-        C = A - B
-        return_array = np.linalg.norm(C, axis=2)
-        return return_array, convert_to
+        coords = ['x', 'y', 'z']
+        radii = np.add.outer(bond_radii, bond_radii)
+        squared_radii = radii ** 2
+        delta = {axis: None for axis in coords}
+        for i, axis in enumerate(coords):
+            coord = positions[:, i]
+            delta[axis] = coord - coord.reshape((len(coord), 1))
+        squared_distances = delta['x']**2 + delta['y']**2 + delta['z']**2
+        overlap = squared_radii - squared_distances
+        bond_array = overlap >= 0
+        if not self_bonding_allowed:
+            np.fill_diagonal(bond_array, False)
+        return bond_array
 
-    def _overlap(self, bond_size_dic, include=None):
-        """Calculates the overlap of van der Vaals radii.
+    def _update_bond_dict(self, fragment_indices,
+                          positions,
+                          bond_radii,
+                          bond_dict=None,
+                          self_bonding_allowed=False,
+                          convert_index=None):
+        """If bond_dict is provided, this function is not side effect free
+        bond_dict has to be a collections.defaultdict(set)"""
+        assert (isinstance(bond_dict, collections.defaultdict)
+                or bond_dict is None)
+        fragment_indices = list(fragment_indices)
+        if convert_index is None:
+            convert_index = dict(enumerate(fragment_indices))
+        if bond_dict is None:
+            bond_dict = collections.defaultdict(set)
 
-        Do not confuse it with overlap of atomic orbitals.
-        This is just a "poor man's overlap" of van der Vaals radii.
+        frag_pos = positions[fragment_indices, :]
+        frag_bond_radii = bond_radii[fragment_indices]
 
-        Args:
-            bond_size_dic (dic): A dictionary mapping from the
-                indices of atoms (integers) to their van der Vaals
-                radius.
-            include (list): The indices between which the overlap
-                should be calculated. If ``None``, the whole index is
-                taken.
+        bond_array = self._give_bond_array(frag_pos, frag_bond_radii)
+        a, b = bond_array.nonzero()
+        a, b = [convert_index[i] for i in a], [convert_index[i] for i in b]
+        for row, index in enumerate(a):
+            # bond_dict is a collections.defaultdict(set)
+            bond_dict[index].add(b[row])
+        return bond_dict
 
-        Returns:
-            tuple: **First element**: overlap_array:
-                A (n_atoms, n_atoms) array that contains the overlap
-                    between every atom given in the frame.
+    def _divide_et_impera(self, n_atoms_per_set=500, offset=3):
+        coords = ['x', 'y', 'z']
+        sorted_series = dict(zip(
+            coords, [self[axis].sort_values() for axis in coords]))
 
-                **Second element**: convert_to: A nested dictionary
-                    that gives the possibility to convert the indices
-                    from the frame to the overlap_array and back.
-        """
-        include = self.index if (include is None) else include
+        def ceil(x):
+            return int(np.ceil(x))
 
-        def summed_bond_size_array(bond_size_dic):
-            bond_size = np.array([bond_size_dic[key] for key in include])
-            A = np.expand_dims(bond_size, axis=1)
-            B = np.expand_dims(bond_size, axis=0)
-            C = A + B
-            return C
+        n_sets = self.n_atoms / n_atoms_per_set
+        n_sets_along_axis = ceil(n_sets ** (1/3))
+        n_atoms_per_set_along_axis = ceil(self.n_atoms / n_sets_along_axis)
 
-        bond_size_array = summed_bond_size_array(bond_size_dic)
-        distance_array, convert_to = self.loc[include, :]._give_distance_array()
-        overlap_array = bond_size_array - distance_array
-        return overlap_array, convert_to
+        def give_index(series, i, n_atoms_per_set_along_axis, offset=offset):
+            N = n_atoms_per_set_along_axis
+            try:
+                min_value, max_value = series.iloc[[i * N, (i + 1) * N]]
+            except IndexError:
+                min_value, max_value = series.iloc[[i * N, -1]]
+            selection = series.between(min_value - offset, max_value + offset)
+            return set(series[selection].index)
 
-    def get_bonds(
-            self,
-            modified_properties=None,
-            maximum_edge_length=25,
-            difference_edge=6,
-            use_valency=False,
-            use_lookup=False,
-            set_lookup=True,
-            divide_et_impera=True,
-            atomic_radius_data=settings['defaults']['atomic_radius_data'],
-            warn_valency=False):
+        indices_at_axis = {axis: {} for axis in coords}
+        for axis, i in product(coords, range(n_sets_along_axis)):
+            indices_at_axis[axis][i] = give_index(sorted_series[axis], i,
+                                                  n_atoms_per_set_along_axis)
+
+        array_of_fragments = np.full([n_sets_along_axis] * 3, None, dtype='O')
+        for i, j, k in product(*[range(x) for x in array_of_fragments.shape]):
+            selection = (indices_at_axis['x'][i]
+                         & indices_at_axis['y'][j]
+                         & indices_at_axis['z'][k])
+            array_of_fragments[i, j, k] = selection
+        return array_of_fragments
+
+    def get_bonds(self,
+                  self_bonding_allowed=False,
+                  offset=3,
+                  modified_properties=None,
+                  use_lookup=False,
+                  set_lookup=True,
+                  atomic_radius_data=settings['defaults']['atomic_radius_data']
+                  ):
         """Return a dictionary representing the bonds.
 
         .. warning:: This function is **not sideeffect free**, since it
@@ -258,7 +286,7 @@ class Cartesian_core(_common_class):
         depending on ``use_lookup``. Greatly increases performance if
         True, but could introduce bugs in certain situations.
 
-        Just imagine a situation where the ``Cartesian().frame`` is
+        Just imagine a situation where the ``Cartesian`` is
         changed manually. If you apply lateron a method e.g. ``to_zmat()``
         that makes use of ``get_bonds()`` the dictionary of the bonds
         may not represent the actual situation anymore.
@@ -271,299 +299,69 @@ class Cartesian_core(_common_class):
 
         Args:
             modified_properties (dic): If you want to change the van der
-                Vaals radius or valency of one or more specific atoms, pass a
+                Vaals radius of one or more specific atoms, pass a
                 dictionary that looks like::
 
-                    modified_properties = {index1 :
-                        {'atomic_radius' : 1.5, 'valency' : 8}, ...}
+                    modified_properties = {index1: 1.5}
 
-                For global changes use the constants.py module.
-            maximum_edge_length (float): Maximum length of one edge of a
-            cuboid if ``divide_et_impera`` is ``True``.
-            difference_edge (float):
-            use_valency (bool): If ``True`` atoms can't have more bonds than
-                their valency. This means that the bonds, exceeding the number
-                of valency, with lowest overlap will be cut, although the
-                van der Waals radii overlap.
+                For global changes use the constants module.
+            offset (float):
             use_lookup (bool):
             set_lookup (bool):
-            divide_et_impera (bool): Since the calculation of overlaps or
-                distances between atoms scale with :math:`O(n^2)`, it is
-                recommended to split the molecule in smaller cuboids and
-                calculate the bonds in each cuboid. The scaling becomes
-                then :math:`O(n\log(n))`. This approach can lead to problems
-                if ``use_valency`` is ``True``. Bonds from one cuboid to
-                another can not be counted for the valency.. This means that
-                in certain situations some atoms can be oversaturated, although
-                ``use_valency`` is ``True``.
+            self_bonding_allowed (bool):
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
                 ``atomic_radius_cc`` and can be changed with
                 :attr:`settings['defaults']['atomic_radius_data']`.
                 Compare with :func:`add_data`.
-            warn_valency (bool): Warn if atoms are over- or undersaturated
-                in their valency.
 
         Returns:
-            dict: Dictionary mapping from an atom index to the indices of atoms
-            bonded to.
+            dict: Dictionary mapping from an atom index to the set of
+            indices of atoms bonded to.
         """
-        def preparation_of_variables(modified_properties):
-            bond_dic = dict(
-                zip(self.index, [set([]) for _ in range(self.n_atoms)]))
+        def complete_calculation():
+            old_index = self.index
+            self.index = range(self.n_atoms)
+            fragments = self._divide_et_impera(offset=offset)
+            self.index = old_index
+            positions = np.array(
+                self.loc[:, ['x', 'y', 'z']], dtype='float32', order='F')
+            bond_radii = self.add_data(atomic_radius_data)[atomic_radius_data]
+            if modified_properties is not None:
+                bond_radii.update(pd.Series(modified_properties))
+            bond_radii = bond_radii.values.astype('float32')
+            bond_dict = collections.defaultdict(set)
+            for i, j, k in product(*[range(x) for x in fragments.shape]):
+                # The following call is not side effect free and changes
+                # bond_dict
+                self._update_bond_dict(
+                    fragments[i, j, k], positions, bond_radii,
+                    bond_dict=bond_dict,
+                    self_bonding_allowed=self_bonding_allowed)
 
-            molecule2 = self.add_data(['valency', atomic_radius_data])
-            valency_dic = dict(zip(
-                molecule2.index, molecule2.loc[:, 'valency'].astype('int64')))
-
-            atomic_radius_dic = dict(zip(molecule2.index,
-                                         molecule2.loc[:, atomic_radius_data]))
-
-            if modified_properties is None:
-                pass
-            else:
-                for key in modified_properties:
-                    valency_dic[key] = modified_properties[key]['valency']
-                    atomic_radius_dic[key] = \
-                        modified_properties[key]['atomic_radius']
-            return bond_dic, valency_dic, atomic_radius_dic
-
-        def get_bonds_local(
-                self,
-                bond_dic,
-                valency_dic,
-                atomic_radius_dic,
-                use_valency,
-                warn_valency,
-                index_of_cube=self.index
-                ):
-            overlap_array, convert_to = self._overlap(atomic_radius_dic,
-                                                      index_of_cube)
-            np.fill_diagonal(overlap_array, -1.)
-            bin_overlap_array = overlap_array > 0
-            actual_valency = np.sum(bin_overlap_array, axis=1)
-            theoretical_valency = np.array([valency_dic[key]
-                                            for key in index_of_cube])
-            excess_valency = (actual_valency - theoretical_valency)
-            indices_of_oversaturated_atoms = np.nonzero(excess_valency > 0)[0]
-            oversaturated_converted = [
-                convert_to['frame'][index]
-                for index in indices_of_oversaturated_atoms]
-
-            if use_valency & (len(indices_of_oversaturated_atoms) > 0):
-                if warn_valency:
-                    warning_string = (
-                        'You specified use_valency=True '
-                        'and provided a geometry with over saturated '
-                        'atoms. This means that the bonds with lowest '
-                        'overlap will be cut, although the van der '
-                        "Waals radii overlap. "
-                        "The problematic indices are:\n") \
-                        + oversaturated_converted.__repr__()
-                    warnings.warn(warning_string)
-
-                for index in indices_of_oversaturated_atoms:
-                    atoms_bonded_to = np.nonzero(
-                        bin_overlap_array[index, :])[0]
-                    temp_frame = pd.Series(overlap_array[
-                        index, atoms_bonded_to], index=atoms_bonded_to)
-                    temp_frame.sort_values(inplace=True, ascending=False)
-                    cut_bonds_to = temp_frame.iloc[
-                        (theoretical_valency[index]):].index
-                    overlap_array[index, [cut_bonds_to]] = -1
-                    overlap_array[[cut_bonds_to], index] = -1
-                    bin_overlap_array = overlap_array > 0
-
-            if (not use_valency) & (len(indices_of_oversaturated_atoms) > 0):
-                if warn_valency:
-                    warning_string = (
-                        "You specified use_valency=False (or "
-                        "used the default) and provided a geometry with "
-                        "over saturated atoms. This means that bonds are "
-                        "not cut even if their number exceeds the valency. "
-                        "The problematic indices are:\n") \
-                        + oversaturated_converted.__repr__()
-                    warnings.warn(warning_string)
-
-            def update_dic(bin_overlap_array):
-                a, b = np.nonzero(bin_overlap_array)
-                a, b = (
-                    [convert_to['frame'][key] for key in a],
-                    [convert_to['frame'][key] for key in b])
-                for row, index in enumerate(a):
-                    bond_dic[index] |= set([b[row]])
-                return bond_dic
-
-            update_dic(bin_overlap_array)
-            return bond_dic
-
-        def complete_calculation(divide_et_impera):
-            bond_dic, valency_dic, atomic_radius_dic = \
-                preparation_of_variables(modified_properties)
-            if divide_et_impera:
-                cuboid_dic = self._divide_et_impera(
-                    maximum_edge_length, difference_edge)
-                for number, key in enumerate(cuboid_dic):
-                    get_bonds_local(
-                        self, bond_dic, valency_dic,
-                        atomic_radius_dic, use_valency, warn_valency,
-                        index_of_cube=cuboid_dic[key][1])
-            else:
-                get_bonds_local(
-                    self, bond_dic, valency_dic,
-                    atomic_radius_dic, use_valency, warn_valency)
-            return bond_dic
+            rename = dict(enumerate(self.index))
+            bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
+                         for key in bond_dict}
+            return bond_dict
 
         if use_lookup:
             try:
-                bond_dic = self._metadata['bond_dict']
+                bond_dict = self._metadata['bond_dict']
             except KeyError:
-                bond_dic = complete_calculation(divide_et_impera)
-                if set_lookup:
-                    self._metadata['bond_dict'] = bond_dic
+                bond_dict = complete_calculation()
         else:
-            bond_dic = complete_calculation(divide_et_impera)
-            if set_lookup:
-                self._metadata['bond_dict'] = bond_dic
+            bond_dict = complete_calculation()
 
-        return bond_dic
-
-    def _divide_et_impera(self, maximum_edge_length=25., difference_edge=6.):
-        """Return a molecule split into cuboids.
-
-        If your algorithm scales with :math:`O(n^2)`.
-        You can use this function as a preprocessing step to make it
-        scaling with :math:`O(n\log(n))`.
-
-        Args:
-            maximum_edge_length (float): Maximum length of one edge
-            of a cuboid. difference_edge (float):
-
-        Returns:
-            dict: A dictionary mapping from a 3 tuple of integers
-            to a 2 tuple of sets. The 3 tuple gives the integer
-            numbered coordinates of the cuboids. The first set
-            contains the indices of atoms lying in the cube with
-            a maximum edge length of ``maximum_edge_length``. They
-            are pairwise disjunct and are referred to as small
-            cuboids. The second set contains the indices of atoms
-            lying in the cube with ``maximum_edge_length +
-            difference_edge``. They are a bit larger than the small
-            cuboids and overlap with ``difference_edge / 2``.
-        """
-        coordinates = ['x', 'y', 'z']
-        sorted_series = dict(zip(
-            coordinates, [
-                self.loc[:, axis].sort_values().copy()
-                for axis in coordinates]))
-
-        convert = dict(
-            (axis, dict(zip(range(self.n_atoms), sorted_series[axis].index)))
-            for axis in coordinates)
-        sorted_arrays = dict(
-            (key, sorted_series[key].values.astype(float))
-            for key in coordinates)
-
-        minimum = (np.array([sorted_arrays[key][0] for key in coordinates])
-                   - np.array([0.01, 0.01, 0.01]))
-        maximum = (np.array([sorted_arrays[key][-1] for key in coordinates])
-                   + np.array([0.01, 0.01, 0.01]))
-        extent = maximum - minimum
-        steps = np.ceil(extent / maximum_edge_length).astype(int)
-        cube_dic = {}
-
-        if np.array_equal(steps, np.array([1, 1, 1])):
-            small_cube_index = self.index
-            big_cube_index = small_cube_index
-            cube_dic[(0, 0, 0)] = [small_cube_index, big_cube_index]
-        else:
-            cuboid_diagonal = extent / steps
-            steps = dict((axis, steps[number])
-                         for number, axis in enumerate(coordinates))
-            edge_small = dict(
-                (axis, cuboid_diagonal[number])
-                for number, axis in enumerate(coordinates))
-            edge_big = dict(
-                (axis, (edge_small[axis] + difference_edge))
-                for axis in coordinates)
-            origin_array = np.empty((steps['x'], steps['y'], steps['z'], 3))
-
-            for x_counter in range(steps['x']):
-                for y_counter in range(steps['y']):
-                    for z_counter in range(steps['z']):
-                        origin_array[x_counter, y_counter, z_counter] = (
-                            minimum
-                            + cuboid_diagonal / 2
-                            + np.dot(
-                                np.diag([x_counter, y_counter, z_counter]),
-                                cuboid_diagonal))
-
-            origin1D = {}
-            origin1D['x'] = dict(
-                (counter, origin_array[counter, 0, 0, 0])
-                for counter in range(steps['x']))
-            origin1D['y'] = dict(
-                (counter, origin_array[0, counter, 0, 1])
-                for counter in range(steps['y']))
-            origin1D['z'] = dict(
-                (counter, origin_array[0, 0, counter, 2])
-                for counter in range(steps['z']))
-
-            indices = dict(zip(coordinates, [{}, {}, {}]))
-            for axis in coordinates:
-                for counter in range(steps[axis]):
-                    intervall_small = [
-                        origin1D[axis][counter] - edge_small[axis] / 2,
-                        origin1D[axis][counter] + edge_small[axis] / 2]
-                    intervall_big = [
-                        origin1D[axis][counter] - edge_big[axis] / 2,
-                        origin1D[axis][counter] + edge_big[axis] / 2]
-                    bool_vec_small = np.logical_and(
-                        intervall_small[0] <= sorted_arrays[axis],
-                        sorted_arrays[axis] < intervall_small[1])
-                    bool_vec_big = np.logical_and(
-                        intervall_big[0] <= sorted_arrays[axis],
-                        sorted_arrays[axis] < intervall_big[1])
-                    index_small = set(np.nonzero(bool_vec_small)[0])
-                    index_small = set(
-                        convert[axis][index] for index in index_small)
-                    index_big = set(np.nonzero(bool_vec_big)[0])
-                    index_big = set(
-                        convert[axis][index] for index in index_big)
-                    indices[axis][counter] = [index_small, index_big]
-
-            for x_counter in range(steps['x']):
-                for y_counter in range(steps['y']):
-                    for z_counter in range(steps['z']):
-                        small_cube_index = (indices['x'][x_counter][0]
-                                            & indices['y'][y_counter][0]
-                                            & indices['z'][z_counter][0])
-                        big_cube_index = (indices['x'][x_counter][1]
-                                          & indices['y'][y_counter][1]
-                                          & indices['z'][z_counter][1])
-                        cube_dic[(x_counter, y_counter, z_counter)] = (
-                            small_cube_index, big_cube_index)
-
-            def test_output(cube_dic):
-                for key in cube_dic.keys():
-                    try:
-                        assert (cube_dic[key][0]
-                                & cube_dic[previous_key][0] == set([])), \
-                                ('I am sorry Dave. I made a mistake.'
-                                    'Report a bug please.')
-                    except UnboundLocalError:
-                        pass
-                    finally:
-                        previous_key = key
-        # slows down performance too much
-        #            test_output(cube_dic)
-        return cube_dic
+        if set_lookup:
+            self._metadata['bond_dict'] = bond_dict
+        return bond_dict
 
     def connected_to(
             self, index_of_atom,
             exclude=None,
             give_only_index=False,
-            follow_bonds=None):
+            follow_bonds=None,
+            use_lookup=settings['defaults']['use_lookup']):
         """Return a Cartesian of atoms connected to the specified
             one.
 
@@ -579,11 +377,13 @@ class Cartesian_core(_common_class):
                 after reaching the end in every branch. If you have a
                 single molecule this usually means, that the whole
                 molecule is recovered.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
-        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
+        bond_dic = self.get_bonds(use_lookup=use_lookup)
         exclude = set([]) if (exclude is None) else set(exclude)
 
         previous_atoms = (
@@ -620,7 +420,8 @@ class Cartesian_core(_common_class):
             to_return = self.loc[fixed_atoms, :]
         return to_return
 
-    def _preserve_bonds(self, sliced_cartesian):
+    def _preserve_bonds(self, sliced_cartesian,
+                        use_lookup=settings['defaults']['use_lookup']):
         """Is called after cutting geometric shapes.
 
         If you want to change the rules how bonds are preserved, when
@@ -632,6 +433,8 @@ class Cartesian_core(_common_class):
 
         Args:
             sliced_frame (Cartesian):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             Cartesian:
@@ -639,7 +442,7 @@ class Cartesian_core(_common_class):
         included_atoms_set = set(sliced_cartesian.index)
         assert included_atoms_set.issubset(set(self.index)), \
             'The sliced Cartesian has to be a subset of the bigger frame'
-        bond_dic = self.get_bonds(use_lookup=settings['defaults']['use_lookup_internally'])
+        bond_dic = self.get_bonds(use_lookup=use_lookup)
         new_atoms = set([])
         for atom in included_atoms_set:
             new_atoms = new_atoms | bond_dic[atom]
@@ -651,7 +454,8 @@ class Cartesian_core(_common_class):
                 self.connected_to(
                     index_of_interest,
                     exclude=included_atoms_set,
-                    give_only_index=True))
+                    give_only_index=True,
+                    use_lookup=use_lookup))
             new_atoms = new_atoms - included_atoms_set
         molecule = self.loc[included_atoms_set, :]
         return molecule
@@ -943,12 +747,15 @@ class Cartesian_core(_common_class):
         dihedrals = to_add + sign * dihedrals
         return dihedrals
 
-    def fragmentate(self, give_only_index=False):
+    def fragmentate(self, give_only_index=False,
+                    use_lookup=settings['defaults']['use_lookup']):
         """Get the indices of non bonded parts in the molecule.
 
         Args:
             give_only_index (bool): If ``True`` a set of indices is returned.
                 Otherwise a new Cartesian instance.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             list: A list of sets of indices or new Cartesian instances.
@@ -956,9 +763,9 @@ class Cartesian_core(_common_class):
         list_fragment_indices = []
         still_to_check = set(self.index)
         while still_to_check != set([]):
-            indices = self.connected_to(
-                pick(still_to_check),
-                give_only_index=True)
+            indices = self.connected_to(pick(still_to_check),
+                                        use_lookup=use_lookup,
+                                        give_only_index=True)
             still_to_check = still_to_check - indices
             list_fragment_indices.append(indices)
 
@@ -969,7 +776,8 @@ class Cartesian_core(_common_class):
                                indices in list_fragment_indices]
         return value_to_return
 
-    def get_fragment(self, list_of_indextuples, give_only_index=False):
+    def get_fragment(self, list_of_indextuples, give_only_index=False,
+                     use_lookup=settings['defaults']['use_lookup']):
         """Get the indices of the atoms in a fragment.
 
         The list_of_indextuples contains all bondings from the
@@ -983,14 +791,17 @@ class Cartesian_core(_common_class):
             list_of_indextuples (list):
             give_only_index (bool): If ``True`` a set of indices
                 is returned. Otherwise a new Cartesian instance.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
         exclude = [tuple[0] for tuple in list_of_indextuples]
         index_of_atom = list_of_indextuples[0][1]
-        fragment_index = self.connected_to(
-            index_of_atom, exclude=exclude, give_only_index=True)
+        fragment_index = self.connected_to(index_of_atom, exclude=exclude,
+                                           give_only_index=True,
+                                           use_lookup=use_lookup)
         if give_only_index:
             value_to_return = fragment_index
         else:
@@ -1153,7 +964,8 @@ class Cartesian_core(_common_class):
 
         output = self.loc[indices_of_other_atoms, :].copy()
         other_locations = output.location()
-        output.loc[:, 'distance'] = np.linalg.norm(other_locations - origin, axis=1)
+        output.loc[:, 'distance'] = np.linalg.norm(other_locations - origin,
+                                                   axis=1)
         if sort:
             output.sort_values(by='distance', inplace=True)
         return output
@@ -1174,7 +986,8 @@ class Cartesian_core(_common_class):
         if not inplace:
             return output
 
-    def partition_chem_env(self, follow_bonds=4):
+    def partition_chem_env(self, follow_bonds=4,
+                           use_lookup=settings['defaults']['use_lookup']):
         """This function partitions the molecule into subsets of the
         same chemical environment.
 
@@ -1207,6 +1020,8 @@ class Cartesian_core(_common_class):
 
         Args:
             follow_bonds (int):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             dict: The output will look like this::
@@ -1218,24 +1033,24 @@ class Cartesian_core(_common_class):
     """
         env_dict = {}
 
-        def get_chem_env(self, atomseries, index, follow_bonds):
-            indices_of_env_atoms = self.connected_to(
-                index, follow_bonds=follow_bonds, give_only_index=True)
-            indices_of_env_atoms.remove(index)
+        def get_chem_env(self, i, follow_bonds):
+            indices_of_env_atoms = self.connected_to(i,
+                                                     follow_bonds=follow_bonds,
+                                                     give_only_index=True,
+                                                     use_lookup=use_lookup)
+            indices_of_env_atoms.remove(i)
             own_symbol, atoms = (
-                atomseries[index], atomseries[indices_of_env_atoms])
+                self.loc[i, 'atom'], self.loc[indices_of_env_atoms, 'atom'])
             environment = collections.Counter(atoms).most_common()
             environment = frozenset(environment)
             return (own_symbol, environment)
 
-        atomseries = self.loc[:, 'atom']
-
-        for index in self.index:
-            chem_env = get_chem_env(self, atomseries, index, follow_bonds)
+        for i in self.index:
+            chem_env = get_chem_env(self, i, follow_bonds)
             try:
-                env_dict[chem_env].add(index)
+                env_dict[chem_env].add(i)
             except KeyError:
-                env_dict[chem_env] = set([index])
+                env_dict[chem_env] = set([i])
         return env_dict
 
 # TODO still to rewrite
@@ -1261,22 +1076,23 @@ class Cartesian_core(_common_class):
             tuple:
         """
         # TODO rewrite with C function
+        coords = ['x', 'y', 'z']
         molecule1 = self.sort_index()
         molecule2 = Cartesian2.sort_index()
-        molecule1.loc[:, 'x':'z'] = (molecule1.loc[:, 'x':'z']
-                                 - molecule1.topologic_center())
-        molecule2.loc[:, 'x':'z'] = (molecule2.loc[:, 'x':'z']
-                                 - molecule2.topologic_center())
+        molecule1.loc[:, coords] = (molecule1.loc[:, coords]
+                                    - molecule1.topologic_center())
+        molecule2.loc[:, coords] = (molecule2.loc[:, coords]
+                                    - molecule2.topologic_center())
 
         if ignore_hydrogens:
-            location1 = molecule1[molecule1[:, 'atom'] != 'H', :].location()
-            location2 = molecule2.loc[molecule2.loc[:, 'atom'] != 'H', :].location()
+            location1 = molecule1[molecule1['atom'] != 'H'].location()
+            location2 = molecule2[molecule2['atom'] != 'H'].location()
         else:
             location1 = molecule1.location()
             location2 = molecule2.location()
 
-        molecule2.loc[:, ['x', 'y', 'z']] = algebra_utilities.rotate(location2,
-                                                                 location1)
+        molecule2.loc[:, coords] = algebra_utilities.rotate(location2,
+                                                            location1)
         return molecule1, molecule2
 
     def make_similar(self, Cartesian2, follow_bonds=4, prealign=True):
@@ -1321,8 +1137,7 @@ class Cartesian_core(_common_class):
                 distances_to_atom_on_molecule1 = molecule2_new.distance_to(
                     molecule1.location(index_on_molecule1), subset2, sort=True)
 
-                index_on_molecule2 = \
-                    distances_to_atom_on_molecule1.frame.iloc[0].name
+                index_on_molecule2 = distances_to_atom_on_molecule1.index[0]
                 distance_new = distances_to_atom_on_molecule1[
                     index_on_molecule2, 'distance']
                 location_of_atom2 = distances_to_atom_on_molecule1.location(
@@ -1341,7 +1156,7 @@ class Cartesian_core(_common_class):
                             break
                         else:
                             index_on_molecule2 = \
-                                distances_to_atom_on_molecule1.frame.iloc[i].name
+                                distances_to_atom_on_molecule1.iloc[i].name
                             distance_new = \
                                 distances_to_atom_on_molecule1[
                                     index_on_molecule2, 'distance']
@@ -1356,10 +1171,8 @@ class Cartesian_core(_common_class):
 
         for key in partition1.keys():
             assert len(partition1[key]) == len(partition2[key]), \
-                (
-                    'You have chemically different molecules, regarding the'
-                    'topology of their connectivity. Perhaps'
-                    ' get_bonds(use_valency=False) helps.')
+                ('You have chemically different molecules, regarding the'
+                 'topology of their connectivity.')
             index_dic = make_subset_similar(
                 molecule1, partition1[key], molecule2_new,
                 partition2[key], index_dic)
@@ -1390,7 +1203,8 @@ class Cartesian_core(_common_class):
             appended to the left and right of the list continuing
             the movement.
         """
-        difference = Cartesian2[:, ['x', 'y', 'z']] - self.loc[:, ['x', 'y', 'z']]
+        coords = ['x', 'y', 'z']
+        difference = Cartesian2.loc[:, coords] - self.loc[:, coords]
 
         step_frame = difference.copy() / step
 
@@ -1398,17 +1212,17 @@ class Cartesian_core(_common_class):
         temp_Cartesian = self.copy()
 
         for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
-            temp_Cartesian[:, ['x', 'y', 'z']] = (
-                self.loc[:, ['x', 'y', 'z']]
-                + step_frame.loc[:, ['x', 'y', 'z']] * t)
+            temp_Cartesian.loc[:, coords] = (
+                self.loc[:, coords]
+                + step_frame.loc[:, coords] * t)
             Cartesian_list.append(temp_Cartesian.copy())
         return Cartesian_list
 
     def has_same_sumformula(self, other):
         same_atoms = True
-        for atom in set(self.loc[:, 'atom']):
-            own_atom_number = self.loc[self.loc[:, 'atom'] == atom, :].shape[0]
-            other_atom_number = other[other[:, 'atom'] == atom, :].shape[0]
+        for atom in set(self['atom']):
+            own_atom_number = self[self['atom'] == atom].n_atoms
+            other_atom_number = other[other['atom'] == atom].n_atoms
             same_atoms = (own_atom_number == other_atom_number)
             if not same_atoms:
                 break

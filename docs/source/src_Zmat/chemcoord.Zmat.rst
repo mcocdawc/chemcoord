@@ -46,7 +46,6 @@ chemcoord\.Zmat
 
       ~Zmat.to_zmat
       ~Zmat.write
-      ~Zmat.from_zmat
       ~Zmat.read_zmat
       ~Zmat.to_string
       ~Zmat.to_latex

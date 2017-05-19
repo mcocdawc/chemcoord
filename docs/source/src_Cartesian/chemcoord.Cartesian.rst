@@ -60,7 +60,6 @@ chemcoord\.Cartesian
          ~Cartesian.write_xyz
          ~Cartesian.to_xyz
          ~Cartesian.read_xyz
-         ~Cartesian.from_xyz
          ~Cartesian.view
          ~Cartesian.to_string
          ~Cartesian.to_latex

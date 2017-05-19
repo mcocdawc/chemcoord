@@ -14,7 +14,7 @@ from chemcoord.configuration import settings
 
 class Zmat_io(Zmat_core):
     @classmethod
-    def from_zmat(cls, inputfile, implicit_index=True):
+    def read_zmat(cls, inputfile, implicit_index=True):
         """Reads a zmat file.
 
         Lines beginning with ``#`` are ignored.
@@ -44,16 +44,6 @@ class Zmat_io(Zmat_core):
             Zmat.set_index('temp_index', drop=True, inplace=True)
             Zmat.index.name = None
         return Zmat
-
-    @classmethod
-    def read_zmat(cls, *args, **kwargs):
-        """Deprecated, use :meth:`~chemcoord.Zmat.from_zmat`
-        """
-        message = 'Will be removed in the future. Please use from_zmat().'
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(message, DeprecationWarning)
-        return cls.from_zmat(*args, **kwargs)
 
     def to_zmat(self, buf=None, implicit_index=True,
                 float_format='{:.6f}'.format, overwrite=True,
