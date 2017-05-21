@@ -192,14 +192,13 @@ class Cartesian_core(_common_class):
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
         """
-        coords = ['x', 'y', 'z']
-        radii = np.add.outer(bond_radii, bond_radii)
-        squared_radii = radii ** 2
-        delta = {axis: None for axis in coords}
-        for i, axis in enumerate(coords):
+        squared_radii = (bond_radii + bond_radii[:, None])**2
+
+        coord = positions[:, 0]
+        squared_distances = (coord - coord[:, None])**2
+        for i in range(1, 3):
             coord = positions[:, i]
-            delta[axis] = coord - coord.reshape((len(coord), 1))
-        squared_distances = delta['x']**2 + delta['y']**2 + delta['z']**2
+            squared_distances += (coord - coord[:, None])**2
         overlap = squared_radii - squared_distances
         bond_array = overlap >= 0
         if not self_bonding_allowed:
