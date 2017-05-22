@@ -345,7 +345,7 @@ class Cartesian_core(_common_class):
             rename = dict(enumerate(self.index))
             bond_dict = {rename[key]:
                          SortedSet([rename[i] for i in bond_dict[key]],
-                                   key=lambda x: valency[x])
+                                   key=lambda x: valency[x], load=20)
                          for key in bond_dict}
             return bond_dict
 
