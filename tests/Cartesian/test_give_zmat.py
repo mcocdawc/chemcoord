@@ -26,6 +26,13 @@ def test_back_and_forth2():
 
 
 def test_back_and_forth3():
+    molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'Cd_lattice.xyz'))
+    zmolecule = molecule1.give_zmat()
+    molecule2 = zmolecule.give_cartesian()
+    assert cc.xyz_functions.isclose(molecule1, molecule2, atol=1e-3, rtol=1e-4)
+
+
+def test_back_and_forth4():
     molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'nasty_cube.xyz'))
     zmolecule = molecule1.give_zmat()
     molecule2 = zmolecule.give_cartesian()
