@@ -55,12 +55,13 @@ nohup.out
 *log
 
 # ignore molecule files from the Tutorial
-*molden
-*xyz
+Tutorial/*molden
+Tutorial/*xyz
 .ipynb_checkpoints
 
 
 cealign-0.8-RBS
 
 #pytest
-.chache/*
+*.chache/*
+.cache/

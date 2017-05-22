@@ -7,7 +7,7 @@ import six
 import pandas as pd
 import numpy as np
 from chemcoord._generic_classes._pandas_wrapper import _pandas_wrapper
-import chemcoord.constants
+import chemcoord.constants as constants
 
 
 class _common_class(_pandas_wrapper):
@@ -28,26 +28,6 @@ class _common_class(_pandas_wrapper):
             return self.__class__(selected)
         else:
             return selected
-
-    def loc_set_copy(self, key, value):
-        """asdf
-        """
-        new = self.copy()
-        if pd.api.types.is_list_like(key):
-            new.loc[key[0], key[1]] = value
-        else:
-            new.loc[key] = value
-        return new
-
-    def iloc_set_copy(self, key, value):
-        """asdf
-        """
-        new = self.copy()
-        if pd.api.types.is_list_like(key):
-            new.iloc[key[0], key[1]] = value
-        else:
-            new.iloc[key] = value
-        return new
 
     @property
     def n_atoms(self):
