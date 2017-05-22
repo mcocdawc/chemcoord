@@ -13,6 +13,7 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import collections
+from sortedcontainers import SortedSet
 import warnings
 from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaningError
@@ -323,10 +324,10 @@ class Cartesian_core(_common_class):
             old_index = self.index
             self.index = range(self.n_atoms)
             fragments = self._divide_et_impera(offset=offset)
-            self.index = old_index
             positions = np.array(
                 self.loc[:, ['x', 'y', 'z']], dtype='float32', order='F')
-            bond_radii = self.add_data(atomic_radius_data)[atomic_radius_data]
+            data = self.add_data([atomic_radius_data, 'valency'])
+            bond_radii = data[atomic_radius_data]
             if modified_properties is not None:
                 bond_radii.update(pd.Series(modified_properties))
             bond_radii = bond_radii.values.astype('float32')
@@ -339,8 +340,12 @@ class Cartesian_core(_common_class):
                     bond_dict=bond_dict,
                     self_bonding_allowed=self_bonding_allowed)
 
+            self.index = old_index
+            valency = dict(zip(self.index, data['valency']))
             rename = dict(enumerate(self.index))
-            bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
+            bond_dict = {rename[key]:
+                         SortedSet([rename[i] for i in bond_dict[key]],
+                                   key=lambda x: valency[x])
                          for key in bond_dict}
             return bond_dict
 

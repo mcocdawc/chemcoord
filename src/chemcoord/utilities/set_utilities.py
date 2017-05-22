@@ -9,7 +9,7 @@ def pick(my_set):
     ``pick`` just returns a random element,
     could be the same, could be different.
     """
-    assert type(my_set) is set, 'Pick can be applied only on sets.'
+    # assert type(my_set) is set, 'Pick can be applied only on sets.'
     x = my_set.pop()
     my_set.add(x)
     return x
