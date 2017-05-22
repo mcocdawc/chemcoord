@@ -125,6 +125,60 @@ class _pandas_wrapper(object):
         """
         return indexers._ILoc(self)
 
+    def loc_set_copy(self, key, value):
+        """Labelbased assignment on a copy.
+
+        Allows the use of list comprehensions::
+
+            [molecule.loc_set_copy([1, iloc], i) for i in range(10)]
+
+        In the case of slicing operations, it is necessary to pass
+        manually a slicing object::
+
+            [molecule.loc_set_copy([slice(None), bond], i) for i in range(10)]
+
+        A workaround is the definition of a slicer class::
+
+            class SliceMaker(object):
+                def __getitem__(self, key):
+                    return key
+            slicer = SliceMaker()
+            [molecule.loc_set_copy([slicer[:], bond], i) for i in range(10)]
+        """
+        new = self.copy()
+        if pd.api.types.is_list_like(key):
+            new.loc[key[0], key[1]] = value
+        else:
+            new.loc[key] = value
+        return new
+
+    def iloc_set_copy(self, key, value):
+        """Rowbased assignment on a copy.
+
+        Allows the use of list comprehensions::
+
+            [molecule.iloc_set_copy([1, bond], i) for i in range(10)]
+
+        In the case of slicing operations, it is necessary to pass
+        manually a slicing object::
+
+            [molecule.iloc_set_copy([slice(None), bond], i) for i in range(10)]
+
+        A workaround is the definition of a slicer class::
+
+            class SliceMaker(object):
+                def __getitem__(self, key):
+                    return key
+            slicer = SliceMaker()
+            [molecule.iloc_set_copy([slicer[:], bond], i) for i in range(10)]
+        """
+        new = self.copy()
+        if pd.api.types.is_list_like(key):
+            new.iloc[key[0], key[1]] = value
+        else:
+            new.iloc[key] = value
+        return new
+
     def __getitem__(self, key):
         if isinstance(key, tuple):
             selected = self.frame[key[0], key[1]]

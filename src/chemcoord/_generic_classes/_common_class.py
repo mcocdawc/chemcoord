@@ -29,26 +29,6 @@ class _common_class(_pandas_wrapper):
         else:
             return selected
 
-    def loc_set_copy(self, key, value):
-        """asdf
-        """
-        new = self.copy()
-        if pd.api.types.is_list_like(key):
-            new.loc[key[0], key[1]] = value
-        else:
-            new.loc[key] = value
-        return new
-
-    def iloc_set_copy(self, key, value):
-        """asdf
-        """
-        new = self.copy()
-        if pd.api.types.is_list_like(key):
-            new.iloc[key[0], key[1]] = value
-        else:
-            new.iloc[key] = value
-        return new
-
     @property
     def n_atoms(self):
         return self.shape[0]
