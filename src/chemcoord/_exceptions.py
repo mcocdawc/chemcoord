@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 
 class PhysicalMeaningError(Exception):
     def __init__(self, value):
