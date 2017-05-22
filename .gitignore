@@ -64,3 +64,4 @@ cealign-0.8-RBS
 
 #pytest
 *.chache/*
+.cache/
