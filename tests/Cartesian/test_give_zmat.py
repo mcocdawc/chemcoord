@@ -1,17 +1,44 @@
 import chemcoord as cc
 import pytest
+import os
+import sys
 
 
-molecule1 = cc.Cartesian.read_xyz('MIL53_small.xyz')
-zmolecule = molecule1.give_zmat()
-molecule2 = zmolecule.give_cartesian()
+def get_script_path():
+    return os.path.dirname(os.path.realpath(__file__))
 
 
-def test_back_and_forth():
+OWN_DIR = get_script_path()
+
+
+def test_back_and_forth1():
+    molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'MIL53_small.xyz'))
+    zmolecule = molecule1.give_zmat()
+    molecule2 = zmolecule.give_cartesian()
     assert cc.xyz_functions.isclose(molecule1, molecule2, atol=1e-3, rtol=1e-4)
 
 
+def test_back_and_forth2():
+    molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'ruthenium.xyz'))
+    zmolecule = molecule1.give_zmat()
+    molecule2 = zmolecule.give_cartesian()
+    assert cc.xyz_functions.isclose(molecule1, molecule2, atol=1e-3, rtol=1e-4)
+
+
+def test_back_and_forth3():
+    molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'nasty_cube.xyz'))
+    zmolecule = molecule1.give_zmat()
+    molecule2 = zmolecule.give_cartesian()
+    # The kabsch alignment is necessary, because cubes have
+    # diagonalised inertia tensors in each basis
+    assert cc.xyz_functions.isclose(*molecule1.align(molecule2),
+                                    atol=1e-2, rtol=1e-3, align=False)
+
+
 def test_zmat_writing():
+    molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'MIL53_small.xyz'))
+    zmolecule = molecule1.give_zmat()
+    molecule2 = zmolecule.give_cartesian()
     output = """ O  nan      nan  nan        nan  nan        nan
 Cr    1 1.952026  nan        nan  nan        nan
  H    1 0.890000    2 119.132614  nan        nan
