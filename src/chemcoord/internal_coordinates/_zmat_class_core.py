@@ -25,7 +25,7 @@ class Zmat_core(_common_class):
         'atom', 'bond_with', 'bond', 'angle_with', 'angle',
         'dihedral_with', 'dihedral'})
 
-    def __init__(self, frame):
+    def __init__(self, frame, order_of_definition=None):
         """How to initialize a Zmat instance.
 
         Args:
@@ -33,6 +33,9 @@ class Zmat_core(_common_class):
                 ``['atom', 'bond_with', 'bond', 'angle_with', 'angle',
                 'dihedral_with', 'dihedral']``.
                 Where ``'atom'`` is a string for the elementsymbol.
+            order_of_definition (list like): Specify in which order
+                the Zmatrix is defined. If ``None`` it just uses
+                ``self.index``.
 
         Returns:
             Zmat: A new zmat instance.
@@ -45,6 +48,26 @@ class Zmat_core(_common_class):
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
+        # TODO make use of
+        if order_of_definition is None:
+            self._order = self.index
+        else:
+            self._order = order_of_definition
+
+    def _repr_html_(self):
+        out = self.copy()
+        cols = ['bond_with', 'angle_with', 'dihedral_with']
+        e = ['$e_x$', '$e_y$', '$e_z$']
+
+        def f(x):
+            if len(x) == 1:
+                return x[0]
+            else:
+                return x
+
+        for row, i in enumerate(out._order[:3]):
+            out.loc[i, cols[row:]] = f(e[:3 - row])
+        return out.frame._repr_html_()
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):

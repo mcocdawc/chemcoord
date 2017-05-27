@@ -5,7 +5,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 try:
-    # import itertools.imap as map
     import itertools.izip as zip
 except ImportError:
     pass
@@ -22,7 +21,6 @@ from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
 
 
-# TODO implement is_physical
 class Cartesian_core(_common_class):
 
     _required_cols = frozenset({'atom', 'x', 'y', 'z'})
@@ -343,9 +341,7 @@ class Cartesian_core(_common_class):
             self.index = old_index
             valency = dict(zip(self.index, data['valency']))
             rename = dict(enumerate(self.index))
-            bond_dict = {rename[key]:
-                         SortedSet([rename[i] for i in bond_dict[key]],
-                                   key=lambda x: valency[x], load=20)
+            bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
                          for key in bond_dict}
             return bond_dict
 
@@ -954,26 +950,23 @@ class Cartesian_core(_common_class):
         return array
 
     def distance_to(self,
-                    origin=[0, 0, 0],
+                    origin=[0., 0., 0.],
                     indices_of_other_atoms=None,
                     sort=False):
         """Return a Cartesian with a column for the distance from origin.
         """
-        try:
-            origin[0]
-        except (TypeError, IndexError):
+        coords = ['x', 'y', 'z']
+        if isinstance(origin, int):
             origin = self.location(int(origin))
+        origin = np.array(origin)
         if indices_of_other_atoms is None:
             indices_of_other_atoms = self.index
-        origin = np.array(origin, dtype=float)
 
-        output = self.loc[indices_of_other_atoms, :].copy()
-        other_locations = output.location()
-        output.loc[:, 'distance'] = np.linalg.norm(other_locations - origin,
-                                                   axis=1)
+        new = self.loc[indices_of_other_atoms, :].copy()
+        new['distance'] = np.linalg.norm(new.loc[:, coords] - origin, axis=1)
         if sort:
-            output.sort_values(by='distance', inplace=True)
-        return output
+            new.sort_values(by='distance', inplace=True)
+        return new
 
     # TODO remove
     def change_numbering(self, rename_dict, inplace=False):

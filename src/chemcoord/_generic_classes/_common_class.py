@@ -34,7 +34,7 @@ class _common_class(_pandas_wrapper):
     def n_atoms(self):
         return self.shape[0]
 
-    def add_data(self, list_of_columns=None):
+    def add_data(self, new_cols=None):
         """Adds a column with the requested data.
 
         If you want to see for example the mass, the colormap used in
@@ -61,33 +61,27 @@ class _common_class(_pandas_wrapper):
         by Valera Veryazov.
 
         Args:
-            list_of_columns (str): You can pass also just one value.
+            new_cols (str): You can pass also just one value.
                 E.g. ``'mass'`` is equivalent to ``['mass']``. If
-                ``list_of_columns`` is ``None`` all available data
+                ``new_cols`` is ``None`` all available data
                 is returned.
             inplace (bool):
 
         Returns:
             Cartesian:
         """
-        data = constants.elements
-
-        list_of_columns = (
-            data.columns if (list_of_columns is None) else list_of_columns)
-
-        if isinstance(list_of_columns, six.string_types):
-            assert list_of_columns not in set(self.columns), \
-                'Column is already present'
+        if pd.api.types.is_list_like(new_cols):
+            new_cols = set(new_cols)
+            pass
+        elif new_cols is None:
+            new_cols = set(data.columns)
         else:
-            for column in list_of_columns:
-                assert column not in set(self.columns), \
-                    'Column is already present'
-
-        atom_symbols = self.loc[:, 'atom']
-        new_columns = data.loc[atom_symbols, list_of_columns]
-        new_columns.index = self.index
-
-        return self.__class__(pd.concat([self.frame, new_columns], axis=1))
+            new_cols = [new_cols]
+        atom_symbols = self['atom']
+        data = constants.elements
+        new_frame = data.loc[atom_symbols, set(new_cols) - set(self.columns)]
+        new_frame.index = self.index
+        return self.__class__(pd.concat([self.frame, new_frame], axis=1))
 
     def total_mass(self):
         """Returns the total mass in g/mol.

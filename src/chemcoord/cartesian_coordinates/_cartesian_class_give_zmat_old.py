@@ -12,8 +12,6 @@ except ImportError:
 import numpy as np
 import pandas as pd
 import warnings
-from sortedcontainers import SortedSet
-from collections import OrderedDict
 from chemcoord._exceptions import PhysicalMeaningError
 from chemcoord.cartesian_coordinates._cartesian_class_core import \
     Cartesian_core
@@ -23,176 +21,7 @@ from chemcoord.configuration import settings
 
 
 class Cartesian_give_zmat(Cartesian_core):
-    def _give_val_sorted_bond_dict(self):
-        bond_dict = self.get_bonds()
-        valency = dict(zip(self.index,
-                           self.add_data('valency')['valency']))
-        val_bond_dict = {key:
-                         SortedSet([i for i in bond_dict[key]],
-                                   key=lambda x: -valency[x], load=20)
-                         for key in bond_dict}
-        return val_bond_dict
-
-    def _get_buildlist2(
-            self, use_lookup=settings['defaults']['use_lookup']):
-        topologic_center = self.topologic_center()
-        molecule = self.distance_to(topologic_center, sort=True)
-        old_index = molecule.index
-        molecule.index = range(molecule.n_atoms)
-        bond_dict = molecule._give_val_sorted_bond_dict()
-
-        # The assignment of an arbitrary integer arb_int lateron
-        # is just done to preserve the type 'int64' in the DataFrame
-        arb_int = 77
-        # ['b', 'a', 'd'] is the abbreviation for
-        # ['bond_with', 'angle_with', 'dihedral_with']
-        buildlist = pd.DataFrame(columns=['b', 'a', 'd'])
-        built, pending = set([]), set(molecule.index)
-        # TODO
-        # pending might be removed
-
-        i = molecule.index[0]
-        buildlist.loc[i] = [arb_int, arb_int, arb_int]
-        buildlist = buildlist.astype('int64')
-        built.add(i)
-        pending.remove(i)
-        parent = {j: i for j in bond_dict[i]}
-        work_bond_dict = OrderedDict([(j, bond_dict[j] - built)
-                                      for j in bond_dict[i]])
-        while work_bond_dict:
-            new_work_bond_dict = OrderedDict()
-            for i in work_bond_dict:
-                if i in built:
-                    continue
-                b = parent[i]
-                if b in buildlist.index[:3]:
-                    if len(buildlist) == 1:
-                        reference = [buildlist.index[0], arb_int, arb_int]
-                    elif len(buildlist) == 2:
-                        try:
-                            a = (bond_dict[b] & built)[0]
-                        except IndexError:
-                            # TODO
-                            pass
-                        reference = [b, a, arb_int]
-                    else:
-                        a = (bond_dict[b] & built)[0]
-                        try:
-                            d = ((bond_dict[a] & built) - set([b, a]))[0]
-                        except IndexError:
-                            d = ((bond_dict[b] & built) - set([b, a]))[0]
-                        reference = [b, a, d]
-                else:
-                    reference = buildlist.loc[b, ['b', 'a']]
-                    reference.index = ['a', 'd']
-                    reference['b'] = b
-
-                buildlist.loc[i] = reference
-                built.add(i)
-                pending.remove(i)
-                for j in work_bond_dict[i]:
-                    new_work_bond_dict[j] = bond_dict[j] - built
-                    parent[j] = i
-
-            work_bond_dict = new_work_bond_dict
-
-        rename = dict(zip(molecule.index, old_index))
-        buildlist.replace(rename, inplace=True)
-        buildlist.rename(rename, inplace=True)
-        return buildlist
-
-    def _get_buildlist(
-            self, use_lookup=settings['defaults']['use_lookup']):
-        topologic_center = self.topologic_center()
-        molecule = self.distance_to(topologic_center, sort=True)
-        old_index = molecule.index
-        molecule.index = range(molecule.n_atoms)
-        bond_dict = molecule.get_bonds()
-        valency = dict(zip(molecule.index,
-                           molecule.add_data('valency')['valency']))
-        val_bond_dict = {key:
-                         SortedSet([i for i in bond_dict[key]],
-                                   key=lambda x: valency[x], load=20)
-                         for key in bond_dict}
-
-        buildlist = np.zeros((molecule.n_atoms, 4)).astype('int64')
-        built, pending = set([]), set(molecule.index)
-
-        row = 0
-        while row <= molecule.n_atoms:
-            if row == 0:
-                i = molecule.index[0]
-                buildlist[0, 0] = i
-                built.add(i)
-                pending.remove(i)
-                row = row + 1
-
-            elif row == 1:
-                try:
-                    i = val_bond_dict[buildlist[0, 0]][0]
-                    b = buildlist[0, 0]
-                except IndexError:
-                    i = molecule.index[1]
-                    b = buildlist[0, 0]
-                buildlist[1, [0, 1]] = i, b
-                built.add(i)
-                pending.remove(i)
-                row = row + 1
-
-            elif row == 2:
-                try:
-                    i = val_bond_dict[buildlist[0, 0]][1]
-                    b = buildlist[0, 0]
-                    a = buildlist[1, 0]
-                except IndexError:
-                    try:
-                        i = (val_bond_dict[buildlist[1, 0]] - built)[0]
-                        b = buildlist[1, 0]
-                        a = buildlist[0, 0]
-                    except IndexError:
-                        i = molecule[~molecule.index.isin(built)].index[0]
-                        b = buildlist[1, 0]
-                        a = buildlist[0, 0]
-                last_ref = b
-                buildlist[2, [0, 1, 2]] = i, b, a
-                built.add(i)
-                to_be_built.remove(i)
-                row = row + 1
-
-            else:
-                row, last_ref, built, pending, buildlist = pick_new_atoms(row, last_ref, built, pending, use_index, buildlist)
-
-
-            for row in new_atoms_set:
-                built.add(i)
-                to_be_built.remove(i)
-
-        if 0 <= row <= 2:
-            if row == 0 and 0 < buildlist.shape[0]:
-                row, already_built, to_be_built = from_topologic_center(
-                    self,
-                    row,
-                    already_built,
-                    to_be_built,
-                    first_time=True)
-            if row == 1 and 1 < buildlist.shape[0]:
-                row, already_built, to_be_built, use_index = second_atom(
-                    self, already_built, to_be_built)
-            if row == 2 and 2 < buildlist.shape[0]:
-                row, already_built, to_be_built, use_index = third_atom(
-                    self, already_built, to_be_built, use_index)
-            if row < buildlist.shape[0]:
-                row, already_built, to_be_built = pick_new_atoms(
-                    self, row, already_built, to_be_built, use_index)
-
-        while row < buildlist.shape[0]:
-            row, already_built, to_be_built = pick_new_atoms(
-                self, row, already_built, to_be_built)
-
-
-
-
-    def _get_buildlist_old(self, fixed_buildlist=None,
+    def _get_buildlist(self, fixed_buildlist=None,
                        use_lookup=settings['defaults']['use_lookup']):
         """Create a buildlist for a Zmatrix.
 
@@ -229,9 +58,6 @@ class Cartesian_give_zmat(Cartesian_core):
                 already_built.add(index)
                 to_be_built.remove(index)
             return already_built, to_be_built
-
-        index_of_new_atom = distance_to_topologic_center.loc[
-            to_be_built, 'distance'].idxmin()
 
         def from_topologic_center(
                 self,
@@ -404,17 +230,17 @@ class Cartesian_give_zmat(Cartesian_core):
 
         row = start_row
         if 0 <= row <= 2:
-            if row == 0 and 0 < buildlist.shape[0]:
+            if row == 0 & 0 < buildlist.shape[0]:
                 row, already_built, to_be_built = from_topologic_center(
                     self,
                     row,
                     already_built,
                     to_be_built,
                     first_time=True)
-            if row == 1 and 1 < buildlist.shape[0]:
+            if row == 1 & 1 < buildlist.shape[0]:
                 row, already_built, to_be_built, use_index = second_atom(
                     self, already_built, to_be_built)
-            if row == 2 and 2 < buildlist.shape[0]:
+            if row == 2 & 2 < buildlist.shape[0]:
                 row, already_built, to_be_built, use_index = third_atom(
                     self, already_built, to_be_built, use_index)
             if row < buildlist.shape[0]:
@@ -634,11 +460,10 @@ class Cartesian_give_zmat(Cartesian_core):
             buildlist = self._clean_dihedral(buildlist, use_lookup=True)
 
         zmat = self._build_zmat(buildlist)
-        zmat.metadata = self.metadata.copy()
+        zmat.metadata = self.metadata
         zmat._metadata = self.metadata.copy()
-        # Because they don't make **physically** sense
+        keys_not_to_keep = []  # Because they don't make **physically** sense
         # for internal coordinates
-        keys_not_to_keep = ['bond_dict']
         for key in keys_not_to_keep:
             try:
                 zmat._metadata.pop(key)
