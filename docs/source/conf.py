@@ -64,12 +64,13 @@ extensions = [
     u'sphinx.ext.todo',
     u'sphinx.ext.mathjax',
     u'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx'
+    u'sphinx.ext.intersphinx'
+    # u'sphinx.ext.inheritance_diagram'
 ]
 
 intersphinx_mapping = {'numpy': ('http://docs.scipy.org/doc/numpy/', None),
-                       'ase' : ('https://wiki.fysik.dtu.dk/ase/', None),
-                       'pandas' : ('http://pandas.pydata.org/pandas-docs/stable/', None)}
+                       'ase': ('https://wiki.fysik.dtu.dk/ase/', None),
+                       'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None)}
 # intersphinx_mapping = {'ase' : ('https://wiki.fysik.dtu.dk/ase/', None)}
 
 

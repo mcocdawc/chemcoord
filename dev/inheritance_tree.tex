@@ -4,15 +4,14 @@
 
 \begin{document}
 
-\begin{tikzpicture}[every tree node/.style=draw]
+\begin{tikzpicture}
 \tikzset{level distance=50pt}
-\Tree
-[.{class A}
-  [.{class B} ]
-  [.{class C} ]
-  [.{class D}
-    [.{class E}]
-  ]
+\Tree [.\node[draw]{class A};
+    [.\node[draw]{class B}; ]
+    [.\node[draw]{class C}; ]
+    [.\node[draw]{class D};
+        \node[draw]{class E};
+    ]
 ]
 \end{tikzpicture}
 
