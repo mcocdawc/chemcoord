@@ -357,27 +357,28 @@ class Cartesian_core(_common_class):
             self._metadata['bond_dict'] = bond_dict
         return bond_dict
 
-    def connected_to(
-            self, index_of_atom,
-            exclude=None,
-            give_only_index=False,
-            follow_bonds=None,
+    def _give_val_sorted_bond_dict(self):
+        bond_dict = self.get_bonds()
+        valency = dict(zip(self.index,
+                           self.add_data('valency')['valency']))
+        val_bond_dict = {key:
+                         SortedSet([i for i in bond_dict[key]],
+                                   key=lambda x: -valency[x], load=20)
+                         for key in bond_dict}
+        return val_bond_dict
+
+    def give_coordination_sphere(
+            self, index_of_atom, n_sphere=1, give_only_index=False,
             use_lookup=settings['defaults']['use_lookup']):
-        """Return a Cartesian of atoms connected to the specified
-            one.
+        """Return a Cartesian of atoms in the n-th coordination sphere.
 
         Connected means that a path along covalent bonds exists.
 
         Args:
             index_of_atom (int):
-            exclude (list): Indices in this list are omitted.
             give_only_index (bool): If ``True`` a set of indices is
                 returned. Otherwise a new Cartesian instance.
-            follow_bonds (int): This option determines how many
-                branches the algorithm follows. If ``None`` it stops
-                after reaching the end in every branch. If you have a
-                single molecule this usually means, that the whole
-                molecule is recovered.
+            n_sphere (int): Determines the number of the coordination sphere.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
 
@@ -385,41 +386,72 @@ class Cartesian_core(_common_class):
             A set of indices or a new Cartesian instance.
         """
         bond_dict = self.get_bonds(use_lookup=use_lookup)
-        exclude = set([]) if (exclude is None) else set(exclude)
-
-        previous_atoms = (
-            (set([index_of_atom]) | set(bond_dic[index_of_atom])) - exclude)
-        fixed_atoms = set([index_of_atom]) | previous_atoms
-
-        def new_shell(bond_dic, previous_atoms, fixed_atoms, exclude):
-            before_inserting = len(fixed_atoms)
-            new_atoms = set([])
-            for index in previous_atoms:
-                new_atoms = new_atoms | (
-                    (bond_dic[index] - exclude) - fixed_atoms)
-                fixed_atoms |= new_atoms
-            after_inserting = len(fixed_atoms)
-            changed = (before_inserting != after_inserting)
-            return new_atoms, fixed_atoms, changed
-
-        if follow_bonds is None:
-            changed = True
-            while changed:
-                previous_atoms, fixed_atoms, changed = new_shell(
-                    bond_dic, previous_atoms, fixed_atoms, exclude)
-        else:
-            assert follow_bonds >= 0, 'follow_bonds has to be positive'
-            fixed_atoms = set(
-                [index_of_atom]) if (follow_bonds == 0) else fixed_atoms
-            for _ in range(follow_bonds - 1):
-                previous_atoms, fixed_atoms, changed = new_shell(
-                    bond_dic, previous_atoms, fixed_atoms, exclude)
-
+        i = index_of_atom
+        visited = set([i])
+        try:
+            tmp_bond_dict = {j: (bond_dict[j] - visited) for j in bond_dict[i]}
+        except KeyError:
+            tmp_bond_dict = {}
+        n = 0
+        while tmp_bond_dict and (n + 1) < n_sphere:
+            new_tmp_bond_dict = {}
+            for i in tmp_bond_dict:
+                if i in visited:
+                    continue
+                visited.add(i)
+                for j in tmp_bond_dict[i]:
+                    new_tmp_bond_dict[j] = bond_dict[j] - visited
+            tmp_bond_dict = new_tmp_bond_dict
+            n += 1
         if give_only_index:
-            to_return = fixed_atoms
+            return set(tmp_bond_dict.keys())
         else:
-            to_return = self.loc[fixed_atoms, :]
-        return to_return
+            return self.loc[set(tmp_bond_dict.keys())]
+
+    def connected_to(
+            self, index_of_atom, n_sphere=float('inf'), give_only_index=False,
+            exclude=None, use_lookup=settings['defaults']['use_lookup']):
+        """Return a Cartesian of atoms connected to the specified one.
+
+        Connected means that a path along covalent bonds exists.
+
+        Args:
+            index_of_atom (int):
+            give_only_index (bool): If ``True`` a set of indices is
+                returned. Otherwise a new Cartesian instance.
+            exclude (set): A set of indices that should be ignored
+                for the path finding.
+            n_sphere (int): Determines a maximum number
+                for the coordination sphere.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            A set of indices or a new Cartesian instance.
+        """
+        exclude = set() if exclude is None else exclude
+        bond_dict = self.get_bonds(use_lookup=use_lookup)
+        i = index_of_atom
+        visited = set([i]) | exclude
+        try:
+            tmp_bond_dict = {j: (bond_dict[j] - visited) for j in bond_dict[i]}
+        except KeyError:
+            tmp_bond_dict = {}
+        n = 0
+        while tmp_bond_dict and (n) < n_sphere:
+            new_tmp_bond_dict = {}
+            for i in tmp_bond_dict:
+                if i in visited:
+                    continue
+                visited.add(i)
+                for j in tmp_bond_dict[i]:
+                    new_tmp_bond_dict[j] = bond_dict[j] - visited
+            tmp_bond_dict = new_tmp_bond_dict
+            n += 1
+        if give_only_index:
+            return visited - exclude
+        else:
+            return self.loc[visited - exclude]
 
     def _preserve_bonds(self, sliced_cartesian,
                         use_lookup=settings['defaults']['use_lookup']):
@@ -761,21 +793,17 @@ class Cartesian_core(_common_class):
         Returns:
             list: A list of sets of indices or new Cartesian instances.
         """
-        list_fragment_indices = []
-        still_to_check = set(self.index)
-        while still_to_check != set([]):
-            indices = self.connected_to(pick(still_to_check),
-                                        use_lookup=use_lookup,
-                                        give_only_index=True)
-            still_to_check = still_to_check - indices
-            list_fragment_indices.append(indices)
-
-        if give_only_index:
-            value_to_return = list_fragment_indices
-        else:
-            value_to_return = [self.loc[indices, :] for
-                               indices in list_fragment_indices]
-        return value_to_return
+        fragments = []
+        pending = set(self.index)
+        while pending:
+            index = self.connected_to(pick(pending), use_lookup=use_lookup,
+                                      give_only_index=True)
+            pending = pending - index
+            if give_only_index:
+                fragments.append(index)
+            else:
+                fragments.append(self.loc[index])
+        return fragments
 
     def get_fragment(self, list_of_indextuples, give_only_index=False,
                      use_lookup=settings['defaults']['use_lookup']):

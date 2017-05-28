@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 from __future__ import with_statement
 from __future__ import division
@@ -23,22 +22,10 @@ from chemcoord.configuration import settings
 
 
 class Cartesian_give_zmat(Cartesian_core):
-    def _give_val_sorted_bond_dict(self):
-        bond_dict = self.get_bonds()
-        valency = dict(zip(self.index,
-                           self.add_data('valency')['valency']))
-        val_bond_dict = {key:
-                         SortedSet([i for i in bond_dict[key]],
-                                   key=lambda x: -valency[x], load=20)
-                         for key in bond_dict}
-        return val_bond_dict
-
-    def _get_buildlist2(
+    def _get_buildlist(
             self, use_lookup=settings['defaults']['use_lookup']):
         topologic_center = self.topologic_center()
         molecule = self.distance_to(topologic_center, sort=True)
-        old_index = molecule.index
-        molecule.index = range(molecule.n_atoms)
         bond_dict = molecule._give_val_sorted_bond_dict()
 
         # The assignment of an arbitrary integer arb_int lateron
@@ -47,18 +34,19 @@ class Cartesian_give_zmat(Cartesian_core):
         # ['b', 'a', 'd'] is the abbreviation for
         # ['bond_with', 'angle_with', 'dihedral_with']
         buildlist = pd.DataFrame(columns=['b', 'a', 'd'])
-        built, pending = set([]), set(molecule.index)
-        # TODO
-        # pending might be removed
+        built = set([])
 
         i = molecule.index[0]
         buildlist.loc[i] = [arb_int, arb_int, arb_int]
         buildlist = buildlist.astype('int64')
         built.add(i)
-        pending.remove(i)
-        parent = {j: i for j in bond_dict[i]}
-        work_bond_dict = OrderedDict([(j, bond_dict[j] - built)
-                                      for j in bond_dict[i]])
+        if molecule.n_atoms > 1:
+            parent = {j: i for j in bond_dict[i]}
+            work_bond_dict = OrderedDict([(j, bond_dict[j] - built)
+                                          for j in bond_dict[i]])
+        else:
+            parent, work_bond_dict = {}, {}
+
         while work_bond_dict:
             new_work_bond_dict = OrderedDict()
             for i in work_bond_dict:
@@ -67,364 +55,32 @@ class Cartesian_give_zmat(Cartesian_core):
                 b = parent[i]
                 if b in buildlist.index[:3]:
                     if len(buildlist) == 1:
-                        reference = [buildlist.index[0], arb_int, arb_int]
+                        reference = b, arb_int, arb_int
                     elif len(buildlist) == 2:
-                        try:
-                            a = (bond_dict[b] & built)[0]
-                        except IndexError:
-                            # TODO
-                            pass
-                        reference = [b, a, arb_int]
-                    else:
                         a = (bond_dict[b] & built)[0]
+                        reference = b, a, arb_int
+                    else:
                         try:
-                            d = ((bond_dict[a] & built) - set([b, a]))[0]
-                        except IndexError:
-                            d = ((bond_dict[b] & built) - set([b, a]))[0]
-                        reference = [b, a, d]
+                            a = parent[b]
+                        except KeyError:
+                            a = (bond_dict[b] & built)[0]
+                        try:
+                            d = parent[a]
+                        except KeyError:
+                            try:
+                                d = ((bond_dict[a] & built) - set([b, a]))[0]
+                            except IndexError:
+                                d = ((bond_dict[b] & built) - set([b, a]))[0]
+                        reference = b, a, d
                 else:
-                    reference = buildlist.loc[b, ['b', 'a']]
-                    reference.index = ['a', 'd']
-                    reference['b'] = b
-
+                    a, d = buildlist.loc[b, ['b', 'a']]
+                    reference = b, a, d
                 buildlist.loc[i] = reference
                 built.add(i)
-                pending.remove(i)
                 for j in work_bond_dict[i]:
                     new_work_bond_dict[j] = bond_dict[j] - built
                     parent[j] = i
-
             work_bond_dict = new_work_bond_dict
-
-        rename = dict(zip(molecule.index, old_index))
-        buildlist.replace(rename, inplace=True)
-        buildlist.rename(rename, inplace=True)
-        return buildlist
-
-    def _get_buildlist(
-            self, use_lookup=settings['defaults']['use_lookup']):
-        topologic_center = self.topologic_center()
-        molecule = self.distance_to(topologic_center, sort=True)
-        old_index = molecule.index
-        molecule.index = range(molecule.n_atoms)
-        bond_dict = molecule.get_bonds()
-        valency = dict(zip(molecule.index,
-                           molecule.add_data('valency')['valency']))
-        val_bond_dict = {key:
-                         SortedSet([i for i in bond_dict[key]],
-                                   key=lambda x: valency[x], load=20)
-                         for key in bond_dict}
-
-        buildlist = np.zeros((molecule.n_atoms, 4)).astype('int64')
-        built, pending = set([]), set(molecule.index)
-
-        row = 0
-        while row <= molecule.n_atoms:
-            if row == 0:
-                i = molecule.index[0]
-                buildlist[0, 0] = i
-                built.add(i)
-                pending.remove(i)
-                row = row + 1
-
-            elif row == 1:
-                try:
-                    i = val_bond_dict[buildlist[0, 0]][0]
-                    b = buildlist[0, 0]
-                except IndexError:
-                    i = molecule.index[1]
-                    b = buildlist[0, 0]
-                buildlist[1, [0, 1]] = i, b
-                built.add(i)
-                pending.remove(i)
-                row = row + 1
-
-            elif row == 2:
-                try:
-                    i = val_bond_dict[buildlist[0, 0]][1]
-                    b = buildlist[0, 0]
-                    a = buildlist[1, 0]
-                except IndexError:
-                    try:
-                        i = (val_bond_dict[buildlist[1, 0]] - built)[0]
-                        b = buildlist[1, 0]
-                        a = buildlist[0, 0]
-                    except IndexError:
-                        i = molecule[~molecule.index.isin(built)].index[0]
-                        b = buildlist[1, 0]
-                        a = buildlist[0, 0]
-                last_ref = b
-                buildlist[2, [0, 1, 2]] = i, b, a
-                built.add(i)
-                to_be_built.remove(i)
-                row = row + 1
-
-            else:
-                row, last_ref, built, pending, buildlist = pick_new_atoms(row, last_ref, built, pending, use_index, buildlist)
-
-
-            for row in new_atoms_set:
-                built.add(i)
-                to_be_built.remove(i)
-
-        if 0 <= row <= 2:
-            if row == 0 and 0 < buildlist.shape[0]:
-                row, already_built, to_be_built = from_topologic_center(
-                    self,
-                    row,
-                    already_built,
-                    to_be_built,
-                    first_time=True)
-            if row == 1 and 1 < buildlist.shape[0]:
-                row, already_built, to_be_built, use_index = second_atom(
-                    self, already_built, to_be_built)
-            if row == 2 and 2 < buildlist.shape[0]:
-                row, already_built, to_be_built, use_index = third_atom(
-                    self, already_built, to_be_built, use_index)
-            if row < buildlist.shape[0]:
-                row, already_built, to_be_built = pick_new_atoms(
-                    self, row, already_built, to_be_built, use_index)
-
-        while row < buildlist.shape[0]:
-            row, already_built, to_be_built = pick_new_atoms(
-                self, row, already_built, to_be_built)
-
-
-
-
-    def _get_buildlist_old(self, fixed_buildlist=None,
-                       use_lookup=settings['defaults']['use_lookup']):
-        """Create a buildlist for a Zmatrix.
-
-        Args:
-            fixed_buildlist (np.array): It is possible to provide the
-                beginning of the buildlist. The rest is "figured" out
-                automatically.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-
-        Returns:
-            np.array: buildlist
-        """
-        buildlist = np.zeros((self.n_atoms, 4)).astype('int64')
-        if fixed_buildlist is not None:
-            buildlist[:fixed_buildlist.shape[0], :] = fixed_buildlist
-            start_row = fixed_buildlist.shape[0]
-            already_built = set(fixed_buildlist[:, 0])
-            to_be_built = set(self.index) - already_built
-            convert_index = dict(zip(buildlist[:, 0], range(start_row)))
-        else:
-            start_row = 0
-            already_built, to_be_built = set([]), set(self.index)
-            convert_index = {}
-
-        bond_dic = self.get_bonds(use_lookup=use_lookup)
-        topologic_center = self.topologic_center()
-        distance_to_topologic_center = self.distance_to(topologic_center)
-
-        def update(already_built, to_be_built, new_atoms_set):
-            """NOT SIDEEFFECT FREE.
-            """
-            for index in new_atoms_set:
-                already_built.add(index)
-                to_be_built.remove(index)
-            return already_built, to_be_built
-
-        index_of_new_atom = distance_to_topologic_center.loc[
-            to_be_built, 'distance'].idxmin()
-
-        def from_topologic_center(
-                self,
-                row_in_buildlist,
-                already_built,
-                to_be_built,
-                first_time=False,
-                third_time=False
-                ):
-            index_of_new_atom = distance_to_topologic_center.loc[
-                to_be_built, 'distance'].idxmin()
-            buildlist[row_in_buildlist, 0] = index_of_new_atom
-            convert_index[index_of_new_atom] = row_in_buildlist
-            if not first_time:
-                bond_with = self.distance_to(
-                    index_of_new_atom,
-                    already_built).loc[:, 'distance'].idxmin()
-                angle_with = self.distance_to(
-                    bond_with,
-                    already_built - set([bond_with]))['distance'].idxmin()
-                buildlist[row_in_buildlist, 1:3] = [bond_with, angle_with]
-                if not third_time:
-                    dihedral_with = self.distance_to(
-                        bond_with,
-                        already_built - set([bond_with, angle_with])
-                        )['distance'].idxmin()
-                    buildlist[row_in_buildlist, 1:] = [
-                        bond_with, angle_with, dihedral_with]
-            new_row_to_modify = row_in_buildlist + 1
-            already_built.add(index_of_new_atom)
-            to_be_built.remove(index_of_new_atom)
-            return new_row_to_modify, already_built, to_be_built
-
-        def second_atom(self, already_built, to_be_built):
-            new_atoms_set = bond_dic[buildlist[0, 0]] - already_built
-            if new_atoms_set != set([]):
-                index_of_new_atom = pick(new_atoms_set)
-                convert_index[index_of_new_atom] = 1
-                buildlist[1, 0] = index_of_new_atom
-                buildlist[1, 1] = pick(already_built)
-            else:
-                new_row_to_modify, already_built, to_be_built = \
-                    from_topologic_center(
-                        self, row_in_buildlist, already_built, to_be_built)
-            if len(new_atoms_set) > 1:
-                use_index = buildlist[0, 0]
-            else:
-                use_index = buildlist[1, 0]
-            new_row_to_modify = 2
-            already_built.add(index_of_new_atom)
-            to_be_built.remove(index_of_new_atom)
-            return new_row_to_modify, already_built, to_be_built, use_index
-
-        # TODO (3, 1) if atoms are not connected to it
-        # TODO find nearest atom of 90
-        def third_atom(self, already_built, to_be_built, use_index):
-            new_atoms_set = bond_dic[use_index] - already_built
-            if new_atoms_set != set([]):
-                index_of_new_atom = pick(new_atoms_set)
-                convert_index[index_of_new_atom] = 2
-                buildlist[2, 0] = index_of_new_atom
-                buildlist[2, 1] = use_index
-                buildlist[2, 2] = pick(already_built - set([use_index]))
-                if (
-                        self.angle_degrees(buildlist[2, :]) < 10
-                        or self.angle_degrees(buildlist[2, :]) > 170):
-                    try:
-                        index_of_new_atom = pick(
-                            new_atoms_set - set([index_of_new_atom]))
-                        convert_index[index_of_new_atom] = 2
-                        buildlist[2, 0] = index_of_new_atom
-                        buildlist[2, 1] = use_index
-                        buildlist[2, 2] = pick(
-                            already_built - set([use_index]))
-                    except KeyError:
-                        pass
-                already_built.add(index_of_new_atom)
-                to_be_built.remove(index_of_new_atom)
-            else:
-                new_row_to_modify, already_built, to_be_built = \
-                    from_topologic_center(
-                        # The two is hardcoded because of third atom.
-                        self, 2, already_built, to_be_built, third_time=True)
-
-            if len(new_atoms_set) > 1:
-                use_index = use_index
-            else:
-                use_index = buildlist[2, 0]
-            new_row_to_modify = 3
-            return new_row_to_modify, already_built, to_be_built, use_index
-
-        def pick_new_atoms(
-                self,
-                row_in_buildlist,
-                already_built,
-                to_be_built,
-                use_given_index=None):
-            """Get the indices of new atoms to be put in buildlist.
-
-            Tries to get the atoms bonded to the one, that was last
-                inserted into the buildlist. If the last atom is the
-                end of a branch, it looks for the index of an atom
-                that is the nearest atom to the topologic center and
-                not built in yet.
-
-            .. note:: It modifies the buildlist array which is global
-                to this function.
-
-            Args:
-                row_in_buildlist (int): The row which has to be filled
-                    at least.
-
-            Returns:
-                list: List of modified rows.
-            """
-            if use_given_index is None:
-                new_atoms_set = (bond_dic[buildlist[row_in_buildlist-1, 0]]
-                                 - already_built)
-
-                if new_atoms_set != set([]):
-                    update(already_built, to_be_built, new_atoms_set)
-                    new_row_to_modify = row_in_buildlist + len(new_atoms_set)
-                    new_atoms_list = list(new_atoms_set)
-                    bond_with = buildlist[row_in_buildlist - 1, 0]
-                    angle_with = buildlist[convert_index[bond_with], 1]
-                    dihedral_with = buildlist[convert_index[bond_with], 2]
-                    buildlist[
-                        row_in_buildlist: new_row_to_modify,
-                        0] = new_atoms_list
-                    buildlist[
-                        row_in_buildlist: new_row_to_modify,
-                        1] = bond_with
-                    buildlist[
-                        row_in_buildlist: new_row_to_modify,
-                        2] = angle_with
-                    buildlist[
-                        row_in_buildlist: new_row_to_modify,
-                        3] = dihedral_with
-                    for key, value in zip(
-                            new_atoms_list,
-                            range(row_in_buildlist, new_row_to_modify)):
-                        convert_index[key] = value
-                else:
-                    new_row_to_modify, already_built, to_be_built = \
-                        from_topologic_center(
-                            self, row_in_buildlist, already_built, to_be_built)
-
-            else:
-                new_atoms_set = bond_dic[use_given_index] - already_built
-                new_row_to_modify = row_in_buildlist + len(new_atoms_set)
-                new_atoms_list = list(new_atoms_set)
-                bond_with = use_given_index
-                angle_with, dihedral_with = (
-                    already_built - set([use_given_index]))
-                buildlist[
-                    row_in_buildlist: new_row_to_modify, 0] = new_atoms_list
-                buildlist[
-                    row_in_buildlist: new_row_to_modify, 1] = bond_with
-                buildlist[
-                    row_in_buildlist: new_row_to_modify, 2] = angle_with
-                buildlist[
-                    row_in_buildlist: new_row_to_modify, 3] = dihedral_with
-                update(already_built, to_be_built, new_atoms_set)
-                for key, value in zip(
-                        new_atoms_list,
-                        range(row_in_buildlist, new_row_to_modify)):
-                    convert_index[key] = value
-
-            return new_row_to_modify, already_built, to_be_built
-
-        row = start_row
-        if 0 <= row <= 2:
-            if row == 0 and 0 < buildlist.shape[0]:
-                row, already_built, to_be_built = from_topologic_center(
-                    self,
-                    row,
-                    already_built,
-                    to_be_built,
-                    first_time=True)
-            if row == 1 and 1 < buildlist.shape[0]:
-                row, already_built, to_be_built, use_index = second_atom(
-                    self, already_built, to_be_built)
-            if row == 2 and 2 < buildlist.shape[0]:
-                row, already_built, to_be_built, use_index = third_atom(
-                    self, already_built, to_be_built, use_index)
-            if row < buildlist.shape[0]:
-                row, already_built, to_be_built = pick_new_atoms(
-                    self, row, already_built, to_be_built, use_index)
-
-        while row < buildlist.shape[0]:
-            row, already_built, to_be_built = pick_new_atoms(
-                self, row, already_built, to_be_built)
-
         return buildlist
 
     def _clean_dihedral(self, buildlist_to_check,
