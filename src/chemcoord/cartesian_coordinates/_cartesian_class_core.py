@@ -384,7 +384,7 @@ class Cartesian_core(_common_class):
         Returns:
             A set of indices or a new Cartesian instance.
         """
-        bond_dic = self.get_bonds(use_lookup=use_lookup)
+        bond_dict = self.get_bonds(use_lookup=use_lookup)
         exclude = set([]) if (exclude is None) else set(exclude)
 
         previous_atoms = (
@@ -956,19 +956,22 @@ class Cartesian_core(_common_class):
         """Return a Cartesian with a column for the distance from origin.
         """
         coords = ['x', 'y', 'z']
+        norm = np.linalg.norm
         if isinstance(origin, int):
-            origin = self.location(int(origin))
-        origin = np.array(origin)
+            origin = self.loc[origin, coords]
         if indices_of_other_atoms is None:
             indices_of_other_atoms = self.index
 
         new = self.loc[indices_of_other_atoms, :].copy()
-        new['distance'] = np.linalg.norm(new.loc[:, coords] - origin, axis=1)
+        try:
+            new.loc[:, 'distance'] = norm(new.loc[:, coords] - origin, axis=1)
+        except AttributeError:
+            # Happens if molecule consists of only one atom
+            new.loc[:, 'distance'] = norm(new.loc[:, coords] - origin)
         if sort:
             new.sort_values(by='distance', inplace=True)
         return new
 
-    # TODO remove
     def change_numbering(self, rename_dict, inplace=False):
         """Return the reindexed version of Cartesian.
 
