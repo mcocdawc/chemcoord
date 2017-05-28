@@ -36,6 +36,10 @@ class _pandas_wrapper(object):
         return self.shape[0]
 
     @property
+    def empty(self):
+        return self.frame.empty
+
+    @property
     def loc(self):
         """Label based indexing
 

@@ -26,7 +26,7 @@ class Cartesian_give_zmat(Cartesian_core):
             self, use_lookup=settings['defaults']['use_lookup']):
         topologic_center = self.topologic_center()
         molecule = self.distance_to(topologic_center, sort=True)
-        bond_dict = molecule._give_val_sorted_bond_dict()
+        bond_dict = molecule._give_val_sorted_bond_dict(use_lookup=use_lookup)
 
         # The assignment of an arbitrary integer arb_int lateron
         # is just done to preserve the type 'int64' in the DataFrame
@@ -66,6 +66,8 @@ class Cartesian_give_zmat(Cartesian_core):
                             a = (bond_dict[b] & built)[0]
                         try:
                             d = parent[a]
+                            if d in set([b, a]):
+                                raise KeyError
                         except KeyError:
                             try:
                                 d = ((bond_dict[a] & built) - set([b, a]))[0]
@@ -96,52 +98,44 @@ class Cartesian_give_zmat(Cartesian_core):
             np.array: modified_buildlist
         """
         buildlist = buildlist_to_check.copy()
+        angles = self.angle_degrees(buildlist.iloc[3:, :])
+        problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
+        rename = dict(enumerate(buildlist.index[3:]))
+        problem_index = [rename[i] for i in problem_index]
 
-        bond_dic = self.get_bonds(use_lookup=use_lookup)
+        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
 
-        angles = self.angle_degrees(buildlist[3:, 1:])
-
-        test_vector = np.logical_or(170 < angles, angles < 10)
-        problematic_indices = np.nonzero(test_vector)[0]
-
-        # look for index + 3 because index start directly at dihedrals
-        for index in problematic_indices:
+        for i in problem_index:
+            loc_i = buildlist.index.get_loc(i)
             try:
-                already_tested = set([])
-                found = False
-                while not found:
-                    new_dihedral = pick(bond_dic[buildlist[index + 3, 2]]
-                                        - set(buildlist[index + 3, [0, 1, 3]])
-                                        - set(buildlist[(index + 3):, 0])
-                                        - already_tested)
-                    already_tested.add(new_dihedral)
-                    temp_buildlist = buildlist[index + 3]
-                    temp_buildlist[3] = new_dihedral
-                    angle = self.angle_degrees(temp_buildlist[1:])
-                    found = True if 10 < angle < 170 else False
+                d = (bond_dict[buildlist.loc[i, 'a']]
+                     - set(buildlist.loc[i, ['b', 'a', 'd']])
+                     - set(buildlist.index[loc_i:]))[0]
+                buildlist.loc[i, 'd'] = d
             except KeyError:
-                origin = buildlist[index + 3, 2]
-                could_be_reference = set(buildlist[: index + 3, 0])
-
-                sorted_Cartesian = self.distance_to(
-                    origin,
-                    indices_of_other_atoms=could_be_reference)
-                sorted_Cartesian.frame = \
-                    sorted_Cartesian.frame.sort_values(by='distance')
-
-                buildlist_for_new_dihedral_with = np.empty(
-                    (len(could_be_reference), 3), dtype='int64')
-                bond_with, angle_with = buildlist[index + 3, [1, 2]]
-                buildlist_for_new_dihedral_with[:, 0] = bond_with
-                buildlist_for_new_dihedral_with[:, 1] = angle_with
-                dihedral_with = sorted_Cartesian.index
-                buildlist_for_new_dihedral_with[:, 2] = dihedral_with
-                angles = self.angle_degrees(buildlist_for_new_dihedral_with)
-
-                test_vector = np.logical_and(170 > angles, angles > 10)
-                new_dihedral = dihedral_with[np.nonzero(test_vector)[0][0]]
-
-                buildlist[index + 3, 3] = new_dihedral
+                pass
+                # origin = buildlist[index + 3, 2]
+                # could_be_reference = set(buildlist[: index + 3, 0])
+                #
+                # sorted_Cartesian = self.distance_to(
+                #     origin,
+                #     indices_of_other_atoms=could_be_reference)
+                # sorted_Cartesian.frame = \
+                #     sorted_Cartesian.frame.sort_values(by='distance')
+                #
+                # buildlist_for_new_dihedral_with = np.empty(
+                #     (len(could_be_reference), 3), dtype='int64')
+                # bond_with, angle_with = buildlist[index + 3, [1, 2]]
+                # buildlist_for_new_dihedral_with[:, 0] = bond_with
+                # buildlist_for_new_dihedral_with[:, 1] = angle_with
+                # dihedral_with = sorted_Cartesian.index
+                # buildlist_for_new_dihedral_with[:, 2] = dihedral_with
+                # angles = self.angle_degrees(buildlist_for_new_dihedral_with)
+                #
+                # test_vector = np.logical_and(170 > angles, angles > 10)
+                # new_dihedral = dihedral_with[np.nonzero(test_vector)[0][0]]
+                #
+                # buildlist[index + 3, 3] = new_dihedral
         return buildlist
 
     def _build_zmat(self, buildlist):
