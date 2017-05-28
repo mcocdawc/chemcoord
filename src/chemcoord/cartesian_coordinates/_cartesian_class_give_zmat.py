@@ -22,24 +22,25 @@ from chemcoord.configuration import settings
 
 
 class Cartesian_give_zmat(Cartesian_core):
-    def _get_buildlist(
-            self, use_lookup=settings['defaults']['use_lookup']):
+    def _get_buildlist(self, use_lookup=settings['defaults']['use_lookup']):
         topologic_center = self.topologic_center()
         molecule = self.distance_to(topologic_center, sort=True)
         bond_dict = molecule._give_val_sorted_bond_dict(use_lookup=use_lookup)
 
         # The assignment of an arbitrary integer arb_int lateron
         # is just done to preserve the type 'int64' in the DataFrame
-        arb_int = 77
+        arb_int = -1
         # ['b', 'a', 'd'] is the abbreviation for
         # ['bond_with', 'angle_with', 'dihedral_with']
-        buildlist = pd.DataFrame(columns=['b', 'a', 'd'])
+        buildlist = pd.DataFrame(np.full((self.n_atoms, 3), arb_int),
+                                 index=molecule.index, columns=['b', 'a', 'd'])
+        order_of_definition = []
         built = set([])
 
         i = molecule.index[0]
         buildlist.loc[i] = [arb_int, arb_int, arb_int]
-        buildlist = buildlist.astype('int64')
         built.add(i)
+        order_of_definition.append(i)
         if molecule.n_atoms > 1:
             parent = {j: i for j in bond_dict[i]}
             work_bond_dict = OrderedDict([(j, bond_dict[j] - built)
@@ -54,9 +55,9 @@ class Cartesian_give_zmat(Cartesian_core):
                     continue
                 b = parent[i]
                 if b in buildlist.index[:3]:
-                    if len(buildlist) == 1:
+                    if len(built) == 1:
                         reference = b, arb_int, arb_int
-                    elif len(buildlist) == 2:
+                    elif len(built) == 2:
                         a = (bond_dict[b] & built)[0]
                         reference = b, a, arb_int
                     else:
@@ -78,11 +79,14 @@ class Cartesian_give_zmat(Cartesian_core):
                     a, d = buildlist.loc[b, ['b', 'a']]
                     reference = b, a, d
                 buildlist.loc[i] = reference
+                order_of_definition.append(i)
                 built.add(i)
                 for j in work_bond_dict[i]:
                     new_work_bond_dict[j] = bond_dict[j] - built
                     parent[j] = i
             work_bond_dict = new_work_bond_dict
+        buildlist.columns = ['bond_with', 'angle_with', 'dihedral_with']
+        buildlist = buildlist.loc[order_of_definition]
         return buildlist
 
     def _clean_dihedral(self, buildlist_to_check,
@@ -98,44 +102,39 @@ class Cartesian_give_zmat(Cartesian_core):
             np.array: modified_buildlist
         """
         buildlist = buildlist_to_check.copy()
+        buildlist.columns = ['b', 'a', 'd']
         angles = self.angle_degrees(buildlist.iloc[3:, :])
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
         rename = dict(enumerate(buildlist.index[3:]))
         problem_index = [rename[i] for i in problem_index]
 
         bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-
         for i in problem_index:
             loc_i = buildlist.index.get_loc(i)
+            b, a, problem_d = buildlist.loc[i, ['b', 'a', 'd']]
             try:
-                d = (bond_dict[buildlist.loc[i, 'a']]
-                     - set(buildlist.loc[i, ['b', 'a', 'd']])
+                d = (bond_dict[a] - {b, a, problem_d}
                      - set(buildlist.index[loc_i:]))[0]
-                buildlist.loc[i, 'd'] = d
-            except KeyError:
-                pass
-                # origin = buildlist[index + 3, 2]
-                # could_be_reference = set(buildlist[: index + 3, 0])
-                #
-                # sorted_Cartesian = self.distance_to(
-                #     origin,
-                #     indices_of_other_atoms=could_be_reference)
-                # sorted_Cartesian.frame = \
-                #     sorted_Cartesian.frame.sort_values(by='distance')
-                #
-                # buildlist_for_new_dihedral_with = np.empty(
-                #     (len(could_be_reference), 3), dtype='int64')
-                # bond_with, angle_with = buildlist[index + 3, [1, 2]]
-                # buildlist_for_new_dihedral_with[:, 0] = bond_with
-                # buildlist_for_new_dihedral_with[:, 1] = angle_with
-                # dihedral_with = sorted_Cartesian.index
-                # buildlist_for_new_dihedral_with[:, 2] = dihedral_with
-                # angles = self.angle_degrees(buildlist_for_new_dihedral_with)
-                #
-                # test_vector = np.logical_and(170 > angles, angles > 10)
-                # new_dihedral = dihedral_with[np.nonzero(test_vector)[0][0]]
-                #
-                # buildlist[index + 3, 3] = new_dihedral
+            except IndexError:
+                visited = set(buildlist.index[loc_i:]) | {b, a, problem_d}
+                tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
+                                             for j in bond_dict[problem_d]])
+                found = False
+                while tmp_bond_dict and not found:
+                    new_tmp_bond_dict = OrderedDict()
+                    for new_d in tmp_bond_dict:
+                        if new_d in visited:
+                            continue
+                        angle = self.angle_degrees([b, a, new_d])[0]
+                        if (5 > angle) or (angle > 175):
+                            visited.add(new_d)
+                            for j in tmp_bond_dict[new_d]:
+                                new_tmp_bond_dict[j] = bond_dict[j] - built
+                        else:
+                            found = True
+                            buildlist.loc[i, 'd'] = new_d
+                    tmp_bond_dict = new_tmp_bond_dict
+        buildlist.columns = ['bond_with', 'angle_with', 'dihedral_with']
         return buildlist
 
     def _build_zmat(self, buildlist):
@@ -147,40 +146,32 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             Zmat: A new instance of :class:`zmat_functions.Zmat`.
         """
-        indexlist = buildlist[:, 0]
+        index = buildlist.index
+        default_cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
+                        'dihedral_with', 'dihedral']
+        optional_cols = list(set(self.columns) - {'atom', 'x', 'y', 'z'})
 
-        default_columns = [
-            'atom', 'bond_with', 'bond', 'angle_with',
-            'angle', 'dihedral_with', 'dihedral']
-        additional_columns = list(set(self.columns)
-                                  - set(['atom', 'x', 'y', 'z']))
+        zmat_frame = pd.DataFrame(columns=default_cols + optional_cols,
+                                  dtype='float', index=index)
 
-        zmat_frame = pd.DataFrame(
-            columns=default_columns + additional_columns,
-            dtype='float',
-            index=indexlist)
-
-        zmat_frame.loc[:, additional_columns] = self.loc[indexlist,
-                                                         additional_columns]
+        zmat_frame.loc[:, optional_cols] = self.loc[index, optional_cols]
 
         bonds = self.bond_lengths(buildlist, start_row=1)
         angles = self.angle_degrees(buildlist, start_row=2)
         dihedrals = self.dihedral_degrees(buildlist, start_row=3)
 
-        zmat_frame.loc[indexlist, 'atom'] = self.loc[indexlist, 'atom']
-        zmat_frame.loc[indexlist[1:], 'bond_with'] = buildlist[1:, 1]
-        zmat_frame.loc[indexlist[1:], 'bond'] = bonds
-        zmat_frame.loc[indexlist[2:], 'angle_with'] = buildlist[2:, 2]
-        zmat_frame.loc[indexlist[2:], 'angle'] = angles
-        zmat_frame.loc[indexlist[3:], 'dihedral_with'] = buildlist[3:, 3]
-        zmat_frame.loc[indexlist[3:], 'dihedral'] = dihedrals
+        zmat_frame.loc[index, 'atom'] = self.loc[index, 'atom']
+        zmat_frame.loc[index, 'bond_with'] = buildlist.iloc[1:, 0]
+        zmat_frame.loc[index[1:], 'bond'] = bonds
+        zmat_frame.loc[index[2:], 'angle_with'] = buildlist.iloc[2:, 1]
+        zmat_frame.loc[index[2:], 'angle'] = angles
+        zmat_frame.loc[index[3:], 'dihedral_with'] = buildlist.iloc[3:, 2]
+        zmat_frame.loc[index[3:], 'dihedral'] = dihedrals
 
         lines = np.full(self.n_atoms, True, dtype='bool')
         lines[:3] = False
         zmat_frame.loc[zmat_frame['dihedral'].isnull() & lines, 'dihedral'] = 0
 
-        # return zmat_frame
-        # TODO
         return Zmat(zmat_frame)
 
     def give_zmat(self, buildlist=None, fragment_list=None,

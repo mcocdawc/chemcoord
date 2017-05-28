@@ -224,7 +224,9 @@ class Cartesian_core(_common_class):
         frag_pos = positions[fragment_indices, :]
         frag_bond_radii = bond_radii[fragment_indices]
 
-        bond_array = self._give_bond_array(frag_pos, frag_bond_radii)
+        bond_array = self._give_bond_array(
+            frag_pos, frag_bond_radii,
+            self_bonding_allowed=self_bonding_allowed)
         a, b = bond_array.nonzero()
         a, b = [convert_index[i] for i in a], [convert_index[i] for i in b]
         for row, index in enumerate(a):
@@ -358,13 +360,23 @@ class Cartesian_core(_common_class):
         return bond_dict
 
     def _give_val_sorted_bond_dict(self, use_lookup):
-        bond_dict = self.get_bonds(use_lookup=use_lookup)
-        valency = dict(zip(self.index,
-                           self.add_data('valency')['valency']))
-        val_bond_dict = {key:
-                         SortedSet([i for i in bond_dict[key]],
-                                   key=lambda x: -valency[x], load=20)
-                         for key in bond_dict}
+        def complete_calculation():
+            bond_dict = self.get_bonds(use_lookup=use_lookup)
+            valency = dict(zip(self.index,
+                               self.add_data('valency')['valency']))
+            val_bond_dict = {key:
+                             SortedSet([i for i in bond_dict[key]],
+                                       key=lambda x: -valency[x], load=20)
+                             for key in bond_dict}
+            return val_bond_dict
+        if use_lookup:
+            try:
+                val_bond_dict = self._metadata['val_bond_dict']
+            except KeyError:
+                val_bond_dict = complete_calculation()
+        else:
+            val_bond_dict = complete_calculation()
+        self._metadata['val_bond_dict'] = val_bond_dict
         return val_bond_dict
 
     def give_coordination_sphere(
@@ -668,21 +680,19 @@ class Cartesian_core(_common_class):
             list: Vector of the distances between the first and second
                 atom of every entry in the buildlist.
         """
-        # check sanity of input
-        buildlist = np.array(buildlist)
-        try:
-            buildlist.shape[1]
-        except IndexError:
-            buildlist = buildlist[None, :]
+        coords = ['x', 'y', 'z']
+        if isinstance(buildlist, pd.DataFrame):
+            i_pos = self.loc[buildlist.index[start_row:], coords].values
+            b_pos = self.loc[buildlist.iloc[start_row:, 0], coords].values
         else:
-            pass
-
-        buildlist = np.array(buildlist)
-        own_location = self.location(buildlist[start_row:, 0])
-        bond_with_location = self.location(buildlist[start_row:, 1])
-        distance_vector = own_location - bond_with_location
-        distance_list = np.linalg.norm(distance_vector, axis=1)
-        return distance_list
+            buildlist = np.array(buildlist)
+            try:
+                buildlist.shape[1]
+            except IndexError:
+                buildlist = buildlist[None, :]
+            i_pos = self.loc[buildlist[start_row:, 0], coords].values
+            b_pos = self.loc[buildlist[start_row:, 1], coords].values
+        return np.linalg.norm(i_pos - b_pos, axis=1)
 
     def angle_degrees(self, buildlist, start_row=0):
         """Return the angles between given atoms.
@@ -697,26 +707,23 @@ class Cartesian_core(_common_class):
             list: List of the angle between the first, second and
                 third atom of every entry in the buildlist.
         """
-        # check sanity of input
-        buildlist = np.array(buildlist)
-        try:
-            buildlist.shape[1]
-        except IndexError:
-            buildlist = buildlist[None, :]
+        coords = ['x', 'y', 'z']
+        if isinstance(buildlist, pd.DataFrame):
+            i_pos = self.loc[buildlist.index[start_row:], coords].values
+            b_pos = self.loc[buildlist.iloc[start_row:, 0], coords].values
+            a_pos = self.loc[buildlist.iloc[start_row:, 1], coords].values
         else:
-            pass
+            buildlist = np.array(buildlist)
+            try:
+                buildlist.shape[1]
+            except IndexError:
+                buildlist = buildlist[None, :]
+            i_pos = self.loc[buildlist[start_row:, 0], coords].values
+            b_pos = self.loc[buildlist[start_row:, 1], coords].values
+            a_pos = self.loc[buildlist[start_row:, 2], coords].values
 
-        buildlist = np.array(buildlist)
-        own_location = self.location(buildlist[start_row:, 0])
-        bond_with_location = self.location(buildlist[start_row:, 1])
-        angle_with_location = self.location(buildlist[start_row:, 2])
-
-        BI, BA = (
-            own_location - bond_with_location,
-            angle_with_location - bond_with_location)
-        bi, ba = (
-            BI / np.linalg.norm(BI, axis=1)[:, None],
-            BA / np.linalg.norm(BA, axis=1)[:, None])
+        BI, BA = i_pos - b_pos, a_pos - b_pos
+        bi, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (BI, BA)]
         dot_product = np.sum(bi * ba, axis=1)
         dot_product[np.isclose(dot_product, 1)] = 1
         dot_product[np.isclose(dot_product, -1)] = -1
@@ -736,30 +743,30 @@ class Cartesian_core(_common_class):
             list: List of the dihedral between the first, second,
                 third and fourth atom of every entry in the buildlist.
         """
-        # check sanity of input
-        buildlist = np.array(buildlist)
-        try:
-            buildlist.shape[1]
-        except IndexError:
-            buildlist = buildlist[None, :]
+        coords = ['x', 'y', 'z']
+        if isinstance(buildlist, pd.DataFrame):
+            i_pos = self.loc[buildlist.index[start_row:], coords].values
+            b_pos = self.loc[buildlist.iloc[start_row:, 0], coords].values
+            a_pos = self.loc[buildlist.iloc[start_row:, 1], coords].values
+            d_pos = self.loc[buildlist.iloc[start_row:, 2], coords].values
         else:
-            pass
+            buildlist = np.array(buildlist)
+            try:
+                buildlist.shape[1]
+            except IndexError:
+                buildlist = buildlist[None, :]
+            i_pos = self.loc[buildlist[start_row:, 0], coords].values
+            b_pos = self.loc[buildlist[start_row:, 1], coords].values
+            a_pos = self.loc[buildlist[start_row:, 2], coords].values
+            d_pos = self.loc[buildlist[start_row:, 3], coords].values
 
-        own_location = self.location(buildlist[start_row:, 0])
-        bond_with_location = self.location(buildlist[start_row:, 1])
-        angle_with_location = self.location(buildlist[start_row:, 2])
-        dihedral_with_location = self.location(buildlist[start_row:, 3])
-        length = buildlist[start_row:].shape[0]
-
-        IB = bond_with_location - own_location
-        BA = angle_with_location - bond_with_location
-        AD = dihedral_with_location - angle_with_location
+        IB = b_pos - i_pos
+        BA = a_pos - b_pos
+        AD = d_pos - a_pos
 
         N1 = np.cross(IB, BA, axis=1)
         N2 = np.cross(BA, AD, axis=1)
-
-        n1 = N1 / np.linalg.norm(N1, axis=1)[:, None]
-        n2 = N2 / np.linalg.norm(N2, axis=1)[:, None]
+        n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
 
         dot_product = np.sum(n1 * n2, axis=1)
         dot_product[np.isclose(dot_product, 1)] = 1
@@ -768,15 +775,15 @@ class Cartesian_core(_common_class):
 
         # the next lines are to test the direction of rotation.
         # is a dihedral really 90 or 270 degrees?
-        test_where_to_modify = (
-            np.sum(BA * np.cross(n1, n2, axis=1), axis=1) < 0)
-        where_to_modify = np.nonzero(test_where_to_modify)[0]
+        # Equivalent to direction of rotation of dihedral
+        where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) < 0
+        where_to_modify = np.nonzero(where_to_modify)[0]
 
+        length = buildlist.shape[0] - start_row
         sign = np.full(length, 1, dtype='float64')
-        sign[where_to_modify] = -1
         to_add = np.full(length, 0, dtype='float64')
+        sign[where_to_modify] = -1
         to_add[where_to_modify] = 360
-
         dihedrals = to_add + sign * dihedrals
         return dihedrals
 
@@ -795,8 +802,9 @@ class Cartesian_core(_common_class):
         """
         fragments = []
         pending = set(self.index)
+        self.get_bonds(use_lookup=use_lookup)
         while pending:
-            index = self.connected_to(pick(pending), use_lookup=use_lookup,
+            index = self.connected_to(pick(pending), use_lookup=True,
                                       give_only_index=True)
             pending = pending - index
             if give_only_index:
