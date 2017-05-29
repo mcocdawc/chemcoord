@@ -23,8 +23,7 @@ from chemcoord.configuration import settings
 
 class Cartesian_give_zmat(Cartesian_core):
     def _get_buildlist(self, use_lookup=settings['defaults']['use_lookup']):
-        topologic_center = self.topologic_center()
-        molecule = self.distance_to(topologic_center, sort=True)
+        molecule = self.distance_to(self.topologic_center(), sort=True)
         bond_dict = molecule._give_val_sorted_bond_dict(use_lookup=use_lookup)
 
         # The assignment of an arbitrary integer arb_int lateron
@@ -32,13 +31,12 @@ class Cartesian_give_zmat(Cartesian_core):
         arb_int = -1
         # ['b', 'a', 'd'] is the abbreviation for
         # ['bond_with', 'angle_with', 'dihedral_with']
-        buildlist = pd.DataFrame(np.full((self.n_atoms, 3), arb_int),
-                                 index=molecule.index, columns=['b', 'a', 'd'])
+        buildlist = {}
         order_of_definition = []
         built = set([])
 
         i = molecule.index[0]
-        buildlist.loc[i] = [arb_int, arb_int, arb_int]
+        buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
         built.add(i)
         order_of_definition.append(i)
         if molecule.n_atoms > 1:
@@ -54,12 +52,12 @@ class Cartesian_give_zmat(Cartesian_core):
                 if i in built:
                     continue
                 b = parent[i]
-                if b in buildlist.index[:3]:
+                if b in order_of_definition[:3]:
                     if len(built) == 1:
-                        reference = b, arb_int, arb_int
+                        buildlist[i] = {'b': b, 'a': np.nan, 'd': np.nan}
                     elif len(built) == 2:
                         a = (bond_dict[b] & built)[0]
-                        reference = b, a, arb_int
+                        buildlist[i] = {'b': b, 'a': a, 'd': np.nan}
                     else:
                         try:
                             a = parent[b]
@@ -74,20 +72,21 @@ class Cartesian_give_zmat(Cartesian_core):
                                 d = ((bond_dict[a] & built) - set([b, a]))[0]
                             except IndexError:
                                 d = ((bond_dict[b] & built) - set([b, a]))[0]
-                        reference = b, a, d
+                        buildlist[i] = {'b': b, 'a': a, 'd': d}
                 else:
-                    a, d = buildlist.loc[b, ['b', 'a']]
-                    reference = b, a, d
-                buildlist.loc[i] = reference
+                    a, d = [buildlist[b][x] for x in ['b', 'a']]
+                    buildlist[i] = {'b': b, 'a': a, 'd': d}
                 order_of_definition.append(i)
                 built.add(i)
                 for j in work_bond_dict[i]:
                     new_work_bond_dict[j] = bond_dict[j] - built
                     parent[j] = i
             work_bond_dict = new_work_bond_dict
-        buildlist.columns = ['bond_with', 'angle_with', 'dihedral_with']
-        buildlist = buildlist.loc[order_of_definition]
-        return buildlist
+        output = pd.DataFrame.from_dict(buildlist, orient='index')
+        output = output.fillna(0).astype('int64')
+        output = output.loc[order_of_definition, ['b', 'a', 'd']]
+        output.columns = ['bond_with', 'angle_with', 'dihedral_with']
+        return output
 
     def _clean_dihedral(self, buildlist_to_check,
                         use_lookup=settings['defaults']['use_lookup']):
