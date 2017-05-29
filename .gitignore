@@ -53,6 +53,7 @@ nohup.out
 *fdb_latexmk
 *fls
 *log
+*gz
 
 # ignore molecule files from the Tutorial
 Tutorial/*molden
