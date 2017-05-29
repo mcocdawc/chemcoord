@@ -436,7 +436,7 @@ class Cartesian_give_zmat(Cartesian_core):
                     buildlist, big_molecule_index = prepare_variables(
                         self, fragment_list)
                     big_molecule = self.loc[big_molecule_index, :]
-                    row = big_molecule.n_atoms
+                    row = len(big_molecule)
                     buildlist[: row, :] = big_molecule._get_buildlist(
                         use_lookup=use_lookup)
                     return buildlist, big_molecule, row

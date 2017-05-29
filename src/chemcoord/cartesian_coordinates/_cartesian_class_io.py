@@ -111,7 +111,7 @@ http://chemcoord.readthedocs.io/en/latest/'
                               names=['atom', 'x', 'y', 'z'])
 
         molecule = cls(frame)
-        molecule.index = range(start_index, start_index + molecule.n_atoms)
+        molecule.index = range(start_index, start_index + len(molecule))
 
         if get_bonds:
             molecule.get_bonds(use_lookup=False, set_lookup=True)

@@ -242,7 +242,9 @@ class _pandas_wrapper(object):
     def copy(self):
         molecule = self.__class__(self.frame)
         molecule.metadata = self.metadata.copy()
-        molecule._metadata = self._metadata.copy()
+        keys_to_keep = []
+        for key in keys_to_keep:
+            molecule._metadata[key] = self._metadata[key].copy()
         return molecule
 
     def sort_values(self, by, axis=0, ascending=True, inplace=False,

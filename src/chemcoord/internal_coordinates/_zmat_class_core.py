@@ -81,13 +81,9 @@ class Zmat_core(_common_class):
                 and self._required_cols <= set(selected.columns)):
             molecule = self.__class__(selected)
             molecule.metadata = self.metadata.copy()
-            molecule._metadata = self.metadata.copy()
-            keys_not_to_keep = []
-            for key in keys_not_to_keep:
-                try:
-                    molecule._metadata.pop(key)
-                except KeyError:
-                    pass
+            keys_to_keep = []
+            for key in keys_to_keep:
+                molecule._metadata[key] = self._metadata[key].copy()
             return molecule
         else:
             return selected

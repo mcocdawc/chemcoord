@@ -22,10 +22,9 @@ from chemcoord.configuration import settings
 
 
 class Cartesian_give_zmat(Cartesian_core):
-    def _get_buildlist(self, use_lookup=settings['defaults']['use_lookup']):
-        molecule = self.distance_to(self.topologic_center(), sort=True)
-        bond_dict = molecule._give_val_sorted_bond_dict(use_lookup=use_lookup)
-
+    def _get_buildlist(self, use_lookup=settings['defaults']['use_lookup'],
+                       start_atom=None, start_buildlist=None):
+        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         # The assignment of an arbitrary integer arb_int lateron
         # is just done to preserve the type 'int64' in the DataFrame
         arb_int = -1
@@ -35,11 +34,22 @@ class Cartesian_give_zmat(Cartesian_core):
         order_of_definition = []
         built = set([])
 
-        i = molecule.index[0]
-        buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
-        built.add(i)
-        order_of_definition.append(i)
-        if molecule.n_atoms > 1:
+        if start_atom is None and start_buildlist is None:
+            molecule = self.distance_to(self.topologic_center())
+            i = molecule['distance'].idxmin()
+            # TODO DRY1
+            buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
+            built.add(i)
+            order_of_definition.append(i)
+        elif start_buildlist is None:
+            i = start_atom
+            # TODO DRY1
+            buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
+            built.add(i)
+            order_of_definition.append(i)
+        else:
+            pass
+        if self.n_atoms > 1:
             parent = {j: i for j in bond_dict[i]}
             work_bond_dict = OrderedDict([(j, bond_dict[j] - built)
                                           for j in bond_dict[i]])
@@ -107,7 +117,7 @@ class Cartesian_give_zmat(Cartesian_core):
         rename = dict(enumerate(buildlist.index[3:]))
         problem_index = [rename[i] for i in problem_index]
 
-        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        print(problem_index)
         for i in problem_index:
             loc_i = buildlist.index.get_loc(i)
             b, a, problem_d = buildlist.loc[i, ['b', 'a', 'd']]
@@ -250,7 +260,7 @@ class Cartesian_give_zmat(Cartesian_core):
                     buildlist, big_molecule_index = prepare_variables(
                         self, fragment_list)
                     big_molecule = self.loc[big_molecule_index, :]
-                    row = big_molecule.n_atoms
+                    row = len(big_molecule)
                     buildlist[: row, :] = big_molecule._get_buildlist(
                         use_lookup=use_lookup)
                     return buildlist, big_molecule, row
@@ -273,18 +283,12 @@ class Cartesian_give_zmat(Cartesian_core):
         if check_linearity:
             buildlist = self._clean_dihedral(buildlist, use_lookup=True)
 
-        zmat = self._build_zmat(buildlist)
-        zmat.metadata = self.metadata.copy()
-        zmat._metadata = self.metadata.copy()
-        # Because they don't make **physically** sense
-        # for internal coordinates
-        keys_not_to_keep = ['bond_dict']
-        for key in keys_not_to_keep:
-            try:
-                zmat._metadata.pop(key)
-            except KeyError:
-                pass
-        return zmat
+        Zmat = self._build_zmat(buildlist)
+        Zmat.metadata = self.metadata.copy()
+        keys_to_keep = []
+        for key in keys_to_keep:
+            Zmat._metadata[key] = self._metadata[key].copy()
+        return Zmat
 
     def to_zmat(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Zmat.give_zmat`

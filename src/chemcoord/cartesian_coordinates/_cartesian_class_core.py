@@ -59,15 +59,9 @@ class Cartesian_core(_common_class):
                 and self._required_cols <= set(selected.columns)):
             molecule = self.__class__(selected)
             molecule.metadata = self.metadata.copy()
-            molecule._metadata = self.metadata.copy()
-            keys_not_to_keep = [
-                'bond_dict'   # You could end up with loose ends
-                ]
-            for key in keys_not_to_keep:
-                try:
-                    molecule._metadata.pop(key)
-                except KeyError:
-                    pass
+            keys_to_keep = []
+            for key in keys_to_keep:
+                molecule._metadata[key] = self._metadata[key].copy()
             return molecule
         else:
             return selected
@@ -186,6 +180,17 @@ class Cartesian_core(_common_class):
         positions = self.location()
         # test
         return ase.Atoms(atoms, positions)
+
+    def copy(self):
+        molecule = self.__class__(self.frame)
+        molecule.metadata = self.metadata.copy()
+        keys_to_keep = ['bond_dict', 'val_bond_dict']
+        for key in keys_to_keep:
+            try:
+                molecule._metadata[key] = self._metadata[key].copy()
+            except KeyError:
+                pass
+        return molecule
 
     @staticmethod
     def _give_bond_array(positions, bond_radii, self_bonding_allowed=False):
@@ -339,6 +344,9 @@ class Cartesian_core(_common_class):
                     fragments[i, j, k], positions, bond_radii,
                     bond_dict=bond_dict,
                     self_bonding_allowed=self_bonding_allowed)
+
+            for i in set(self.index) - set(bond_dict.keys()):
+                bond_dict[i] = {}
 
             self.index = old_index
             valency = dict(zip(self.index, data['valency']))
