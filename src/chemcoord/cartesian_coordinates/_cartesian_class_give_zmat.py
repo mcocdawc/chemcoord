@@ -30,31 +30,34 @@ class Cartesian_give_zmat(Cartesian_core):
         arb_int = -1
         # ['b', 'a', 'd'] is the abbreviation for
         # ['bond_with', 'angle_with', 'dihedral_with']
-        buildlist = {}
-        order_of_definition = []
-        built = set([])
-
-        if start_atom is None and start_buildlist is None:
-            molecule = self.distance_to(self.topologic_center())
-            i = molecule['distance'].idxmin()
-            # TODO DRY1
-            buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
-            built.add(i)
-            order_of_definition.append(i)
-        elif start_buildlist is None:
-            i = start_atom
-            # TODO DRY1
-            buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
-            built.add(i)
-            order_of_definition.append(i)
+        if start_buildlist is None:
+            buildlist = {}
+            order_of_definition = []
+            built = set([])
+            if start_atom is None:
+                molecule = self.distance_to(self.topologic_center())
+                i = molecule['distance'].idxmin()
+                buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
+                built.add(i)
+                order_of_definition.append(i)
+            else:
+                i = start_atom
+                buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
+                built.add(i)
+                order_of_definition.append(i)
+            if self.n_atoms > 1:
+                parent = {j: i for j in bond_dict[i]}
+                work_bond_dict = OrderedDict(
+                    [(j, bond_dict[j] - built) for j in bond_dict[i]])
+            else:
+                parent, work_bond_dict = {}, {}
         else:
-            pass
-        if self.n_atoms > 1:
-            parent = {j: i for j in bond_dict[i]}
-            work_bond_dict = OrderedDict([(j, bond_dict[j] - built)
-                                          for j in bond_dict[i]])
-        else:
-            parent, work_bond_dict = {}, {}
+            buildlist = start_buildlist.copy()
+            buildlist.columns = ['b', 'a', 'd']
+            order_of_definition = list(buildlist.index)
+            built = set(order_of_definition)
+            buildlist = buildlist.to_dict(orient='index')
+            # TODO implement
 
         while work_bond_dict:
             new_work_bond_dict = OrderedDict()
