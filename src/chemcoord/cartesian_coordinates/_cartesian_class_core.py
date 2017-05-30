@@ -15,7 +15,7 @@ import collections
 from sortedcontainers import SortedSet
 import warnings
 from chemcoord._generic_classes._common_class import _common_class
-from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord._exceptions import PhysicalMeaning
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
@@ -41,7 +41,7 @@ class Cartesian_core(_common_class):
         if not isinstance(frame, pd.DataFrame):
             raise ValueError('Need a pd.DataFrame as input')
         if not self._required_cols <= set(frame.columns):
-            raise PhysicalMeaningError('There are columns missing for a '
+            raise PhysicalMeaning('There are columns missing for a '
                                        'meaningful description of a molecule')
         self.frame = frame.copy()
         self.metadata = {}

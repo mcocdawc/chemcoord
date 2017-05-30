@@ -42,7 +42,7 @@ __all__ = ("get_version",)
 
 CURRENT_DIRECTORY = path.dirname(path.abspath(__file__))
 VERSION_FILE = path.join(CURRENT_DIRECTORY, "VERSION")
-CC_INIT = path.join(CURRENT_DIRECTORY, 'chemcoord', '__init__.py')
+CC_INIT = path.join(CURRENT_DIRECTORY, 'src', 'chemcoord', '__init__.py')
 CC_TUTORIAL = path.join(CURRENT_DIRECTORY, 'docs', 'source', 'tutorial.rst')
 
 GIT_COMMAND = "git"

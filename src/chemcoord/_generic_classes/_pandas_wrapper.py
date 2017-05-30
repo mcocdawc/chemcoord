@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 import pandas as pd
-from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord._exceptions import PhysicalMeaning
 import chemcoord._generic_classes._indexers as indexers
 
 
@@ -222,7 +222,7 @@ class _pandas_wrapper(object):
     @columns.setter
     def columns(self, value):
         if not self._required_cols <= set(value):
-            raise PhysicalMeaningError('There are columns missing for a '
+            raise PhysicalMeaning('There are columns missing for a '
                                        'meaningful description of a molecule')
         self.frame.columns = value
 
@@ -311,7 +311,7 @@ class _pandas_wrapper(object):
                 dropped_cols = set([keys])
 
         if not self._required_cols <= (set(self.columns) - set(dropped_cols)):
-            raise PhysicalMeaningError('You drop a column that is needed to '
+            raise PhysicalMeaning('You drop a column that is needed to '
                                        'be a physical meaningful description '
                                        'of a molecule.')
 

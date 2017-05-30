@@ -8,7 +8,7 @@ import six
 import numpy as np
 import warnings
 import re
-from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord._exceptions import PhysicalMeaning
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from chemcoord.cartesian_coordinates import xyz_functions
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
@@ -201,12 +201,12 @@ class mode(object):
 
         if not check_index(eq_strct_zmat, displaced_zmats):
             error_message = 'All indices have to match'
-            raise PhysicalMeaningError(error_message)
+            raise PhysicalMeaning(error_message)
 
         if not check_input(eq_strct_zmat, displaced_zmats):
             error_message = ('All Zmatrices require the same index and '
                              + 'the atom of each index number has to match.')
-            raise PhysicalMeaningError(error_message)
+            raise PhysicalMeaning(error_message)
 
         if fit_function == 'default':
             calculate_structure = default_fit_function(eq_strct_zmat,
@@ -255,7 +255,7 @@ class mode(object):
     def __add__(self, other):
         if self.eq_structure['zmat'] != other.eq_structure['zmat']:
             message = 'Only defined for the exact same equilibrium structure'
-            raise PhysicalMeaningError(message)
+            raise PhysicalMeaning(message)
         new_mode = self._give_displacement.copy()
         columns = ('bond', 'angle', 'dihedral')
         new_mode.loc[:, columns] = (self._give_displacement.loc[:, columns]
@@ -265,7 +265,7 @@ class mode(object):
     def __radd__(self, other):
         if self.eq_structure['zmat'] != other.eq_structure['zmat']:
             message = 'Only defined for the exact same equilibrium structure'
-            raise PhysicalMeaningError(message)
+            raise PhysicalMeaning(message)
         new_mode = self._give_displacement.copy()
         columns = ('bond', 'angle', 'dihedral')
         new_mode.loc[:, columns] = (self._give_displacement.loc[:, columns]

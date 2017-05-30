@@ -13,7 +13,7 @@ import pandas as pd
 import warnings
 from sortedcontainers import SortedSet
 from collections import OrderedDict
-from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord._exceptions import PhysicalMeaning, UndefinedCoordinateSystem
 from chemcoord.cartesian_coordinates._cartesian_class_core import \
     Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
@@ -22,79 +22,109 @@ from chemcoord.configuration import settings
 
 
 class Cartesian_give_zmat(Cartesian_core):
-    def _get_buildlist(self, use_lookup=settings['defaults']['use_lookup'],
-                       start_atom=None, start_buildlist=None):
+    @staticmethod
+    def _check_buildlist(buildlist):
+        for row, i in enumerate(buildlist.index):
+            give_message = ("Not a valid buildlist. "
+                            "The index {i} uses an invalid reference").format
+            if row == 0:
+                pass
+            elif row == 1:
+                if buildlist.loc[i, 'bond_with'] not in buildlist.index[:row]:
+                    raise UndefinedCoordinateSystem(give_message(i=i))
+            elif row == 2:
+                reference = buildlist.loc[i, ['bond_with', 'angle_with']]
+                if not reference.isin(buildlist.index[:row]).all():
+                    raise UndefinedCoordinateSystem(give_message(i=i))
+            else:
+                reference = buildlist.loc[i, ['bond_with', 'angle_with']]
+                if not reference.isin(buildlist.index[:row]).all():
+                    raise UndefinedCoordinateSystem(give_message(i=i))
+
+    def _get_buildlist(self, start_atom=None, start_buildlist=None,
+                       use_lookup=settings['defaults']['use_lookup']):
+        """Create a buildlist for a Zmatrix.
+
+        Args:
+            fixed_buildlist (np.array): It is possible to provide the
+                beginning of the buildlist. The rest is "figured" out
+                automatically.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            np.array: buildlist
+        """
         bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-        # The assignment of an arbitrary integer arb_int lateron
-        # is just done to preserve the type 'int64' in the DataFrame
-        arb_int = -1
-        # ['b', 'a', 'd'] is the abbreviation for
-        # ['bond_with', 'angle_with', 'dihedral_with']
+        if start_buildlist is not None:
+            self._check_buildlist(start_buildlist)
+            buildlist = start_buildlist.copy()
+            buildlist.columns = ['b', 'a', 'd']
+
         if start_buildlist is None:
-            buildlist = {}
-            order_of_definition = []
-            built = set([])
             if start_atom is None:
                 molecule = self.distance_to(self.topologic_center())
                 i = molecule['distance'].idxmin()
-                buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
-                built.add(i)
-                order_of_definition.append(i)
             else:
                 i = start_atom
-                buildlist[i] = {'b': np.nan, 'a': np.nan, 'd': np.nan}
-                built.add(i)
-                order_of_definition.append(i)
-            if self.n_atoms > 1:
-                parent = {j: i for j in bond_dict[i]}
-                work_bond_dict = OrderedDict(
-                    [(j, bond_dict[j] - built) for j in bond_dict[i]])
-            else:
-                parent, work_bond_dict = {}, {}
+            buildlist = {i: {'b': np.nan, 'a': np.nan, 'd': np.nan}}
+            order_of_definition = [i]
+            user_defined = set()
         else:
-            buildlist = start_buildlist.copy()
-            buildlist.columns = ['b', 'a', 'd']
             order_of_definition = list(buildlist.index)
-            built = set(order_of_definition)
+            user_defined = set(buildlist.index)
+            i = buildlist.index[0]
             buildlist = buildlist.to_dict(orient='index')
-            # TODO implement
+        visited = {i}
+
+        if self.n_atoms > 1:
+            parent = {j: i for j in bond_dict[i]}
+            work_bond_dict = OrderedDict(
+                [(j, bond_dict[j] - visited) for j in bond_dict[i]])
+        else:
+            parent, work_bond_dict = {}, {}
 
         while work_bond_dict:
             new_work_bond_dict = OrderedDict()
             for i in work_bond_dict:
-                if i in built:
+                if i in visited:
                     continue
-                b = parent[i]
-                if b in order_of_definition[:3]:
-                    if len(built) == 1:
-                        buildlist[i] = {'b': b, 'a': np.nan, 'd': np.nan}
-                    elif len(built) == 2:
-                        a = (bond_dict[b] & built)[0]
-                        buildlist[i] = {'b': b, 'a': a, 'd': np.nan}
-                    else:
-                        try:
-                            a = parent[b]
-                        except KeyError:
-                            a = (bond_dict[b] & built)[0]
-                        try:
-                            d = parent[a]
-                            if d in set([b, a]):
-                                raise KeyError
-                        except KeyError:
+                if i not in user_defined:
+                    b = parent[i]
+                    if b in order_of_definition[:3]:
+                        if len(buildlist) == 1:
+                            buildlist[i] = {'b': b, 'a': np.nan, 'd': np.nan}
+                        elif len(buildlist) == 2:
+                            a = (bond_dict[b] & visited)[0]
+                            buildlist[i] = {'b': b, 'a': a, 'd': np.nan}
+                        else:
                             try:
-                                d = ((bond_dict[a] & built) - set([b, a]))[0]
-                            except IndexError:
-                                d = ((bond_dict[b] & built) - set([b, a]))[0]
+                                a = parent[b]
+                            except KeyError:
+                                a = (bond_dict[b] & visited)[0]
+                            try:
+                                d = parent[a]
+                                if d in set([b, a]):
+                                    raise KeyError
+                            except KeyError:
+                                try:
+                                    d = ((bond_dict[a] & visited)
+                                         - set([b, a]))[0]
+                                except IndexError:
+                                    d = ((bond_dict[b] & visited)
+                                         - set([b, a]))[0]
+                            buildlist[i] = {'b': b, 'a': a, 'd': d}
+                    else:
+                        a, d = [buildlist[b][x] for x in ['b', 'a']]
                         buildlist[i] = {'b': b, 'a': a, 'd': d}
-                else:
-                    a, d = [buildlist[b][x] for x in ['b', 'a']]
-                    buildlist[i] = {'b': b, 'a': a, 'd': d}
-                order_of_definition.append(i)
-                built.add(i)
+                    order_of_definition.append(i)
+
+                visited.add(i)
                 for j in work_bond_dict[i]:
-                    new_work_bond_dict[j] = bond_dict[j] - built
+                    new_work_bond_dict[j] = bond_dict[j] - visited
                     parent[j] = i
             work_bond_dict = new_work_bond_dict
+
         output = pd.DataFrame.from_dict(buildlist, orient='index')
         output = output.fillna(0).astype('int64')
         output = output.loc[order_of_definition, ['b', 'a', 'd']]

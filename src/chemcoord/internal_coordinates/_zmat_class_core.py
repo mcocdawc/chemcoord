@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import math as m
 from chemcoord._generic_classes._common_class import _common_class
-from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord._exceptions import PhysicalMeaning
 from chemcoord.configuration import settings
 
 
@@ -43,7 +43,7 @@ class Zmat_core(_common_class):
         if not isinstance(frame, pd.DataFrame):
             raise ValueError('Need a pd.DataFrame as input')
         if not self._required_cols <= set(frame.columns):
-            raise PhysicalMeaningError('There are columns missing for a '
+            raise PhysicalMeaning('There are columns missing for a '
                                        'meaningful description of a molecule')
         self.frame = frame.copy()
         self.metadata = {}
@@ -110,7 +110,7 @@ class Zmat_core(_common_class):
 
             new[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         except AssertionError:
-            raise PhysicalMeaningError("You can add only those zmatrices that \
+            raise PhysicalMeaning("You can add only those zmatrices that \
 have the same index, use the same buildlist, have the same ordering... \
 The only allowed difference is ['bond', 'angle', 'dihedral']")
         return new

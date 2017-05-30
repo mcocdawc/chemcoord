@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import warnings
 from chemcoord.internal_coordinates._zmat_class_core import Zmat_core
-from chemcoord._exceptions import PhysicalMeaningError
+from chemcoord._exceptions import PhysicalMeaning
 from chemcoord.configuration import settings
 
 
