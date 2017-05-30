@@ -811,6 +811,10 @@ class Cartesian_core(_common_class):
         fragments = []
         pending = set(self.index)
         self.get_bonds(use_lookup=use_lookup)
+
+        def restrict_bond_dict(self, fragment, bond_dict):
+            return {j: bond_dict[j] & set(self.index) for j in fragment.index}
+
         while pending:
             index = self.connected_to(pick(pending), use_lookup=True,
                                       give_only_index=True)
@@ -818,7 +822,15 @@ class Cartesian_core(_common_class):
             if give_only_index:
                 fragments.append(index)
             else:
-                fragments.append(self.loc[index])
+                fragment = self.loc[index]
+                fragment._metadata['bond_dict'] = restrict_bond_dict(
+                    self, fragment, self._metadata['bond_dict'])
+                try:
+                    fragment._metadata['val_bond_dict'] = restrict_bond_dict(
+                        self, fragment, self._metadata['val_bond_dict'])
+                except KeyError:
+                    pass
+                fragments.append(fragment)
         return fragments
 
     def get_fragment(self, list_of_indextuples, give_only_index=False,

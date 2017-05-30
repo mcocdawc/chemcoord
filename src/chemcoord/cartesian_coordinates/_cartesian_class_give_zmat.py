@@ -13,7 +13,8 @@ import pandas as pd
 import warnings
 from sortedcontainers import SortedSet
 from collections import OrderedDict
-from chemcoord._exceptions import PhysicalMeaning, UndefinedCoordinateSystem
+from chemcoord._exceptions import \
+    PhysicalMeaning, UndefinedCoordinateSystem, IllegalArgumentCombination
 from chemcoord.cartesian_coordinates._cartesian_class_core import \
     Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
@@ -23,58 +24,82 @@ from chemcoord.configuration import settings
 
 class Cartesian_give_zmat(Cartesian_core):
     @staticmethod
-    def _check_buildlist(buildlist):
-        for row, i in enumerate(buildlist.index):
-            give_message = ("Not a valid buildlist. "
+    def _check_construction_table(construction_table):
+        """Checks if a construction table uses valid references.
+        Raises an exception (UndefinedCoordinateSystem) otherwise.
+        """
+        c_table = construction_table
+        for row, i in enumerate(c_table.index):
+            give_message = ("Not a valid construction table. "
                             "The index {i} uses an invalid reference").format
             if row == 0:
                 pass
             elif row == 1:
-                if buildlist.loc[i, 'bond_with'] not in buildlist.index[:row]:
+                if c_table.loc[i, 'bond_with'] not in c_table.index[:row]:
                     raise UndefinedCoordinateSystem(give_message(i=i))
             elif row == 2:
-                reference = buildlist.loc[i, ['bond_with', 'angle_with']]
-                if not reference.isin(buildlist.index[:row]).all():
+                reference = c_table.loc[i, ['bond_with', 'angle_with']]
+                if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
             else:
-                reference = buildlist.loc[i, ['bond_with', 'angle_with']]
-                if not reference.isin(buildlist.index[:row]).all():
+                reference = c_table.loc[i, ['bond_with', 'angle_with']]
+                if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
 
-    def _get_buildlist(self, start_atom=None, start_buildlist=None,
-                       use_lookup=settings['defaults']['use_lookup']):
-        """Create a buildlist for a Zmatrix.
+    def _get_construction_table(self,
+                                start_atom=None,
+                                predefined_table=None,
+                                use_lookup=settings['defaults']['use_lookup'],
+                                bond_dict=None):
+        """Create a construction table for a Zmatrix.
+
+        A construction table is basically a Zmatrix without the values
+        for the bond lenghts, angles and dihedrals.
+        It contains the whole information about which reference atoms
+        are used by each atom in the Zmatrix.
+
+        This method creates a so called "chemical" construction table,
+        which makes use of the connectivity table in this molecule.
+
+        By default the first atom is the one nearest to the topologic center.
+        (Compare with :meth:`~Cartesian.topologic_center()`)
 
         Args:
-            fixed_buildlist (np.array): It is possible to provide the
-                beginning of the buildlist. The rest is "figured" out
-                automatically.
+            start_atom (index): An index for the first atom may be provided.
+            predefined_table (pd.DataFrame): An uncomplete construction table
+                may be provided. The rest is created automatically.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
+            bond_dict (OrderedDict): If a connectivity table is provided, it is
+                not recalculated.
 
         Returns:
-            np.array: buildlist
+            pd.DataFrame: Construction table
         """
-        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-        if start_buildlist is not None:
-            self._check_buildlist(start_buildlist)
-            buildlist = start_buildlist.copy()
-            buildlist.columns = ['b', 'a', 'd']
+        if start_atom is not None and predefined_table is not None:
+            raise IllegalArgumentCombination('Either start_atom or '
+                                             'predefined_table has to be None')
+        if bond_dict is None:
+            bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        if predefined_table is not None:
+            self._check_construction_table(predefined_table)
+            construction_table = predefined_table.copy()
+            construction_table.columns = ['b', 'a', 'd']
 
-        if start_buildlist is None:
+        if predefined_table is None:
             if start_atom is None:
                 molecule = self.distance_to(self.topologic_center())
                 i = molecule['distance'].idxmin()
             else:
                 i = start_atom
-            buildlist = {i: {'b': np.nan, 'a': np.nan, 'd': np.nan}}
+            construction_table = {i: {'b': np.nan, 'a': np.nan, 'd': np.nan}}
             order_of_definition = [i]
             user_defined = set()
         else:
-            order_of_definition = list(buildlist.index)
-            user_defined = set(buildlist.index)
-            i = buildlist.index[0]
-            buildlist = buildlist.to_dict(orient='index')
+            order_of_definition = list(construction_table.index)
+            user_defined = set(construction_table.index)
+            i = construction_table.index[0]
+            construction_table = construction_table.to_dict(orient='index')
         visited = {i}
 
         if self.n_atoms > 1:
@@ -92,11 +117,11 @@ class Cartesian_give_zmat(Cartesian_core):
                 if i not in user_defined:
                     b = parent[i]
                     if b in order_of_definition[:3]:
-                        if len(buildlist) == 1:
-                            buildlist[i] = {'b': b, 'a': np.nan, 'd': np.nan}
-                        elif len(buildlist) == 2:
+                        if len(construction_table) == 1:
+                            construction_table[i] = {'b': b}
+                        elif len(construction_table) == 2:
                             a = (bond_dict[b] & visited)[0]
-                            buildlist[i] = {'b': b, 'a': a, 'd': np.nan}
+                            construction_table[i] = {'b': b, 'a': a}
                         else:
                             try:
                                 a = parent[b]
@@ -113,10 +138,10 @@ class Cartesian_give_zmat(Cartesian_core):
                                 except IndexError:
                                     d = ((bond_dict[b] & visited)
                                          - set([b, a]))[0]
-                            buildlist[i] = {'b': b, 'a': a, 'd': d}
+                            construction_table[i] = {'b': b, 'a': a, 'd': d}
                     else:
-                        a, d = [buildlist[b][x] for x in ['b', 'a']]
-                        buildlist[i] = {'b': b, 'a': a, 'd': d}
+                        a, d = [construction_table[b][k] for k in ['b', 'a']]
+                        construction_table[i] = {'b': b, 'a': a, 'd': d}
                     order_of_definition.append(i)
 
                 visited.add(i)
@@ -125,40 +150,109 @@ class Cartesian_give_zmat(Cartesian_core):
                     parent[j] = i
             work_bond_dict = new_work_bond_dict
 
-        output = pd.DataFrame.from_dict(buildlist, orient='index')
+        output = pd.DataFrame.from_dict(construction_table, orient='index')
         output = output.fillna(0).astype('int64')
         output = output.loc[order_of_definition, ['b', 'a', 'd']]
         output.columns = ['bond_with', 'angle_with', 'dihedral_with']
         return output
 
-    def _clean_dihedral(self, buildlist_to_check,
-                        use_lookup=settings['defaults']['use_lookup']):
-        """Reindexe the dihedral defining atom if colinear.
+    def _shortest_distance(self, other):
+        coords = ['x', 'y', 'z']
+        old_indices = self.index, other.index
+        self.index, other.index = range(self.n_atoms), range(other.n_atoms)
+        self_positions = self.loc[:, coords].values
+        other_positions = other.loc[:, coords].values
+
+        coord1 = self_positions[:, 0]
+        coord2 = other_positions[:, 0]
+        squared_distances = (coord1 - coord2[:, None])**2
+        for i in range(1, 3):
+            coord1= self_positions[:, i]
+            coord2= other_positions[:, i]
+            squared_distances += (coord1 - coord2[:, None])**2
+        i, j = np.unravel_index(squared_distances.argmin(),
+                                squared_distances.shape)
+        distance = np.sqrt(squared_distances[i, j])
+        self.index, other.index = old_indices
+        return i, j, distance
+
+
+    def get_construction_table(self,
+                               use_lookup=settings['defaults']['use_lookup']):
+        """Create a construction table for a Zmatrix.
+
+        A construction table is basically a Zmatrix without the values
+        for the bond lenghts, angles and dihedrals.
+        It contains the whole information about which reference atoms
+        are used by each atom in the Zmatrix.
+
+        This method creates a so called "chemical" construction table,
+        which makes use of the connectivity table in this molecule.
+
+        By default the first atom is the one nearest to the topologic center.
+        (Compare with :meth:`~Cartesian.topologic_center()`)
 
         Args:
-            buildlist (np.array):
+            start_atom (index): An index for the first atom may be provided.
+            predefined_table (pd.DataFrame): An uncomplete construction table
+                may be provided. The rest is created automatically.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
-            np.array: modified_buildlist
+            pd.DataFrame: Construction table
         """
-        buildlist = buildlist_to_check.copy()
-        buildlist.columns = ['b', 'a', 'd']
-        angles = self.angle_degrees(buildlist.iloc[3:, :])
+        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        fragments = sorted(self.fragmentate(),
+                           key=lambda x: len(x), reverse=True)
+        molecule = fragments[0]
+        full_constr_table = molecule._get_construction_table(use_lookup=True)
+        full_constr_table.columns = ['b', 'a', 'd']
+        included = list(molecule.index)
+        for molecule in fragments[1:]:
+            i, j = molecule._shortest_distance(self.loc[included])
+            constr_table = molecule._get_construction_table(start_atom=i,
+                                                            use_lookup=True)
+            constr_table.columns = ['b', 'a', 'd']
+            a, d = full_constr_table.loc[j, ['b', 'a']]
+            constr_table.loc[i] = j, a, d
+            constr_table.iloc[1, ['a', 'd']] = b, a
+            constr_table.iloc[2, 'd'] = b
+            pd.concat([full_constr_table, constr_table])
+        return full_constr_table
+
+    def _clean_dihedral(self, construction_table, bond_dict=None,
+                        use_lookup=settings['defaults']['use_lookup']):
+        """Reindexe the dihedral defining atom if colinear.
+
+        Args:
+            construction_table (pd.DataFrame):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+            bond_dict (OrderedDict): If a connectivity table is provided, it is
+                not recalculated.
+
+        Returns:
+            pd.DataFrame: construction_table
+        """
+        if bond_dict is None:
+            bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        c_table = construction_table.copy()
+        c_table.columns = ['b', 'a', 'd']
+        angles = self.angle_degrees(c_table.iloc[3:, :])
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
-        rename = dict(enumerate(buildlist.index[3:]))
+        rename = dict(enumerate(c_table.index[3:]))
         problem_index = [rename[i] for i in problem_index]
 
         print(problem_index)
         for i in problem_index:
-            loc_i = buildlist.index.get_loc(i)
-            b, a, problem_d = buildlist.loc[i, ['b', 'a', 'd']]
+            loc_i = c_table.index.get_loc(i)
+            b, a, problem_d = c_table.loc[i, ['b', 'a', 'd']]
             try:
                 d = (bond_dict[a] - {b, a, problem_d}
-                     - set(buildlist.index[loc_i:]))[0]
+                     - set(c_table.index[loc_i:]))[0]
             except IndexError:
-                visited = set(buildlist.index[loc_i:]) | {b, a, problem_d}
+                visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
                 tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
                                              for j in bond_dict[problem_d]])
                 found = False
@@ -174,21 +268,22 @@ class Cartesian_give_zmat(Cartesian_core):
                                 new_tmp_bond_dict[j] = bond_dict[j] - built
                         else:
                             found = True
-                            buildlist.loc[i, 'd'] = new_d
+                            c_table.loc[i, 'd'] = new_d
                     tmp_bond_dict = new_tmp_bond_dict
-        buildlist.columns = ['bond_with', 'angle_with', 'dihedral_with']
-        return buildlist
+        c_table.columns = ['bond_with', 'angle_with', 'dihedral_with']
+        return c_table
 
-    def _build_zmat(self, buildlist):
-        """Create the zmatrix from a buildlist.
+    def _build_zmat(self, construction_table):
+        """Create the Zmatrix from a construction table.
 
         Args:
-            buildlist (np.array):
+            Construction table (pd.DataFrame):
 
         Returns:
-            Zmat: A new instance of :class:`zmat_functions.Zmat`.
+            Zmat: A new instance of :class:`Zmat`.
         """
-        index = buildlist.index
+        c_table = construction_table
+        index = c_table.index
         default_cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
                         'dihedral_with', 'dihedral']
         optional_cols = list(set(self.columns) - {'atom', 'x', 'y', 'z'})
@@ -198,16 +293,16 @@ class Cartesian_give_zmat(Cartesian_core):
 
         zmat_frame.loc[:, optional_cols] = self.loc[index, optional_cols]
 
-        bonds = self.bond_lengths(buildlist, start_row=1)
-        angles = self.angle_degrees(buildlist, start_row=2)
-        dihedrals = self.dihedral_degrees(buildlist, start_row=3)
+        bonds = self.bond_lengths(c_table, start_row=1)
+        angles = self.angle_degrees(c_table, start_row=2)
+        dihedrals = self.dihedral_degrees(c_table, start_row=3)
 
         zmat_frame.loc[index, 'atom'] = self.loc[index, 'atom']
-        zmat_frame.loc[index, 'bond_with'] = buildlist.iloc[1:, 0]
+        zmat_frame.loc[index, 'bond_with'] = c_table.iloc[1:, 0]
         zmat_frame.loc[index[1:], 'bond'] = bonds
-        zmat_frame.loc[index[2:], 'angle_with'] = buildlist.iloc[2:, 1]
+        zmat_frame.loc[index[2:], 'angle_with'] = c_table.iloc[2:, 1]
         zmat_frame.loc[index[2:], 'angle'] = angles
-        zmat_frame.loc[index[3:], 'dihedral_with'] = buildlist.iloc[3:, 2]
+        zmat_frame.loc[index[3:], 'dihedral_with'] = c_table.iloc[3:, 2]
         zmat_frame.loc[index[3:], 'dihedral'] = dihedrals
 
         lines = np.full(self.n_atoms, True, dtype='bool')
