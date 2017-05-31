@@ -42,7 +42,7 @@ class Cartesian_core(_common_class):
             raise ValueError('Need a pd.DataFrame as input')
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning('There are columns missing for a '
-                                       'meaningful description of a molecule')
+                                  'meaningful description of a molecule')
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
@@ -193,18 +193,26 @@ class Cartesian_core(_common_class):
         return molecule
 
     @staticmethod
-    def _give_bond_array(positions, bond_radii, self_bonding_allowed=False):
+    def _get_squared_distances(positions1, positions2):
+        """Optimized function for calculating the distance between each pair
+        of points in positions1 and positions2.
+        """
+        coord1 = positions1[:, 0]
+        coord2 = positions2[:, 0]
+        squared_distances = (coord1 - coord2[:, None])**2
+        for i in range(1, 3):
+            coord1 = positions1[:, i]
+            coord2 = positions2[:, i]
+            squared_distances += (coord1 - coord2[:, None])**2
+        return squared_distances
+
+    def _give_bond_array(self, positions, bond_radii,
+                         self_bonding_allowed=False):
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
         """
-        squared_radii = (bond_radii + bond_radii[:, None])**2
-
-        coord = positions[:, 0]
-        squared_distances = (coord - coord[:, None])**2
-        for i in range(1, 3):
-            coord = positions[:, i]
-            squared_distances += (coord - coord[:, None])**2
-        overlap = squared_radii - squared_distances
+        D = self._get_squared_distances(positions, positions)
+        overlap = (bond_radii + bond_radii[:, None])**2 - D
         bond_array = overlap >= 0
         if not self_bonding_allowed:
             np.fill_diagonal(bond_array, False)
@@ -812,9 +820,6 @@ class Cartesian_core(_common_class):
         pending = set(self.index)
         self.get_bonds(use_lookup=use_lookup)
 
-        def restrict_bond_dict(self, fragment, bond_dict):
-            return {j: bond_dict[j] & set(self.index) for j in fragment.index}
-
         while pending:
             index = self.connected_to(pick(pending), use_lookup=True,
                                       give_only_index=True)
@@ -823,15 +828,19 @@ class Cartesian_core(_common_class):
                 fragments.append(index)
             else:
                 fragment = self.loc[index]
-                fragment._metadata['bond_dict'] = restrict_bond_dict(
-                    self, fragment, self._metadata['bond_dict'])
+                fragment._metadata['bond_dict'] = fragment.restrict_bond_dict(
+                    self._metadata['bond_dict'])
                 try:
-                    fragment._metadata['val_bond_dict'] = restrict_bond_dict(
-                        self, fragment, self._metadata['val_bond_dict'])
+                    fragment._metadata['val_bond_dict'] = (
+                        fragment.restrict_bond_dict(
+                            self._metadata['val_bond_dict']))
                 except KeyError:
                     pass
                 fragments.append(fragment)
         return fragments
+
+    def restrict_bond_dict(self, bond_dict):
+        return {j: bond_dict[j] & set(self.index) for j in self.index}
 
     def get_fragment(self, list_of_indextuples, give_only_index=False,
                      use_lookup=settings['defaults']['use_lookup']):
@@ -860,10 +869,22 @@ class Cartesian_core(_common_class):
                                            give_only_index=True,
                                            use_lookup=use_lookup)
         if give_only_index:
-            value_to_return = fragment_index
+            return fragment_index
         else:
-            value_to_return = self.loc[fragment_index, :]
-        return value_to_return
+            return self.loc[fragment_index, :]
+
+    def _shortest_distance(self, other):
+        coords = ['x', 'y', 'z']
+        positions1 = self.loc[:, coords].values.astype('float32')
+        positions2 = other.loc[:, coords].values.astype('float32')
+        D = self._get_squared_distances(positions1, positions2)
+        i, j = np.unravel_index(D.argmin(), D.shape)
+        distance = np.sqrt(D[i, j])
+
+        i, j = j, i
+        i = dict(enumerate(self.index))[i]
+        j = dict(enumerate(other.index))[j]
+        return i, j, distance
 
     def inertia(self):
         """Calculate the inertia tensor and transforms along

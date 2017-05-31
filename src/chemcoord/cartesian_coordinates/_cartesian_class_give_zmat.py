@@ -156,28 +156,7 @@ class Cartesian_give_zmat(Cartesian_core):
         output.columns = ['bond_with', 'angle_with', 'dihedral_with']
         return output
 
-    def _shortest_distance(self, other):
-        coords = ['x', 'y', 'z']
-        old_indices = self.index, other.index
-        self.index, other.index = range(self.n_atoms), range(other.n_atoms)
-        self_positions = self.loc[:, coords].values
-        other_positions = other.loc[:, coords].values
-
-        coord1 = self_positions[:, 0]
-        coord2 = other_positions[:, 0]
-        squared_distances = (coord1 - coord2[:, None])**2
-        for i in range(1, 3):
-            coord1= self_positions[:, i]
-            coord2= other_positions[:, i]
-            squared_distances += (coord1 - coord2[:, None])**2
-        i, j = np.unravel_index(squared_distances.argmin(),
-                                squared_distances.shape)
-        distance = np.sqrt(squared_distances[i, j])
-        self.index, other.index = old_indices
-        return i, j, distance
-
-
-    def get_construction_table(self,
+    def get_construction_table(self, fragment_list=None,
                                use_lookup=settings['defaults']['use_lookup']):
         """Create a construction table for a Zmatrix.
 
@@ -202,23 +181,52 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
-        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        arb_int = 0
+        full_bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         fragments = sorted(self.fragmentate(),
-                           key=lambda x: len(x), reverse=True)
+                           key=lambda x: len(x), reverse=False)
+
         molecule = fragments[0]
         full_constr_table = molecule._get_construction_table(use_lookup=True)
         full_constr_table.columns = ['b', 'a', 'd']
         included = list(molecule.index)
+
         for molecule in fragments[1:]:
-            i, j = molecule._shortest_distance(self.loc[included])
+            i, b = molecule._shortest_distance(self.loc[included])[:2]
             constr_table = molecule._get_construction_table(start_atom=i,
                                                             use_lookup=True)
             constr_table.columns = ['b', 'a', 'd']
-            a, d = full_constr_table.loc[j, ['b', 'a']]
-            constr_table.loc[i] = j, a, d
-            constr_table.iloc[1, ['a', 'd']] = b, a
-            constr_table.iloc[2, 'd'] = b
-            pd.concat([full_constr_table, constr_table])
+            if b in full_constr_table.index[:3]:
+                if b == full_constr_table.index[0]:
+                    tmp_bond_dict = self.loc[
+                        included].restrict_bond_dict(full_bond_dict)
+                    try:
+                        a = (tmp_bond_dict[b] & set(included))[0]
+                    except IndexError:
+                        a = arb_int
+                    try:
+                        d = (tmp_bond_dict[a] & set(included) - {b})[0]
+                    except (KeyError, IndexError):
+                        d = arb_int
+                elif b == full_constr_table.index[1]:
+                    a = full_constr_table.loc[b, 'b']
+                    tmp_bond_dict = self.loc[
+                        included].restrict_bond_dict(full_bond_dict)
+                    d = (tmp_bond_dict[a] & set(included))[0]
+                elif b == full_constr_table.index[2]:
+                    a, d = full_constr_table.loc[b, ['b', 'a']]
+            else:
+                a, d = full_constr_table.loc[b, ['b', 'a']]
+
+            if len(constr_table) >= 1:
+                constr_table.iloc[0, :] = b, a, d
+            if len(constr_table) >= 2:
+                constr_table.iloc[1, [1, 2]] = b, a
+            if len(constr_table) >= 3:
+                constr_table.iloc[2, 2] = b
+
+            full_constr_table = pd.concat([full_constr_table, constr_table])
+            included.extend(molecule.index)
         return full_constr_table
 
     def _clean_dihedral(self, construction_table, bond_dict=None,
@@ -244,7 +252,6 @@ class Cartesian_give_zmat(Cartesian_core):
         rename = dict(enumerate(c_table.index[3:]))
         problem_index = [rename[i] for i in problem_index]
 
-        print(problem_index)
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
             b, a, problem_d = c_table.loc[i, ['b', 'a', 'd']]
