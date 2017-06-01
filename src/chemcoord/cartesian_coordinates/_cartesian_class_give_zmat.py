@@ -12,9 +12,10 @@ import numpy as np
 import pandas as pd
 import warnings
 from sortedcontainers import SortedSet
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from chemcoord._exceptions import \
-    PhysicalMeaning, UndefinedCoordinateSystem, IllegalArgumentCombination
+    PhysicalMeaning, UndefinedCoordinateSystem, IllegalArgumentCombination, \
+    InvalidReference
 from chemcoord.cartesian_coordinates._cartesian_class_core import \
     Cartesian_core
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
@@ -76,6 +77,7 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
+        arb_int = 0
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination('Either start_atom or '
                                              'predefined_table has to be None')
@@ -94,20 +96,32 @@ class Cartesian_give_zmat(Cartesian_core):
                 i = start_atom
             construction_table = {i: {'b': np.nan, 'a': np.nan, 'd': np.nan}}
             order_of_definition = [i]
-            user_defined = set()
+            user_defined = []
+            visited = {i}
+            if self.n_atoms > 1:
+                parent = {j: i for j in bond_dict[i]}
+                work_bond_dict = OrderedDict(
+                    [(j, bond_dict[j] - visited) for j in bond_dict[i]])
+            else:
+                parent, work_bond_dict = {}, {}
         else:
             order_of_definition = list(construction_table.index)
-            user_defined = set(construction_table.index)
+            user_defined = list(construction_table.index)
             i = construction_table.index[0]
             construction_table = construction_table.to_dict(orient='index')
-        visited = {i}
-
-        if self.n_atoms > 1:
-            parent = {j: i for j in bond_dict[i]}
-            work_bond_dict = OrderedDict(
-                [(j, bond_dict[j] - visited) for j in bond_dict[i]])
-        else:
-            parent, work_bond_dict = {}, {}
+            visited = {i}
+            if self.n_atoms > 1:
+                parent = {j: i for j in bond_dict[i]}
+                bond_dict[i]
+                work_bond_dict = OrderedDict(
+                    [(j, bond_dict[j] - visited)
+                     for j in bond_dict[i] if j not in user_defined])
+                for j in reversed(user_defined):
+                    if j in bond_dict[i]:
+                        work_bond_dict[j] = bond_dict[j] - visited
+                        work_bond_dict.move_to_end(j, last=False)
+            else:
+                parent, work_bond_dict = {}, {}
 
         while work_bond_dict:
             new_work_bond_dict = OrderedDict()
@@ -117,9 +131,9 @@ class Cartesian_give_zmat(Cartesian_core):
                 if i not in user_defined:
                     b = parent[i]
                     if b in order_of_definition[:3]:
-                        if len(construction_table) == 1:
+                        if len(order_of_definition) == 1:
                             construction_table[i] = {'b': b}
-                        elif len(construction_table) == 2:
+                        elif len(order_of_definition) == 2:
                             a = (bond_dict[b] & visited)[0]
                             construction_table[i] = {'b': b, 'a': a}
                         else:
@@ -130,8 +144,9 @@ class Cartesian_give_zmat(Cartesian_core):
                             try:
                                 d = parent[a]
                                 if d in set([b, a]):
-                                    raise KeyError
-                            except KeyError:
+                                    message = "Don't make tautologic reference"
+                                    raise InvalidReference(message)
+                            except (KeyError, InvalidReference):
                                 try:
                                     d = ((bond_dict[a] & visited)
                                          - set([b, a]))[0]
@@ -146,10 +161,11 @@ class Cartesian_give_zmat(Cartesian_core):
 
                 visited.add(i)
                 for j in work_bond_dict[i]:
+                    # TODO prepend user_defined
+                    raise NotImplementedError
                     new_work_bond_dict[j] = bond_dict[j] - visited
                     parent[j] = i
             work_bond_dict = new_work_bond_dict
-
         output = pd.DataFrame.from_dict(construction_table, orient='index')
         output = output.fillna(0).astype('int64')
         output = output.loc[order_of_definition, ['b', 'a', 'd']]
@@ -183,50 +199,74 @@ class Cartesian_give_zmat(Cartesian_core):
         """
         arb_int = 0
         full_bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-        fragments = sorted(self.fragmentate(),
-                           key=lambda x: len(x), reverse=False)
+        if fragment_list is None:
+            fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
+        else:
+            fragments = fragment_list
 
-        molecule = fragments[0]
-        full_constr_table = molecule._get_construction_table(use_lookup=True)
+        fragment = fragments[0]
+        if fragment_list is None:
+            full_constr_table = fragment._get_construction_table(
+                use_lookup=True)
+        elif isinstance(fragment, tuple):
+            fragment, references = fragment
+            full_constr_table = fragment._get_construction_table(
+                use_lookup=use_lookup)
+        else:
+            full_constr_table = fragment._get_construction_table(
+                use_lookup=use_lookup)
         full_constr_table.columns = ['b', 'a', 'd']
-        included = list(molecule.index)
+        included = list(fragment.index)
 
-        for molecule in fragments[1:]:
-            i, b = molecule._shortest_distance(self.loc[included])[:2]
-            constr_table = molecule._get_construction_table(start_atom=i,
-                                                            use_lookup=True)
-            constr_table.columns = ['b', 'a', 'd']
-            if b in full_constr_table.index[:3]:
-                if b == full_constr_table.index[0]:
-                    tmp_bond_dict = self.loc[
-                        included].restrict_bond_dict(full_bond_dict)
-                    try:
-                        a = (tmp_bond_dict[b] & set(included))[0]
-                    except IndexError:
-                        a = arb_int
-                    try:
-                        d = (tmp_bond_dict[a] & set(included) - {b})[0]
-                    except (KeyError, IndexError):
-                        d = arb_int
-                elif b == full_constr_table.index[1]:
-                    a = full_constr_table.loc[b, 'b']
-                    tmp_bond_dict = self.loc[
-                        included].restrict_bond_dict(full_bond_dict)
-                    d = (tmp_bond_dict[a] & set(included))[0]
-                elif b == full_constr_table.index[2]:
-                    a, d = full_constr_table.loc[b, ['b', 'a']]
+        for fragment in fragments[1:]:
+            bond_dict = self.loc[included].restrict_bond_dict(full_bond_dict)
+            if isinstance(fragment, tuple):
+                fragment, references = fragment
+                if len(references) < min(3, len(fragment)):
+                    raise ValueError('If you specify references for a '
+                                     'fragment, it has to consist of at least'
+                                     'min(3, len(fragment)) rows.')
+                constr_table = fragment._get_construction_table(
+                    predefined_table=references, use_lookup=use_lookup)
             else:
-                a, d = full_constr_table.loc[b, ['b', 'a']]
+                i, b = fragment._shortest_distance(self.loc[included])[:2]
+                if fragment_list is None:
+                    constr_table = fragment._get_construction_table(
+                        start_atom=i, use_lookup=True)
+                else:
+                    constr_table = fragment._get_construction_table(
+                        start_atom=i, use_lookup=use_lookup)
+                constr_table.columns = ['b', 'a', 'd']
+                if len(full_constr_table) == 1:
+                    a, d = arb_int, arb_int
+                elif len(full_constr_table) == 2:
+                    if b == full_constr_table.index[0]:
+                        a = full_constr_table.index[1]
+                    else:
+                        a = full_constr_table.index[0]
+                    d = arb_int
+                else:
+                    if b in full_constr_table.index[:2]:
+                        if b == full_constr_table.index[0]:
+                            a = full_constr_table.index[2]
+                            d = full_constr_table.index[1]
+                        else:
+                            a = full_constr_table.loc[b, 'b']
+                            d = full_constr_table.index[2]
+                    else:
+                        a, d = full_constr_table.loc[b, ['b', 'a']]
 
-            if len(constr_table) >= 1:
-                constr_table.iloc[0, :] = b, a, d
-            if len(constr_table) >= 2:
-                constr_table.iloc[1, [1, 2]] = b, a
-            if len(constr_table) >= 3:
-                constr_table.iloc[2, 2] = b
+                if len(constr_table) >= 1:
+                    constr_table.iloc[0, :] = b, a, d
+                if len(constr_table) >= 2:
+                    constr_table.iloc[1, [1, 2]] = b, a
+                if len(constr_table) >= 3:
+                    constr_table.iloc[2, 2] = b
 
             full_constr_table = pd.concat([full_constr_table, constr_table])
-            included.extend(molecule.index)
+            included.extend(fragment.index)
+        full_constr_table.columns = ['bond_with', 'angle_with',
+                                     'dihedral_with']
         return full_constr_table
 
     def _clean_dihedral(self, construction_table, bond_dict=None,
@@ -277,6 +317,10 @@ class Cartesian_give_zmat(Cartesian_core):
                             found = True
                             c_table.loc[i, 'd'] = new_d
                     tmp_bond_dict = new_tmp_bond_dict
+                if not found:
+                    # Check using distances
+                    # Raise UndefinedCoordinateSystem otherwise
+                    pass
         c_table.columns = ['bond_with', 'angle_with', 'dihedral_with']
         return c_table
 

@@ -13,5 +13,9 @@ class UndefinedCoordinateSystem(PhysicalMeaning):
     pass
 
 
+class InvalidReference(UndefinedCoordinateSystem):
+    pass
+
+
 class IllegalArgumentCombination(ValueError):
     pass

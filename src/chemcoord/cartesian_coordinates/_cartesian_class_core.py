@@ -865,13 +865,26 @@ class Cartesian_core(_common_class):
         """
         exclude = [tuple[0] for tuple in list_of_indextuples]
         index_of_atom = list_of_indextuples[0][1]
-        fragment_index = self.connected_to(index_of_atom, exclude=exclude,
+        fragment_index = self.connected_to(index_of_atom, exclude=set(exclude),
                                            give_only_index=True,
                                            use_lookup=use_lookup)
         if give_only_index:
             return fragment_index
         else:
             return self.loc[fragment_index, :]
+
+    def without(self, fragments):
+        if pd.api.types.is_list_like(fragments):
+            for fragment in fragments:
+                try:
+                    index_of_all_fragments |= fragment.index
+                except NameError:
+                    index_of_all_fragments = fragment.index
+        else:
+            index_of_all_fragments = fragments.index
+        return self.loc[self.index.difference(index_of_all_fragments)]
+
+
 
     def _shortest_distance(self, other):
         coords = ['x', 'y', 'z']
