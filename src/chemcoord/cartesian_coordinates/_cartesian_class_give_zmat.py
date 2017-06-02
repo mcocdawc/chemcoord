@@ -77,7 +77,14 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
+        def modify_priority(bond_dict, user_defined):
+            for j in reversed(user_defined):
+                try:
+                    work_bond_dict.move_to_end(j, last=False)
+                except KeyError:
+                    pass
         arb_int = 0
+
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination('Either start_atom or '
                                              'predefined_table has to be None')
@@ -94,34 +101,24 @@ class Cartesian_give_zmat(Cartesian_core):
                 i = molecule['distance'].idxmin()
             else:
                 i = start_atom
-            construction_table = {i: {'b': np.nan, 'a': np.nan, 'd': np.nan}}
             order_of_definition = [i]
             user_defined = []
-            visited = {i}
-            if self.n_atoms > 1:
-                parent = {j: i for j in bond_dict[i]}
-                work_bond_dict = OrderedDict(
-                    [(j, bond_dict[j] - visited) for j in bond_dict[i]])
-            else:
-                parent, work_bond_dict = {}, {}
+            construction_table = {i: {'b': np.nan, 'a': np.nan, 'd': np.nan}}
         else:
+            i = construction_table.index[0]
             order_of_definition = list(construction_table.index)
             user_defined = list(construction_table.index)
-            i = construction_table.index[0]
             construction_table = construction_table.to_dict(orient='index')
-            visited = {i}
-            if self.n_atoms > 1:
-                parent = {j: i for j in bond_dict[i]}
-                bond_dict[i]
-                work_bond_dict = OrderedDict(
-                    [(j, bond_dict[j] - visited)
-                     for j in bond_dict[i] if j not in user_defined])
-                for j in reversed(user_defined):
-                    if j in bond_dict[i]:
-                        work_bond_dict[j] = bond_dict[j] - visited
-                        work_bond_dict.move_to_end(j, last=False)
-            else:
-                parent, work_bond_dict = {}, {}
+
+        visited = {i}
+        if self.n_atoms > 1:
+            parent = {j: i for j in bond_dict[i]}
+            bond_dict[i]
+            work_bond_dict = OrderedDict(
+                [(j, bond_dict[j] - visited) for j in bond_dict[i]])
+            modify_priority(work_bond_dict, user_defined)
+        else:
+            parent, work_bond_dict = {}, {}
 
         while work_bond_dict:
             new_work_bond_dict = OrderedDict()
@@ -161,11 +158,10 @@ class Cartesian_give_zmat(Cartesian_core):
 
                 visited.add(i)
                 for j in work_bond_dict[i]:
-                    # TODO prepend user_defined
-                    raise NotImplementedError
                     new_work_bond_dict[j] = bond_dict[j] - visited
                     parent[j] = i
             work_bond_dict = new_work_bond_dict
+            modify_priority(work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient='index')
         output = output.fillna(0).astype('int64')
         output = output.loc[order_of_definition, ['b', 'a', 'd']]
