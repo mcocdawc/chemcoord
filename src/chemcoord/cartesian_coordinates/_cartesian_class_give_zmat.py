@@ -203,16 +203,15 @@ class Cartesian_give_zmat(Cartesian_core):
 
         if isinstance(fragment, tuple):
             fragment, references = fragment[0]
-            full_constr_table = fragment._get_constr_table(
+            full_table = fragment._get_constr_table(
                 use_lookup=use_lookup, predefined_table=references)
         else:
             fragment = fragments[0]
-            full_constr_table = fragment._get_constr_table(
-                use_lookup=use_lookup)
-        full_constr_table.columns = ['b', 'a', 'd']
+            full_table = fragment._get_constr_table(use_lookup=use_lookup)
+        full_table.columns = ['b', 'a', 'd']
 
         for fragment in fragments[1:]:
-            finished_part = self.loc[full_constr_table.index]
+            finished_part = self.loc[full_table.index]
             bond_dict = finished_part.restrict_bond_dict(full_bond_dict)
             if isinstance(fragment, tuple):
                 fragment, references = fragment
@@ -227,24 +226,24 @@ class Cartesian_give_zmat(Cartesian_core):
                 constr_table = fragment._get_constr_table(
                     start_atom=i, use_lookup=use_lookup)
                 constr_table.columns = ['b', 'a', 'd']
-                if len(full_constr_table) == 1:
+                if len(full_table) == 1:
                     a, d = arb_int, arb_int
-                elif len(full_constr_table) == 2:
-                    if b == full_constr_table.index[0]:
-                        a = full_constr_table.index[1]
+                elif len(full_table) == 2:
+                    if b == full_table.index[0]:
+                        a = full_table.index[1]
                     else:
-                        a = full_constr_table.index[0]
+                        a = full_table.index[0]
                     d = arb_int
                 else:
-                    if b in full_constr_table.index[:2]:
-                        if b == full_constr_table.index[0]:
-                            a = full_constr_table.index[2]
-                            d = full_constr_table.index[1]
+                    if b in full_table.index[:2]:
+                        if b == full_table.index[0]:
+                            a = full_table.index[2]
+                            d = full_table.index[1]
                         else:
-                            a = full_constr_table.loc[b, 'b']
-                            d = full_constr_table.index[2]
+                            a = full_table.loc[b, 'b']
+                            d = full_table.index[2]
                     else:
-                        a, d = full_constr_table.loc[b, ['b', 'a']]
+                        a, d = full_table.loc[b, ['b', 'a']]
 
                 if len(constr_table) >= 1:
                     constr_table.iloc[0, :] = b, a, d
@@ -253,11 +252,10 @@ class Cartesian_give_zmat(Cartesian_core):
                 if len(constr_table) >= 3:
                     constr_table.iloc[2, 2] = b
 
-            full_constr_table = pd.concat([full_constr_table, constr_table])
+            full_table = pd.concat([full_table, constr_table])
 
-        new_columns = ['bond_with', 'angle_with', 'dihedral_with']
-        full_constr_table.columns = new_columns
-        return full_constr_table
+        full_table.columns = ['bond_with', 'angle_with', 'dihedral_with']
+        return full_table
 
     def _clean_dihedral(self, construction_table, bond_dict=None,
                         use_lookup=settings['defaults']['use_lookup']):
