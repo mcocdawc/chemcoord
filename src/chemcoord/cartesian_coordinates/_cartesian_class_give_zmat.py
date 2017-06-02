@@ -47,11 +47,9 @@ class Cartesian_give_zmat(Cartesian_core):
                 if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
 
-    def _get_construction_table(self,
-                                start_atom=None,
-                                predefined_table=None,
-                                use_lookup=settings['defaults']['use_lookup'],
-                                bond_dict=None):
+    def _get_constr_table(self, start_atom=None, predefined_table=None,
+                          use_lookup=settings['defaults']['use_lookup'],
+                          bond_dict=None):
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
@@ -197,41 +195,37 @@ class Cartesian_give_zmat(Cartesian_core):
         full_bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         if fragment_list is None:
             fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
+            # During function execution the bonding situation does not change,
+            # so the lookup may be used now.
+            use_lookup = True
         else:
             fragments = fragment_list
 
-        fragment = fragments[0]
-        if fragment_list is None:
-            full_constr_table = fragment._get_construction_table(
-                use_lookup=True)
-        elif isinstance(fragment, tuple):
-            fragment, references = fragment
-            full_constr_table = fragment._get_construction_table(
-                use_lookup=use_lookup)
+        if isinstance(fragment, tuple):
+            fragment, references = fragment[0]
+            full_constr_table = fragment._get_constr_table(
+                use_lookup=use_lookup, predefined_table=references)
         else:
-            full_constr_table = fragment._get_construction_table(
+            fragment = fragments[0]
+            full_constr_table = fragment._get_constr_table(
                 use_lookup=use_lookup)
         full_constr_table.columns = ['b', 'a', 'd']
-        included = list(fragment.index)
 
         for fragment in fragments[1:]:
-            bond_dict = self.loc[included].restrict_bond_dict(full_bond_dict)
+            finished_part = self.loc[full_constr_table.index]
+            bond_dict = finished_part.restrict_bond_dict(full_bond_dict)
             if isinstance(fragment, tuple):
                 fragment, references = fragment
                 if len(references) < min(3, len(fragment)):
                     raise ValueError('If you specify references for a '
                                      'fragment, it has to consist of at least'
                                      'min(3, len(fragment)) rows.')
-                constr_table = fragment._get_construction_table(
+                constr_table = fragment._get_constr_table(
                     predefined_table=references, use_lookup=use_lookup)
             else:
-                i, b = fragment._shortest_distance(self.loc[included])[:2]
-                if fragment_list is None:
-                    constr_table = fragment._get_construction_table(
-                        start_atom=i, use_lookup=True)
-                else:
-                    constr_table = fragment._get_construction_table(
-                        start_atom=i, use_lookup=use_lookup)
+                i, b = fragment._shortest_distance(finished_part)[:2]
+                constr_table = fragment._get_constr_table(
+                    start_atom=i, use_lookup=use_lookup)
                 constr_table.columns = ['b', 'a', 'd']
                 if len(full_constr_table) == 1:
                     a, d = arb_int, arb_int
@@ -260,9 +254,9 @@ class Cartesian_give_zmat(Cartesian_core):
                     constr_table.iloc[2, 2] = b
 
             full_constr_table = pd.concat([full_constr_table, constr_table])
-            included.extend(fragment.index)
-        full_constr_table.columns = ['bond_with', 'angle_with',
-                                     'dihedral_with']
+
+        new_columns = ['bond_with', 'angle_with', 'dihedral_with']
+        full_constr_table.columns = new_columns
         return full_constr_table
 
     def _clean_dihedral(self, construction_table, bond_dict=None,
