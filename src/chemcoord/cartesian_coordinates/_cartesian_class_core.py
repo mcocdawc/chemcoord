@@ -46,6 +46,11 @@ class Cartesian_core(_common_class):
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
+        self._metadata['abs_ref'] = {}
+        self._metadata['abs_ref'][-1] = np.array([1, 0, 0])
+        self._metadata['abs_ref'][-2] = np.array([0, 1, 0])
+        self._metadata['abs_ref'][-3] = np.array([0, 0, 1])
+        self._metadata['abs_ref'][-4] = np.array([0, 0, 0])
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):

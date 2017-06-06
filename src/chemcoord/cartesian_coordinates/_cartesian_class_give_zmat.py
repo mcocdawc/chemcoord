@@ -144,6 +144,93 @@ class Cartesian_give_zmat(Cartesian_core):
         output = output.loc[order_of_definition, ['b', 'a', 'd']]
         return output
 
+    def _clean_dihedral(self, construction_table, bond_dict=None,
+                        use_lookup=settings['defaults']['use_lookup']):
+        """Reindexe the dihedral defining atom if colinear.
+
+        Args:
+            construction_table (pd.DataFrame):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+            bond_dict (OrderedDict): If a connectivity table is provided, it is
+                not recalculated.
+
+        Returns:
+            pd.DataFrame: construction_table
+        """
+        if bond_dict is None:
+            bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        c_table = construction_table.copy()
+        angles = self.angle_degrees(c_table.iloc[3:, :])
+        problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
+        rename = dict(enumerate(c_table.index[3:]))
+        problem_index = [rename[i] for i in problem_index]
+
+        for i in problem_index:
+            loc_i = c_table.index.get_loc(i)
+            b, a, problem_d = c_table.loc[i, ['b', 'a', 'd']]
+            try:
+                d = (bond_dict[a] - {b, a, problem_d}
+                     - set(c_table.index[loc_i:]))[0]
+            except IndexError:
+                visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
+                tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
+                                             for j in bond_dict[problem_d]])
+                found = False
+                while tmp_bond_dict and not found:
+                    new_tmp_bond_dict = OrderedDict()
+                    for new_d in tmp_bond_dict:
+                        if new_d in visited:
+                            continue
+                        angle = self.angle_degrees([b, a, new_d])[0]
+                        if 5 < angle < 175:
+                            found = True
+                            c_table.loc[i, 'd'] = new_d
+                        else:
+                            visited.add(new_d)
+                            for j in tmp_bond_dict[new_d]:
+                                new_tmp_bond_dict[j] = bond_dict[j] - visited
+                    tmp_bond_dict = new_tmp_bond_dict
+                if not found:
+                    molecule = self.distance_to(origin=i, sort=True,
+                                                indices_of_other_atoms=visited)
+                    k = 0
+                    while not found and k < len(molecule):
+                        new_d = molecule.index[k]
+                        angle = self.angle_degrees([b, a, new_d])[0]
+                        if 5 < angle < 175:
+                            found = True
+                            c_table.loc[i, 'd'] = new_d
+                        k = k + 1
+                    if not found:
+                        raise UndefinedCoordinateSystem
+        return c_table
+
+    def _determine_absolute_reference(self, construction_table):
+        coords = ['x', 'y', 'z']
+        c_table = construction_table.copy()
+        references = self._metadata['abs_ref']
+
+        c_table.loc[index[0], ['b', 'a', 'd']] = [-4, -1, -2]
+        c_table.loc[index[1], ['a', 'd']] = [-4, -1]
+        c_table.loc[index[2], 'd'] = -4
+        cols = ['b', 'a', 'd']
+        e = [-4, -1, -2]
+
+        def f(x):
+            if len(x) == 1:
+                return x[0]
+            else:
+                return x
+
+        for row, i in enumerate(out._order[:3]):
+            out.loc[i, cols[row:]] = f(e[:3 - row])
+
+        b, a, d = c_table.loc[c_table.index[1], ['b', 'a', 'd']]
+        # b, a, d = self.loc[[b, a, d], coords]
+        # construction_table.loc[c_table.index[2], ['b', 'a']]
+        return self.loc[[b, a, d], coords]
+
     def get_construction_table(self, fragment_list=None,
                                use_lookup=settings['defaults']['use_lookup']):
         """Create a construction table for a Zmatrix.
@@ -251,69 +338,64 @@ class Cartesian_give_zmat(Cartesian_core):
 
             full_table = pd.concat([full_table, constr_table])
 
+        # TODO delete
+        # full_table = self._clean_dihedral(full_table, bond_dict=full_bond_dict)
+        # full_table = self._determine_absolute_reference(full_table)
         return full_table
 
-    def _clean_dihedral(self, construction_table, bond_dict=None,
-                        use_lookup=settings['defaults']['use_lookup']):
-        """Reindexe the dihedral defining atom if colinear.
+    def _calculate_values(self, buildlist):
+        coords = ['x', 'y', 'z']
+        origin = np.array([0, 0, 0])
+        e = np.identity(3)
 
-        Args:
-            construction_table (pd.DataFrame):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-            bond_dict (OrderedDict): If a connectivity table is provided, it is
-                not recalculated.
+        values = np.empty((self.n_atoms, 3))
+        pos = np.empty((self.n_atoms, 3, 4))
 
-        Returns:
-            pd.DataFrame: construction_table
-        """
-        if bond_dict is None:
-            bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-        c_table = construction_table.copy()
-        angles = self.angle_degrees(c_table.iloc[3:, :])
-        problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
-        rename = dict(enumerate(c_table.index[3:]))
-        problem_index = [rename[i] for i in problem_index]
+        pos[:, :, 0] = self.loc[buildlist.index, coords]
 
-        for i in problem_index:
-            loc_i = c_table.index.get_loc(i)
-            b, a, problem_d = c_table.loc[i, ['b', 'a', 'd']]
-            try:
-                d = (bond_dict[a] - {b, a, problem_d}
-                     - set(c_table.index[loc_i:]))[0]
-            except IndexError:
-                visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
-                tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
-                                             for j in bond_dict[problem_d]])
-                found = False
-                while tmp_bond_dict and not found:
-                    new_tmp_bond_dict = OrderedDict()
-                    for new_d in tmp_bond_dict:
-                        if new_d in visited:
-                            continue
-                        angle = self.angle_degrees([b, a, new_d])[0]
-                        if 5 < angle < 175:
-                            found = True
-                            c_table.loc[i, 'd'] = new_d
-                        else:
-                            visited.add(new_d)
-                            for j in tmp_bond_dict[new_d]:
-                                new_tmp_bond_dict[j] = bond_dict[j] - visited
-                    tmp_bond_dict = new_tmp_bond_dict
-                if not found:
-                    molecule = self.distance_to(origin=i, sort=True,
-                                                indices_of_other_atoms=visited)
-                    k = 0
-                    while not found and k < len(molecule):
-                        new_d = molecule.index[k]
-                        angle = self.angle_degrees([b, a, new_d])[0]
-                        if 5 < angle < 175:
-                            found = True
-                            c_table.loc[i, 'd'] = new_d
-                        k = k + 1
-                    if not found:
-                        raise UndefinedCoordinateSystem
-        return c_table
+        pos[0, :, 1] = origin
+        pos[1:, :, 1] = self.loc[buildlist.iloc[1:, 0], coords]
+
+        pos[0, :, 2] = e[0]
+        pos[1, :, 2] = e[0]
+        pos[2:, :, 2] = self.loc[buildlist.iloc[2:, 1], coords]
+
+        pos[0, :, 3] = e[1]
+        pos[1, :, 3] = e[1]
+        pos[2, :, 3] = e[1]
+        pos[3:, :, 3] = self.loc[buildlist.iloc[3:, 2], coords]
+
+        IB = pos[:, :, 1] - pos[:, :, 0]
+        BA = pos[:, :, 2] - pos[:, :, 1]
+        AD = pos[:, :, 3] - pos[:, :, 2]
+
+        values[:, 0] = np.linalg.norm(IB, axis=1)
+
+        ib, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (IB, BA)]
+        dot_product = np.sum(ib * ba, axis=1)
+        dot_product[np.isclose(dot_product, 1)] = 1
+        dot_product[np.isclose(dot_product, -1)] = -1
+        values[:, 1] = np.degrees(np.arccos(dot_product))
+
+        N1 = np.cross(IB, BA, axis=1)
+        N2 = np.cross(BA, AD, axis=1)
+        n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
+        dot_product = np.sum(n1 * n2, axis=1)
+        dot_product[np.isclose(dot_product, 1)] = 1
+        dot_product[np.isclose(dot_product, -1)] = -1
+        dihedrals = np.degrees(np.arccos(dot_product))
+        # the next lines are to test the direction of rotation.
+        # is a dihedral really 90 or 270 degrees?
+        # Equivalent to direction of rotation of dihedral
+        where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) < 0
+        where_to_modify = np.nonzero(where_to_modify)[0]
+        sign = np.full_like(dihedrals, 1)
+        to_add = np.full_like(dihedrals, 0)
+        sign[where_to_modify] = -1
+        to_add[where_to_modify] = 360
+        values[:, 2] = to_add + sign * dihedrals
+
+        return values
 
     def _build_zmat(self, construction_table):
         """Create the Zmatrix from a construction table.
@@ -337,13 +419,7 @@ class Cartesian_give_zmat(Cartesian_core):
         zmat_frame.loc[:, 'atom'] = self.loc[index, 'atom']
         zmat_frame.loc[:, ['b', 'a', 'd']] = c_table
 
-        bonds = self.bond_lengths(c_table, start_row=1)
-        angles = self.angle_degrees(c_table, start_row=2)
-        dihedrals = self.dihedral_degrees(c_table, start_row=3)
-
-        zmat_frame.loc[:, 'bond'] = bonds
-        zmat_frame.loc[:, 'angle'] = angles
-        zmat_frame.loc[:, 'dihedral'] = dihedrals
+        zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = self._calculate_values(c_table)
 
         lines = np.full(self.n_atoms, True, dtype='bool')
         lines[:3] = False

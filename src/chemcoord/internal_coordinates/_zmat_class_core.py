@@ -55,7 +55,7 @@ class Zmat_core(_common_class):
     def _repr_html_(self):
         out = self.copy()
         cols = ['b', 'a', 'd']
-        e = ['$e_x$', '$e_y$', '$e_z$']
+        e = ['$\\vec{0}$', '$\\vec{e_x}$', '$\\vec{e_y}$']
 
         def f(x):
             if len(x) == 1:
