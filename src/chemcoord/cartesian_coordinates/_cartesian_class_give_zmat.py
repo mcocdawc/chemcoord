@@ -71,7 +71,6 @@ class Cartesian_give_zmat(Cartesian_core):
         if predefined_table is not None:
             self._check_construction_table(predefined_table)
             construction_table = predefined_table.copy()
-            construction_table.columns = ['b', 'a', 'd']
 
         if predefined_table is None:
             if start_atom is None:
@@ -143,7 +142,6 @@ class Cartesian_give_zmat(Cartesian_core):
         output = pd.DataFrame.from_dict(construction_table, orient='index')
         output = output.fillna(0).astype('int64')
         output = output.loc[order_of_definition, ['b', 'a', 'd']]
-        output.columns = ['bond_with', 'angle_with', 'dihedral_with']
         return output
 
     def get_construction_table(self, fragment_list=None,
@@ -209,7 +207,6 @@ class Cartesian_give_zmat(Cartesian_core):
         else:
             fragment = fragments[0]
             full_table = fragment._get_constr_table(use_lookup=use_lookup)
-        full_table.columns = ['b', 'a', 'd']
 
         for fragment in fragments[1:]:
             finished_part = self.loc[full_table.index]
@@ -222,12 +219,10 @@ class Cartesian_give_zmat(Cartesian_core):
                                      'min(3, len(fragment)) rows.')
                 constr_table = fragment._get_constr_table(
                     predefined_table=references, use_lookup=use_lookup)
-                constr_table.columns = ['b', 'a', 'd']
             else:
                 i, b = fragment._shortest_distance(finished_part)[:2]
                 constr_table = fragment._get_constr_table(
                     start_atom=i, use_lookup=use_lookup)
-                constr_table.columns = ['b', 'a', 'd']
                 if len(full_table) == 1:
                     a, d = arb_int, arb_int
                 elif len(full_table) == 2:
@@ -256,7 +251,6 @@ class Cartesian_give_zmat(Cartesian_core):
 
             full_table = pd.concat([full_table, constr_table])
 
-        full_table.columns = ['bond_with', 'angle_with', 'dihedral_with']
         return full_table
 
     def _clean_dihedral(self, construction_table, bond_dict=None,
@@ -276,7 +270,6 @@ class Cartesian_give_zmat(Cartesian_core):
         if bond_dict is None:
             bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         c_table = construction_table.copy()
-        c_table.columns = ['b', 'a', 'd']
         angles = self.angle_degrees(c_table.iloc[3:, :])
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
         rename = dict(enumerate(c_table.index[3:]))
@@ -320,7 +313,6 @@ class Cartesian_give_zmat(Cartesian_core):
                         k = k + 1
                     if not found:
                         raise UndefinedCoordinateSystem
-        c_table.columns = ['bond_with', 'angle_with', 'dihedral_with']
         return c_table
 
     def _build_zmat(self, construction_table):
