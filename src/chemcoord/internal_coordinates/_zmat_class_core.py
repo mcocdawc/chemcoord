@@ -48,7 +48,6 @@ class Zmat_core(_common_class):
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
-        # TODO make use of
         if order_of_definition is None:
             self._order = self.index
         else:

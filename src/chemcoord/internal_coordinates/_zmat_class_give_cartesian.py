@@ -44,7 +44,6 @@ class Zmat_give_cartesian(Zmat_core):
         xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
                                  dtype='float', index=self.index)
 
-        # TODO correct
         # Cannot import globally in python 2, so we will only import here.
         # It is not a beautiful hack, but works for now!
         # See:
@@ -137,11 +136,6 @@ class Zmat_give_cartesian(Zmat_core):
 
         def add_atom_SN_NeRF(row):
             normalize = algebra_utilities.normalize
-
-            # TODO python2 compatibility
-#            raise NotImplementedError(
-#                "This functionality has not been implemented yet!")
-#            index = None  # Should be added
 
             index, bond_with, angle_with, dihedral_with = buildlist[row, :]
             atom, bond, angle, dihedral = self.loc[

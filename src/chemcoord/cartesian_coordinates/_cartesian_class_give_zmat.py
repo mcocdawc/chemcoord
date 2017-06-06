@@ -50,30 +50,10 @@ class Cartesian_give_zmat(Cartesian_core):
     def _get_constr_table(self, start_atom=None, predefined_table=None,
                           use_lookup=settings['defaults']['use_lookup'],
                           bond_dict=None):
-        """Create a construction table for a Zmatrix.
+        """Create a construction table.
 
-        A construction table is basically a Zmatrix without the values
-        for the bond lenghts, angles and dihedrals.
-        It contains the whole information about which reference atoms
-        are used by each atom in the Zmatrix.
-
-        This method creates a so called "chemical" construction table,
-        which makes use of the connectivity table in this molecule.
-
-        By default the first atom is the one nearest to the topologic center.
-        (Compare with :meth:`~Cartesian.topologic_center()`)
-
-        Args:
-            start_atom (index): An index for the first atom may be provided.
-            predefined_table (pd.DataFrame): An uncomplete construction table
-                may be provided. The rest is created automatically.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-            bond_dict (OrderedDict): If a connectivity table is provided, it is
-                not recalculated.
-
-        Returns:
-            pd.DataFrame: Construction table
+        It is written under the assumption that self is one
+        connected molecule.
         """
         def modify_priority(bond_dict, user_defined):
             for j in reversed(user_defined):
@@ -201,8 +181,29 @@ class Cartesian_give_zmat(Cartesian_core):
         else:
             fragments = fragment_list
 
-        if isinstance(fragment, tuple):
-            fragment, references = fragment[0]
+        def prepend_missing_parts_of_molecule(fragment_list):
+            for fragment in fragment_list:
+                if pd.api.types.is_list_like(fragment):
+                    try:
+                        full_index |= fragment[0].index
+                    except NameError:
+                        full_index = fragment[0].index
+                else:
+                    try:
+                        full_index |= fragment.index
+                    except NameError:
+                        full_index = fragment.index
+
+            if not self.index.difference(full_index).empty:
+                missing_part = self.without(self.loc[full_index],
+                                            use_lookup=use_lookup)
+                fragment_list = missing_part + fragment_list
+            return fragment_list
+
+        fragments = prepend_missing_parts_of_molecule(fragments)
+
+        if pd.api.types.is_list_like(fragments[0]):
+            fragment, references = fragments[0]
             full_table = fragment._get_constr_table(
                 use_lookup=use_lookup, predefined_table=references)
         else:
@@ -213,7 +214,7 @@ class Cartesian_give_zmat(Cartesian_core):
         for fragment in fragments[1:]:
             finished_part = self.loc[full_table.index]
             bond_dict = finished_part.restrict_bond_dict(full_bond_dict)
-            if isinstance(fragment, tuple):
+            if pd.api.types.is_list_like(fragment):
                 fragment, references = fragment
                 if len(references) < min(3, len(fragment)):
                     raise ValueError('If you specify references for a '
@@ -221,6 +222,7 @@ class Cartesian_give_zmat(Cartesian_core):
                                      'min(3, len(fragment)) rows.')
                 constr_table = fragment._get_constr_table(
                     predefined_table=references, use_lookup=use_lookup)
+                constr_table.columns = ['b', 'a', 'd']
             else:
                 i, b = fragment._shortest_distance(finished_part)[:2]
                 constr_table = fragment._get_constr_table(
@@ -297,18 +299,27 @@ class Cartesian_give_zmat(Cartesian_core):
                         if new_d in visited:
                             continue
                         angle = self.angle_degrees([b, a, new_d])[0]
-                        if (5 > angle) or (angle > 175):
-                            visited.add(new_d)
-                            for j in tmp_bond_dict[new_d]:
-                                new_tmp_bond_dict[j] = bond_dict[j] - built
-                        else:
+                        if 5 < angle < 175:
                             found = True
                             c_table.loc[i, 'd'] = new_d
+                        else:
+                            visited.add(new_d)
+                            for j in tmp_bond_dict[new_d]:
+                                new_tmp_bond_dict[j] = bond_dict[j] - visited
                     tmp_bond_dict = new_tmp_bond_dict
                 if not found:
-                    # Check using distances
-                    # Raise UndefinedCoordinateSystem otherwise
-                    pass
+                    molecule = self.distance_to(origin=i, sort=True,
+                                                indices_of_other_atoms=visited)
+                    k = 0
+                    while not found and k < len(molecule):
+                        new_d = molecule.index[k]
+                        angle = self.angle_degrees([b, a, new_d])[0]
+                        if 5 < angle < 175:
+                            found = True
+                            c_table.loc[i, 'd'] = new_d
+                        k = k + 1
+                    if not found:
+                        raise UndefinedCoordinateSystem
         c_table.columns = ['bond_with', 'angle_with', 'dihedral_with']
         return c_table
 
@@ -336,13 +347,13 @@ class Cartesian_give_zmat(Cartesian_core):
         angles = self.angle_degrees(c_table, start_row=2)
         dihedrals = self.dihedral_degrees(c_table, start_row=3)
 
-        zmat_frame.loc[index, 'atom'] = self.loc[index, 'atom']
-        zmat_frame.loc[index, 'bond_with'] = c_table.iloc[1:, 0]
-        zmat_frame.loc[index[1:], 'bond'] = bonds
-        zmat_frame.loc[index[2:], 'angle_with'] = c_table.iloc[2:, 1]
-        zmat_frame.loc[index[2:], 'angle'] = angles
-        zmat_frame.loc[index[3:], 'dihedral_with'] = c_table.iloc[3:, 2]
-        zmat_frame.loc[index[3:], 'dihedral'] = dihedrals
+        zmat_frame.loc[:, 'bond_with'] = c_table.iloc[1:, 0]
+        zmat_frame.loc[:, 'angle_with'] = c_table.iloc[2:, 1]
+        zmat_frame.loc[:, 'dihedral_with'] = c_table.iloc[3:, 2]
+        zmat_frame.loc[:, 'atom'] = self.loc[index, 'atom']
+        zmat_frame.loc[:, 'bond'] = bonds
+        zmat_frame.loc[:, 'angle'] = angles
+        zmat_frame.loc[:, 'dihedral'] = dihedrals
 
         lines = np.full(self.n_atoms, True, dtype='bool')
         lines[:3] = False

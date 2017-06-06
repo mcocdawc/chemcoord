@@ -62,49 +62,6 @@ def give_angle(Vector1, Vector2):
 
     return angle
 
-# TODO remove
-def add_dummy(zmat_frame, xyz_frame, index):
-    zmat = zmat_frame.copy()
-    p_list = []
-    xyz = xyz_frame.copy()
-
-    atom, bond, angle, dihedral = zmat.loc[
-        index, ['atom', 'bond', 'angle', 'dihedral']]
-
-    angle, dihedral = map(m.radians, (angle, dihedral))
-
-    bond_with, angle_with, dihedral_with = zmat.loc[index, [
-        'bond_with', 'angle_with', 'dihedral_with']]
-
-    bond_with, angle_with, dihedral_with = map(
-        int, (bond_with, angle_with, dihedral_with))
-
-    vb = np.array(xyz.loc[bond_with, ['x', 'y', 'z']], dtype=float)
-    va = np.array(xyz.loc[angle_with, ['x', 'y', 'z']], dtype=float)
-    vd = np.array(xyz.loc[dihedral_with, ['x', 'y', 'z']], dtype=float)
-
-    AB = vb - va
-    DA = vd - va
-
-    n1 = normalize(np.cross(DA, AB))
-    ab = normalize(AB)
-
-    # Vector of length distance pointing along the x-axis
-    d = bond * -ab
-
-    # Rotate d by the angle around the n1 axis
-    d = np.dot(rotation_matrix(n1, angle), d)
-    d = np.dot(rotation_matrix(ab, dihedral), d)
-
-    # Add d to the position of q to get the new coordinates of the atom
-    p = vb + d
-
-    # Change of nonlocal variables
-    p_list.append(list(p))
-    xyz.loc[index] = [atom] + list(p)
-    return xyz
-
-
 def orthormalize(basis):
     """Orthonormalizes a given basis.
 

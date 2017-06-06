@@ -355,8 +355,6 @@ class Cartesian_give_zmat(Cartesian_core):
         lines[:3] = False
         zmat_frame.loc[zmat_frame['dihedral'].isnull() & lines, 'dihedral'] = 0
 
-        # return zmat_frame
-        # TODO
         return Zmat(zmat_frame)
 
     def give_zmat(self, buildlist=None, fragment_list=None,

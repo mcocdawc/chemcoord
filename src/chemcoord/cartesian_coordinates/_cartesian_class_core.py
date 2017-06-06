@@ -873,7 +873,8 @@ class Cartesian_core(_common_class):
         else:
             return self.loc[fragment_index, :]
 
-    def without(self, fragments):
+    def without(self, fragments,
+                use_lookup=settings['defaults']['use_lookup']):
         if pd.api.types.is_list_like(fragments):
             for fragment in fragments:
                 try:
@@ -882,21 +883,19 @@ class Cartesian_core(_common_class):
                     index_of_all_fragments = fragment.index
         else:
             index_of_all_fragments = fragments.index
-        return self.loc[self.index.difference(index_of_all_fragments)]
-
-
+        missing_part = self.loc[self.index.difference(index_of_all_fragments)]
+        missing_part = missing_part.fragmentate(use_lookup=use_lookup)
+        return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
     def _shortest_distance(self, other):
         coords = ['x', 'y', 'z']
         positions1 = self.loc[:, coords].values.astype('float32')
         positions2 = other.loc[:, coords].values.astype('float32')
-        D = self._get_squared_distances(positions1, positions2)
+        D = self._get_squared_distances(positions2, positions1)
         i, j = np.unravel_index(D.argmin(), D.shape)
         distance = np.sqrt(D[i, j])
 
-        i, j = j, i
-        i = dict(enumerate(self.index))[i]
-        j = dict(enumerate(other.index))[j]
+        i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
         return i, j, distance
 
     def inertia(self):
@@ -957,11 +956,11 @@ class Cartesian_core(_common_class):
         Cartesian_mass = self.basistransform(new_basis, old_basis)
         Cartesian_mass = Cartesian_mass - Cartesian_mass.barycenter()
 
-        dic_of_values = dict(zip([
-            'transformed_Cartesian', 'diag_inertia_tensor',
-            'inertia_tensor', 'eigenvectors'],
+        dic_of_values = dict(zip(
+            ['transformed_Cartesian', 'diag_inertia_tensor',
+             'inertia_tensor', 'eigenvectors'],
             [Cartesian_mass, diag_inertia_tensor, inertia_tensor, eigenvectors]
-        ))
+            ))
         return dic_of_values
 
     def basistransform(
@@ -1144,8 +1143,6 @@ class Cartesian_core(_common_class):
                 env_dict[chem_env] = set([i])
         return env_dict
 
-# TODO still to rewrite
-#        U = algebra_utilities.kabsch(location2, location1)
     def align(self, Cartesian2, ignore_hydrogens=False):
         """Align two Cartesians.
 
@@ -1166,7 +1163,6 @@ class Cartesian_core(_common_class):
         Returns:
             tuple:
         """
-        # TODO rewrite with C function
         coords = ['x', 'y', 'z']
         molecule1 = self.sort_index()
         molecule2 = Cartesian2.sort_index()

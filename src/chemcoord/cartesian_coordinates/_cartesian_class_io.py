@@ -63,7 +63,7 @@ http://chemcoord.readthedocs.io/en/latest/'
             molecule_string = self.to_string(header=header, index=index,
                                              float_format=float_format)
 
-        # TODO the following might be removed in the future
+        # NOTE the following might be removed in the future
         # introduced because of formatting bug in pandas
         # See https://github.com/pandas-dev/pandas/issues/13032
         space = ' ' * (self.loc[:, 'atom'].str.len().max()
