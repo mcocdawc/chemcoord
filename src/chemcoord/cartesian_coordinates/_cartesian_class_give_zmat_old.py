@@ -326,8 +326,8 @@ class Cartesian_give_zmat(Cartesian_core):
         indexlist = buildlist[:, 0]
 
         default_columns = [
-            'atom', 'bond_with', 'bond', 'angle_with',
-            'angle', 'dihedral_with', 'dihedral']
+            'atom', 'b', 'bond', 'a',
+            'angle', 'd', 'dihedral']
         additional_columns = list(set(self.columns)
                                   - set(['atom', 'x', 'y', 'z']))
 
@@ -344,11 +344,11 @@ class Cartesian_give_zmat(Cartesian_core):
         dihedrals = self.dihedral_degrees(buildlist, start_row=3)
 
         zmat_frame.loc[indexlist, 'atom'] = self.loc[indexlist, 'atom']
-        zmat_frame.loc[indexlist[1:], 'bond_with'] = buildlist[1:, 1]
+        zmat_frame.loc[indexlist[1:], 'b'] = buildlist[1:, 1]
         zmat_frame.loc[indexlist[1:], 'bond'] = bonds
-        zmat_frame.loc[indexlist[2:], 'angle_with'] = buildlist[2:, 2]
+        zmat_frame.loc[indexlist[2:], 'a'] = buildlist[2:, 2]
         zmat_frame.loc[indexlist[2:], 'angle'] = angles
-        zmat_frame.loc[indexlist[3:], 'dihedral_with'] = buildlist[3:, 3]
+        zmat_frame.loc[indexlist[3:], 'd'] = buildlist[3:, 3]
         zmat_frame.loc[indexlist[3:], 'dihedral'] = dihedrals
 
         lines = np.full(self.n_atoms, True, dtype='bool')
@@ -379,8 +379,8 @@ class Cartesian_give_zmat(Cartesian_core):
         This is basically a ``np.array`` of shape ``(n_atoms, 4)`` and
         integer type.
 
-        The four columns are ``['own_index', 'bond_with', 'angle_with',
-        'dihedral_with']``.
+        The four columns are ``['own_index', 'b', 'a',
+        'd']``.
         This means that usually the upper right triangle can be any
         number, because for example the first atom has no other
         atom as reference.

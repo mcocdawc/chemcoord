@@ -23,6 +23,6 @@ def is_Zmat(possible_Zmat):
         columns = set(columns)
     except (TypeError, AssertionError):
         columns = set([columns])
-    is_zmat = {'atom', 'bond_with', 'bond', 'angle_with', 'angle',
-               'dihedral_with', 'dihedral'} <= columns
+    is_zmat = {'atom', 'b', 'bond', 'a', 'angle',
+               'd', 'dihedral'} <= columns
     return is_zmat

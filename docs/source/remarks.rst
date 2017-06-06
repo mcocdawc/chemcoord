@@ -19,7 +19,7 @@ This module uses pandas DataFrames to represent cartesian and internal coordinat
 
 The xyz_frame has at least four columns ``['atom', 'x', 'y', 'z']``.
 
-The zmat_frame has at least seven columns ``['atom', 'bond_with', 'bond', 'angle_with', 'angle', 'dihedral_with', 'dihedral']``.
+The zmat_frame has at least seven columns ``['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']``.
 
 Since they are normal pandas DataFrames you can do everything with them as long as you respect this structure.
 This means it is possible to append e.g. a column for the masses of each atom.

@@ -36,14 +36,14 @@ class Cartesian_give_zmat(Cartesian_core):
             if row == 0:
                 pass
             elif row == 1:
-                if c_table.loc[i, 'bond_with'] not in c_table.index[:row]:
+                if c_table.loc[i, 'b'] not in c_table.index[:row]:
                     raise UndefinedCoordinateSystem(give_message(i=i))
             elif row == 2:
-                reference = c_table.loc[i, ['bond_with', 'angle_with']]
+                reference = c_table.loc[i, ['b', 'a']]
                 if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
             else:
-                reference = c_table.loc[i, ['bond_with', 'angle_with']]
+                reference = c_table.loc[i, ['b', 'a', 'd']]
                 if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
 
@@ -326,8 +326,7 @@ class Cartesian_give_zmat(Cartesian_core):
         """
         c_table = construction_table
         index = c_table.index
-        default_cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
-                        'dihedral_with', 'dihedral']
+        default_cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
         optional_cols = list(set(self.columns) - {'atom', 'x', 'y', 'z'})
 
         zmat_frame = pd.DataFrame(columns=default_cols + optional_cols,
@@ -335,14 +334,13 @@ class Cartesian_give_zmat(Cartesian_core):
 
         zmat_frame.loc[:, optional_cols] = self.loc[index, optional_cols]
 
+        zmat_frame.loc[:, 'atom'] = self.loc[index, 'atom']
+        zmat_frame.loc[:, ['b', 'a', 'd']] = c_table
+
         bonds = self.bond_lengths(c_table, start_row=1)
         angles = self.angle_degrees(c_table, start_row=2)
         dihedrals = self.dihedral_degrees(c_table, start_row=3)
 
-        zmat_frame.loc[:, 'bond_with'] = c_table.iloc[1:, 0]
-        zmat_frame.loc[:, 'angle_with'] = c_table.iloc[2:, 1]
-        zmat_frame.loc[:, 'dihedral_with'] = c_table.iloc[3:, 2]
-        zmat_frame.loc[:, 'atom'] = self.loc[index, 'atom']
         zmat_frame.loc[:, 'bond'] = bonds
         zmat_frame.loc[:, 'angle'] = angles
         zmat_frame.loc[:, 'dihedral'] = dihedrals
@@ -375,8 +373,8 @@ class Cartesian_give_zmat(Cartesian_core):
         This is basically a ``np.array`` of shape ``(n_atoms, 4)`` and
         integer type.
 
-        The four columns are ``['own_index', 'bond_with', 'angle_with',
-        'dihedral_with']``.
+        The four columns are ``['own_index', 'b', 'a',
+        'd']``.
         This means that usually the upper right triangle can be any
         number, because for example the first atom has no other
         atom as reference.

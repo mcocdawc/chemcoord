@@ -21,17 +21,16 @@ from chemcoord.configuration import settings
 class Zmat_core(_common_class):
     """The main class for dealing with internal coordinates.
     """
-    _required_cols = frozenset({
-        'atom', 'bond_with', 'bond', 'angle_with', 'angle',
-        'dihedral_with', 'dihedral'})
+    _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
+                                'd', 'dihedral'})
 
     def __init__(self, frame, order_of_definition=None):
         """How to initialize a Zmat instance.
 
         Args:
             init (pd.DataFrame): A Dataframe with at least the columns
-                ``['atom', 'bond_with', 'bond', 'angle_with', 'angle',
-                'dihedral_with', 'dihedral']``.
+                ``['atom', 'b', 'bond', 'a', 'angle',
+                'd', 'dihedral']``.
                 Where ``'atom'`` is a string for the elementsymbol.
             order_of_definition (list like): Specify in which order
                 the Zmatrix is defined. If ``None`` it just uses
@@ -55,7 +54,7 @@ class Zmat_core(_common_class):
 
     def _repr_html_(self):
         out = self.copy()
-        cols = ['bond_with', 'angle_with', 'dihedral_with']
+        cols = ['b', 'a', 'd']
         e = ['$e_x$', '$e_y$', '$e_z$']
 
         def f(x):
@@ -88,7 +87,7 @@ class Zmat_core(_common_class):
             return selected
 
     def __add__(self, other):
-        selection = ['atom', 'bond_with', 'angle_with', 'dihedral_with']
+        selection = ['atom', 'b', 'a', 'd']
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
         new._metadata['absolute_zmat'] = (self._metadata['absolute_zmat']
@@ -129,7 +128,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
         Returns:
             np.array: Buildlist
         """
-        columns = ['temporary_index', 'bond_with', 'angle_with', 'dihedral_with']
+        columns = ['temporary_index', 'b', 'a', 'd']
         tmp = self.insert(0, 'temporary_index', self.index)
         buildlist = tmp.loc[:, columns].values.astype('int64')
         buildlist[0, 1:] = 0
@@ -163,7 +162,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
 
         output.index = new_index
 
-        cols = ['bond_with', 'angle_with', 'dihedral_with']
+        cols = ['b', 'a', 'd']
         output.loc[:, cols] = output.loc[:, cols].replace(old_index, new_index)
 
         if not inplace:

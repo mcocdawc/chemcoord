@@ -29,8 +29,8 @@ class Zmat_io(Zmat_core):
         Returns:
             Zmat:
         """
-        cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
-                'dihedral_with', 'dihedral']
+        cols = ['atom', 'b', 'bond', 'a', 'angle',
+                'd', 'dihedral']
         if implicit_index:
             zmat_frame = pd.read_table(inputfile, comment='#',
                                        delim_whitespace=True,

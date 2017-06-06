@@ -68,15 +68,15 @@ class _pandas_wrapper(object):
         Zmat:
             If the following definition is used::
 
-                cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
-                        'dihedral_with', 'dihedral']
+                cols = ['atom', 'b', 'bond', 'a', 'angle',
+                        'd', 'dihedral']
 
             The return types in the case of a :class:`~chemcoord.Zmat`
             instance are:
 
                 ``molecule.loc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
 
-                ``molecule.loc[:, ['atom', 'bond_with']]`` returns a
+                ``molecule.loc[:, ['atom', 'b']]`` returns a
                 :class:`~pandas.DataFrame`.
 
                 ``molecule.loc[:, 'atom']`` returns a
@@ -113,15 +113,15 @@ class _pandas_wrapper(object):
         Zmat:
             If the following definition is used::
 
-                cols = ['atom', 'bond_with', 'bond', 'angle_with', 'angle',
-                        'dihedral_with', 'dihedral']
+                cols = ['atom', 'b', 'bond', 'a', 'angle',
+                        'd', 'dihedral']
 
             The return types in the case of a :class:`~chemcoord.Zmat`
             instance are:
 
                 ``molecule.iloc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
 
-                ``molecule.iloc[:, ['atom', 'bond_with']]`` returns a
+                ``molecule.iloc[:, ['atom', 'b']]`` returns a
                 :class:`~pandas.DataFrame`.
 
                 ``molecule.iloc[:, 'atom']`` returns a
