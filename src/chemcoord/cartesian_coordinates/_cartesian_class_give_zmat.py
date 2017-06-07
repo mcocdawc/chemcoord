@@ -259,7 +259,6 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
-        arb_int = 0
         full_bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         if fragment_list is None:
             fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
@@ -314,13 +313,13 @@ class Cartesian_give_zmat(Cartesian_core):
                 constr_table = fragment._get_constr_table(
                     start_atom=i, use_lookup=use_lookup)
                 if len(full_table) == 1:
-                    a, d = arb_int, arb_int
+                    a, d = -3, -1
                 elif len(full_table) == 2:
                     if b == full_table.index[0]:
                         a = full_table.index[1]
                     else:
                         a = full_table.index[0]
-                    d = arb_int
+                    d = -1
                 else:
                     if b in full_table.index[:2]:
                         if b == full_table.index[0]:
@@ -443,63 +442,6 @@ class Cartesian_give_zmat(Cartesian_core):
 
     def give_zmat(self, construction_table=None,
                   use_lookup=settings['defaults']['use_lookup']):
-        """Transform to internal coordinates.
-
-        Transforming to internal coordinates involves basically three
-        steps:
-
-        1. Define an order of how to build.
-
-        2. Check for problematic local linearity. In this algorithm an
-        angle with ``170 < angle < 10`` is assumed to be linear.
-        This is not the mathematical definition, but makes it safer
-        against "floating point noise"
-
-        3. Calculate the bond lengths, angles and dihedrals using the
-        references defined in step 1 and 2.
-
-        In the first two steps a so called ``buildlist`` is created.
-        This is basically a ``np.array`` of shape ``(n_atoms, 4)`` and
-        integer type.
-
-        The four columns are ``['own_index', 'b', 'a',
-        'd']``.
-        This means that usually the upper right triangle can be any
-        number, because for example the first atom has no other
-        atom as reference.
-
-        It is important to know, that getting the buildlist is a very
-        costly step since the algoritym tries to make some guesses
-        based on the connectivity to create a "chemical" zmatrix.
-
-        If you create several zmatrices based on the same references
-        you can save the buildlist of a zmatrix with
-        :meth:`Zmat.get_buildlist`.
-        If you then pass the buildlist as argument to ``to_zmat``,
-        then the algorithm directly starts with step 3.
-
-
-        Another thing is that you can specify fragments.
-        For this purpose the function :meth:`Cartesian.get_fragment`
-        is quite handy.
-        An element of fragment_list looks like::
-
-            (fragment, connections)
-
-        Fragment is a ``Cartesian`` instance and connections is a
-        ``(3, 4)`` numpy integer array, that defines how the
-        fragment is connected to the molecule.
-
-        Args:
-            buildlist (np.array):
-            fragment_list (list):
-            check_linearity (bool):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-
-        Returns:
-            Zmat: A new instance of :class:`~.zmat_functions.Zmat`.
-        """
         self.get_bonds(use_lookup=use_lookup)
         # During function execution the connectivity situation won't change
         # So use_look=True will be used
