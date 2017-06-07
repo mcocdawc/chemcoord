@@ -145,8 +145,8 @@ class Cartesian_give_zmat(Cartesian_core):
         output = output.loc[order_of_definition, ['b', 'a', 'd']]
         return output
 
-    def _clean_dihedral(self, construction_table, bond_dict=None,
-                        use_lookup=settings['defaults']['use_lookup']):
+    def check_dihedral(self, construction_table,
+                       use_lookup=settings['defaults']['use_lookup']):
         """Reindexe the dihedral defining atom if colinear.
 
         Args:
@@ -159,8 +159,7 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: construction_table
         """
-        if bond_dict is None:
-            bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         c_table = construction_table.copy()
         angles = self.angle_degrees(c_table.iloc[3:, :])
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
@@ -207,11 +206,11 @@ class Cartesian_give_zmat(Cartesian_core):
                         raise UndefinedCoordinateSystem
         return c_table
 
-    def _check_absolute_refs(self, construction_table):
+    def check_absolute_refs(self, construction_table):
         c_table = construction_table.copy()
         abs_refs = self._metadata['abs_refs']
 
-        def _is_valid_abs_ref(self, c_table, abs_references, row):
+        def is_valid_abs_ref(self, c_table, abs_references, row):
             A = np.empty((3, 3))
             for i in range(3):
                 if i < row:
@@ -229,7 +228,7 @@ class Cartesian_give_zmat(Cartesian_core):
             order_of_refs = iter(permutations(abs_refs.keys()))
             finished = False
             while not finished:
-                if not _is_valid_abs_ref(self, c_table, abs_refs, i):
+                if not is_valid_abs_ref(self, c_table, abs_refs, i):
                     c_table.iloc[i, i:] = next(order_of_refs)[i:3]
                 else:
                     finished = True
@@ -403,9 +402,11 @@ class Cartesian_give_zmat(Cartesian_core):
             return np.nan_to_num(to_add + sign * dihedrals)
 
         IB, BA, AD = get_position(self, construction_table)
-        values[:, 0] = get_bond_length(IB)
-        values[:, 1] = get_angle(IB, BA)
-        values[:, 2] = get_dihedral(IB, BA, AD)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            values[:, 0] = get_bond_length(IB)
+            values[:, 1] = get_angle(IB, BA)
+            values[:, 2] = get_dihedral(IB, BA, AD)
         return values
 
     def _build_zmat(self, construction_table):
@@ -440,8 +441,7 @@ class Cartesian_give_zmat(Cartesian_core):
 
         return zmatrix
 
-    def give_zmat(self, buildlist=None, fragment_list=None,
-                  check_linearity=True,
+    def give_zmat(self, construction_table=None,
                   use_lookup=settings['defaults']['use_lookup']):
         """Transform to internal coordinates.
 
@@ -500,52 +500,16 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             Zmat: A new instance of :class:`~.zmat_functions.Zmat`.
         """
-        if buildlist is None:
-            if fragment_list is None:
-                buildlist = self._get_buildlist(use_lookup=use_lookup)
-            else:
-                def create_big_molecule(self, fragment_list):
-                    def prepare_variables(self, fragment_list):
-                        buildlist = np.empty((self.n_atoms, 4), dtype='int64')
-                        fragment_index = set([])
-                        for fragment_tpl in fragment_list:
-                            fragment_index |= set(
-                                fragment_tpl[0].index)
-                        big_molecule_index = (
-                            set(self.index) - fragment_index)
-                        return buildlist, big_molecule_index
-                    buildlist, big_molecule_index = prepare_variables(
-                        self, fragment_list)
-                    big_molecule = self.loc[big_molecule_index, :]
-                    row = len(big_molecule)
-                    buildlist[: row, :] = big_molecule._get_buildlist(
-                        use_lookup=use_lookup)
-                    return buildlist, big_molecule, row
-
-                def add_fragment(
-                        self, fragment_tpl, big_molecule, buildlist, row):
-                    next_row = row + fragment_tpl[0].n_atoms
-                    buildlist[row: next_row, :] = \
-                        fragment_tpl[0]._get_buildlist(
-                            fragment_tpl[1], use_lookup=use_lookup)
-                    return buildlist, big_molecule, row
-
-                buildlist, big_molecule, row = create_big_molecule(
-                    self, fragment_list)
-
-                for fragment_tpl in fragment_list:
-                    buildlist, big_molecule, row = add_fragment(
-                        self, fragment_tpl, big_molecule, buildlist, row)
-
-        if check_linearity:
-            buildlist = self._clean_dihedral(buildlist, use_lookup=True)
-
-        Zmat = self._build_zmat(buildlist)
-        Zmat.metadata = self.metadata.copy()
-        keys_to_keep = ['abs_refs']
-        for key in keys_to_keep:
-            Zmat._metadata[key] = self._metadata[key].copy()
-        return Zmat
+        self.get_bonds(use_lookup=use_lookup)
+        # During function execution the connectivity situation won't change
+        # So use_look=True will be used
+        if construction_table is None:
+            c_table = self.get_construction_table(use_lookup=True)
+            c_table = self.check_dihedral(c_table, use_lookup=True)
+            c_table = self.check_absolute_refs(c_table)
+        else:
+            c_table = construction_table
+        return self._build_zmat(c_table)
 
     def to_zmat(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Zmat.give_zmat`
