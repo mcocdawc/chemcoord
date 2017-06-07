@@ -13,6 +13,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 import math as m
+import sympy
 from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaning
 from chemcoord.configuration import settings
@@ -65,6 +66,7 @@ class Zmat_core(_common_class):
                 pass
         return molecule
 
+    # overwrites existing method
     def _repr_html_(self):
         out = self.copy()
         cols = ['b', 'a', 'd']
@@ -80,6 +82,14 @@ class Zmat_core(_common_class):
         for row, i in enumerate(out._order[:3]):
             new = f([representation[x] for x in out.loc[i, cols[row:]]])
             out.loc[i, cols[row:]] = new
+
+        def formatter(x):
+            if (isinstance(x, sympy.Basic)):
+                return '${}$'.format(sympy.latex(x))
+            else:
+                return x
+
+        out = out.applymap(formatter)
         return out.frame._repr_html_()
 
     def _return_appropiate_type(self, selected):

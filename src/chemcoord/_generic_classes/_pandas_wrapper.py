@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 import pandas as pd
+import sympy
 from chemcoord._exceptions import PhysicalMeaning
 import chemcoord._generic_classes._indexers as indexers
 
@@ -234,10 +235,14 @@ class _pandas_wrapper(object):
         return self.frame.__repr__()
 
     def _repr_html_(self):
-        try:
-            return self.frame._repr_html_()
-        except AttributeError:
-            pass
+        def formatter(x):
+            if (isinstance(x, sympy.Basic)):
+                return '${}$'.format(sympy.latex(x))
+            else:
+                return x
+
+        new = self.applymap(formatter)
+        return new.frame._repr_html_()
 
     def copy(self):
         molecule = self.__class__(self.frame)
