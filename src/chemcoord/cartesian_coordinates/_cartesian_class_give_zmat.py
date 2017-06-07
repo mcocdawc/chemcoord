@@ -13,6 +13,7 @@ import pandas as pd
 import warnings
 from sortedcontainers import SortedSet
 from collections import OrderedDict, deque
+from itertools import permutations, cycle
 from chemcoord._exceptions import \
     PhysicalMeaning, UndefinedCoordinateSystem, IllegalArgumentCombination, \
     InvalidReference
@@ -80,7 +81,7 @@ class Cartesian_give_zmat(Cartesian_core):
                 i = start_atom
             order_of_definition = [i]
             user_defined = []
-            construction_table = {i: {'b': np.nan, 'a': np.nan, 'd': np.nan}}
+            construction_table = {i: {'b': -4, 'a': -3, 'd': -1}}
         else:
             i = construction_table.index[0]
             order_of_definition = list(construction_table.index)
@@ -106,10 +107,10 @@ class Cartesian_give_zmat(Cartesian_core):
                     b = parent[i]
                     if b in order_of_definition[:3]:
                         if len(order_of_definition) == 1:
-                            construction_table[i] = {'b': b}
+                            construction_table[i] = {'b': b, 'a': -3, 'd': -1}
                         elif len(order_of_definition) == 2:
                             a = (bond_dict[b] & visited)[0]
-                            construction_table[i] = {'b': b, 'a': a}
+                            construction_table[i] = {'b': b, 'a': a, 'd': -1}
                         else:
                             try:
                                 a = parent[b]
@@ -206,30 +207,33 @@ class Cartesian_give_zmat(Cartesian_core):
                         raise UndefinedCoordinateSystem
         return c_table
 
-    def _determine_absolute_reference(self, construction_table):
-        coords = ['x', 'y', 'z']
+    def _check_absolute_refs(self, construction_table):
         c_table = construction_table.copy()
-        references = self._metadata['abs_ref']
+        abs_refs = self._metadata['abs_refs']
 
-        c_table.loc[index[0], ['b', 'a', 'd']] = [-4, -1, -2]
-        c_table.loc[index[1], ['a', 'd']] = [-4, -1]
-        c_table.loc[index[2], 'd'] = -4
-        cols = ['b', 'a', 'd']
-        e = [-4, -1, -2]
+        def _is_valid_abs_ref(self, c_table, abs_references, row):
+            A = np.empty((3, 3))
+            for i in range(3):
+                if i < row:
+                    A[i] = self.loc[c_table.iloc[row, i], ['x', 'y', 'z']]
+                else:
+                    A[i] = abs_references[c_table.iloc[row, i]][0]
+            v1, v2 = A[2] - A[1], A[1] - A[0]
+            K = np.cross(v1, v2)
+            zero = np.array([0, 0, 0])
+            return not (np.isclose(K, zero).all()
+                        or np.isclose(v1, zero).all()
+                        or np.isclose(v2, zero).all())
 
-        def f(x):
-            if len(x) == 1:
-                return x[0]
-            else:
-                return x
-
-        for row, i in enumerate(out._order[:3]):
-            out.loc[i, cols[row:]] = f(e[:3 - row])
-
-        b, a, d = c_table.loc[c_table.index[1], ['b', 'a', 'd']]
-        # b, a, d = self.loc[[b, a, d], coords]
-        # construction_table.loc[c_table.index[2], ['b', 'a']]
-        return self.loc[[b, a, d], coords]
+        for i in range(min(3, len(c_table))):
+            order_of_refs = iter(permutations(abs_refs.keys()))
+            finished = False
+            while not finished:
+                if not _is_valid_abs_ref(self, c_table, abs_refs, i):
+                    c_table.iloc[i, i:] = next(order_of_refs)[i:3]
+                else:
+                    finished = True
+        return c_table
 
     def get_construction_table(self, fragment_list=None,
                                use_lookup=settings['defaults']['use_lookup']):
@@ -337,64 +341,71 @@ class Cartesian_give_zmat(Cartesian_core):
                     constr_table.iloc[2, 2] = b
 
             full_table = pd.concat([full_table, constr_table])
-
-        # TODO delete
-        # full_table = self._clean_dihedral(full_table, bond_dict=full_bond_dict)
-        # full_table = self._determine_absolute_reference(full_table)
         return full_table
 
-    def _calculate_values(self, buildlist):
-        coords = ['x', 'y', 'z']
-        origin = np.array([0, 0, 0])
-        e = np.identity(3)
+    def _calculate_values(self, construction_table):
+        values = np.empty((len(self), 3), dtype='float64')
 
-        values = np.empty((self.n_atoms, 3))
-        pos = np.empty((self.n_atoms, 3, 4))
+        def get_position(self, construction_table):
+            coords = ['x', 'y', 'z']
+            abs_references = self._metadata['abs_refs']
 
-        pos[:, :, 0] = self.loc[buildlist.index, coords]
+            values = np.empty((self.n_atoms, 3))
+            pos = np.empty((self.n_atoms, 3, 4))
 
-        pos[0, :, 1] = origin
-        pos[1:, :, 1] = self.loc[buildlist.iloc[1:, 0], coords]
+            pos[:, :, 0] = self.loc[construction_table.index, coords]
 
-        pos[0, :, 2] = e[0]
-        pos[1, :, 2] = e[0]
-        pos[2:, :, 2] = self.loc[buildlist.iloc[2:, 1], coords]
+            pos[0, :, 1] = abs_references[construction_table.iloc[0, 0]][0]
+            pos[1:, :, 1] = self.loc[construction_table.iloc[1:, 0], coords]
 
-        pos[0, :, 3] = e[1]
-        pos[1, :, 3] = e[1]
-        pos[2, :, 3] = e[1]
-        pos[3:, :, 3] = self.loc[buildlist.iloc[3:, 2], coords]
+            pos[0, :, 2] = abs_references[construction_table.iloc[0, 1]][0]
+            pos[1, :, 2] = abs_references[construction_table.iloc[1, 1]][0]
+            pos[2:, :, 2] = self.loc[construction_table.iloc[2:, 1], coords]
 
-        IB = pos[:, :, 1] - pos[:, :, 0]
-        BA = pos[:, :, 2] - pos[:, :, 1]
-        AD = pos[:, :, 3] - pos[:, :, 2]
+            pos[0, :, 3] = abs_references[construction_table.iloc[0, 2]][0]
+            pos[1, :, 3] = abs_references[construction_table.iloc[1, 2]][0]
+            pos[2, :, 3] = abs_references[construction_table.iloc[2, 2]][0]
+            pos[3:, :, 3] = self.loc[construction_table.iloc[3:, 2], coords]
 
-        values[:, 0] = np.linalg.norm(IB, axis=1)
+            IB = pos[:, :, 1] - pos[:, :, 0]
+            BA = pos[:, :, 2] - pos[:, :, 1]
+            AD = pos[:, :, 3] - pos[:, :, 2]
+            return IB, BA, AD
 
-        ib, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (IB, BA)]
-        dot_product = np.sum(ib * ba, axis=1)
-        dot_product[np.isclose(dot_product, 1)] = 1
-        dot_product[np.isclose(dot_product, -1)] = -1
-        values[:, 1] = np.degrees(np.arccos(dot_product))
+        def get_bond_length(IB):
+            return np.linalg.norm(IB, axis=1)
 
-        N1 = np.cross(IB, BA, axis=1)
-        N2 = np.cross(BA, AD, axis=1)
-        n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
-        dot_product = np.sum(n1 * n2, axis=1)
-        dot_product[np.isclose(dot_product, 1)] = 1
-        dot_product[np.isclose(dot_product, -1)] = -1
-        dihedrals = np.degrees(np.arccos(dot_product))
-        # the next lines are to test the direction of rotation.
-        # is a dihedral really 90 or 270 degrees?
-        # Equivalent to direction of rotation of dihedral
-        where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) < 0
-        where_to_modify = np.nonzero(where_to_modify)[0]
-        sign = np.full_like(dihedrals, 1)
-        to_add = np.full_like(dihedrals, 0)
-        sign[where_to_modify] = -1
-        to_add[where_to_modify] = 360
-        values[:, 2] = to_add + sign * dihedrals
+        def get_angle(IB, BA):
+            ba = BA / np.linalg.norm(BA, axis=1)[:, None]
+            bi = -1 * IB / np.linalg.norm(IB, axis=1)[:, None]
+            dot_product = np.sum(bi * ba, axis=1)
+            dot_product[np.isclose(dot_product, 1)] = 1
+            dot_product[np.isclose(dot_product, -1)] = -1
+            return np.nan_to_num(np.degrees(np.arccos(dot_product)))
 
+        def get_dihedral(IB, BA, AD):
+            N1 = np.cross(IB, BA, axis=1)
+            N2 = np.cross(BA, AD, axis=1)
+            n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
+            dot_product = np.sum(n1 * n2, axis=1)
+            dot_product[np.isclose(dot_product, 1)] = 1
+            dot_product[np.isclose(dot_product, -1)] = -1
+            dihedrals = np.degrees(np.arccos(dot_product))
+            # the next lines are to test the direction of rotation.
+            # is a dihedral really 90 or 270 degrees?
+            # Equivalent to direction of rotation of dihedral
+            where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) > 0
+            where_to_modify = np.nonzero(where_to_modify)[0]
+            sign = np.full_like(dihedrals, 1)
+            to_add = np.full_like(dihedrals, 0)
+            sign[where_to_modify] = -1
+            to_add[where_to_modify] = 360
+            return np.nan_to_num(to_add + sign * dihedrals)
+
+        IB, BA, AD = get_position(self, construction_table)
+        values[:, 0] = get_bond_length(IB)
+        values[:, 1] = get_angle(IB, BA)
+        values[:, 2] = get_dihedral(IB, BA, AD)
         return values
 
     def _build_zmat(self, construction_table):
@@ -407,25 +418,27 @@ class Cartesian_give_zmat(Cartesian_core):
             Zmat: A new instance of :class:`Zmat`.
         """
         c_table = construction_table
-        index = c_table.index
         default_cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
         optional_cols = list(set(self.columns) - {'atom', 'x', 'y', 'z'})
 
         zmat_frame = pd.DataFrame(columns=default_cols + optional_cols,
-                                  dtype='float', index=index)
+                                  dtype='float', index=c_table.index)
 
-        zmat_frame.loc[:, optional_cols] = self.loc[index, optional_cols]
+        zmat_frame.loc[:, optional_cols] = self.loc[c_table.index,
+                                                    optional_cols]
 
-        zmat_frame.loc[:, 'atom'] = self.loc[index, 'atom']
+        zmat_frame.loc[:, 'atom'] = self.loc[c_table.index, 'atom']
         zmat_frame.loc[:, ['b', 'a', 'd']] = c_table
 
-        zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = self._calculate_values(c_table)
+        zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = \
+            self._calculate_values(c_table)
 
-        lines = np.full(self.n_atoms, True, dtype='bool')
-        lines[:3] = False
-        zmat_frame.loc[zmat_frame['dihedral'].isnull() & lines, 'dihedral'] = 0
+        zmat = Zmat(zmat_frame)
+        keys_to_keep = ['abs_refs']
+        for key in keys_to_keep:
+            zmat._metadata[key] = self._metadata[key].copy()
 
-        return Zmat(zmat_frame)
+        return zmat
 
     def give_zmat(self, buildlist=None, fragment_list=None,
                   check_linearity=True,
@@ -529,7 +542,7 @@ class Cartesian_give_zmat(Cartesian_core):
 
         Zmat = self._build_zmat(buildlist)
         Zmat.metadata = self.metadata.copy()
-        keys_to_keep = []
+        keys_to_keep = ['abs_refs']
         for key in keys_to_keep:
             Zmat._metadata[key] = self._metadata[key].copy()
         return Zmat

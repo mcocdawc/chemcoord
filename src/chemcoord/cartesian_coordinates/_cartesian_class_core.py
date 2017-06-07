@@ -27,6 +27,7 @@ class Cartesian_core(_common_class):
     # Look into the numpy manual for description of __array_priority__
     __array_priority__ = 15.0
 
+    # overwrites existing method
     def __init__(self, frame):
         """How to initialize a Cartesian instance.
 
@@ -46,11 +47,12 @@ class Cartesian_core(_common_class):
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
-        self._metadata['abs_ref'] = {}
-        self._metadata['abs_ref'][-1] = np.array([1, 0, 0])
-        self._metadata['abs_ref'][-2] = np.array([0, 1, 0])
-        self._metadata['abs_ref'][-3] = np.array([0, 0, 1])
-        self._metadata['abs_ref'][-4] = np.array([0, 0, 0])
+        self._metadata['abs_refs'] = {
+            -4: (np.array([0, 0, 0]), '$\\vec{0}$'),
+            -1: (np.array([1, 0, 0]), '$\\vec{e}_x$'),
+            -2: (np.array([0, 1, 0]), '$\\vec{e}_y$'),
+            -3: (np.array([0, 0, 1]), '$\\vec{e}_z$')}
+
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
@@ -64,7 +66,7 @@ class Cartesian_core(_common_class):
                 and self._required_cols <= set(selected.columns)):
             molecule = self.__class__(selected)
             molecule.metadata = self.metadata.copy()
-            keys_to_keep = []
+            keys_to_keep = ['abs_refs']
             for key in keys_to_keep:
                 molecule._metadata[key] = self._metadata[key].copy()
             return molecule
@@ -186,10 +188,11 @@ class Cartesian_core(_common_class):
         # test
         return ase.Atoms(atoms, positions)
 
+    # overwrites existing method
     def copy(self):
         molecule = self.__class__(self.frame)
         molecule.metadata = self.metadata.copy()
-        keys_to_keep = ['bond_dict', 'val_bond_dict']
+        keys_to_keep = ['bond_dict', 'val_bond_dict', 'abs_refs']
         for key in keys_to_keep:
             try:
                 molecule._metadata[key] = self._metadata[key].copy()
@@ -797,7 +800,7 @@ class Cartesian_core(_common_class):
         # the next lines are to test the direction of rotation.
         # is a dihedral really 90 or 270 degrees?
         # Equivalent to direction of rotation of dihedral
-        where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) < 0
+        where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) > 0
         where_to_modify = np.nonzero(where_to_modify)[0]
 
         length = buildlist.shape[0] - start_row

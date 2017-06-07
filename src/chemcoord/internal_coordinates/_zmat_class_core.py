@@ -24,6 +24,7 @@ class Zmat_core(_common_class):
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
 
+    # overwrites existing method
     def __init__(self, frame, order_of_definition=None):
         """How to initialize a Zmat instance.
 
@@ -43,7 +44,7 @@ class Zmat_core(_common_class):
             raise ValueError('Need a pd.DataFrame as input')
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning('There are columns missing for a '
-                                       'meaningful description of a molecule')
+                                  'meaningful description of a molecule')
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
@@ -52,10 +53,23 @@ class Zmat_core(_common_class):
         else:
             self._order = order_of_definition
 
+    # overwrites existing method
+    def copy(self):
+        molecule = self.__class__(self.frame)
+        molecule.metadata = self.metadata.copy()
+        keys_to_keep = ['abs_refs']
+        for key in keys_to_keep:
+            try:
+                molecule._metadata[key] = self._metadata[key].copy()
+            except KeyError:
+                pass
+        return molecule
+
     def _repr_html_(self):
         out = self.copy()
         cols = ['b', 'a', 'd']
-        e = ['$\\vec{0}$', '$\\vec{e_x}$', '$\\vec{e_y}$']
+        representation = {key: out._metadata['abs_refs'][key][1]
+                          for key in out._metadata['abs_refs']}
 
         def f(x):
             if len(x) == 1:
@@ -64,7 +78,8 @@ class Zmat_core(_common_class):
                 return x
 
         for row, i in enumerate(out._order[:3]):
-            out.loc[i, cols[row:]] = f(e[:3 - row])
+            new = f([representation[x] for x in out.loc[i, cols[row:]]])
+            out.loc[i, cols[row:]] = new
         return out.frame._repr_html_()
 
     def _return_appropiate_type(self, selected):
@@ -79,7 +94,7 @@ class Zmat_core(_common_class):
                 and self._required_cols <= set(selected.columns)):
             molecule = self.__class__(selected)
             molecule.metadata = self.metadata.copy()
-            keys_to_keep = []
+            keys_to_keep = ['abs_refs']
             for key in keys_to_keep:
                 molecule._metadata[key] = self._metadata[key].copy()
             return molecule
