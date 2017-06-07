@@ -53,7 +53,6 @@ class Cartesian_core(_common_class):
             -2: (np.array([0, 1, 0]), '$\\vec{e}_y$'),
             -3: (np.array([0, 0, 1]), '$\\vec{e}_z$')}
 
-
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
             frame = pd.DataFrame(selected).T

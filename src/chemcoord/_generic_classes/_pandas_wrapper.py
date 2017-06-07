@@ -242,9 +242,7 @@ class _pandas_wrapper(object):
     def copy(self):
         molecule = self.__class__(self.frame)
         molecule.metadata = self.metadata.copy()
-        keys_to_keep = []
-        for key in keys_to_keep:
-            molecule._metadata[key] = self._metadata[key].copy()
+        molecule._metadata = self._metadata.copy()
         return molecule
 
     def sort_values(self, by, axis=0, ascending=True, inplace=False,
@@ -258,9 +256,12 @@ class _pandas_wrapper(object):
                     by, axis=axis, ascending=ascending,
                     inplace=inplace, kind=kind, na_position=na_position)
         else:
-            return self.__class__(self.frame.sort_values(
-                    by, axis=axis, ascending=ascending,
-                    inplace=inplace, kind=kind, na_position=na_position))
+            new = self.__class__(self.frame.sort_values(
+                by, axis=axis, ascending=ascending, inplace=inplace,
+                kind=kind, na_position=na_position))
+            new.metadata = self.metadata.copy()
+            new._metadata = self._metadata.copy()
+            return new
 
     def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
                    kind='quicksort', na_position='last',
@@ -275,10 +276,13 @@ class _pandas_wrapper(object):
                 kind=kind, na_position=na_position,
                 sort_remaining=sort_remaining, by=by)
         else:
-            return self.__class__(self.frame.sort_index(
+            new = self.__class__(self.frame.sort_index(
                     axis=axis, level=level, ascending=ascending,
                     inplace=inplace, kind=kind, na_position=na_position,
                     sort_remaining=sort_remaining, by=by))
+            new.metadata = self.metadata.copy()
+            new._metadata = self._metadata.copy()
+            return new
 
     def replace(self, to_replace=None, value=None, inplace=False,
                 limit=None, regex=False, method='pad', axis=None):
@@ -291,9 +295,12 @@ class _pandas_wrapper(object):
                                inplace=inplace, limit=limit,
                                regex=regex, method=method, axis=axis)
         else:
-            return self.__class__(self.frame.replace(
+            new = self.__class__(self.frame.replace(
                 to_replace=to_replace, value=value, inplace=inplace,
                 limit=limit, regex=regex, method=method, axis=axis))
+            new.metadata = self.metadata.copy()
+            new._metadata = self._metadata.copy()
+            return new
 
     def set_index(self, keys, drop=True, append=False,
                   inplace=False, verify_integrity=False):
@@ -312,25 +319,28 @@ class _pandas_wrapper(object):
 
         if not self._required_cols <= (set(self.columns) - set(dropped_cols)):
             raise PhysicalMeaning('You drop a column that is needed to '
-                                       'be a physical meaningful description '
-                                       'of a molecule.')
+                                  'be a physical meaningful description '
+                                  'of a molecule.')
 
         if inplace:
             self.frame.set_index(keys, drop=drop, append=append,
                                  inplace=inplace,
                                  verify_integrity=verify_integrity)
         else:
-            return self.__class__(
-                self.frame.set_index(keys, drop=drop, append=append,
-                                     inplace=inplace,
-                                     verify_integrity=verify_integrity)
-                )
+            new = self.frame.set_index(keys, drop=drop, append=append,
+                                       inplace=inplace,
+                                       verify_integrity=verify_integrity)
+            new = self.__class__(new)
+            new.metadata = self.metadata.copy()
+            new._metadata = self._metadata.copy()
+            return new
 
     def append(self, other, ignore_index=False, verify_integrity=False):
         """Append rows of `other` to the end of this frame, returning a new object.
 
         Wrapper around the :meth:`pandas.DataFrame.append` method.
         """
+        # TODO think about metadata
         if not isinstance(other, self.__class__):
             raise ValueError('May only append instances of same type.')
         new_frame = self.frame.append(other.frame,
@@ -344,21 +354,28 @@ class _pandas_wrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.insert` method.
         """
-        if inplace:
-            self.frame.insert(loc, column, value,
-                              allow_duplicates=allow_duplicates)
-        else:
-            output = self.copy()
-            output.frame.insert(loc, column, value,
-                                allow_duplicates=allow_duplicates)
-            return output
+        self.frame.insert(loc, column, value,
+                          allow_duplicates=allow_duplicates)
 
     def apply(self, *args, **kwargs):
         """Applies function along input axis of DataFrame.
 
         Wrapper around the :meth:`pandas.DataFrame.apply` method.
         """
-        return self.__class__(self.frame.apply(*args, **kwargs))
+        new = self.__class__(self.frame.apply(*args, **kwargs))
+        new.metadata = self.metadata.copy()
+        new._metadata = self._metadata.copy()
+        return new
+
+    def applymap(self, *args, **kwargs):
+        """Applies function elementwise
+
+        Wrapper around the :meth:`pandas.DataFrame.applymap` method.
+        """
+        new = self.__class__(self.frame.applymap(*args, **kwargs))
+        new.metadata = self.metadata.copy()
+        new._metadata = self._metadata.copy()
+        return new
 
     def to_string(self, buf=None, columns=None, col_space=None, header=True,
                   index=True, na_rep='NaN', formatters=None,
