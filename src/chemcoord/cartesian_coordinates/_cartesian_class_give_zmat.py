@@ -62,8 +62,6 @@ class Cartesian_give_zmat(Cartesian_core):
                     work_bond_dict.move_to_end(j, last=False)
                 except KeyError:
                     pass
-        arb_int = 0
-
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination('Either start_atom or '
                                              'predefined_table has to be None')
