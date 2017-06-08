@@ -159,7 +159,7 @@ class Cartesian_give_zmat(Cartesian_core):
         """
         bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         c_table = construction_table.copy()
-        angles = self.angle_degrees(c_table.iloc[3:, :])
+        angles = self.angle_degrees(c_table.iloc[3:, :].values)
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
         rename = dict(enumerate(c_table.index[3:]))
         problem_index = [rename[i] for i in problem_index]
@@ -168,9 +168,10 @@ class Cartesian_give_zmat(Cartesian_core):
             loc_i = c_table.index.get_loc(i)
             b, a, problem_d = c_table.loc[i, ['b', 'a', 'd']]
             try:
-                d = (bond_dict[a] - {b, a, problem_d}
-                     - set(c_table.index[loc_i:]))[0]
+                c_table.loc[i, 'd'] = (bond_dict[a] - {b, a, problem_d}
+                                       - set(c_table.index[loc_i:]))[0]
             except IndexError:
+                print(i, 'hello')
                 visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
                 tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
                                              for j in bond_dict[problem_d]])

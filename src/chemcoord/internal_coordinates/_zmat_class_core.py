@@ -144,23 +144,6 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
     def _to_Zmat(self):
         return self.copy()
 
-    def get_buildlist(self):
-        """Return the buildlist which is necessary to create this Zmat
-
-        Args:
-            None
-
-        Returns:
-            np.array: Buildlist
-        """
-        columns = ['temporary_index', 'b', 'a', 'd']
-        tmp = self.insert(0, 'temporary_index', self.index)
-        buildlist = tmp.loc[:, columns].values.astype('int64')
-        buildlist[0, 1:] = 0
-        buildlist[1, 2:] = 0
-        buildlist[2, 3:] = 0
-        return buildlist
-
     def change_numbering(self, new_index=None, inplace=False):
         """Change numbering to a new index.
 
@@ -177,27 +160,23 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
             Zmat: Reindexed version of the zmatrix.
         """
         output = self if inplace else self.copy()
-        old_index = output.index
 
         if (new_index is None):
-            new_index = range(1, self.n_atoms + 1)
-        else:
-            new_index = new_index
-        assert len(new_index) == len(old_index)
-
-        output.index = new_index
+            new_index = range(self.n_atoms)
+        assert len(new_index) == len(output)
 
         cols = ['b', 'a', 'd']
-        output.loc[:, cols] = output.loc[:, cols].replace(old_index, new_index)
-
+        output.loc[:, cols] = output.loc[:, cols].replace(
+            output.index, new_index)
+        output.index = new_index
         if not inplace:
             return output
 
     def has_same_sumformula(self, other):
         same_atoms = True
         for atom in set(self.loc[:, 'atom']):
-            own_atom_number = self.loc[self.loc[:, 'atom'] == atom, :].shape[0]
-            other_atom_number = other.loc[other.loc[:, 'atom'] == atom, :].shape[0]
+            own_atom_number = len(self[self['atom'] == atom])
+            other_atom_number = len(other[other['atom'] == atom])
             same_atoms = (own_atom_number == other_atom_number)
             if not same_atoms:
                 break

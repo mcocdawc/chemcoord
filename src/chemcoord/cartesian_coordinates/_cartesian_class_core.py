@@ -48,10 +48,10 @@ class Cartesian_core(_common_class):
         self.metadata = {}
         self._metadata = {}
         self._metadata['abs_refs'] = {
-            -4: (np.array([0, 0, 0]), '$\\vec{0}$'),
-            -1: (np.array([1, 0, 0]), '$\\vec{e}_x$'),
-            -2: (np.array([0, 1, 0]), '$\\vec{e}_y$'),
-            -3: (np.array([0, 0, 1]), '$\\vec{e}_z$')}
+            -4: (np.array([0., 0., 0.]), '$\\vec{0}$'),
+            -1: (np.array([1., 0., 0.]), '$\\vec{e}_x$'),
+            -2: (np.array([0., 1., 0.]), '$\\vec{e}_y$'),
+            -3: (np.array([0., 0., 1.]), '$\\vec{e}_z$')}
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
@@ -717,7 +717,7 @@ class Cartesian_core(_common_class):
             b_pos = self.loc[buildlist[start_row:, 1], coords].values
         return np.linalg.norm(i_pos - b_pos, axis=1)
 
-    def angle_degrees(self, buildlist, start_row=0):
+    def angle_degrees(self, indices, start_row=0):
         """Return the angles between given atoms.
 
         In order to know more about the buildlist, go to :func:`to_zmat`.
@@ -731,12 +731,12 @@ class Cartesian_core(_common_class):
                 third atom of every entry in the buildlist.
         """
         coords = ['x', 'y', 'z']
-        if isinstance(buildlist, pd.DataFrame):
-            i_pos = self.loc[buildlist.index[start_row:], coords].values
-            b_pos = self.loc[buildlist.iloc[start_row:, 0], coords].values
-            a_pos = self.loc[buildlist.iloc[start_row:, 1], coords].values
+        if isinstance(indices, pd.DataFrame):
+            i_pos = self.loc[indices.index[start_row:], coords].values
+            b_pos = self.loc[indices.iloc[start_row:, 0], coords].values
+            a_pos = self.loc[indices.iloc[start_row:, 1], coords].values
         else:
-            buildlist = np.array(buildlist)
+            buildlist = np.array(indices)
             try:
                 buildlist.shape[1]
             except IndexError:

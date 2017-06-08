@@ -8,9 +8,32 @@ except ImportError:
 
 import numpy as np
 import math as m
+from numba import jit
+
+
+@jit(nopython=True)
+def _jit_isclose(a, b, atol=1e-5, rtol=1e-8):
+    return np.abs(a - b) <= (atol + rtol * np.abs(b))
+
+
+@jit(nopython=True)
+def _jit_cross(A, B):
+    C = np.empty_like(A)
+    C[0] = A[1] * B[2] - A[2] * B[1]
+    C[1] = A[2] * B[0] - A[0] * B[2]
+    C[2] = A[0] * B[1] - A[1] * B[0]
+    return C
 
 
 def normalize(vector):
+    """Normalizes a vector
+    """
+    normed_vector = vector / np.linalg.norm(vector)
+    return normed_vector
+
+
+@jit(nopython=True)
+def _jit_normalize(vector):
     """Normalizes a vector
     """
     normed_vector = vector / np.linalg.norm(vector)
@@ -41,6 +64,37 @@ def rotation_matrix(axis, angle):
     return rot_matrix
 
 
+@jit(nopython=True)
+def _jit_rotation_matrix(axis, angle):
+    """Returns the rotation matrix.
+
+    This function returns a matrix for the counterclockwise rotation
+    around the given axis.
+    The Input angle is in radians.
+
+    Args:
+        axis (vector):
+        angle (float):
+
+    Returns:
+        Rotation matrix (np.array):
+    """
+    axis = _jit_normalize(axis)
+    a = m.cos(angle / 2)
+    b, c, d = axis * m.sin(angle / 2)
+    rot_matrix = np.empty((3, 3))
+    rot_matrix[0, 0] = a**2 + b**2 - c**2 - d**2
+    rot_matrix[0, 1] = 2. * (b * c - a * d)
+    rot_matrix[0, 2] = 2. * (b * d + a * c)
+    rot_matrix[1, 0] = 2. * (b * c + a * d)
+    rot_matrix[1, 1] = a**2 + c**2 - b**2 - d**2
+    rot_matrix[1, 2] = 2. * (c * d - a * b)
+    rot_matrix[2, 0] = 2. * (b * d - a * c)
+    rot_matrix[2, 1] = 2. * (c * d + a * b)
+    rot_matrix[2, 2] = a**2 + d**2 - b**2 - c**2
+    return rot_matrix
+
+
 def give_angle(Vector1, Vector2):
     '''
     Calculate the angle in degrees between two vectors.
@@ -61,6 +115,7 @@ def give_angle(Vector1, Vector2):
     angle = np.degrees(angle)
 
     return angle
+
 
 def orthormalize(basis):
     """Orthonormalizes a given basis.
