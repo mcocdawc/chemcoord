@@ -159,18 +159,18 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
         Returns:
             Zmat: Reindexed version of the zmatrix.
         """
-        output = self if inplace else self.copy()
+        out = self if inplace else self.copy()
 
         if (new_index is None):
-            new_index = range(self.n_atoms)
-        assert len(new_index) == len(output)
+            new_index = range(len(self))
+        elif len(new_index) != len(output):
+            raise ValueError('len(new_index) has to be the same as len(self)')
 
         cols = ['b', 'a', 'd']
-        output.loc[:, cols] = output.loc[:, cols].replace(
-            output.index, new_index)
-        output.index = new_index
+        out.loc[:, cols] = out.loc[:, cols].replace(out.index, new_index)
+        out.index = new_index
         if not inplace:
-            return output
+            return out
 
     def has_same_sumformula(self, other):
         same_atoms = True
