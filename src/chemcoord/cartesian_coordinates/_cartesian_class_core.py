@@ -19,6 +19,44 @@ from chemcoord._exceptions import PhysicalMeaning
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
+import numba as nb
+from numba import jit
+
+
+@jit(nopython=True)
+def _jit_get_squared_distances(positions1, positions2):
+    """Optimized function for calculating the distance between each pair
+    of points in positions1 and positions2.
+    """
+    n1 = positions1.shape[0]
+    n2 = positions2.shape[0]
+    D = np.empty((n2, n1))
+
+    for i in range(n1):
+        for j in range(n2):
+            D[i, j] = np.sum((positions1[i] - positions2[j])**2)
+    return D
+
+
+@jit(nopython=True)
+def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
+    """Calculate a boolean array where ``A[i,j] is True`` indicates a
+    bond between the i-th and j-th atom.
+    """
+    n = pos.shape[0]
+    bond_array = np.empty((n, n), dtype=nb.boolean)
+
+    for i in range(n):
+        for j in range(i, n):
+            D = 0
+            for h in range(3):
+                D += (pos[i, h] - pos[j, h])**2
+            bond_array[i, j] = ((bond_radii[i] + bond_radii[j])**2 - D) >= 0
+            bond_array[j, i] = bond_array[i, j]
+    if not self_bonding_allowed:
+        for i in range(n):
+            bond_array[i, i] = False
+    return bond_array
 
 
 class Cartesian_core(_common_class):
@@ -200,32 +238,7 @@ class Cartesian_core(_common_class):
         return molecule
 
     @staticmethod
-    def _get_squared_distances(positions1, positions2):
-        """Optimized function for calculating the distance between each pair
-        of points in positions1 and positions2.
-        """
-        coord1 = positions1[:, 0]
-        coord2 = positions2[:, 0]
-        squared_distances = (coord1 - coord2[:, None])**2
-        for i in range(1, 3):
-            coord1 = positions1[:, i]
-            coord2 = positions2[:, i]
-            squared_distances += (coord1 - coord2[:, None])**2
-        return squared_distances
-
-    def _give_bond_array(self, positions, bond_radii,
-                         self_bonding_allowed=False):
-        """Calculate a boolean array where ``A[i,j] is True`` indicates a
-        bond between the i-th and j-th atom.
-        """
-        D = self._get_squared_distances(positions, positions)
-        overlap = (bond_radii + bond_radii[:, None])**2 - D
-        bond_array = overlap >= 0
-        if not self_bonding_allowed:
-            np.fill_diagonal(bond_array, False)
-        return bond_array
-
-    def _update_bond_dict(self, fragment_indices,
+    def _update_bond_dict(fragment_indices,
                           positions,
                           bond_radii,
                           bond_dict=None,
@@ -244,7 +257,7 @@ class Cartesian_core(_common_class):
         frag_pos = positions[fragment_indices, :]
         frag_bond_radii = bond_radii[fragment_indices]
 
-        bond_array = self._give_bond_array(
+        bond_array = _jit_give_bond_array(
             frag_pos, frag_bond_radii,
             self_bonding_allowed=self_bonding_allowed)
         a, b = bond_array.nonzero()
@@ -344,13 +357,12 @@ class Cartesian_core(_common_class):
             old_index = self.index
             self.index = range(self.n_atoms)
             fragments = self._divide_et_impera(offset=offset)
-            positions = np.array(
-                self.loc[:, ['x', 'y', 'z']], dtype='float32', order='F')
+            positions = np.array(self.loc[:, ['x', 'y', 'z']], order='F')
             data = self.add_data([atomic_radius_data, 'valency'])
             bond_radii = data[atomic_radius_data]
             if modified_properties is not None:
                 bond_radii.update(pd.Series(modified_properties))
-            bond_radii = bond_radii.values.astype('float32')
+            bond_radii = bond_radii.values
             bond_dict = collections.defaultdict(set)
             for i, j, k in product(*[range(x) for x in fragments.shape]):
                 # The following call is not side effect free and changes
@@ -898,7 +910,7 @@ class Cartesian_core(_common_class):
         coords = ['x', 'y', 'z']
         positions1 = self.loc[:, coords].values.astype('float32')
         positions2 = other.loc[:, coords].values.astype('float32')
-        D = self._get_squared_distances(positions2, positions1)
+        D = _jit_get_squared_distances(positions2, positions1)
         i, j = np.unravel_index(D.argmin(), D.shape)
         distance = np.sqrt(D[i, j])
 
