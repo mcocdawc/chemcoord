@@ -53,6 +53,10 @@ chemcoord\.Cartesian
          ~Cartesian.distance_to
 
     .. rubric:: Conversion to internal coordinates
+
+    .. autosummary::
+         :toctree: src_Cartesian
+
          ~Cartesian.give_zmat
          ~Cartesian.get_construction_table
          ~Cartesian.check_absolute_refs

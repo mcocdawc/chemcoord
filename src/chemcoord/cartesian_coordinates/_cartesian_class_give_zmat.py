@@ -143,6 +143,113 @@ class Cartesian_give_zmat(Cartesian_core):
         output = output.loc[order_of_definition, ['b', 'a', 'd']]
         return output
 
+    def get_construction_table(self, fragment_list=None,
+                               use_lookup=settings['defaults']['use_lookup']):
+        """Create a construction table for a Zmatrix.
+
+        A construction table is basically a Zmatrix without the values
+        for the bond lenghts, angles and dihedrals.
+        It contains the whole information about which reference atoms
+        are used by each atom in the Zmatrix.
+
+        This method creates a so called "chemical" construction table,
+        which makes use of the connectivity table in this molecule.
+
+        By default the first atom is the one nearest to the topologic center.
+        (Compare with :meth:`~Cartesian.topologic_center()`)
+
+        Args:
+            start_atom: An index for the first atom may be provided.
+            predefined_table (pd.DataFrame): An uncomplete construction table
+                may be provided. The rest is created automatically.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            pd.DataFrame: Construction table
+        """
+        full_bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        if fragment_list is None:
+            fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
+            # During function execution the bonding situation does not change,
+            # so the lookup may be used now.
+            use_lookup = True
+        else:
+            fragments = fragment_list
+
+        def prepend_missing_parts_of_molecule(fragment_list):
+            for fragment in fragment_list:
+                if pd.api.types.is_list_like(fragment):
+                    try:
+                        full_index |= fragment[0].index
+                    except NameError:
+                        full_index = fragment[0].index
+                else:
+                    try:
+                        full_index |= fragment.index
+                    except NameError:
+                        full_index = fragment.index
+
+            if not self.index.difference(full_index).empty:
+                missing_part = self.without(self.loc[full_index],
+                                            use_lookup=use_lookup)
+                fragment_list = missing_part + fragment_list
+            return fragment_list
+
+        fragments = prepend_missing_parts_of_molecule(fragments)
+
+        if pd.api.types.is_list_like(fragments[0]):
+            fragment, references = fragments[0]
+            full_table = fragment._get_constr_table(
+                use_lookup=use_lookup, predefined_table=references)
+        else:
+            fragment = fragments[0]
+            full_table = fragment._get_constr_table(use_lookup=use_lookup)
+
+        for fragment in fragments[1:]:
+            finished_part = self.loc[full_table.index]
+            bond_dict = finished_part.restrict_bond_dict(full_bond_dict)
+            if pd.api.types.is_list_like(fragment):
+                fragment, references = fragment
+                if len(references) < min(3, len(fragment)):
+                    raise ValueError('If you specify references for a '
+                                     'fragment, it has to consist of at least'
+                                     'min(3, len(fragment)) rows.')
+                constr_table = fragment._get_constr_table(
+                    predefined_table=references, use_lookup=use_lookup)
+            else:
+                i, b = fragment._shortest_distance(finished_part)[:2]
+                constr_table = fragment._get_constr_table(
+                    start_atom=i, use_lookup=use_lookup)
+                if len(full_table) == 1:
+                    a, d = -3, -1
+                elif len(full_table) == 2:
+                    if b == full_table.index[0]:
+                        a = full_table.index[1]
+                    else:
+                        a = full_table.index[0]
+                    d = -1
+                else:
+                    if b in full_table.index[:2]:
+                        if b == full_table.index[0]:
+                            a = full_table.index[2]
+                            d = full_table.index[1]
+                        else:
+                            a = full_table.loc[b, 'b']
+                            d = full_table.index[2]
+                    else:
+                        a, d = full_table.loc[b, ['b', 'a']]
+
+                if len(constr_table) >= 1:
+                    constr_table.iloc[0, :] = b, a, d
+                if len(constr_table) >= 2:
+                    constr_table.iloc[1, [1, 2]] = b, a
+                if len(constr_table) >= 3:
+                    constr_table.iloc[2, 2] = b
+
+            full_table = pd.concat([full_table, constr_table])
+        return full_table
+
     def check_dihedral(self, construction_table,
                        use_lookup=settings['defaults']['use_lookup']):
         """Reindexe the dihedral defining atom if colinear.
@@ -245,113 +352,6 @@ class Cartesian_give_zmat(Cartesian_core):
                 else:
                     finished = True
         return c_table
-
-    def get_construction_table(self, fragment_list=None,
-                               use_lookup=settings['defaults']['use_lookup']):
-        """Create a construction table for a Zmatrix.
-
-        A construction table is basically a Zmatrix without the values
-        for the bond lenghts, angles and dihedrals.
-        It contains the whole information about which reference atoms
-        are used by each atom in the Zmatrix.
-
-        This method creates a so called "chemical" construction table,
-        which makes use of the connectivity table in this molecule.
-
-        By default the first atom is the one nearest to the topologic center.
-        (Compare with :meth:`~Cartesian.topologic_center()`)
-
-        Args:
-            start_atom (index): An index for the first atom may be provided.
-            predefined_table (pd.DataFrame): An uncomplete construction table
-                may be provided. The rest is created automatically.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-
-        Returns:
-            pd.DataFrame: Construction table
-        """
-        full_bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-        if fragment_list is None:
-            fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
-            # During function execution the bonding situation does not change,
-            # so the lookup may be used now.
-            use_lookup = True
-        else:
-            fragments = fragment_list
-
-        def prepend_missing_parts_of_molecule(fragment_list):
-            for fragment in fragment_list:
-                if pd.api.types.is_list_like(fragment):
-                    try:
-                        full_index |= fragment[0].index
-                    except NameError:
-                        full_index = fragment[0].index
-                else:
-                    try:
-                        full_index |= fragment.index
-                    except NameError:
-                        full_index = fragment.index
-
-            if not self.index.difference(full_index).empty:
-                missing_part = self.without(self.loc[full_index],
-                                            use_lookup=use_lookup)
-                fragment_list = missing_part + fragment_list
-            return fragment_list
-
-        fragments = prepend_missing_parts_of_molecule(fragments)
-
-        if pd.api.types.is_list_like(fragments[0]):
-            fragment, references = fragments[0]
-            full_table = fragment._get_constr_table(
-                use_lookup=use_lookup, predefined_table=references)
-        else:
-            fragment = fragments[0]
-            full_table = fragment._get_constr_table(use_lookup=use_lookup)
-
-        for fragment in fragments[1:]:
-            finished_part = self.loc[full_table.index]
-            bond_dict = finished_part.restrict_bond_dict(full_bond_dict)
-            if pd.api.types.is_list_like(fragment):
-                fragment, references = fragment
-                if len(references) < min(3, len(fragment)):
-                    raise ValueError('If you specify references for a '
-                                     'fragment, it has to consist of at least'
-                                     'min(3, len(fragment)) rows.')
-                constr_table = fragment._get_constr_table(
-                    predefined_table=references, use_lookup=use_lookup)
-            else:
-                i, b = fragment._shortest_distance(finished_part)[:2]
-                constr_table = fragment._get_constr_table(
-                    start_atom=i, use_lookup=use_lookup)
-                if len(full_table) == 1:
-                    a, d = -3, -1
-                elif len(full_table) == 2:
-                    if b == full_table.index[0]:
-                        a = full_table.index[1]
-                    else:
-                        a = full_table.index[0]
-                    d = -1
-                else:
-                    if b in full_table.index[:2]:
-                        if b == full_table.index[0]:
-                            a = full_table.index[2]
-                            d = full_table.index[1]
-                        else:
-                            a = full_table.loc[b, 'b']
-                            d = full_table.index[2]
-                    else:
-                        a, d = full_table.loc[b, ['b', 'a']]
-
-                if len(constr_table) >= 1:
-                    constr_table.iloc[0, :] = b, a, d
-                if len(constr_table) >= 2:
-                    constr_table.iloc[1, [1, 2]] = b, a
-                if len(constr_table) >= 3:
-                    constr_table.iloc[2, 2] = b
-
-            full_table = pd.concat([full_table, constr_table])
-        return full_table
 
     def _calculate_values(self, construction_table):
         values = np.empty((len(self), 3), dtype='float64')
