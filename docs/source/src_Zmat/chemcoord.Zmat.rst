@@ -14,7 +14,6 @@ chemcoord\.Zmat
       ~Zmat.__init__
       ~Zmat.add_data
       ~Zmat.change_numbering
-      ~Zmat.get_buildlist
       ~Zmat.has_same_sumformula
       ~Zmat.give_cartesian
       ~Zmat.to_xyz

@@ -207,6 +207,18 @@ class Cartesian_give_zmat(Cartesian_core):
         return c_table
 
     def check_absolute_refs(self, construction_table):
+        """Reindexe the dihedral defining atom if colinear.
+
+        Args:
+            construction_table (pd.DataFrame):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+            bond_dict (OrderedDict): If a connectivity table is provided, it is
+                not recalculated.
+
+        Returns:
+            pd.DataFrame: construction_table
+        """
         c_table = construction_table.copy()
         abs_refs = self._metadata['abs_refs']
 
@@ -442,6 +454,18 @@ class Cartesian_give_zmat(Cartesian_core):
 
     def give_zmat(self, construction_table=None,
                   use_lookup=settings['defaults']['use_lookup']):
+        """Reindexe the dihedral defining atom if colinear.
+
+        Args:
+            construction_table (pd.DataFrame):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+            bond_dict (OrderedDict): If a connectivity table is provided, it is
+                not recalculated.
+
+        Returns:
+            pd.DataFrame: construction_table
+        """
         self.get_bonds(use_lookup=use_lookup)
         # During function execution the connectivity situation won't change
         # So use_look=True will be used

@@ -13,7 +13,6 @@ chemcoord\.Cartesian
 
          ~Cartesian.__init__
          ~Cartesian.get_bonds
-         ~Cartesian.give_zmat
          ~Cartesian.to_zmat
          ~Cartesian.add_data
          ~Cartesian.total_mass
@@ -53,6 +52,11 @@ chemcoord\.Cartesian
          ~Cartesian.topologic_center
          ~Cartesian.distance_to
 
+    .. rubric:: Conversion to internal coordinates
+         ~Cartesian.give_zmat
+         ~Cartesian.get_construction_table
+         ~Cartesian.check_absolute_refs
+         ~Cartesian.check_dihedral
 
     .. rubric:: IO
 
@@ -92,9 +96,6 @@ chemcoord\.Cartesian
 
          ~Cartesian._divide_et_impera
          ~Cartesian._preserve_bonds
-         ~Cartesian._get_buildlist
-         ~Cartesian._clean_dihedral
-         ~Cartesian._build_zmat
 
 
 
