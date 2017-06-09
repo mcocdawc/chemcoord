@@ -19,19 +19,24 @@ import os
 import inspect
 # import chemcoord
 
+from unittest.mock import MagicMock
 
 
-#__location__ = os.path.join(os.getcwd(), os.path.dirname(
-#    inspect.getfile(inspect.currentframe())))
-#
-#output_dir = os.path.join(__location__, "_reference")
-#module_dir = os.path.join(__location__, "../mendeleev")
-#
-#on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-#if on_rtd:
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return MagicMock()
+
+
+MOCK_MODULES = ['numba']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+
+# on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+# if on_rtd:
 #    html_theme = 'default'
-#else:
-#    sys.path.append(os.path.dirname(os.path.normpath(module_dir)))
+# else:
+#     sys.path.append(os.path.dirname(os.path.normpath(module_dir)))
 
 def give_version():
     version_file = os.path.join('../../', 'VERSION')
