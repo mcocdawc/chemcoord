@@ -55,9 +55,9 @@ class Zmat_give_cartesian(Zmat_core):
         c_table = self.loc[:, ['b', 'a', 'd']].values
         zmat_values = self.loc[:, ['bond', 'angle', 'dihedral']].values
         zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
-        positions = np.empty((len(self), 3), dtype='float64', order='C')
+        positions = np.empty((len(self), 3), dtype='float64')
 
-        def get_ref_first_three_atoms(c_table, positions, row):
+        for row in range(min(3, len(c_table))):
             b, a, d = c_table[row, :]
             if row == 0:
                 vb = abs_refs[b][0]
@@ -69,10 +69,8 @@ class Zmat_give_cartesian(Zmat_core):
                 vb = positions[b]
                 va = positions[a]
             vd = abs_refs[d][0]
-            return vb, va, vd
+            refs = vb, va, vd
 
-        for row in range(min(3, len(c_table))):
-            refs = get_ref_first_three_atoms(c_table, positions, row)
             positions[row] = _jit_calculate_position(refs, zmat_values, row)
 
         _jit_calculate_rest(positions, c_table, zmat_values)
