@@ -171,7 +171,6 @@ class Cartesian_give_zmat(Cartesian_core):
                 c_table.loc[i, 'd'] = (bond_dict[a] - {b, a, problem_d}
                                        - set(c_table.index[loc_i:]))[0]
             except IndexError:
-                print(i, 'hello')
                 visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
                 tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
                                              for j in bond_dict[problem_d]])
@@ -202,7 +201,9 @@ class Cartesian_give_zmat(Cartesian_core):
                             c_table.loc[i, 'd'] = new_d
                         k = k + 1
                     if not found:
-                        raise UndefinedCoordinateSystem
+                        message = ('The atom with index {} has no possibility '
+                                   'to get nonlinear reference atoms'.format)
+                        raise UndefinedCoordinateSystem(message(i))
         return c_table
 
     def check_absolute_refs(self, construction_table):

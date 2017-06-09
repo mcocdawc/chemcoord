@@ -240,9 +240,15 @@ class _pandas_wrapper(object):
                 return '${}$'.format(sympy.latex(x))
             else:
                 return x
-
         new = self.applymap(formatter)
-        return new.frame._repr_html_()
+
+        def insert_before_substring(insert_txt, substr, txt):
+            """Under the assumption that substr only appears once.
+            """
+            return (insert_txt + substr).join(txt.split(substr))
+        html_txt = new.frame._repr_html_()
+        insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
+        return insert_before_substring(insert_txt, '<thead>', html_txt)
 
     def copy(self):
         molecule = self.__class__(self.frame)

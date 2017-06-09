@@ -67,10 +67,11 @@ class Zmat_io(Zmat_core):
         Returns:
             formatted : string (or unicode, depending on data and options)
         """
-        molecule = self.change_numbering() if implicit_index else self
+        if implicit_index:
+            molecule = self.change_numbering(new_index=range(1, len(self)))
         molecule = molecule._convert_nan_int() if convert_nan_int else molecule
 
-        content = molecule.to_string(index=not implicit_index,
+        content = molecule.to_string(index=(not implicit_index),
                                      float_format=float_format, header=header)
 
         # TODO the following might be removed in the future

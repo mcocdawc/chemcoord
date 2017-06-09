@@ -90,26 +90,17 @@ class Zmat_core(_common_class):
                 return x
 
         out = out.applymap(formatter)
-        return out.frame._repr_html_()
+
+        def insert_before_substring(insert_txt, substr, txt):
+            """Under the assumption that substr only appears once.
+            """
+            return (insert_txt + substr).join(txt.split(substr))
+        html_txt = out.frame._repr_html_()
+        insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
+        return insert_before_substring(insert_txt, '<thead>', html_txt)
 
     def _return_appropiate_type(self, selected):
-        if isinstance(selected, pd.Series):
-            frame = pd.DataFrame(selected).T
-            if self._required_cols <= set(frame.columns):
-                selected = frame
-            else:
-                return selected
-
-        if (isinstance(selected, pd.DataFrame)
-                and self._required_cols <= set(selected.columns)):
-            molecule = self.__class__(selected)
-            molecule.metadata = self.metadata.copy()
-            keys_to_keep = ['abs_refs']
-            for key in keys_to_keep:
-                molecule._metadata[key] = self._metadata[key].copy()
-            return molecule
-        else:
-            return selected
+        return selected
 
     def __add__(self, other):
         selection = ['atom', 'b', 'a', 'd']
