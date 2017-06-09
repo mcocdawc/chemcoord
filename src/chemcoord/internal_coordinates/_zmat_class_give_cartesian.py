@@ -38,15 +38,10 @@ def _jit_calculate_position(references, zmat_values, row):
 
 
 @jit(nopython=True)
-def _jit_get_ref(positions, c_table, row):
-    b, a, d = c_table[row, :]
-    return positions[b], positions[a], positions[d]
-
-
-@jit(nopython=True)
 def _jit_calculate_rest(positions, c_table, zmat_values):
     for row in range(3, len(c_table)):
-        references = _jit_get_ref(positions, c_table, row)
+        b, a, d = c_table[row, :]
+        references = positions[b], positions[a], positions[d]
         positions[row] = _jit_calculate_position(references, zmat_values, row)
 
 
@@ -62,20 +57,22 @@ class Zmat_give_cartesian(Zmat_core):
         zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
         positions = np.empty((len(self), 3), dtype='float64', order='C')
 
-        def get_ref_first_atoms(c_table, positions, row):
+        def get_ref_first_three_atoms(c_table, positions, row):
             b, a, d = c_table[row, :]
             if row == 0:
-                vb, va, vd = [abs_refs[k][0] for k in (b, a, d)]
+                vb = abs_refs[b][0]
+                va = abs_refs[a][0]
             elif row == 1:
                 vb = positions[b]
-                va, vd = [abs_refs[k][0] for k in (a, d)]
+                va = abs_refs[a][0]
             elif row == 2:
-                vb, va = positions[[b, a]]
-                vd = abs_refs[d][0]
+                vb = positions[b]
+                va = positions[a]
+            vd = abs_refs[d][0]
             return vb, va, vd
 
         for row in range(min(3, len(c_table))):
-            refs = get_ref_first_atoms(c_table, positions, row)
+            refs = get_ref_first_three_atoms(c_table, positions, row)
             positions[row] = _jit_calculate_position(refs, zmat_values, row)
 
         _jit_calculate_rest(positions, c_table, zmat_values)
