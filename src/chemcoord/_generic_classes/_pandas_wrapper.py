@@ -224,7 +224,7 @@ class _pandas_wrapper(object):
     def columns(self, value):
         if not self._required_cols <= set(value):
             raise PhysicalMeaning('There are columns missing for a '
-                                       'meaningful description of a molecule')
+                                  'meaningful description of a molecule')
         self.frame.columns = value
 
     @property
