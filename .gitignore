@@ -1,5 +1,6 @@
 # compiled python code
 *.py[cod]
+*nb[ci]
 
 # C extensions
 *.so

@@ -21,42 +21,8 @@ from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
 import numba as nb
 from numba import jit
-
-
-@jit(nopython=True)
-def _jit_get_squared_distances(positions1, positions2):
-    """Optimized function for calculating the distance between each pair
-    of points in positions1 and positions2.
-    """
-    n1 = positions1.shape[0]
-    n2 = positions2.shape[0]
-    D = np.empty((n2, n1))
-
-    for i in range(n1):
-        for j in range(n2):
-            D[i, j] = np.sum((positions1[i] - positions2[j])**2)
-    return D
-
-
-@jit(nopython=True)
-def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
-    """Calculate a boolean array where ``A[i,j] is True`` indicates a
-    bond between the i-th and j-th atom.
-    """
-    n = pos.shape[0]
-    bond_array = np.empty((n, n), dtype=nb.boolean)
-
-    for i in range(n):
-        for j in range(i, n):
-            D = 0
-            for h in range(3):
-                D += (pos[i, h] - pos[j, h])**2
-            bond_array[i, j] = ((bond_radii[i] + bond_radii[j])**2 - D) >= 0
-            bond_array[j, i] = bond_array[i, j]
-    if not self_bonding_allowed:
-        for i in range(n):
-            bond_array[i, i] = False
-    return bond_array
+import multiprocessing
+import threading
 
 
 class Cartesian_core(_common_class):
@@ -237,8 +203,83 @@ class Cartesian_core(_common_class):
                 pass
         return molecule
 
+    # @staticmethod
+    # @jit(nopython=True)
+    # def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
+    #     """Calculate a boolean array where ``A[i,j] is True`` indicates a
+    #     bond between the i-th and j-th atom.
+    #     """
+    #     n = pos.shape[0]
+    #     bond_array = np.empty((n, n), dtype=nb.boolean)
+    #
+    #     for i in range(n):
+    #         for j in range(i, n):
+    #             D = 0
+    #             for h in range(3):
+    #                 D += (pos[i, h] - pos[j, h])**2
+    #             bond_array[i, j] = ((bond_radii[i] + bond_radii[j])**2 - D) >= 0
+    #             bond_array[j, i] = bond_array[i, j]
+    #     if not self_bonding_allowed:
+    #         for i in range(n):
+    #             bond_array[i, i] = False
+    #     return bond_array
+
     @staticmethod
-    def _update_bond_dict(fragment_indices,
+    def _give_multithreaded_function(numthreads):
+        """Run the given function inside *numthreads* threads, splitting its
+        arguments into equal-sized chunks.
+        """
+        @jit(nopython=True, nogil=True, cache=True)
+        def inner_func(X, bond_radii, R, interval, self_bonding_allowed=False):
+            start_row, end_row = interval
+            M, d = X.shape
+            for i in range(start_row, end_row):
+                for j in range(i, M):
+                    r = 0.0
+                    for k in range(d):
+                        r += (X[i, k] - X[j, k])**2
+                    R[i, j] = ((bond_radii[i] + bond_radii[j])**2 - r) >= 0
+                    R[j, i] = R[i, j]
+            if not self_bonding_allowed:
+                for i in range(start_row, end_row):
+                    R[i, i] = False
+
+        def calculate_workload(M, numthreads):
+            """Get the intervals that cut a isosceles right-angled triangle
+            into stripes of same area.
+            The aim is to get a similar workload for all threads.
+            The number of stripes is given by *numthreads*.
+            """
+            def get_new_end_row(start_row, M, numthreads):
+                K = (start_row**2 - 2 * M * start_row
+                     - M**2 / numthreads)
+                return M - np.sqrt(M**2 + K)
+
+            intervals = []
+            start_row = 0
+            for i in range(numthreads - 1):
+                end_row = int(get_new_end_row(start_row, M, numthreads))
+                intervals.append((start_row, end_row))
+                start_row = end_row
+            intervals.append((start_row, M))
+            return intervals
+
+        def func_mt(X, bond_radii, self_bonding_allowed=False):
+            side_length = X.shape[0]
+            R = np.empty((side_length, side_length), dtype='b1')
+            intervals = calculate_workload(side_length, numthreads)
+            chunks = [[X, bond_radii, R, interval, self_bonding_allowed]
+                      for interval in intervals]
+            threads = [threading.Thread(target=inner_func, args=args)
+                       for args in chunks]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+            return R
+        return func_mt
+
+    def _update_bond_dict(self, fragment_indices,
                           positions,
                           bond_radii,
                           bond_dict=None,
@@ -257,9 +298,10 @@ class Cartesian_core(_common_class):
         frag_pos = positions[fragment_indices, :]
         frag_bond_radii = bond_radii[fragment_indices]
 
-        bond_array = _jit_give_bond_array(
-            frag_pos, frag_bond_radii,
-            self_bonding_allowed=self_bonding_allowed)
+        give_bond_array = self._give_multithreaded_function(multiprocessing.cpu_count())
+
+        bond_array = give_bond_array(frag_pos, frag_bond_radii,
+                                     self_bonding_allowed=self_bonding_allowed)
         a, b = bond_array.nonzero()
         a, b = [convert_index[i] for i in a], [convert_index[i] for i in b]
         for row, index in enumerate(a):
@@ -906,11 +948,26 @@ class Cartesian_core(_common_class):
         missing_part = missing_part.fragmentate(use_lookup=use_lookup)
         return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
+    @staticmethod
+    @jit(nopython=True)
+    def _jit_get_squared_distances(positions1, positions2):
+        """Optimized function for calculating the distance between each pair
+        of points in positions1 and positions2.
+        """
+        n1 = positions1.shape[0]
+        n2 = positions2.shape[0]
+        D = np.empty((n2, n1))
+
+        for i in range(n1):
+            for j in range(n2):
+                D[i, j] = np.sum((positions1[i] - positions2[j])**2)
+        return D
+
     def _shortest_distance(self, other):
         coords = ['x', 'y', 'z']
         positions1 = self.loc[:, coords].values.astype('float32')
         positions2 = other.loc[:, coords].values.astype('float32')
-        D = _jit_get_squared_distances(positions2, positions1)
+        D = self._jit_get_squared_distances(positions2, positions1)
         i, j = np.unravel_index(D.argmin(), D.shape)
         distance = np.sqrt(D[i, j])
 
