@@ -21,42 +21,8 @@ from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
 import numba as nb
 from numba import jit
-
-
-@jit(nopython=True)
-def _jit_get_squared_distances(positions1, positions2):
-    """Optimized function for calculating the distance between each pair
-    of points in positions1 and positions2.
-    """
-    n1 = positions1.shape[0]
-    n2 = positions2.shape[0]
-    D = np.empty((n2, n1))
-
-    for i in range(n1):
-        for j in range(n2):
-            D[i, j] = np.sum((positions1[i] - positions2[j])**2)
-    return D
-
-
-@jit(nopython=True)
-def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
-    """Calculate a boolean array where ``A[i,j] is True`` indicates a
-    bond between the i-th and j-th atom.
-    """
-    n = pos.shape[0]
-    bond_array = np.empty((n, n), dtype=nb.boolean)
-
-    for i in range(n):
-        for j in range(i, n):
-            D = 0
-            for h in range(3):
-                D += (pos[i, h] - pos[j, h])**2
-            bond_array[i, j] = ((bond_radii[i] + bond_radii[j])**2 - D) >= 0
-            bond_array[j, i] = bond_array[i, j]
-    if not self_bonding_allowed:
-        for i in range(n):
-            bond_array[i, i] = False
-    return bond_array
+import threading
+import multiprocessing
 
 
 class Cartesian_core(_common_class):
@@ -238,7 +204,27 @@ class Cartesian_core(_common_class):
         return molecule
 
     @staticmethod
-    def _update_bond_dict(fragment_indices,
+    @jit(nopython=True)
+    def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
+        """Calculate a boolean array where ``A[i,j] is True`` indicates a
+        bond between the i-th and j-th atom.
+        """
+        n = pos.shape[0]
+        bond_array = np.empty((n, n), dtype=nb.boolean)
+
+        for i in range(n):
+            for j in range(i, n):
+                D = 0
+                for h in range(3):
+                    D += (pos[i, h] - pos[j, h])**2
+                bond_array[i, j] = ((bond_radii[i] + bond_radii[j])**2 - D) >= 0
+                bond_array[j, i] = bond_array[i, j]
+        if not self_bonding_allowed:
+            for i in range(n):
+                bond_array[i, i] = False
+        return bond_array
+
+    def _update_bond_dict(self, fragment_indices,
                           positions,
                           bond_radii,
                           bond_dict=None,
@@ -257,14 +243,17 @@ class Cartesian_core(_common_class):
         frag_pos = positions[fragment_indices, :]
         frag_bond_radii = bond_radii[fragment_indices]
 
-        bond_array = _jit_give_bond_array(
+        bond_array = self._jit_give_bond_array(
             frag_pos, frag_bond_radii,
             self_bonding_allowed=self_bonding_allowed)
         a, b = bond_array.nonzero()
         a, b = [convert_index[i] for i in a], [convert_index[i] for i in b]
-        for row, index in enumerate(a):
-            # bond_dict is a collections.defaultdict(set)
-            bond_dict[index].add(b[row])
+
+        lock = threading.Lock()
+        with lock:
+            for row, index in enumerate(a):
+                # bond_dict is a collections.defaultdict(set)
+                bond_dict[index].add(b[row])
         return bond_dict
 
     def _divide_et_impera(self, n_atoms_per_set=500, offset=3):
@@ -364,13 +353,19 @@ class Cartesian_core(_common_class):
                 bond_radii.update(pd.Series(modified_properties))
             bond_radii = bond_radii.values
             bond_dict = collections.defaultdict(set)
-            for i, j, k in product(*[range(x) for x in fragments.shape]):
-                # The following call is not side effect free and changes
-                # bond_dict
-                self._update_bond_dict(
-                    fragments[i, j, k], positions, bond_radii,
-                    bond_dict=bond_dict,
-                    self_bonding_allowed=self_bonding_allowed)
+
+            cart_product = product(*[range(x) for x in fragments.shape])
+            chunks = [(fragments[i, j, k], positions, bond_radii,
+                       bond_dict, self_bonding_allowed)
+                      for i, j, k in cart_product]
+
+            threads = [threading.Thread(target=self._update_bond_dict,
+                                        args=args) for args in chunks]
+
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
 
             for i in set(self.index) - set(bond_dict.keys()):
                 bond_dict[i] = {}
@@ -906,11 +901,26 @@ class Cartesian_core(_common_class):
         missing_part = missing_part.fragmentate(use_lookup=use_lookup)
         return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
+    @staticmethod
+    @jit(nopython=True, cache=True)
+    def _jit_get_squared_distances(positions1, positions2):
+        """Optimized function for calculating the distance between each pair
+        of points in positions1 and positions2.
+        """
+        n1 = positions1.shape[0]
+        n2 = positions2.shape[0]
+        D = np.empty((n2, n1))
+
+        for i in range(n1):
+            for j in range(n2):
+                D[i, j] = np.sum((positions1[i] - positions2[j])**2)
+        return D
+
     def _shortest_distance(self, other):
         coords = ['x', 'y', 'z']
         positions1 = self.loc[:, coords].values.astype('float32')
         positions2 = other.loc[:, coords].values.astype('float32')
-        D = _jit_get_squared_distances(positions2, positions1)
+        D = self._jit_get_squared_distances(positions2, positions1)
         i, j = np.unravel_index(D.argmin(), D.shape)
         distance = np.sqrt(D[i, j])
 
