@@ -75,7 +75,7 @@ class Zmat_give_cartesian(Zmat_core):
 
         _jit_calculate_rest(positions, c_table, zmat_values)
 
-        xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'])
+        xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'], dtype=float)
         xyz_frame['atom'] = self['atom']
         xyz_frame.loc[:, ['x', 'y', 'z']] = positions
 

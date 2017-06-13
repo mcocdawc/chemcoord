@@ -243,8 +243,7 @@ class Cartesian_give_zmat(Cartesian_core):
             full_table = pd.concat([full_table, constr_table])
         return full_table
 
-    def check_dihedral(self, construction_table,
-                       use_lookup=settings['defaults']['use_lookup']):
+    def check_dihedral(self, construction_table):
         """Reindexe the dihedral defining atom if colinear.
 
         Args:
@@ -257,13 +256,19 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: construction_table
         """
-        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-        c_table = construction_table.copy()
+        c_table = construction_table
         angles = self.angle_degrees(c_table.iloc[3:, :].values)
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
         rename = dict(enumerate(c_table.index[3:]))
         problem_index = [rename[i] for i in problem_index]
+        return problem_index
 
+    def correct_dihedral(self, construction_table,
+                         use_lookup=settings['defaults']['use_lookup']):
+
+        problem_index = self.check_dihedral(construction_table)
+        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        c_table = construction_table.copy()
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
             b, a, problem_d = c_table.loc[i, ['b', 'a', 'd']]
@@ -458,11 +463,12 @@ class Cartesian_give_zmat(Cartesian_core):
             pd.DataFrame: construction_table
         """
         self.get_bonds(use_lookup=use_lookup)
+        use_lookup = True
         # During function execution the connectivity situation won't change
         # So use_look=True will be used
         if construction_table is None:
-            c_table = self.get_construction_table(use_lookup=True)
-            c_table = self.check_dihedral(c_table, use_lookup=True)
+            c_table = self.get_construction_table(use_lookup=use_lookup)
+            c_table = self.correct_dihedral(c_table, use_lookup=use_lookup)
             c_table = self.check_absolute_refs(c_table)
         else:
             c_table = construction_table
