@@ -4,24 +4,19 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    import itertools.izip as zip
-except ImportError:
-    pass
 import numpy as np
 import pandas as pd
 import warnings
-from sortedcontainers import SortedSet
-from collections import OrderedDict, deque
-from itertools import permutations, cycle
 from chemcoord._exceptions import \
-    PhysicalMeaning, UndefinedCoordinateSystem, IllegalArgumentCombination, \
-    InvalidReference
+    IllegalArgumentCombination, \
+    InvalidReference, \
+    UndefinedCoordinateSystem
 from chemcoord.cartesian_coordinates._cartesian_class_core import \
     Cartesian_core
-from chemcoord.internal_coordinates.zmat_class_main import Zmat
-from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
+from chemcoord.internal_coordinates.zmat_class_main import Zmat
+from collections import OrderedDict
+from itertools import permutations
 
 
 class Cartesian_give_zmat(Cartesian_core):
@@ -168,7 +163,6 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
-        full_bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         if fragment_list is None:
             fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
             # During function execution the bonding situation does not change,
@@ -208,7 +202,6 @@ class Cartesian_give_zmat(Cartesian_core):
 
         for fragment in fragments[1:]:
             finished_part = self.loc[full_table.index]
-            bond_dict = finished_part.restrict_bond_dict(full_bond_dict)
             if pd.api.types.is_list_like(fragment):
                 fragment, references = fragment
                 if len(references) < min(3, len(fragment)):
@@ -359,8 +352,6 @@ class Cartesian_give_zmat(Cartesian_core):
         def get_position(self, construction_table):
             coords = ['x', 'y', 'z']
             abs_references = self._metadata['abs_refs']
-
-            values = np.empty((self.n_atoms, 3))
             pos = np.empty((self.n_atoms, 3, 4))
 
             pos[:, :, 0] = self.loc[construction_table.index, coords]

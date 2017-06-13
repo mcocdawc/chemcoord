@@ -13,12 +13,12 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-import pandas as pd
-import os
-
 from io import StringIO
+import os
+import pandas as pd
 
-#energy_conversion={
+
+# energy_conversion={
 #        ('hartree', 'kJ per mole') : 2625.50,
 #        ('hartree', 'cm^-1') : 219474.63,
 #        ('bohr', 'angstroem'): 0.529177249,
@@ -147,7 +147,6 @@ Uus,,117.0,,,p,,,,,,[Rn] 5f14 6d10 7s2 7p5,,,17.0,,,,,Ununseptium,7.0,6.0,,,,,16
 Uuo,,118.0,,,p,,,,46.33,0.055999999999999994,[Rn] 5f14 6d10 7s2 7p6,,,18.0,,,,,Ununoctium,7.0,2.0,,,,,157.0,,,,,,,,,,,,,,,,,,,,,,,nan,
 X,,0.0,,,,,,,,,,,,,,,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0.0,,nan,0.8
 """)
-
 
 
 elements = pd.read_csv(atom_properties, index_col=0)

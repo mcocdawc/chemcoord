@@ -5,16 +5,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import numpy as np
-from numba import jit
-import pandas as pd
-import math as m
-import warnings
 from chemcoord.internal_coordinates._zmat_class_core import Zmat_core
-from chemcoord.utilities import algebra_utilities
-from chemcoord.utilities.algebra_utilities import _jit_normalize, \
-    _jit_rotation_matrix, _jit_isclose, _jit_cross
-from chemcoord.configuration import settings
+from chemcoord.utilities.algebra_utilities import \
+    _jit_normalize, \
+    _jit_rotation_matrix, \
+    _jit_isclose, \
+    _jit_cross
+from numba import jit
+import numpy as np
+import pandas as pd
+import warnings
 
 
 @jit(nopython=True)

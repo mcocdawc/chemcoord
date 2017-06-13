@@ -4,10 +4,10 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-import pandas as pd
-import sympy
 from chemcoord._exceptions import PhysicalMeaning
 import chemcoord._generic_classes._indexers as indexers
+import pandas as pd
+import sympy
 
 
 class _pandas_wrapper(object):
@@ -243,8 +243,7 @@ class _pandas_wrapper(object):
         new = self.applymap(formatter)
 
         def insert_before_substring(insert_txt, substr, txt):
-            """Under the assumption that substr only appears once.
-            """
+            "Under the assumption that substr only appears once."
             return (insert_txt + substr).join(txt.split(substr))
         html_txt = new.frame._repr_html_()
         insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
@@ -288,9 +287,9 @@ class _pandas_wrapper(object):
                 sort_remaining=sort_remaining, by=by)
         else:
             new = self.__class__(self.frame.sort_index(
-                    axis=axis, level=level, ascending=ascending,
-                    inplace=inplace, kind=kind, na_position=na_position,
-                    sort_remaining=sort_remaining, by=by))
+                axis=axis, level=level, ascending=ascending,
+                inplace=inplace, kind=kind, na_position=na_position,
+                sort_remaining=sort_remaining, by=by))
             new.metadata = self.metadata.copy()
             new._metadata = self._metadata.copy()
             return new
@@ -351,7 +350,7 @@ class _pandas_wrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.append` method.
         """
-        # TODO think about metadata
+        # TODO(think about metadata)
         if not isinstance(other, self.__class__):
             raise ValueError('May only append instances of same type.')
         new_frame = self.frame.append(other.frame,
@@ -419,7 +418,7 @@ class _pandas_wrapper(object):
                  column_format=None, longtable=None, escape=None,
                  encoding=None, decimal='.', multicolumn=None,
                  multicolumn_format=None, multirow=None):
-        """ Render a DataFrame to a tabular environment table.
+        """Render a DataFrame to a tabular environment table.
 
         You can splice this into a LaTeX document.
         Requires ``\\usepackage{booktabs}``.

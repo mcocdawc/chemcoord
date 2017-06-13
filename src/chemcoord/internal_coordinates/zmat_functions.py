@@ -18,6 +18,7 @@ def is_Zmat(possible_Zmat):
     Returns:
         bool:
     """
+    columns = possible_Zmat.columns
     try:
         assert type(columns) is not str
         columns = set(columns)

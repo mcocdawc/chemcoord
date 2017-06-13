@@ -5,9 +5,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from chemcoord.cartesian_coordinates._cartesian_class_io import Cartesian_io
 from chemcoord.cartesian_coordinates._cartesian_class_give_zmat \
     import Cartesian_give_zmat
+from chemcoord.cartesian_coordinates._cartesian_class_io import Cartesian_io
 
 
 class Cartesian(Cartesian_io, Cartesian_give_zmat):

@@ -8,19 +8,18 @@ try:
     import itertools.izip as zip
 except ImportError:
     pass
-from itertools import product
-import numpy as np
-import pandas as pd
-import collections
-from sortedcontainers import SortedSet
-import warnings
-from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaning
+from chemcoord._generic_classes._common_class import _common_class
+from chemcoord.configuration import settings
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
-from chemcoord.configuration import settings
+import collections
+from itertools import product
 import numba as nb
 from numba import jit
+import numpy as np
+import pandas as pd
+from sortedcontainers import SortedSet
 
 
 class Cartesian_core(_common_class):
@@ -231,7 +230,8 @@ class Cartesian_core(_common_class):
                           self_bonding_allowed=False,
                           convert_index=None):
         """If bond_dict is provided, this function is not side effect free
-        bond_dict has to be a collections.defaultdict(set)"""
+        bond_dict has to be a collections.defaultdict(set)
+        """
         assert (isinstance(bond_dict, collections.defaultdict)
                 or bond_dict is None)
         fragment_indices = list(fragment_indices)
@@ -262,7 +262,7 @@ class Cartesian_core(_common_class):
             return int(np.ceil(x))
 
         n_sets = self.n_atoms / n_atoms_per_set
-        n_sets_along_axis = ceil(n_sets ** (1/3))
+        n_sets_along_axis = ceil(n_sets**(1 / 3))
         n_atoms_per_set_along_axis = ceil(self.n_atoms / n_sets_along_axis)
 
         def give_index(series, i, n_atoms_per_set_along_axis, offset=offset):
@@ -362,7 +362,6 @@ class Cartesian_core(_common_class):
                 bond_dict[i] = {}
 
             self.index = old_index
-            valency = dict(zip(self.index, data['valency']))
             rename = dict(enumerate(self.index))
             bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
                          for key in bond_dict}
@@ -673,9 +672,8 @@ class Cartesian_core(_common_class):
 
         if copy:
             max_index = self.index.max()
-            index_for_copied_atoms = range(
-                max_index + 1, max_index + len(indices) + 1
-                )
+            index_for_copied_atoms = range(max_index + 1,
+                                           max_index + len(indices) + 1)
             temp = self.loc[indices, :].copy()
             temp.index = index_for_copied_atoms
             temp[index_for_copied_atoms, ['x', 'y', 'z']] = vectors

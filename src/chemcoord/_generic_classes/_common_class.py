@@ -4,15 +4,15 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-import six
-import pandas as pd
-import numpy as np
 from chemcoord._generic_classes._pandas_wrapper import _pandas_wrapper
 import chemcoord.constants as constants
+import numpy as np
+import pandas as pd
 
 
 class _common_class(_pandas_wrapper):
     """This class provides methods which are used by Zmat and Cartesian.
+
     """
 
     _required_cols = set(['atom'])
@@ -70,6 +70,8 @@ class _common_class(_pandas_wrapper):
         Returns:
             Cartesian:
         """
+        atoms = self['atom']
+        data = constants.elements
         if pd.api.types.is_list_like(new_cols):
             new_cols = set(new_cols)
             pass
@@ -77,9 +79,7 @@ class _common_class(_pandas_wrapper):
             new_cols = set(data.columns)
         else:
             new_cols = [new_cols]
-        atom_symbols = self['atom']
-        data = constants.elements
-        new_frame = data.loc[atom_symbols, set(new_cols) - set(self.columns)]
+        new_frame = data.loc[atoms, set(new_cols) - set(self.columns)]
         new_frame.index = self.index
         return self.__class__(pd.concat([self.frame, new_frame], axis=1))
 
@@ -108,7 +108,7 @@ class _common_class(_pandas_wrapper):
         return self.applymap(new_function)
 
     def _convert_nan_int(self):
-        """ The following functions are necessary to deal with the fact,
+        """The following functions are necessary to deal with the fact,
         that pandas does not support "NaN" for integers.
         It was written by the user LondonRob at StackExchange:
         http://stackoverflow.com/questions/25789354/
@@ -118,8 +118,7 @@ class _common_class(_pandas_wrapper):
         COULD_BE_ANY_INTEGER = 0
 
         def _lost_precision(s):
-            """
-            The total amount of precision lost over Series `s`
+            """The total amount of precision lost over Series `s`
             during conversion to int64 dtype
             """
             try:
@@ -129,9 +128,8 @@ class _common_class(_pandas_wrapper):
                 return np.nan
 
         def _nansafe_integer_convert(s, epsilon=1e-9):
-            """
-            Convert Series `s` to an object type with `np.nan`
-            represented as an empty string ""
+            """Convert Series `s` to an object type with `np.nan`
+            represented as an empty string
             """
             if _lost_precision(s) < epsilon:
                 # Here's where the magic happens

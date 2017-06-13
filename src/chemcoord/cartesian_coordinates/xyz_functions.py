@@ -4,26 +4,17 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    # import itertools.imap as map
-    import itertools.izip as zip
-except ImportError:
-    pass
-import numpy as np
-import pandas as pd
-import collections
-from threading import Thread
-import subprocess
-import os
-import tempfile
-import warnings
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
-from chemcoord import export
 from chemcoord.configuration import settings
 import io
 from io import open
-import re
-import textwrap
+import numpy as np
+import os
+import pandas as pd
+import subprocess
+import tempfile
+from threading import Thread
+import warnings
 
 
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):

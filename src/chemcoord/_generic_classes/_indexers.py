@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import pandas as pd
 
 
 class _generic_Indexer(object):

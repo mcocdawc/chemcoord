@@ -5,12 +5,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import numpy as np
+from chemcoord.internal_coordinates._zmat_class_core import Zmat_core
 import pandas as pd
 import warnings
-from chemcoord.internal_coordinates._zmat_class_core import Zmat_core
-from chemcoord._exceptions import PhysicalMeaning
-from chemcoord.configuration import settings
 
 
 class Zmat_io(Zmat_core):

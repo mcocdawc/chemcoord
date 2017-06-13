@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import configparser
 import os
-import warnings
 from warnings import warn
 
 
