@@ -72,7 +72,7 @@ def read_configuration_file(filepath=_give_default_file_path()):
     config.read(filepath)
 
     def get_correct_type(section, key, config):
-        """ Gives e.g. the boolean True for the string 'True'"""
+        """Gives e.g. the boolean True for the string 'True'"""
         def getstring(section, key, config):
             return config[section][key]
 
