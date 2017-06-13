@@ -389,8 +389,8 @@ class Cartesian_give_zmat(Cartesian_core):
             ba = BA / np.linalg.norm(BA, axis=1)[:, None]
             bi = -1 * IB / np.linalg.norm(IB, axis=1)[:, None]
             dot_product = np.sum(bi * ba, axis=1)
-            dot_product[np.isclose(dot_product, 1)] = 1
-            dot_product[np.isclose(dot_product, -1)] = -1
+            dot_product[dot_product > 1] = 1
+            dot_product[dot_product < -1] = -1
             return np.nan_to_num(np.degrees(np.arccos(dot_product)))
 
         def get_dihedral(IB, BA, AD):
@@ -398,8 +398,8 @@ class Cartesian_give_zmat(Cartesian_core):
             N2 = np.cross(BA, AD, axis=1)
             n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
             dot_product = np.sum(n1 * n2, axis=1)
-            dot_product[np.isclose(dot_product, 1)] = 1
-            dot_product[np.isclose(dot_product, -1)] = -1
+            dot_product[dot_product > 1] = 1
+            dot_product[dot_product < -1] = -1
             dihedrals = np.degrees(np.arccos(dot_product))
             # the next lines are to test the direction of rotation.
             # is a dihedral really 90 or 270 degrees?

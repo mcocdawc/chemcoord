@@ -26,7 +26,8 @@ from numba import jit
 class Cartesian_core(_common_class):
 
     _required_cols = frozenset({'atom', 'x', 'y', 'z'})
-    # Look into the numpy manual for description of __array_priority__
+    # Look into the numpy manual for description of __array_priority__:
+    # https://docs.scipy.org/doc/numpy-1.12.0/reference/arrays.classes.html
     __array_priority__ = 15.0
 
     # overwrites existing method
@@ -743,8 +744,8 @@ class Cartesian_core(_common_class):
         BI, BA = i_pos - b_pos, a_pos - b_pos
         bi, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (BI, BA)]
         dot_product = np.sum(bi * ba, axis=1)
-        dot_product[np.isclose(dot_product, 1)] = 1
-        dot_product[np.isclose(dot_product, -1)] = -1
+        dot_product[dot_product > 1] = 1
+        dot_product[dot_product < -1] = -1
         angles = np.degrees(np.arccos(dot_product))
         return angles
 
@@ -787,8 +788,8 @@ class Cartesian_core(_common_class):
         n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
 
         dot_product = np.sum(n1 * n2, axis=1)
-        dot_product[np.isclose(dot_product, 1)] = 1
-        dot_product[np.isclose(dot_product, -1)] = -1
+        dot_product[dot_product > 1] = 1
+        dot_product[dot_product < -1] = -1
         dihedrals = np.degrees(np.arccos(dot_product))
 
         # the next lines are to test the direction of rotation.

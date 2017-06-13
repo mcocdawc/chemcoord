@@ -154,7 +154,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
 
         if (new_index is None):
             new_index = range(len(self))
-        elif len(new_index) != len(output):
+        elif len(new_index) != len(self):
             raise ValueError('len(new_index) has to be the same as len(self)')
 
         cols = ['b', 'a', 'd']
