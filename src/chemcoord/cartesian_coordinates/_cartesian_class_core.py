@@ -23,42 +23,6 @@ import numba as nb
 from numba import jit
 
 
-@jit(nopython=True)
-def _jit_get_squared_distances(positions1, positions2):
-    """Optimized function for calculating the distance between each pair
-    of points in positions1 and positions2.
-    """
-    n1 = positions1.shape[0]
-    n2 = positions2.shape[0]
-    D = np.empty((n2, n1))
-
-    for i in range(n1):
-        for j in range(n2):
-            D[i, j] = np.sum((positions1[i] - positions2[j])**2)
-    return D
-
-
-@jit(nopython=True)
-def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
-    """Calculate a boolean array where ``A[i,j] is True`` indicates a
-    bond between the i-th and j-th atom.
-    """
-    n = pos.shape[0]
-    bond_array = np.empty((n, n), dtype=nb.boolean)
-
-    for i in range(n):
-        for j in range(i, n):
-            D = 0
-            for h in range(3):
-                D += (pos[i, h] - pos[j, h])**2
-            bond_array[i, j] = ((bond_radii[i] + bond_radii[j])**2 - D) >= 0
-            bond_array[j, i] = bond_array[i, j]
-    if not self_bonding_allowed:
-        for i in range(n):
-            bond_array[i, i] = False
-    return bond_array
-
-
 class Cartesian_core(_common_class):
 
     _required_cols = frozenset({'atom', 'x', 'y', 'z'})
@@ -238,7 +202,28 @@ class Cartesian_core(_common_class):
         return molecule
 
     @staticmethod
-    def _update_bond_dict(fragment_indices,
+    @jit(nopython=True)
+    def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
+        """Calculate a boolean array where ``A[i,j] is True`` indicates a
+        bond between the i-th and j-th atom.
+        """
+        n = pos.shape[0]
+        bond_array = np.empty((n, n), dtype=nb.boolean)
+
+        for i in range(n):
+            for j in range(i, n):
+                D = 0
+                for h in range(3):
+                    D += (pos[i, h] - pos[j, h])**2
+                B = (bond_radii[i] + bond_radii[j])**2
+                bond_array[i, j] = (B - D) >= 0
+                bond_array[j, i] = bond_array[i, j]
+        if not self_bonding_allowed:
+            for i in range(n):
+                bond_array[i, i] = False
+        return bond_array
+
+    def _update_bond_dict(self, fragment_indices,
                           positions,
                           bond_radii,
                           bond_dict=None,
@@ -257,7 +242,7 @@ class Cartesian_core(_common_class):
         frag_pos = positions[fragment_indices, :]
         frag_bond_radii = bond_radii[fragment_indices]
 
-        bond_array = _jit_give_bond_array(
+        bond_array = self._jit_give_bond_array(
             frag_pos, frag_bond_radii,
             self_bonding_allowed=self_bonding_allowed)
         a, b = bond_array.nonzero()
@@ -643,13 +628,11 @@ class Cartesian_core(_common_class):
             np.array:
         """
         try:
-            mass_vector = self.loc[:, 'mass'].values.astype('float64')
+            mass = self['mass'].values
         except KeyError:
-            mass_molecule = self.add_data('mass')
-            mass_vector = mass_molecule.loc[:, 'mass'].values.astype('float64')
-        location_array = self.location()
-        barycenter = (np.sum(location_array * mass_vector[:, None], axis=0)
-                      / self.total_mass())
+            mass = self.add_data('mass')['mass'].values
+        pos = self.loc[:, ['x', 'y', 'z']].values
+        barycenter = (pos * mass[:, None]).sum(axis=0) / self.total_mass()
         return barycenter
 
     def move(
@@ -906,11 +889,26 @@ class Cartesian_core(_common_class):
         missing_part = missing_part.fragmentate(use_lookup=use_lookup)
         return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
+    @staticmethod
+    @jit(nopython=True)
+    def _jit_get_squared_distances(positions1, positions2):
+        """Optimized function for calculating the distance between each pair
+        of points in positions1 and positions2.
+        """
+        n1 = positions1.shape[0]
+        n2 = positions2.shape[0]
+        D = np.empty((n2, n1))
+
+        for i in range(n1):
+            for j in range(n2):
+                D[i, j] = np.sum((positions1[i] - positions2[j])**2)
+        return D
+
     def _shortest_distance(self, other):
         coords = ['x', 'y', 'z']
-        positions1 = self.loc[:, coords].values.astype('float32')
-        positions2 = other.loc[:, coords].values.astype('float32')
-        D = _jit_get_squared_distances(positions2, positions1)
+        positions1 = self.loc[:, coords].values
+        positions2 = other.loc[:, coords].values
+        D = self._jit_get_squared_distances(positions2, positions1)
         i, j = np.unravel_index(D.argmin(), D.shape)
         distance = np.sqrt(D[i, j])
 
@@ -948,11 +946,11 @@ class Cartesian_core(_common_class):
             The eigenvectors of the inertia tensor in the old basis.
         """
         try:
-            mass_vector = self.loc[:, 'mass'].values.astype('float64')
+            mass_vector = self.loc[:, 'mass'].values
             molecule = self.copy()
         except KeyError:
             molecule = self.add_data('mass')
-            mass_vector = molecule.loc[:, 'mass'].values.astype('float64')
+            mass_vector = molecule.loc[:, 'mass'].values
 
         molecule = molecule - molecule.barycenter()
         locations = molecule.location()
@@ -975,11 +973,10 @@ class Cartesian_core(_common_class):
         Cartesian_mass = self.basistransform(new_basis, old_basis)
         Cartesian_mass = Cartesian_mass - Cartesian_mass.barycenter()
 
-        dic_of_values = dict(zip(
-            ['transformed_Cartesian', 'diag_inertia_tensor',
-             'inertia_tensor', 'eigenvectors'],
-            [Cartesian_mass, diag_inertia_tensor, inertia_tensor, eigenvectors]
-            ))
+        dic_of_values = {'transformed_Cartesian': Cartesian_mass,
+                         'diag_inertia_tensor': diag_inertia_tensor,
+                         'inertia_tensor': inertia_tensor,
+                         'eigenvectors': eigenvectors}
         return dic_of_values
 
     def basistransform(
@@ -1054,7 +1051,7 @@ class Cartesian_core(_common_class):
             given a 3D vector is returned one index.
         """
         indexlist = self.index if indexlist is None else indexlist
-        array = self.loc[indexlist, ['x', 'y', 'z']].values.astype(float)
+        array = self.loc[indexlist, ['x', 'y', 'z']].values
         return array
 
     def distance_to(self,
