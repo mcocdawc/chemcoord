@@ -903,12 +903,6 @@ class Cartesian_core(_common_class):
                 D[i, j] = np.sqrt(((pos1[i] - pos2[j])**2).sum())
         return D
 
-    # def _pairwise_distances(self, pos1, pos2):
-    #     """Optimized function for calculating the distance between each pair
-    #     of points in positions1 and positions2.
-    #     """
-    #     return np.sqrt(((pos1[:, None, :] - pos2)**2).sum(axis=2))
-
     def _shortest_distance(self, other):
         coords = ['x', 'y', 'z']
         pos1 = self.loc[:, coords].values
