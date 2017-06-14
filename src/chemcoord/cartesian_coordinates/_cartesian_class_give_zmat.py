@@ -276,6 +276,7 @@ class Cartesian_give_zmat(Cartesian_core):
                 c_table.loc[i, 'd'] = (bond_dict[a] - {b, a, problem_d}
                                        - set(c_table.index[loc_i:]))[0]
             except IndexError:
+                # TODO(Use only already defined atoms as reference)
                 visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
                 tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
                                              for j in bond_dict[problem_d]])
@@ -295,8 +296,9 @@ class Cartesian_give_zmat(Cartesian_core):
                                 new_tmp_bond_dict[j] = bond_dict[j] - visited
                     tmp_bond_dict = new_tmp_bond_dict
                 if not found:
+                    other_atoms = c_table.index[:loc_i].difference({b, a})
                     molecule = self.distance_to(origin=i, sort=True,
-                                                indices_of_other_atoms=visited)
+                                                other_atoms=other_atoms)
                     k = 0
                     while not found and k < len(molecule):
                         new_d = molecule.index[k]

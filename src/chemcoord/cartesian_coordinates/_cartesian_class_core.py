@@ -890,29 +890,33 @@ class Cartesian_core(_common_class):
 
     @staticmethod
     @jit(nopython=True)
-    def _jit_get_squared_distances(positions1, positions2):
+    def _jit_pairwise_distances(pos1, pos2):
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.
         """
-        n1 = positions1.shape[0]
-        n2 = positions2.shape[0]
-        D = np.empty((n2, n1))
+        n1 = pos1.shape[0]
+        n2 = pos2.shape[0]
+        D = np.empty((n1, n2))
 
         for i in range(n1):
             for j in range(n2):
-                D[i, j] = np.sum((positions1[i] - positions2[j])**2)
+                D[i, j] = np.sqrt(((pos1[i] - pos2[j])**2).sum())
         return D
+
+    # def _pairwise_distances(self, pos1, pos2):
+    #     """Optimized function for calculating the distance between each pair
+    #     of points in positions1 and positions2.
+    #     """
+    #     return np.sqrt(((pos1[:, None, :] - pos2)**2).sum(axis=2))
 
     def _shortest_distance(self, other):
         coords = ['x', 'y', 'z']
-        positions1 = self.loc[:, coords].values
-        positions2 = other.loc[:, coords].values
-        D = self._jit_get_squared_distances(positions2, positions1)
+        pos1 = self.loc[:, coords].values
+        pos2 = other.loc[:, coords].values
+        D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
-        distance = np.sqrt(D[i, j])
-
         i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
-        return i, j, distance
+        return i, j
 
     def inertia(self):
         """Calculate the inertia tensor and transforms along
@@ -1055,7 +1059,7 @@ class Cartesian_core(_common_class):
 
     def distance_to(self,
                     origin=[0., 0., 0.],
-                    indices_of_other_atoms=None,
+                    other_atoms=None,
                     sort=False):
         """Return a Cartesian with a column for the distance from origin.
         """
@@ -1063,10 +1067,10 @@ class Cartesian_core(_common_class):
         norm = np.linalg.norm
         if isinstance(origin, int):
             origin = self.loc[origin, coords]
-        if indices_of_other_atoms is None:
-            indices_of_other_atoms = self.index
+        if other_atoms is None:
+            other_atoms = self.index
 
-        new = self.loc[indices_of_other_atoms, :].copy()
+        new = self.loc[other_atoms, :].copy()
         try:
             new.loc[:, 'distance'] = norm(new.loc[:, coords] - origin, axis=1)
         except AttributeError:

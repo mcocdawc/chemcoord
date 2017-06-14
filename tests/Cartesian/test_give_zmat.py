@@ -18,18 +18,18 @@ def test_back_and_forth1():
     assert cc.xyz_functions.isclose(molecule1, molecule2, align=False)
 
 
-# def test_back_and_forth2():
-#     molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'ruthenium.xyz'))
-#     zmolecule = molecule1.give_zmat()
-#     molecule2 = zmolecule.give_cartesian()
-#     assert cc.xyz_functions.isclose(molecule1, molecule2)
+def test_back_and_forth2():
+    molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'ruthenium.xyz'))
+    zmolecule = molecule1.give_zmat()
+    molecule2 = zmolecule.give_cartesian()
+    assert cc.xyz_functions.isclose(molecule1, molecule2, align=False)
 
 
 def test_back_and_forth3():
     molecule1 = cc.Cartesian.read_xyz(os.path.join(OWN_DIR, 'Cd_lattice.xyz'))
     zmolecule = molecule1.give_zmat()
     molecule2 = zmolecule.give_cartesian()
-    assert cc.xyz_functions.isclose(molecule1, molecule2)
+    assert cc.xyz_functions.isclose(molecule1, molecule2, align=False)
 
 
 def test_back_and_forth4():
