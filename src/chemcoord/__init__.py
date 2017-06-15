@@ -4,7 +4,7 @@ import os
 
 import pkg_resources  # part of setuptools
 __version__ = pkg_resources.get_distribution("chemcoord").version
-_git_branch = "experimental"
+_git_branch = "master"
 
 
 def export(func):
