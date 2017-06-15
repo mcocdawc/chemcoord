@@ -46,10 +46,28 @@ class Cartesian_give_zmat(Cartesian_core):
     def _get_frag_constr_table(self, start_atom=None, predefined_table=None,
                                use_lookup=settings['defaults']['use_lookup'],
                                bond_dict=None):
-        """Create a construction table.
+        """Create a construction table for a Zmatrix.
 
-        It is written under the assumption that self is one single
-        connected molecule.
+        A construction table is basically a Zmatrix without the values
+        for the bond lenghts, angles and dihedrals.
+        It contains the whole information about which reference atoms
+        are used by each atom in the Zmatrix.
+
+        This method creates a so called "chemical" construction table,
+        which makes use of the connectivity table in this molecule.
+
+        By default the first atom is the one nearest to the topologic center.
+        (Compare with :meth:`~Cartesian.topologic_center()`)
+
+        Args:
+            start_atom: An index for the first atom may be provided.
+            predefined_table (pd.DataFrame): An uncomplete construction table
+                may be provided. The rest is created automatically.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            pd.DataFrame: Construction table
         """
         def modify_priority(bond_dict, user_defined):
             for j in reversed(user_defined):
