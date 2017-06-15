@@ -876,6 +876,17 @@ class Cartesian_core(_common_class):
 
     def without(self, fragments,
                 use_lookup=settings['defaults']['use_lookup']):
+        """Return self without the specified fragments.
+
+        Args:
+            fragments: Either a list of :class:`~chemcoord.Cartesian` or a
+                :class:`~chemcoord.Cartesian`.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            list: List containing :class:`~chemcoord.Cartesian`.
+        """
         if pd.api.types.is_list_like(fragments):
             for fragment in fragments:
                 try:
@@ -904,34 +915,22 @@ class Cartesian_core(_common_class):
         return D
 
     def shortest_distance(self, other):
-        # TODO(Docstring)
-        """Calculate the
-
-        This function calculates the inertia tensor and returns
-        a 4-tuple.
+        """Calculate the shortest distance between self and other
 
         Args:
-            None
+            Cartesian: other
 
         Returns:
-            dict: The returned dictionary has four possible keys:
+            tuple: Returns a tuple ``i, j, d`` with the following meaning:
 
-            ``transformed_Cartesian``:
-            A frame that is transformed to the basis spanned by
-            the eigenvectors of the inertia tensor. The x-axis
-            is the axis with the lowest inertia moment, the
-            z-axis the one with the highest. Contains also a
-            column for the mass
+            ``i``:
+            The index on self that minimises the pairwise distance.
 
-            ``diag_inertia_tensor``:
-            A vector containing the sorted inertia moments after
-            diagonalization.
+            ``j``:
+            The index on other that minimises the pairwise distance.
 
-            ``inertia_tensor``:
-            The inertia tensor in the old basis.
-
-            ``eigenvectors``:
-            The eigenvectors of the inertia tensor in the old basis.
+            ``d``:
+            The distance between self and other. (float)
         """
         coords = ['x', 'y', 'z']
         pos1 = self.loc[:, coords].values
@@ -939,7 +938,7 @@ class Cartesian_core(_common_class):
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
         i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
-        return i, j
+        return i, j, D[i, j]
 
     def inertia(self):
         """Calculate the inertia tensor and transforms along
