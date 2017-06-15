@@ -211,7 +211,7 @@ class Cartesian_give_zmat(Cartesian_core):
                 constr_table = fragment._get_frag_constr_table(
                     predefined_table=references, use_lookup=use_lookup)
             else:
-                i, b = fragment.shortest_distance(finished_part)[:2]
+                i, b, ignore = fragment.shortest_distance(finished_part)[:2]
                 constr_table = fragment._get_frag_constr_table(
                     start_atom=i, use_lookup=use_lookup)
                 if len(full_table) == 1:
