@@ -43,12 +43,12 @@ class Cartesian_give_zmat(Cartesian_core):
                 if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
 
-    def _get_constr_table(self, start_atom=None, predefined_table=None,
-                          use_lookup=settings['defaults']['use_lookup'],
-                          bond_dict=None):
+    def _get_frag_constr_table(self, start_atom=None, predefined_table=None,
+                               use_lookup=settings['defaults']['use_lookup'],
+                               bond_dict=None):
         """Create a construction table.
 
-        It is written under the assumption that self is one
+        It is written under the assumption that self is one single
         connected molecule.
         """
         def modify_priority(bond_dict, user_defined):
@@ -72,12 +72,12 @@ class Cartesian_give_zmat(Cartesian_core):
                 i = molecule['distance'].idxmin()
             else:
                 i = start_atom
-            order_of_definition = [i]
+            order_of_def = [i]
             user_defined = []
             construction_table = {i: {'b': -4, 'a': -3, 'd': -1}}
         else:
             i = construction_table.index[0]
-            order_of_definition = list(construction_table.index)
+            order_of_def = list(construction_table.index)
             user_defined = list(construction_table.index)
             construction_table = construction_table.to_dict(orient='index')
 
@@ -98,17 +98,17 @@ class Cartesian_give_zmat(Cartesian_core):
                     continue
                 if i not in user_defined:
                     b = parent[i]
-                    if b in order_of_definition[:3]:
-                        if len(order_of_definition) == 1:
+                    if b in order_of_def[:3]:
+                        if len(order_of_def) == 1:
                             construction_table[i] = {'b': b, 'a': -3, 'd': -1}
-                        elif len(order_of_definition) == 2:
-                            a = (bond_dict[b] & visited)[0]
+                        elif len(order_of_def) == 2:
+                            a = (bond_dict[b] & set(order_of_def))[0]
                             construction_table[i] = {'b': b, 'a': a, 'd': -1}
                         else:
                             try:
                                 a = parent[b]
                             except KeyError:
-                                a = (bond_dict[b] & visited)[0]
+                                a = (bond_dict[b] & set(order_of_def))[0]
                             try:
                                 d = parent[a]
                                 if d in set([b, a]):
@@ -116,16 +116,19 @@ class Cartesian_give_zmat(Cartesian_core):
                                     raise InvalidReference(message)
                             except (KeyError, InvalidReference):
                                 try:
-                                    d = ((bond_dict[a] & visited)
+                                    d = ((bond_dict[a] & set(order_of_def))
                                          - set([b, a]))[0]
                                 except IndexError:
-                                    d = ((bond_dict[b] & visited)
+                                    print(i, b, a, d)
+                                    print(visited)
+                                    print(construction_table)
+                                    d = ((bond_dict[b] & set(order_of_def))
                                          - set([b, a]))[0]
                             construction_table[i] = {'b': b, 'a': a, 'd': d}
                     else:
                         a, d = [construction_table[b][k] for k in ['b', 'a']]
                         construction_table[i] = {'b': b, 'a': a, 'd': d}
-                    order_of_definition.append(i)
+                    order_of_def.append(i)
 
                 visited.add(i)
                 for j in work_bond_dict[i]:
@@ -135,7 +138,7 @@ class Cartesian_give_zmat(Cartesian_core):
             modify_priority(work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient='index')
         output = output.fillna(0).astype('int64')
-        output = output.loc[order_of_definition, ['b', 'a', 'd']]
+        output = output.loc[order_of_def, ['b', 'a', 'd']]
         return output
 
     def get_construction_table(self, fragment_list=None,
@@ -211,7 +214,7 @@ class Cartesian_give_zmat(Cartesian_core):
                 constr_table = fragment._get_constr_table(
                     predefined_table=references, use_lookup=use_lookup)
             else:
-                i, b = fragment._shortest_distance(finished_part)[:2]
+                i, b = fragment.shortest_distance(finished_part)[:2]
                 constr_table = fragment._get_constr_table(
                     start_atom=i, use_lookup=use_lookup)
                 if len(full_table) == 1:

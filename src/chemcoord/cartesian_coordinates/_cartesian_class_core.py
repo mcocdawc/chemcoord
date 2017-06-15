@@ -903,7 +903,36 @@ class Cartesian_core(_common_class):
                 D[i, j] = np.sqrt(((pos1[i] - pos2[j])**2).sum())
         return D
 
-    def _shortest_distance(self, other):
+    def shortest_distance(self, other):
+        # TODO(Docstring)
+        """Calculate the
+
+        This function calculates the inertia tensor and returns
+        a 4-tuple.
+
+        Args:
+            None
+
+        Returns:
+            dict: The returned dictionary has four possible keys:
+
+            ``transformed_Cartesian``:
+            A frame that is transformed to the basis spanned by
+            the eigenvectors of the inertia tensor. The x-axis
+            is the axis with the lowest inertia moment, the
+            z-axis the one with the highest. Contains also a
+            column for the mass
+
+            ``diag_inertia_tensor``:
+            A vector containing the sorted inertia moments after
+            diagonalization.
+
+            ``inertia_tensor``:
+            The inertia tensor in the old basis.
+
+            ``eigenvectors``:
+            The eigenvectors of the inertia tensor in the old basis.
+        """
         coords = ['x', 'y', 'z']
         pos1 = self.loc[:, coords].values
         pos2 = other.loc[:, coords].values
