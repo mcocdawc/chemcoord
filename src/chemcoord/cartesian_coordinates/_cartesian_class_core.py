@@ -683,61 +683,70 @@ class Cartesian_core(_common_class):
             output.loc[indices, ['x', 'y', 'z']] = vectors
         return output
 
-    def bond_lengths(self, buildlist, start_row=0):
+    def bond_lengths(self, indices):
         """Return the distances between given atoms.
 
-        In order to know more about the buildlist, go to
-            :func:`to_zmat`.
+        Calculates the distance between the atoms with
+        indices ``i`` and ``b``.
+        The indices can be given in three ways:
+
+        * As simple list ``[i, b]``
+        * As list of lists: ``[[i1, b1], [i2, b2]...]``
+        * As :class:`pd.DataFrame` where ``i`` is taken from the index and
+          ``b`` from the respective column ``'b'``.
 
         Args:
-            buildlist (np.array):
-            start_row (int):
+            indices (list):
 
         Returns:
-            list: Vector of the distances between the first and second
-                atom of every entry in the buildlist.
-        """
-        coords = ['x', 'y', 'z']
-        if isinstance(buildlist, pd.DataFrame):
-            i_pos = self.loc[buildlist.index[start_row:], coords].values
-            b_pos = self.loc[buildlist.iloc[start_row:, 0], coords].values
-        else:
-            buildlist = np.array(buildlist)
-            try:
-                buildlist.shape[1]
-            except IndexError:
-                buildlist = buildlist[None, :]
-            i_pos = self.loc[buildlist[start_row:, 0], coords].values
-            b_pos = self.loc[buildlist[start_row:, 1], coords].values
-        return np.linalg.norm(i_pos - b_pos, axis=1)
-
-    def angle_degrees(self, indices, start_row=0):
-        """Return the angles between given atoms.
-
-        In order to know more about the buildlist, go to :func:`to_zmat`.
-
-        Args:
-            buildlist (list):
-            start_row (int):
-
-        Returns:
-            list: List of the angle between the first, second and
-                third atom of every entry in the buildlist.
+            :class:`numpy.ndarray`: Vector of angles in degrees.
         """
         coords = ['x', 'y', 'z']
         if isinstance(indices, pd.DataFrame):
-            i_pos = self.loc[indices.index[start_row:], coords].values
-            b_pos = self.loc[indices.iloc[start_row:, 0], coords].values
-            a_pos = self.loc[indices.iloc[start_row:, 1], coords].values
+            i_pos = self.loc[indices.index, coords].values
+            b_pos = self.loc[indices.loc[:, 'b'], coords].values
         else:
-            buildlist = np.array(indices)
+            indices = np.array(indices)
             try:
-                buildlist.shape[1]
+                indices.shape[1]
             except IndexError:
-                buildlist = buildlist[None, :]
-            i_pos = self.loc[buildlist[start_row:, 0], coords].values
-            b_pos = self.loc[buildlist[start_row:, 1], coords].values
-            a_pos = self.loc[buildlist[start_row:, 2], coords].values
+                buildlist = indices[None, :]
+            i_pos = self.loc[indices[:, 0], coords].values
+            b_pos = self.loc[indices[:, 1], coords].values
+        return np.linalg.norm(i_pos - b_pos, axis=1)
+
+    def angle_degrees(self, indices):
+        """Return the angles between given atoms.
+
+        Calculates the angle in degrees between the atoms with
+        indices ``i, b, a``.
+        The indices can be given in three ways:
+
+        * As simple list ``[i, b, a]``
+        * As list of lists: ``[[i1, b1, a1], [i2, b2, a2]...]``
+        * As :class:`pd.DataFrame` where ``i`` is taken from the index and
+          ``b`` and ``a`` from the respective columns ``'b'`` and ``'a'``.
+
+        Args:
+            indices (list):
+
+        Returns:
+            :class:`numpy.ndarray`: Vector of angles in degrees.
+        """
+        coords = ['x', 'y', 'z']
+        if isinstance(indices, pd.DataFrame):
+            i_pos = self.loc[indices.index, coords].values
+            b_pos = self.loc[indices.loc[:, 'b'], coords].values
+            a_pos = self.loc[indices.loc[:, 'a'], coords].values
+        else:
+            indices = np.array(indices)
+            try:
+                indices.shape[1]
+            except IndexError:
+                buildlist = indices[None, :]
+            i_pos = self.loc[indices[:, 0], coords].values
+            b_pos = self.loc[indices[:, 1], coords].values
+            a_pos = self.loc[indices[:, 2], coords].values
 
         BI, BA = i_pos - b_pos, a_pos - b_pos
         bi, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (BI, BA)]
@@ -748,34 +757,40 @@ class Cartesian_core(_common_class):
         return angles
 
     def dihedral_degrees(self, buildlist, start_row=0):
-        """Return the angles between given atoms.
+        """Return the dihedrals between given atoms.
 
-        In order to know more about the buildlist, go to :func:`to_zmat`.
+        Calculates the dihedral angle in degrees between the atoms with
+        indices ``i, b, a, d``.
+        The indices can be given in three ways:
+
+        * As simple list ``[i, b, a, d]``
+        * As list of lists: ``[[i1, b1, a1, d1], [i2, b2, a2, d2]...]``
+        * As :class:`pandas.DataFrame` where ``i`` is taken from the index and
+          ``b``, ``a`` and ``d``from the respective columns
+          ``'b'``, ``'a'`` and ``'d'``.
 
         Args:
-            buildlist (list):
-            start_row (int):
+            indices (list):
 
         Returns:
-            list: List of the dihedral between the first, second,
-                third and fourth atom of every entry in the buildlist.
+            :class:`numpy.ndarray`: Vector of angles in degrees.
         """
         coords = ['x', 'y', 'z']
-        if isinstance(buildlist, pd.DataFrame):
-            i_pos = self.loc[buildlist.index[start_row:], coords].values
-            b_pos = self.loc[buildlist.iloc[start_row:, 0], coords].values
-            a_pos = self.loc[buildlist.iloc[start_row:, 1], coords].values
-            d_pos = self.loc[buildlist.iloc[start_row:, 2], coords].values
+        if isinstance(indices, pd.DataFrame):
+            i_pos = self.loc[indices.index, coords].values
+            b_pos = self.loc[indices.loc[:, 'b'], coords].values
+            a_pos = self.loc[indices.loc[:, 'a'], coords].values
+            d_pos = self.loc[indices.loc[:, 'd'], coords].values
         else:
-            buildlist = np.array(buildlist)
+            indices = np.array(indices)
             try:
-                buildlist.shape[1]
+                indices.shape[1]
             except IndexError:
-                buildlist = buildlist[None, :]
-            i_pos = self.loc[buildlist[start_row:, 0], coords].values
-            b_pos = self.loc[buildlist[start_row:, 1], coords].values
-            a_pos = self.loc[buildlist[start_row:, 2], coords].values
-            d_pos = self.loc[buildlist[start_row:, 3], coords].values
+                buildlist = indices[None, :]
+            i_pos = self.loc[indices[:, 0], coords].values
+            b_pos = self.loc[indices[:, 1], coords].values
+            a_pos = self.loc[indices[:, 2], coords].values
+            d_pos = self.loc[indices[:, 3], coords].values
 
         IB = b_pos - i_pos
         BA = a_pos - b_pos
@@ -841,6 +856,15 @@ class Cartesian_core(_common_class):
         return fragments
 
     def restrict_bond_dict(self, bond_dict):
+        """Restrict a bond dictionary to self.
+
+        Args:
+            bond_dict (dict): Look into :meth:`~chemcoord.Cartesian.get_bonds`,
+                to see examples for a bond_dict.
+
+        Returns:
+            bond dictionary
+        """
         return {j: bond_dict[j] & set(self.index) for j in self.index}
 
     def get_fragment(self, list_of_indextuples, give_only_index=False,
