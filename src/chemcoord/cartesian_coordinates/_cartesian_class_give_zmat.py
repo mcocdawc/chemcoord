@@ -119,9 +119,6 @@ class Cartesian_give_zmat(Cartesian_core):
                                     d = ((bond_dict[a] & set(order_of_def))
                                          - set([b, a]))[0]
                                 except IndexError:
-                                    print(i, b, a, d)
-                                    print(visited)
-                                    print(construction_table)
                                     d = ((bond_dict[b] & set(order_of_def))
                                          - set([b, a]))[0]
                             construction_table[i] = {'b': b, 'a': a, 'd': d}
@@ -197,11 +194,11 @@ class Cartesian_give_zmat(Cartesian_core):
 
         if pd.api.types.is_list_like(fragments[0]):
             fragment, references = fragments[0]
-            full_table = fragment._get_constr_table(
+            full_table = fragment._get_frag_constr_table(
                 use_lookup=use_lookup, predefined_table=references)
         else:
             fragment = fragments[0]
-            full_table = fragment._get_constr_table(use_lookup=use_lookup)
+            full_table = fragment._get_frag_constr_table(use_lookup=use_lookup)
 
         for fragment in fragments[1:]:
             finished_part = self.loc[full_table.index]
@@ -211,11 +208,11 @@ class Cartesian_give_zmat(Cartesian_core):
                     raise ValueError('If you specify references for a '
                                      'fragment, it has to consist of at least'
                                      'min(3, len(fragment)) rows.')
-                constr_table = fragment._get_constr_table(
+                constr_table = fragment._get_frag_constr_table(
                     predefined_table=references, use_lookup=use_lookup)
             else:
                 i, b = fragment.shortest_distance(finished_part)[:2]
-                constr_table = fragment._get_constr_table(
+                constr_table = fragment._get_frag_constr_table(
                     start_atom=i, use_lookup=use_lookup)
                 if len(full_table) == 1:
                     a, d = -3, -1
