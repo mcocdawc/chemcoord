@@ -26,5 +26,3 @@ A collection of functions operating on instances of :class:`~chemcoord.Zmat`.
 
 .. autosummary::
     :toctree: src_zmat_functions
-
-    ~zmat_functions.is_Zmat
