@@ -4,24 +4,19 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    import itertools.izip as zip
-except ImportError:
-    pass
 import numpy as np
 import pandas as pd
 import warnings
-from sortedcontainers import SortedSet
-from collections import OrderedDict, deque
-from itertools import permutations, cycle
 from chemcoord._exceptions import \
-    PhysicalMeaning, UndefinedCoordinateSystem, IllegalArgumentCombination, \
-    InvalidReference
+    IllegalArgumentCombination, \
+    InvalidReference, \
+    UndefinedCoordinateSystem
 from chemcoord.cartesian_coordinates._cartesian_class_core import \
     Cartesian_core
-from chemcoord.internal_coordinates.zmat_class_main import Zmat
-from chemcoord.utilities.set_utilities import pick
 from chemcoord.configuration import settings
+from chemcoord.internal_coordinates.zmat_class_main import Zmat
+from collections import OrderedDict
+from itertools import permutations
 
 
 class Cartesian_give_zmat(Cartesian_core):
@@ -168,7 +163,6 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
-        full_bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         if fragment_list is None:
             fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
             # During function execution the bonding situation does not change,
@@ -208,7 +202,6 @@ class Cartesian_give_zmat(Cartesian_core):
 
         for fragment in fragments[1:]:
             finished_part = self.loc[full_table.index]
-            bond_dict = finished_part.restrict_bond_dict(full_bond_dict)
             if pd.api.types.is_list_like(fragment):
                 fragment, references = fragment
                 if len(references) < min(3, len(fragment)):
@@ -250,8 +243,7 @@ class Cartesian_give_zmat(Cartesian_core):
             full_table = pd.concat([full_table, constr_table])
         return full_table
 
-    def check_dihedral(self, construction_table,
-                       use_lookup=settings['defaults']['use_lookup']):
+    def check_dihedral(self, construction_table):
         """Reindexe the dihedral defining atom if colinear.
 
         Args:
@@ -264,13 +256,19 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: construction_table
         """
-        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-        c_table = construction_table.copy()
+        c_table = construction_table
         angles = self.angle_degrees(c_table.iloc[3:, :].values)
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
         rename = dict(enumerate(c_table.index[3:]))
         problem_index = [rename[i] for i in problem_index]
+        return problem_index
 
+    def correct_dihedral(self, construction_table,
+                         use_lookup=settings['defaults']['use_lookup']):
+
+        problem_index = self.check_dihedral(construction_table)
+        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        c_table = construction_table.copy()
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
             b, a, problem_d = c_table.loc[i, ['b', 'a', 'd']]
@@ -278,6 +276,7 @@ class Cartesian_give_zmat(Cartesian_core):
                 c_table.loc[i, 'd'] = (bond_dict[a] - {b, a, problem_d}
                                        - set(c_table.index[loc_i:]))[0]
             except IndexError:
+                # TODO(Use only already defined atoms as reference)
                 visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
                 tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
                                              for j in bond_dict[problem_d]])
@@ -297,8 +296,9 @@ class Cartesian_give_zmat(Cartesian_core):
                                 new_tmp_bond_dict[j] = bond_dict[j] - visited
                     tmp_bond_dict = new_tmp_bond_dict
                 if not found:
+                    other_atoms = c_table.index[:loc_i].difference({b, a})
                     molecule = self.distance_to(origin=i, sort=True,
-                                                indices_of_other_atoms=visited)
+                                                other_atoms=other_atoms)
                     k = 0
                     while not found and k < len(molecule):
                         new_d = molecule.index[k]
@@ -359,8 +359,6 @@ class Cartesian_give_zmat(Cartesian_core):
         def get_position(self, construction_table):
             coords = ['x', 'y', 'z']
             abs_references = self._metadata['abs_refs']
-
-            values = np.empty((self.n_atoms, 3))
             pos = np.empty((self.n_atoms, 3, 4))
 
             pos[:, :, 0] = self.loc[construction_table.index, coords]
@@ -389,8 +387,8 @@ class Cartesian_give_zmat(Cartesian_core):
             ba = BA / np.linalg.norm(BA, axis=1)[:, None]
             bi = -1 * IB / np.linalg.norm(IB, axis=1)[:, None]
             dot_product = np.sum(bi * ba, axis=1)
-            dot_product[np.isclose(dot_product, 1)] = 1
-            dot_product[np.isclose(dot_product, -1)] = -1
+            dot_product[dot_product > 1] = 1
+            dot_product[dot_product < -1] = -1
             return np.nan_to_num(np.degrees(np.arccos(dot_product)))
 
         def get_dihedral(IB, BA, AD):
@@ -398,8 +396,8 @@ class Cartesian_give_zmat(Cartesian_core):
             N2 = np.cross(BA, AD, axis=1)
             n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
             dot_product = np.sum(n1 * n2, axis=1)
-            dot_product[np.isclose(dot_product, 1)] = 1
-            dot_product[np.isclose(dot_product, -1)] = -1
+            dot_product[dot_product > 1] = 1
+            dot_product[dot_product < -1] = -1
             dihedrals = np.degrees(np.arccos(dot_product))
             # the next lines are to test the direction of rotation.
             # is a dihedral really 90 or 270 degrees?
@@ -467,11 +465,12 @@ class Cartesian_give_zmat(Cartesian_core):
             pd.DataFrame: construction_table
         """
         self.get_bonds(use_lookup=use_lookup)
+        use_lookup = True
         # During function execution the connectivity situation won't change
         # So use_look=True will be used
         if construction_table is None:
-            c_table = self.get_construction_table(use_lookup=True)
-            c_table = self.check_dihedral(c_table, use_lookup=True)
+            c_table = self.get_construction_table(use_lookup=use_lookup)
+            c_table = self.correct_dihedral(c_table, use_lookup=use_lookup)
             c_table = self.check_absolute_refs(c_table)
         else:
             c_table = construction_table

@@ -5,18 +5,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import pandas as pd
-from threading import Thread
-import subprocess
-import os
-import tempfile
-import warnings
 from chemcoord.cartesian_coordinates._cartesian_class_core \
     import Cartesian_core
 from chemcoord.configuration import settings
-import io
 from io import open
-import re
+import os
+import pandas as pd
+import subprocess
+import tempfile
+from threading import Thread
+import warnings
 
 
 class Cartesian_io(Cartesian_core):
@@ -52,7 +50,7 @@ class Cartesian_io(Cartesian_core):
         """
         create_string = '{n}\n{message}\n{alignment}{frame_string}'.format
 
-        # TODO automatically insert last stable version
+        # TODO(automatically insert last stable version)
         message = 'Created by chemcoord \
 http://chemcoord.readthedocs.io/en/latest/'
 

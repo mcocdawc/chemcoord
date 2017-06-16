@@ -8,61 +8,25 @@ try:
     import itertools.izip as zip
 except ImportError:
     pass
-from itertools import product
-import numpy as np
-import pandas as pd
-import collections
-from sortedcontainers import SortedSet
-import warnings
-from chemcoord._generic_classes._common_class import _common_class
 from chemcoord._exceptions import PhysicalMeaning
+from chemcoord._generic_classes._common_class import _common_class
+from chemcoord.configuration import settings
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
-from chemcoord.configuration import settings
+import collections
+from itertools import product
 import numba as nb
 from numba import jit
-
-
-@jit(nopython=True)
-def _jit_get_squared_distances(positions1, positions2):
-    """Optimized function for calculating the distance between each pair
-    of points in positions1 and positions2.
-    """
-    n1 = positions1.shape[0]
-    n2 = positions2.shape[0]
-    D = np.empty((n2, n1))
-
-    for i in range(n1):
-        for j in range(n2):
-            D[i, j] = np.sum((positions1[i] - positions2[j])**2)
-    return D
-
-
-@jit(nopython=True)
-def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
-    """Calculate a boolean array where ``A[i,j] is True`` indicates a
-    bond between the i-th and j-th atom.
-    """
-    n = pos.shape[0]
-    bond_array = np.empty((n, n), dtype=nb.boolean)
-
-    for i in range(n):
-        for j in range(i, n):
-            D = 0
-            for h in range(3):
-                D += (pos[i, h] - pos[j, h])**2
-            bond_array[i, j] = ((bond_radii[i] + bond_radii[j])**2 - D) >= 0
-            bond_array[j, i] = bond_array[i, j]
-    if not self_bonding_allowed:
-        for i in range(n):
-            bond_array[i, i] = False
-    return bond_array
+import numpy as np
+import pandas as pd
+from sortedcontainers import SortedSet
 
 
 class Cartesian_core(_common_class):
 
     _required_cols = frozenset({'atom', 'x', 'y', 'z'})
-    # Look into the numpy manual for description of __array_priority__
+    # Look into the numpy manual for description of __array_priority__:
+    # https://docs.scipy.org/doc/numpy-1.12.0/reference/arrays.classes.html
     __array_priority__ = 15.0
 
     # overwrites existing method
@@ -238,14 +202,36 @@ class Cartesian_core(_common_class):
         return molecule
 
     @staticmethod
-    def _update_bond_dict(fragment_indices,
+    @jit(nopython=True)
+    def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
+        """Calculate a boolean array where ``A[i,j] is True`` indicates a
+        bond between the i-th and j-th atom.
+        """
+        n = pos.shape[0]
+        bond_array = np.empty((n, n), dtype=nb.boolean)
+
+        for i in range(n):
+            for j in range(i, n):
+                D = 0
+                for h in range(3):
+                    D += (pos[i, h] - pos[j, h])**2
+                B = (bond_radii[i] + bond_radii[j])**2
+                bond_array[i, j] = (B - D) >= 0
+                bond_array[j, i] = bond_array[i, j]
+        if not self_bonding_allowed:
+            for i in range(n):
+                bond_array[i, i] = False
+        return bond_array
+
+    def _update_bond_dict(self, fragment_indices,
                           positions,
                           bond_radii,
                           bond_dict=None,
                           self_bonding_allowed=False,
                           convert_index=None):
         """If bond_dict is provided, this function is not side effect free
-        bond_dict has to be a collections.defaultdict(set)"""
+        bond_dict has to be a collections.defaultdict(set)
+        """
         assert (isinstance(bond_dict, collections.defaultdict)
                 or bond_dict is None)
         fragment_indices = list(fragment_indices)
@@ -257,7 +243,7 @@ class Cartesian_core(_common_class):
         frag_pos = positions[fragment_indices, :]
         frag_bond_radii = bond_radii[fragment_indices]
 
-        bond_array = _jit_give_bond_array(
+        bond_array = self._jit_give_bond_array(
             frag_pos, frag_bond_radii,
             self_bonding_allowed=self_bonding_allowed)
         a, b = bond_array.nonzero()
@@ -276,7 +262,7 @@ class Cartesian_core(_common_class):
             return int(np.ceil(x))
 
         n_sets = self.n_atoms / n_atoms_per_set
-        n_sets_along_axis = ceil(n_sets ** (1/3))
+        n_sets_along_axis = ceil(n_sets**(1 / 3))
         n_atoms_per_set_along_axis = ceil(self.n_atoms / n_sets_along_axis)
 
         def give_index(series, i, n_atoms_per_set_along_axis, offset=offset):
@@ -376,7 +362,6 @@ class Cartesian_core(_common_class):
                 bond_dict[i] = {}
 
             self.index = old_index
-            valency = dict(zip(self.index, data['valency']))
             rename = dict(enumerate(self.index))
             bond_dict = {rename[key]: {rename[i] for i in bond_dict[key]}
                          for key in bond_dict}
@@ -643,13 +628,11 @@ class Cartesian_core(_common_class):
             np.array:
         """
         try:
-            mass_vector = self.loc[:, 'mass'].values.astype('float64')
+            mass = self['mass'].values
         except KeyError:
-            mass_molecule = self.add_data('mass')
-            mass_vector = mass_molecule.loc[:, 'mass'].values.astype('float64')
-        location_array = self.location()
-        barycenter = (np.sum(location_array * mass_vector[:, None], axis=0)
-                      / self.total_mass())
+            mass = self.add_data('mass')['mass'].values
+        pos = self.loc[:, ['x', 'y', 'z']].values
+        barycenter = (pos * mass[:, None]).sum(axis=0) / self.total_mass()
         return barycenter
 
     def move(
@@ -689,9 +672,8 @@ class Cartesian_core(_common_class):
 
         if copy:
             max_index = self.index.max()
-            index_for_copied_atoms = range(
-                max_index + 1, max_index + len(indices) + 1
-                )
+            index_for_copied_atoms = range(max_index + 1,
+                                           max_index + len(indices) + 1)
             temp = self.loc[indices, :].copy()
             temp.index = index_for_copied_atoms
             temp[index_for_copied_atoms, ['x', 'y', 'z']] = vectors
@@ -760,8 +742,8 @@ class Cartesian_core(_common_class):
         BI, BA = i_pos - b_pos, a_pos - b_pos
         bi, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (BI, BA)]
         dot_product = np.sum(bi * ba, axis=1)
-        dot_product[np.isclose(dot_product, 1)] = 1
-        dot_product[np.isclose(dot_product, -1)] = -1
+        dot_product[dot_product > 1] = 1
+        dot_product[dot_product < -1] = -1
         angles = np.degrees(np.arccos(dot_product))
         return angles
 
@@ -804,8 +786,8 @@ class Cartesian_core(_common_class):
         n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
 
         dot_product = np.sum(n1 * n2, axis=1)
-        dot_product[np.isclose(dot_product, 1)] = 1
-        dot_product[np.isclose(dot_product, -1)] = -1
+        dot_product[dot_product > 1] = 1
+        dot_product[dot_product < -1] = -1
         dihedrals = np.degrees(np.arccos(dot_product))
 
         # the next lines are to test the direction of rotation.
@@ -906,16 +888,29 @@ class Cartesian_core(_common_class):
         missing_part = missing_part.fragmentate(use_lookup=use_lookup)
         return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
+    @staticmethod
+    @jit(nopython=True)
+    def _jit_pairwise_distances(pos1, pos2):
+        """Optimized function for calculating the distance between each pair
+        of points in positions1 and positions2.
+        """
+        n1 = pos1.shape[0]
+        n2 = pos2.shape[0]
+        D = np.empty((n1, n2))
+
+        for i in range(n1):
+            for j in range(n2):
+                D[i, j] = np.sqrt(((pos1[i] - pos2[j])**2).sum())
+        return D
+
     def _shortest_distance(self, other):
         coords = ['x', 'y', 'z']
-        positions1 = self.loc[:, coords].values.astype('float32')
-        positions2 = other.loc[:, coords].values.astype('float32')
-        D = _jit_get_squared_distances(positions2, positions1)
+        pos1 = self.loc[:, coords].values
+        pos2 = other.loc[:, coords].values
+        D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
-        distance = np.sqrt(D[i, j])
-
         i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
-        return i, j, distance
+        return i, j
 
     def inertia(self):
         """Calculate the inertia tensor and transforms along
@@ -948,11 +943,11 @@ class Cartesian_core(_common_class):
             The eigenvectors of the inertia tensor in the old basis.
         """
         try:
-            mass_vector = self.loc[:, 'mass'].values.astype('float64')
+            mass_vector = self.loc[:, 'mass'].values
             molecule = self.copy()
         except KeyError:
             molecule = self.add_data('mass')
-            mass_vector = molecule.loc[:, 'mass'].values.astype('float64')
+            mass_vector = molecule.loc[:, 'mass'].values
 
         molecule = molecule - molecule.barycenter()
         locations = molecule.location()
@@ -975,11 +970,10 @@ class Cartesian_core(_common_class):
         Cartesian_mass = self.basistransform(new_basis, old_basis)
         Cartesian_mass = Cartesian_mass - Cartesian_mass.barycenter()
 
-        dic_of_values = dict(zip(
-            ['transformed_Cartesian', 'diag_inertia_tensor',
-             'inertia_tensor', 'eigenvectors'],
-            [Cartesian_mass, diag_inertia_tensor, inertia_tensor, eigenvectors]
-            ))
+        dic_of_values = {'transformed_Cartesian': Cartesian_mass,
+                         'diag_inertia_tensor': diag_inertia_tensor,
+                         'inertia_tensor': inertia_tensor,
+                         'eigenvectors': eigenvectors}
         return dic_of_values
 
     def basistransform(
@@ -1054,12 +1048,12 @@ class Cartesian_core(_common_class):
             given a 3D vector is returned one index.
         """
         indexlist = self.index if indexlist is None else indexlist
-        array = self.loc[indexlist, ['x', 'y', 'z']].values.astype(float)
+        array = self.loc[indexlist, ['x', 'y', 'z']].values
         return array
 
     def distance_to(self,
                     origin=[0., 0., 0.],
-                    indices_of_other_atoms=None,
+                    other_atoms=None,
                     sort=False):
         """Return a Cartesian with a column for the distance from origin.
         """
@@ -1067,10 +1061,10 @@ class Cartesian_core(_common_class):
         norm = np.linalg.norm
         if isinstance(origin, int):
             origin = self.loc[origin, coords]
-        if indices_of_other_atoms is None:
-            indices_of_other_atoms = self.index
+        if other_atoms is None:
+            other_atoms = self.index
 
-        new = self.loc[indices_of_other_atoms, :].copy()
+        new = self.loc[other_atoms, :].copy()
         try:
             new.loc[:, 'distance'] = norm(new.loc[:, coords] - origin, axis=1)
         except AttributeError:

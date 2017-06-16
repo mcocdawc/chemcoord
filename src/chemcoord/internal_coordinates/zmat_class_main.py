@@ -5,9 +5,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from chemcoord.internal_coordinates._zmat_class_io import Zmat_io
 from chemcoord.internal_coordinates._zmat_class_give_cartesian \
     import Zmat_give_cartesian
+from chemcoord.internal_coordinates._zmat_class_io import Zmat_io
 
 
 class Zmat(Zmat_io, Zmat_give_cartesian):

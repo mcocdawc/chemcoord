@@ -1,12 +1,10 @@
+import codecs
+import importlib
+import locale
 import os
 import platform
-import sys
 import struct
-import subprocess
-import codecs
-import locale
-import importlib
-import chemcoord as cc
+import sys
 
 
 def get_sys_info():
@@ -33,7 +31,7 @@ def get_sys_info():
             ("LANG", "%s" % os.environ.get('LANG', "None")),
             ("LOCALE", "%s.%s" % locale.getlocale()),
         ])
-    except:
+    except Exception:
         pass
 
     return blob
@@ -89,13 +87,13 @@ def show_versions(as_json=False):
                 mod = importlib.import_module(modname)
             ver = ver_f(mod)
             deps_blob.append((modname, ver))
-        except:
+        except Exception:
             deps_blob.append((modname, None))
 
     if (as_json):
         try:
             import json
-        except:
+        except Exception:
             import simplejson as json
 
         j = dict(system=dict(sys_info), dependencies=dict(deps_blob))

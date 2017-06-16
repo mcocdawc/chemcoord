@@ -5,18 +5,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-try:
-    import itertools.imap as map
-except ImportError:
-    pass
-
+from chemcoord._exceptions import PhysicalMeaning
+from chemcoord._generic_classes._common_class import _common_class
 import numpy as np
 import pandas as pd
-import math as m
 import sympy
-from chemcoord._generic_classes._common_class import _common_class
-from chemcoord._exceptions import PhysicalMeaning
-from chemcoord.configuration import settings
 
 
 class Zmat_core(_common_class):
@@ -103,24 +96,24 @@ class Zmat_core(_common_class):
         return selected
 
     def __add__(self, other):
-        selection = ['atom', 'b', 'a', 'd']
+        cols = ['atom', 'b', 'a', 'd']
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
         new._metadata['absolute_zmat'] = (self._metadata['absolute_zmat']
                                           and other._metadata['absolute_zmat'])
         try:
             assert (self.index == other.index).all()
-            # TODO default values for _metadata
+            # TODO(default values for _metadata)
             if new._metadata['absolute_zmat']:
-                assert np.alltrue(self.loc[:, selection] == other.loc[:, selection])
+                assert np.alltrue(self[:, cols] == other.loc[:, cols])
             else:
-                self.loc[:, selection].isnull()
-                tested_where_equal = (self.loc[:, selection] == other.loc[:, selection])
-                tested_where_nan = (self.loc[:, selection].isnull()
-                                    | other.loc[:, selection].isnull())
-                for column in selection:
-                    tested_where_equal[tested_where_nan[column], column] = True
-                assert np.alltrue(tested_where_equal)
+                self.loc[:, cols].isnull()
+                where_equal = (self.loc[:, cols] == other.loc[:, cols])
+                where_nan = (self.loc[:, cols].isnull()
+                             | other.loc[:, cols].isnull())
+                for column in cols:
+                    where_equal[where_nan[column], column] = True
+                assert np.alltrue(where_equal)
 
             new[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         except AssertionError:
@@ -154,7 +147,7 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
 
         if (new_index is None):
             new_index = range(len(self))
-        elif len(new_index) != len(output):
+        elif len(new_index) != len(self):
             raise ValueError('len(new_index) has to be the same as len(self)')
 
         cols = ['b', 'a', 'd']
