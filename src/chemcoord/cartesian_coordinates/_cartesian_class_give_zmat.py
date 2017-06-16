@@ -117,7 +117,7 @@ class Cartesian_give_zmat(Cartesian_core):
                             try:
                                 d = parent[a]
                                 if d in set([b, a]):
-                                    message = "Don't make tautologic reference"
+                                    message = "Don't make self references"
                                     raise InvalidReference(message)
                             except (KeyError, InvalidReference):
                                 try:
