@@ -707,10 +707,8 @@ class Cartesian_core(_common_class):
             b_pos = self.loc[indices.loc[:, 'b'], coords].values
         else:
             indices = np.array(indices)
-            try:
-                indices.shape[1]
-            except IndexError:
-                buildlist = indices[None, :]
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
             i_pos = self.loc[indices[:, 0], coords].values
             b_pos = self.loc[indices[:, 1], coords].values
         return np.linalg.norm(i_pos - b_pos, axis=1)
@@ -740,10 +738,8 @@ class Cartesian_core(_common_class):
             a_pos = self.loc[indices.loc[:, 'a'], coords].values
         else:
             indices = np.array(indices)
-            try:
-                indices.shape[1]
-            except IndexError:
-                buildlist = indices[None, :]
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
             i_pos = self.loc[indices[:, 0], coords].values
             b_pos = self.loc[indices[:, 1], coords].values
             a_pos = self.loc[indices[:, 2], coords].values
@@ -783,10 +779,8 @@ class Cartesian_core(_common_class):
             d_pos = self.loc[indices.loc[:, 'd'], coords].values
         else:
             indices = np.array(indices)
-            try:
-                indices.shape[1]
-            except IndexError:
-                buildlist = indices[None, :]
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
             i_pos = self.loc[indices[:, 0], coords].values
             b_pos = self.loc[indices[:, 1], coords].values
             a_pos = self.loc[indices[:, 2], coords].values
@@ -961,8 +955,9 @@ class Cartesian_core(_common_class):
         pos2 = other.loc[:, coords].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
+        d = D[i, j]
         i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
-        return i, j, D[i, j]
+        return i, j, d
 
     def inertia(self):
         """Calculate the inertia tensor and transforms along
