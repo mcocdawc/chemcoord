@@ -164,7 +164,8 @@ class Cartesian_give_zmat(Cartesian_core):
             pd.DataFrame: Construction table
         """
         if fragment_list is None:
-            fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
+            fragments = sorted(self.fragmentate(use_lookup=use_lookup),
+                               key=lambda x: len(x), reverse=True)
             # During function execution the bonding situation does not change,
             # so the lookup may be used now.
             use_lookup = True
@@ -244,17 +245,13 @@ class Cartesian_give_zmat(Cartesian_core):
         return full_table
 
     def check_dihedral(self, construction_table):
-        """Reindexe the dihedral defining atom if colinear.
+        """Checks, if the dihedral defining atom is colinear.
 
         Args:
             construction_table (pd.DataFrame):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-            bond_dict (OrderedDict): If a connectivity table is provided, it is
-                not recalculated.
 
         Returns:
-            pd.DataFrame: construction_table
+            list: A list of problematic indices.
         """
         c_table = construction_table
         angles = self.angle_degrees(c_table.iloc[3:, :].values)
@@ -265,6 +262,16 @@ class Cartesian_give_zmat(Cartesian_core):
 
     def correct_dihedral(self, construction_table,
                          use_lookup=settings['defaults']['use_lookup']):
+        """Reindexe the dihedral defining atom if linear reference is used.
+
+        Args:
+            construction_table (pd.DataFrame):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            pd.DataFrame: Appropiately renamed construction table.
+        """
 
         problem_index = self.check_dihedral(construction_table)
         bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
@@ -313,18 +320,14 @@ class Cartesian_give_zmat(Cartesian_core):
                         raise UndefinedCoordinateSystem(message(i))
         return c_table
 
-    def check_absolute_refs(self, construction_table):
-        """Reindexe the dihedral defining atom if colinear.
+    def correct_absolute_refs(self, construction_table):
+        """Reindexe the absolute references if linear reference is used.
 
         Args:
             construction_table (pd.DataFrame):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-            bond_dict (OrderedDict): If a connectivity table is provided, it is
-                not recalculated.
 
         Returns:
-            pd.DataFrame: construction_table
+            pd.DataFrame: Appropiately renamed construction table.
         """
         c_table = construction_table.copy()
         abs_refs = self._metadata['abs_refs']
@@ -452,18 +455,6 @@ class Cartesian_give_zmat(Cartesian_core):
 
     def give_zmat(self, construction_table=None,
                   use_lookup=settings['defaults']['use_lookup']):
-        """Reindexe the dihedral defining atom if colinear.
-
-        Args:
-            construction_table (pd.DataFrame):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-            bond_dict (OrderedDict): If a connectivity table is provided, it is
-                not recalculated.
-
-        Returns:
-            pd.DataFrame: construction_table
-        """
         self.get_bonds(use_lookup=use_lookup)
         use_lookup = True
         # During function execution the connectivity situation won't change
