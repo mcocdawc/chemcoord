@@ -918,10 +918,13 @@ class Cartesian_core(_common_class):
         return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
     @staticmethod
-    @jit(nopython=True)
+    @jit()
     def _jit_pairwise_distances(pos1, pos2):
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.
+
+        Does use python mode as fallback, if a scalar and not an array is
+        given.
         """
         n1 = pos1.shape[0]
         n2 = pos2.shape[0]
