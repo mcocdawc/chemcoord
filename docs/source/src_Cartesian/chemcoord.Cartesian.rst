@@ -61,7 +61,7 @@ chemcoord\.Cartesian
 
          ~Cartesian.give_zmat
          ~Cartesian.get_construction_table
-         ~Cartesian.check_absolute_refs
+         ~Cartesian.correct_absolute_refs
          ~Cartesian.check_dihedral
          ~Cartesian.to_zmat
 

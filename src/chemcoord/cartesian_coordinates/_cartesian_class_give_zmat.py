@@ -143,7 +143,7 @@ class Cartesian_give_zmat(Cartesian_core):
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
-        for the bond lenghts, angles and dihedrals.
+        for the bond lengths, angles and dihedrals.
         It contains the whole information about which reference atoms
         are used by each atom in the Zmatrix.
 
@@ -455,6 +455,48 @@ class Cartesian_give_zmat(Cartesian_core):
 
     def give_zmat(self, construction_table=None,
                   use_lookup=settings['defaults']['use_lookup']):
+        """Transform to internal coordinates.
+
+        Transforming to internal coordinates involves basically three
+        steps:
+
+        1. Define an order of how to build and define for each atom
+        the used reference atoms.
+
+        2. Check for problematic local linearity. In this algorithm an
+        angle with ``170 < angle < 10`` is assumed to be linear.
+        This is not the mathematical definition, but makes it safer
+        against "floating point noise"
+
+        3. Calculate the bond lengths, angles and dihedrals using the
+        references defined in step 1 and 2.
+
+        In the first two steps a so called ``construction_table`` is created.
+        This is basically a Zmatrix without the values for the bonds, angles
+        and dihedrals hence containing only the information about the used
+        references. ChemCoord uses a :class:`pandas.DataFrame` with the columns
+        ``['b', 'a', 'd']``. Look into
+        :meth:`~chemcoord.Cartesian.get_construction_table` for more
+        information.
+
+        It is important to know, that calculating the construction table
+        is a very costly step since the algoritym tries to make some guesses
+        based on connectivity to create a "chemical" zmatrix.
+
+        If you create several zmatrices based on the same references
+        you can save the buildlist of a zmatrix with
+        :meth:`Zmat.get_buildlist`.
+        If you then pass the buildlist as argument to ``to_zmat``,
+        then the algorithm directly starts with step 3.
+
+        Args:
+            construction_table (pandas.DataFrame):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            Zmat: A new instance of :class:`~.zmat_functions.Zmat`.
+        """
         self.get_bonds(use_lookup=use_lookup)
         use_lookup = True
         # During function execution the connectivity situation won't change
@@ -462,7 +504,7 @@ class Cartesian_give_zmat(Cartesian_core):
         if construction_table is None:
             c_table = self.get_construction_table(use_lookup=use_lookup)
             c_table = self.correct_dihedral(c_table, use_lookup=use_lookup)
-            c_table = self.check_absolute_refs(c_table)
+            c_table = self.correct_absolute_refs(c_table)
         else:
             c_table = construction_table
         return self._build_zmat(c_table)
