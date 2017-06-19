@@ -21,7 +21,8 @@ URL = 'https://github.com/mcocdawc/chemcoord'
 # automatic generation of the documentation at readthedocs.org.
 # Read the section 'I get import errors on libraries that depend on C modules'
 # at http://docs.readthedocs.io/en/latest/faq.html
-INSTALL_REQUIRES = ['numpy', 'pandas>=0.20', 'sortedcontainers', 'sympy']
+INSTALL_REQUIRES = ['numpy', 'pandas>=0.20', 'sortedcontainers', 'sympy',
+                    'numba']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
             'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
             'coordinate system']
