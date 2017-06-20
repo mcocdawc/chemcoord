@@ -27,10 +27,11 @@ install:
   # Replace dep1 dep2 ... with your dependencies
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
   - source activate test-environment
+  - conda install pytest
   - conda install numba
   - pip install .
 # command to run tests
 script:
-  - source activate test-environment
   - which python
+  - python -c "import chemcoord"
   - pytest
