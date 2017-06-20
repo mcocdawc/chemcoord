@@ -71,17 +71,17 @@ class Cartesian_give_zmat(Cartesian_core):
         """
         def modify_priority(bond_dict, user_defined):
             def move_to_start(dct, key):
-                if key in dct:
+                keys = dct.keys()
+                if key in keys and key != keys[0]:
                     root = dct._OrderedDict__root
                     first = root[1]
-                    if key != first[-1]:
-                        link = dct._OrderedDict__map[key]
-                        link_prev, link_next, _ = link
-                        link_prev[1] = link_next
-                        link_next[0] = link_prev
-                        link[0] = root
-                        link[1] = first
-                        root[1] = first[0] = link
+                    link = dct._OrderedDict__map[key]
+                    link_prev, link_next, _ = link
+                    link_prev[1] = link_next
+                    link_next[0] = link_prev
+                    link[0] = root
+                    link[1] = first
+                    root[1] = first[0] = link
                 else:
                     raise KeyError
 
