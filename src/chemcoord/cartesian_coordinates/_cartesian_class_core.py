@@ -707,10 +707,8 @@ class Cartesian_core(_common_class):
             b_pos = self.loc[indices.loc[:, 'b'], coords].values
         else:
             indices = np.array(indices)
-            try:
-                indices.shape[1]
-            except IndexError:
-                buildlist = indices[None, :]
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
             i_pos = self.loc[indices[:, 0], coords].values
             b_pos = self.loc[indices[:, 1], coords].values
         return np.linalg.norm(i_pos - b_pos, axis=1)
@@ -740,10 +738,8 @@ class Cartesian_core(_common_class):
             a_pos = self.loc[indices.loc[:, 'a'], coords].values
         else:
             indices = np.array(indices)
-            try:
-                indices.shape[1]
-            except IndexError:
-                buildlist = indices[None, :]
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
             i_pos = self.loc[indices[:, 0], coords].values
             b_pos = self.loc[indices[:, 1], coords].values
             a_pos = self.loc[indices[:, 2], coords].values
@@ -783,10 +779,8 @@ class Cartesian_core(_common_class):
             d_pos = self.loc[indices.loc[:, 'd'], coords].values
         else:
             indices = np.array(indices)
-            try:
-                indices.shape[1]
-            except IndexError:
-                buildlist = indices[None, :]
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
             i_pos = self.loc[indices[:, 0], coords].values
             b_pos = self.loc[indices[:, 1], coords].values
             a_pos = self.loc[indices[:, 2], coords].values
@@ -924,10 +918,13 @@ class Cartesian_core(_common_class):
         return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
     @staticmethod
-    @jit(nopython=True)
+    @jit()
     def _jit_pairwise_distances(pos1, pos2):
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.
+
+        Does use python mode as fallback, if a scalar and not an array is
+        given.
         """
         n1 = pos1.shape[0]
         n2 = pos2.shape[0]
@@ -961,8 +958,9 @@ class Cartesian_core(_common_class):
         pos2 = other.loc[:, coords].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
+        d = D[i, j]
         i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
-        return i, j, D[i, j]
+        return i, j, d
 
     def inertia(self):
         """Calculate the inertia tensor and transforms along

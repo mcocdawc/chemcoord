@@ -70,9 +70,28 @@ class Cartesian_give_zmat(Cartesian_core):
             pd.DataFrame: Construction table
         """
         def modify_priority(bond_dict, user_defined):
+            def move_to_start(dct, key):
+                if key in dct:
+                    root = dct._OrderedDict__root
+                    first = root[1]
+
+                    link = dct._OrderedDict__map[key]
+                    link_prev, link_next, _ = link
+                    link_prev[1] = link_next
+                    link_next[0] = link_prev
+                    link[0] = root
+                    link[1] = first
+                    root[1] = first[0] = link
+                else:
+                    raise KeyError
+
             for j in reversed(user_defined):
                 try:
-                    work_bond_dict.move_to_end(j, last=False)
+                    try:
+                        work_bond_dict.move_to_end(j, last=False)
+                    except AttributeError:
+                        # No move_to_end method in python 2.x
+                        move_to_start(work_bond_dict, j)
                 except KeyError:
                     pass
         if start_atom is not None and predefined_table is not None:
@@ -145,12 +164,23 @@ class Cartesian_give_zmat(Cartesian_core):
                         construction_table[i] = {'b': b, 'a': a, 'd': d}
                     order_of_def.append(i)
 
+                if i == 8:
+                    print('valkomen')
+                    print(visited)
                 visited.add(i)
+                print(work_bond_dict)
                 for j in work_bond_dict[i]:
+                    print(i, j)
                     new_work_bond_dict[j] = bond_dict[j] - visited
                     parent[j] = i
+            if i == 8:
+                print('A', i, work_bond_dict, user_defined)
             work_bond_dict = new_work_bond_dict
+            if i == 8:
+                print('B', i, work_bond_dict, user_defined)
             modify_priority(work_bond_dict, user_defined)
+            if i == 8:
+                print('C', i, work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient='index')
         output = output.fillna(0).astype('int64')
         output = output.loc[order_of_def, ['b', 'a', 'd']]
@@ -161,7 +191,7 @@ class Cartesian_give_zmat(Cartesian_core):
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
-        for the bond lenghts, angles and dihedrals.
+        for the bond lengths, angles and dihedrals.
         It contains the whole information about which reference atoms
         are used by each atom in the Zmatrix.
 
@@ -182,7 +212,8 @@ class Cartesian_give_zmat(Cartesian_core):
             pd.DataFrame: Construction table
         """
         if fragment_list is None:
-            fragments = sorted(self.fragmentate(), key=lambda x: -len(x))
+            fragments = sorted(self.fragmentate(use_lookup=use_lookup),
+                               key=lambda x: len(x), reverse=True)
             # During function execution the bonding situation does not change,
             # so the lookup may be used now.
             use_lookup = True
@@ -229,7 +260,7 @@ class Cartesian_give_zmat(Cartesian_core):
                 constr_table = fragment._get_frag_constr_table(
                     predefined_table=references, use_lookup=use_lookup)
             else:
-                i, b, ignore = fragment.shortest_distance(finished_part)[:2]
+                i, b = fragment.shortest_distance(finished_part)[:2]
                 constr_table = fragment._get_frag_constr_table(
                     start_atom=i, use_lookup=use_lookup)
                 if len(full_table) == 1:
@@ -262,17 +293,13 @@ class Cartesian_give_zmat(Cartesian_core):
         return full_table
 
     def check_dihedral(self, construction_table):
-        """Reindexe the dihedral defining atom if colinear.
+        """Checks, if the dihedral defining atom is colinear.
 
         Args:
             construction_table (pd.DataFrame):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-            bond_dict (OrderedDict): If a connectivity table is provided, it is
-                not recalculated.
 
         Returns:
-            pd.DataFrame: construction_table
+            list: A list of problematic indices.
         """
         c_table = construction_table
         angles = self.angle_degrees(c_table.iloc[3:, :].values)
@@ -283,6 +310,16 @@ class Cartesian_give_zmat(Cartesian_core):
 
     def correct_dihedral(self, construction_table,
                          use_lookup=settings['defaults']['use_lookup']):
+        """Reindexe the dihedral defining atom if linear reference is used.
+
+        Args:
+            construction_table (pd.DataFrame):
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            pd.DataFrame: Appropiately renamed construction table.
+        """
 
         problem_index = self.check_dihedral(construction_table)
         bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
@@ -331,18 +368,14 @@ class Cartesian_give_zmat(Cartesian_core):
                         raise UndefinedCoordinateSystem(message(i))
         return c_table
 
-    def check_absolute_refs(self, construction_table):
-        """Reindexe the dihedral defining atom if colinear.
+    def correct_absolute_refs(self, construction_table):
+        """Reindexe the absolute references if linear reference is used.
 
         Args:
             construction_table (pd.DataFrame):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-            bond_dict (OrderedDict): If a connectivity table is provided, it is
-                not recalculated.
 
         Returns:
-            pd.DataFrame: construction_table
+            pd.DataFrame: Appropiately renamed construction table.
         """
         c_table = construction_table.copy()
         abs_refs = self._metadata['abs_refs']
@@ -470,17 +503,47 @@ class Cartesian_give_zmat(Cartesian_core):
 
     def give_zmat(self, construction_table=None,
                   use_lookup=settings['defaults']['use_lookup']):
-        """Reindexe the dihedral defining atom if colinear.
+        """Transform to internal coordinates.
+
+        Transforming to internal coordinates involves basically three
+        steps:
+
+        1. Define an order of how to build and define for each atom
+        the used reference atoms.
+
+        2. Check for problematic local linearity. In this algorithm an
+        angle with ``170 < angle < 10`` is assumed to be linear.
+        This is not the mathematical definition, but makes it safer
+        against "floating point noise"
+
+        3. Calculate the bond lengths, angles and dihedrals using the
+        references defined in step 1 and 2.
+
+        In the first two steps a so called ``construction_table`` is created.
+        This is basically a Zmatrix without the values for the bonds, angles
+        and dihedrals hence containing only the information about the used
+        references. ChemCoord uses a :class:`pandas.DataFrame` with the columns
+        ``['b', 'a', 'd']``. Look into
+        :meth:`~chemcoord.Cartesian.get_construction_table` for more
+        information.
+
+        It is important to know, that calculating the construction table
+        is a very costly step since the algoritym tries to make some guesses
+        based on connectivity to create a "chemical" zmatrix.
+
+        If you create several zmatrices based on the same references
+        you can save the buildlist of a zmatrix with
+        :meth:`Zmat.get_buildlist`.
+        If you then pass the buildlist as argument to ``to_zmat``,
+        then the algorithm directly starts with step 3.
 
         Args:
-            construction_table (pd.DataFrame):
+            construction_table (pandas.DataFrame):
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
-            bond_dict (OrderedDict): If a connectivity table is provided, it is
-                not recalculated.
 
         Returns:
-            pd.DataFrame: construction_table
+            Zmat: A new instance of :class:`~.zmat_functions.Zmat`.
         """
         self.get_bonds(use_lookup=use_lookup)
         use_lookup = True
@@ -489,7 +552,7 @@ class Cartesian_give_zmat(Cartesian_core):
         if construction_table is None:
             c_table = self.get_construction_table(use_lookup=use_lookup)
             c_table = self.correct_dihedral(c_table, use_lookup=use_lookup)
-            c_table = self.check_absolute_refs(c_table)
+            c_table = self.correct_absolute_refs(c_table)
         else:
             c_table = construction_table
         return self._build_zmat(c_table)

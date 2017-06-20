@@ -10,14 +10,13 @@ def get_script_path():
 
 
 def get_structure_path(script_path):
-    found, n = False, 0
-    while not found:
-        parents = ['..' for _ in range(n)]
-        structure_path = os.path.join(script_path, *parents, 'structures')
+    test_path = os.path.join(script_path)
+    while True:
+        structure_path = os.path.join(test_path, 'structures')
         if os.path.exists(structure_path):
             return structure_path
         else:
-            n += 1
+            test_path = os.path.join(test_path, '..')
 
 
 STRUCTURES = get_structure_path(get_script_path())

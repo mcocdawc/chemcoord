@@ -50,7 +50,6 @@ def give_version():
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 # sys.path.insert(0, os.path.abspath(u'.'))
 # sys.path.insert(0, os.path.abspath(u'..'))
-sys.path.insert(0, os.path.abspath(u'../../'))
 sys.path.insert(0, os.path.abspath(u'../../src'))
 
 
