@@ -30,4 +30,6 @@ install:
   - conda install numba
   - pip install .
 # command to run tests
-script: pytest
+script:
+  - source activate test-environment
+  - pytest
