@@ -52,9 +52,28 @@ class Cartesian_give_zmat(Cartesian_core):
         connected molecule.
         """
         def modify_priority(bond_dict, user_defined):
+            def move_to_start(dct, key):
+                if key in dct:
+                    root = dct._OrderedDict__root
+                    first = root[1]
+
+                    link = dct._OrderedDict__map[key]
+                    link_prev, link_next, _ = link
+                    link_prev[1] = link_next
+                    link_next[0] = link_prev
+                    link[0] = root
+                    link[1] = first
+                    root[1] = first[0] = link
+                else:
+                    raise KeyError
+
             for j in reversed(user_defined):
                 try:
-                    work_bond_dict.move_to_end(j, last=False)
+                    try:
+                        work_bond_dict.move_to_end(j, last=False)
+                    except AttributeError:
+                        # No move_to_end method in python 2.x
+                        move_to_start(work_bond_dict, j)
                 except KeyError:
                     pass
         if start_atom is not None and predefined_table is not None:
@@ -127,12 +146,23 @@ class Cartesian_give_zmat(Cartesian_core):
                         construction_table[i] = {'b': b, 'a': a, 'd': d}
                     order_of_def.append(i)
 
+                if i == 8:
+                    print('valkomen')
+                    print(visited)
                 visited.add(i)
+                print(work_bond_dict)
                 for j in work_bond_dict[i]:
+                    print(i, j)
                     new_work_bond_dict[j] = bond_dict[j] - visited
                     parent[j] = i
+            if i == 8:
+                print('A', i, work_bond_dict, user_defined)
             work_bond_dict = new_work_bond_dict
+            if i == 8:
+                print('B', i, work_bond_dict, user_defined)
             modify_priority(work_bond_dict, user_defined)
+            if i == 8:
+                print('C', i, work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient='index')
         output = output.fillna(0).astype('int64')
         output = output.loc[order_of_def, ['b', 'a', 'd']]
