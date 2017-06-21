@@ -1,5 +1,7 @@
 # chemcoord: A python module for coordinates of molecules
 
+<img src="https://travis-ci.org/pandas-dev/pandas.svg?branch=master" alt="travis build status" />
+
 ## Website
 
 The project's website is: http://chemcoord.readthedocs.org/
@@ -10,7 +12,7 @@ The project's website is: http://chemcoord.readthedocs.org/
 * [You can use it as a python module](https://xkcd.com/353/)
 * It reliably converts from Cartesian space (xyz-files) to internal coordinates (zmat-files)
   **without** introducing dummy atoms. Even in the case of linearity.
-* The created zmatrix is not only a transformation to internal coordinates, it is a "chemical" zmatrix. 
+* The created zmatrix is not only a transformation to internal coordinates, it is a "chemical" zmatrix.
   By chemical I mean, that e.g. distances are along bonds or dihedrals are defined as you draw them in chemical textbooks.
 * It derived from my own work and I heavily use it during the day.
   So all functions are tested and tailored around the workflow in theoretical chemistry.
@@ -22,7 +24,7 @@ You need a working python (both 2 and 3 are possible) installation together with
 You can use for example the [anaconda3 installer](https://www.continuum.io/downloads/)
 
 The advantage of the anaconda3 installer is that you get a lot of additional modules and programs,
-that make it really easy to work with python. 
+that make it really easy to work with python.
 For example [Ipython](http://ipython.org/) and the [jupyter notebooks](http://jupyter.org/)
 I highly recommend to use those.
 
@@ -40,4 +42,3 @@ This should also resolve all dependencies automatically.
 I tested neither installation nor running the module on windows.
 As far as I know it should work as well if you use the ``pip`` manager.
 If you get it installed and running, please report it on the Github page.
-
