@@ -7,10 +7,10 @@ python:
   - "3.5"
 # command to install dependencies
 install:
-  - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-  - sudo add-apt-repository 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'  -y
-  - sudo apt-get update -q
-  - sudo apt-get install clang-4.0 libclang-common-4.0-dev libclang-4.0-dev libclang1-4.0 libllvm4.0 lldb-4.0 llvm-4.0 llvm-4.0-dev llvm-4.0-runtime clang-format-4.0 lld-4.0 libfuzzer-4.0-dev
+  # - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+  # - sudo add-apt-repository 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'  -y
+  # - sudo apt-get update -q
+  # - sudo apt-get install clang-4.0 libclang-common-4.0-dev libclang-4.0-dev libclang1-4.0 libllvm4.0 lldb-4.0 llvm-4.0 llvm-4.0-dev llvm-4.0-runtime clang-format-4.0 lld-4.0 libfuzzer-4.0-dev
   # - sudo apt-get update
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
