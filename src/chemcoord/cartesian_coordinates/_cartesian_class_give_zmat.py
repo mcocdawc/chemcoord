@@ -71,6 +71,7 @@ class Cartesian_give_zmat(Cartesian_core):
         """
         def modify_priority(bond_dict, user_defined):
             def move_to_start(dct, key):
+                "Due to PY27 compatibility"
                 keys = dct.keys()
                 if key in keys and key != keys[0]:
                     root = dct._OrderedDict__root
