@@ -22,6 +22,6 @@ do
   for platform in 'osx-64' 'linux-32' 'linux-64' 'win-32' 'win-64'
   do
     conda-convert -p ${platform} -o "${root_dir}/${py_version}" ${package_path}
-    anaconda upload "${root_dir}/${py_version}/${platform}/${package_name}"
+    anaconda upload --force "${root_dir}/${py_version}/${platform}/${package_name}"
   done
 done
