@@ -231,6 +231,10 @@ class _pandas_wrapper(object):
     def shape(self):
         return self.frame.shape
 
+    @property
+    def dtypes(self):
+        return self.frame.dtypes
+
     def __repr__(self):
         return self.frame.__repr__()
 

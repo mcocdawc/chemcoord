@@ -125,6 +125,33 @@ The only allowed difference is ['bond', 'angle', 'dihedral']")
     def __radd__(self, other):
         return self.__add__(other)
 
+    def substitute(self, variable, value):
+        cols = ['bond', 'angle', 'dihedral']
+        out = self.copy()
+
+        def give_subs_function(variable, value):
+            def subs_function(x):
+                try:
+                    new = x.subs(variable, value)
+                except AttributeError:
+                    new = x
+
+                sympy_numbers = (sympy.numbers.Float, sympy.numbers.Integer)
+                if isinstance(new, sympy_numbers):
+                    return float(new)
+                else:
+                    return new
+            return subs_function
+
+        for col in cols:
+            series = out[col]
+            out[col] = series.map(give_subs_function(variable, value))
+            try:
+                out[col] = out[col].astype('float')
+            except TypeError:
+                pass
+        return out
+
     def _to_Zmat(self):
         return self.copy()
 

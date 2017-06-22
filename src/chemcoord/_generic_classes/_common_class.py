@@ -99,14 +99,6 @@ class _common_class(_pandas_wrapper):
             mass = mass_molecule.loc[:, 'mass'].sum()
         return mass
 
-    def substitute(self, variable, value):
-        def new_function(x):
-            try:
-                return x.subs(variable, value)
-            except AttributeError:
-                return x
-        return self.applymap(new_function)
-
     def _convert_nan_int(self):
         """The following functions are necessary to deal with the fact,
         that pandas does not support "NaN" for integers.
