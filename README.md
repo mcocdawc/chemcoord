@@ -1,6 +1,6 @@
 # chemcoord: A python module for coordinates of molecules
 
-<img src="https://travis-ci.org/pandas-dev/pandas.svg?branch=master" alt="travis build status" />
+[![Build Status](https://travis-ci.org/mcocdawc/chemcoord.svg?branch=master)](https://travis-ci.org/mcocdawc/chemcoord)
 
 ## Website
 
