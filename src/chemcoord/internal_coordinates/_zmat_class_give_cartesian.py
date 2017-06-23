@@ -57,6 +57,7 @@ def _jit_calculate_rest(positions, c_table, zmat_values, start_row=3):
             positions[row] = pos
         elif err == ERR_CODE_InvalidReference:
             return row
+    return row
 
 
 class Zmat_give_cartesian(Zmat_core):

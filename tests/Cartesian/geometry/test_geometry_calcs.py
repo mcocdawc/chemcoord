@@ -37,7 +37,7 @@ def test_bond_length():
 def test_fragmentate():
     fragments = molecule.fragmentate()
     assert len(fragments) == 1
-    assert fragments[0] == molecule
+    assert np.alltrue(fragments[0] == molecule)
 
 
 def test_shortest_distance():
