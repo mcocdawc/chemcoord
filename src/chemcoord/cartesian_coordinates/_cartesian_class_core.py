@@ -169,6 +169,10 @@ class Cartesian_core(_common_class):
     def __eq__(self, other):
         return self.frame == other.frame
 
+    def append(self, other):
+        new = self.frame.append(other.frame, verify_integrity=True)
+        return self.__class__(new)
+
     def _to_ase_Atoms(self):
         import ase
         atoms = ''.join(self.loc[:, 'atom'])
