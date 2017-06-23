@@ -97,6 +97,8 @@ class Zmat_core(_common_class):
 
     def _test_if_can_be_added(self, other):
         cols = ['atom', 'b', 'a', 'd']
+        if not isinstance(other, Zmat_core):
+            raise PhysicalMeaning('You can only add zmatrices with each other')
         if not (np.alltrue(self.loc[:, cols] == other.loc[:, cols])
                 and np.alltrue(self.index == other.index)):
             message = ("You can add only those zmatrices that have the same "
