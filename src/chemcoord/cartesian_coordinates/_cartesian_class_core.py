@@ -74,15 +74,21 @@ class Cartesian_core(_common_class):
         else:
             return selected
 
+    def _test_if_correctly_indexed(self, other):
+        cols = ['atom', 'x', 'y', 'z']
+        if not (set(self.index) == set(other.index)
+                and np.alltrue(self['atom'] == other.loc[self.index, 'atom'])):
+            message = ("You can add only Cartesians which are indexed in the "
+                       "same way and use the same atoms.")
+            raise PhysicalMeaning(message)
+
     def __add__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = self.loc[:, coords] + other
         return new
 
@@ -92,72 +98,53 @@ class Cartesian_core(_common_class):
     def __sub__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = self.loc[:, coords] - other
         return new
 
     def __rsub__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = other - self.loc[:, coords]
         return new
 
     def __mul__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = self.loc[:, coords] * other
         return new
 
     def __rmul__(self, other):
-        coords = ['x', 'y', 'z']
-        new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
-            new.loc[:, coords] = self.loc[:, coords] * other
-        return new
+        return self.__mul__(other)
 
     def __truediv__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = self.loc[:, coords] / other
         return new
 
     def __rtruediv__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
-            new.loc[:, coords] = other[:, coords] / self.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
+            new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
+        else:
             new.loc[:, coords] = other / self.loc[:, coords]
         return new
 
@@ -180,7 +167,11 @@ class Cartesian_core(_common_class):
         return new
 
     def __eq__(self, other):
-        return np.alltrue(self.frame == other.frame)
+        return self.frame == other.frame
+
+    def append(self, other):
+        new = self.frame.append(other.frame, verify_integrity=True)
+        return self.__class__(new)
 
     def _to_ase_Atoms(self):
         import ase
