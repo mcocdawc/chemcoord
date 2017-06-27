@@ -315,13 +315,68 @@ class Zmat_core(_common_class):
 
         ``i`` uses introduced dummy atom as reference (instead of ``d``)
         """
-        zmolecule = self.copy()
         coords = ['x', 'y', 'z']
-        dummy_index = max(self.index) + 1
+        i_dummy = max(self.index) + 1
+
+        def insert_row(df, pos, key):
+            if pos < len(df):
+                b = df.iloc[pos:(pos + 1)]
+                b.index = [key]
+                a, c = df.iloc[:pos], df.iloc[pos:]
+                return pd.concat([a, b, c])
+            elif pos == len(df):
+                a = df.copy()
+                a.loc[key] = a.iloc[-1]
+                return a
+        zframe = insert_row(self.frame.copy(), self.index.get_loc(i), i_dummy)
+
         xyz = self._metadata['cartesian']
 
-        xyz.loc[dummy_index, 'atom'] = 'X'
-        xyz.loc[dummy_index, coords] = position
+        def get_dummy_cart_pos(xyz, b, a, d):
+            b_pos, a_pos, d_pos = xyz.loc[[b, a, d], coords].values
+            BA = a_pos - b_pos
+            AD = d_pos - a_pos
+            N1 = np.cross(BA, AD, axis=1)
+            N2 = np.cross(N1, BA, axis=1)
+            n2 = N2 / np.linalg.norm(x, N2, axis=1)
+            return a_pos + n2
+
+        # calculate values for i and 'X'
+
+        def get_values(i_pos, b_pos, a_pos, d_pos):
+            IB = b_pos - i_pos
+            BA = a_pos - b_pos
+            AD = d_pos - a_pos
+
+            bond = np.linalg.norm(IB, axis=1)
+
+            ba = BA / np.linalg.norm(BA, axis=1)[:, None]
+            bi = -1 * IB / np.linalg.norm(IB, axis=1)[:, None]
+            dot_product = np.sum(bi * ba, axis=1)
+            dot_product[dot_product > 1] = 1
+            dot_product[dot_product < -1] = -1
+
+            N1 = np.cross(IB, BA, axis=1)
+            N2 = np.cross(BA, AD, axis=1)
+            n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
+            dot_product = np.sum(n1 * n2, axis=1)
+            dot_product[dot_product > 1] = 1
+            dot_product[dot_product < -1] = -1
+            dihedrals = np.degrees(np.arccos(dot_product))
+            # the next lines are to test the direction of rotation.
+            # is a dihedral really 90 or 270 degrees?
+            # Equivalent to direction of rotation of dihedral
+            where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) > 0
+            where_to_modify = np.nonzero(where_to_modify)[0]
+            sign = np.full_like(dihedrals, 1)
+            to_add = np.full_like(dihedrals, 0)
+            sign[where_to_modify] = -1
+            to_add[where_to_modify] = 360
+            return bond, angle, dihedral
+
+        # modify zframe
+
+        # return self.__class__(zframe)
         return zmolecule
 
     def give_cartesian(self):
