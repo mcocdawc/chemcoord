@@ -94,7 +94,7 @@ class Zmat_give_cartesian(Zmat_core):
                 print('Error Handling required', rename[row])
 
         row = _jit_calculate_rest(positions, c_table, zmat_values)
-        if row < len(self):
+        if row < len(self) - 1:
             print('Error handling required', rename[row])
 
         xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'], dtype=float)
