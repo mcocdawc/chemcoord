@@ -1,7 +1,7 @@
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
 import pytest
-from chemcoord._exceptions import UndefinedCoordinateSystem
+from chemcoord._exceptions import UndefinedCoordinateSystem, InvalidReference
 import os
 import sys
 
@@ -27,5 +27,5 @@ def test_assignment_leading_to_linear_reference():
     molecule = cc.Cartesian.read_xyz(os.path.join(STRUCTURE_PATH, 'water.xyz'))
     zmolecule = molecule.give_zmat()
 
-    with pytest.raises(UndefinedCoordinateSystem):
+    with pytest.raises(InvalidReference):
         zmolecule.loc[4, 'angle'] = 180

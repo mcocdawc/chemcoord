@@ -6,11 +6,11 @@ ERR_CODE_OK = 0
 
 ERR_CODE_PhysicalMeaning = 200
 class PhysicalMeaning(Exception):  # noqa
-    def __init__(self, value=''):
-        self.parameter = value
+    def __init__(self, message=''):
+        self.message = message
 
     def __str__(self):
-        return repr(self.parameter)
+        return repr(self.message)
 
 
 ERR_CODE_UndefinedCoordinateSystem = 201
@@ -20,7 +20,15 @@ class UndefinedCoordinateSystem(PhysicalMeaning): # noqa
 
 ERR_CODE_InvalidReference = 202
 class InvalidReference(UndefinedCoordinateSystem): # noqa
-    pass
+    def __init__(self, message='', i=None, b=None, a=None, d=None):
+        self.message = message
+        self.i = i
+        self.b = b
+        self.a = a
+        self.d = d
+
+    def __str__(self):
+        return repr(self.message)
 
 
 class IllegalArgumentCombination(ValueError):
