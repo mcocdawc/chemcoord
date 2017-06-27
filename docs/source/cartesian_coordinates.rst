@@ -28,6 +28,7 @@ A collection of functions operating on instances of
 .. autosummary::
     :toctree: src_xyz_functions
 
+    ~xyz_functions.isclose
     ~xyz_functions.allclose
     ~xyz_functions.write_molden
     ~xyz_functions.to_molden
