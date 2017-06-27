@@ -22,10 +22,8 @@ ERR_CODE_InvalidReference = 202
 class InvalidReference(UndefinedCoordinateSystem): # noqa
     def __init__(self, message='', i=None, b=None, a=None, d=None):
         self.message = message
-        self.i = i
-        self.b = b
-        self.a = a
-        self.d = d
+        self.index = i
+        self.references = {'b': b, 'a': a, 'd': d}
 
     def __str__(self):
         return repr(self.message)

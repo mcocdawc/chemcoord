@@ -542,7 +542,7 @@ class Cartesian_give_zmat(Cartesian_core):
         keys_to_keep = ['abs_refs']
         for key in keys_to_keep:
             zmatrix._metadata[key] = self._metadata[key].copy()
-
+        zmatrix._metadata['cartesian'] = self.copy()
         return zmatrix
 
     def give_zmat(self, construction_table=None,

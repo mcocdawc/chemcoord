@@ -92,16 +92,17 @@ class Zmat_core(_common_class):
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
+        self.metadata['order'] = self.index
         if order_of_definition is None:
-            self._order = self.index
+            self.metadata['order'] = self.index
         else:
-            self._order = order_of_definition
+            self.metadata['order'] = order_of_definition
 
     # overwrites existing method
     def copy(self):
         molecule = self.__class__(self.frame)
         molecule.metadata = self.metadata.copy()
-        keys_to_keep = ['abs_refs']
+        keys_to_keep = ['abs_refs', 'cartesian', 'order']
         for key in keys_to_keep:
             try:
                 molecule._metadata[key] = self._metadata[key].copy()
@@ -122,7 +123,7 @@ class Zmat_core(_common_class):
             else:
                 return x
 
-        for row, i in enumerate(out._order[:3]):
+        for row, i in enumerate(out._metadata['order'][:3]):
             new = f([representation[x] for x in out.loc[i, cols[row:]]])
             out.loc[i, cols[row:]] = new
 
@@ -270,6 +271,58 @@ class Zmat_core(_common_class):
             if not same_atoms:
                 break
         return same_atoms
+
+    def _test_give_cartesian(self):
+        abs_refs = self._metadata['abs_refs']
+        old_index = self.index
+        rename = dict(enumerate(old_index))
+        self.change_numbering(inplace=True)
+        c_table = self.loc[:, ['b', 'a', 'd']].values
+        zmat_values = self.loc[:, ['bond', 'angle', 'dihedral']].values
+        zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
+        positions = np.empty((len(self), 3), dtype='float64')
+
+        for row in range(min(3, len(c_table))):
+            b, a, d = c_table[row, :]
+            if row == 0:
+                vb = abs_refs[b][0]
+                va = abs_refs[a][0]
+            elif row == 1:
+                vb = positions[b]
+                va = abs_refs[a][0]
+            elif row == 2:
+                vb = positions[b]
+                va = positions[a]
+            vd = abs_refs[d][0]
+            refs = vb, va, vd
+
+            err, pos = _jit_calculate_position(refs, zmat_values, row)
+            if err == ERR_CODE_OK:
+                positions[row] = pos
+            elif err == ERR_CODE_InvalidReference:
+                print('Error Handling required', rename[row])
+
+        row = _jit_calculate_rest(positions, c_table, zmat_values)
+        if row < len(self) - 1:
+            i = rename[row]
+            self.change_numbering(old_index, inplace=True)
+            b, a, d = self.loc[i, ['b', 'a', 'd']]
+            raise InvalidReference(i=i, b=b, a=a, d=d)
+        return positions
+
+    def _insert_dummy(self, i, b, a, d):
+        """Insert dummy atom into ``self``
+
+        ``i`` uses introduced dummy atom as reference (instead of ``d``)
+        """
+        zmolecule = self.copy()
+        coords = ['x', 'y', 'z']
+        dummy_index = max(self.index) + 1
+        xyz = self._metadata['cartesian']
+
+        xyz.loc[dummy_index, 'atom'] = 'X'
+        xyz.loc[dummy_index, coords] = position
+        return zmolecule
 
     def give_cartesian(self):
         abs_refs = self._metadata['abs_refs']
