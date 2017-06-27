@@ -12,6 +12,8 @@ from chemcoord.utilities.algebra_utilities import \
     _jit_isclose, \
     _jit_cross
 from numba import jit
+from chemcoord._exceptions import ERR_CODE_OK, \
+    InvalidReference, ERR_CODE_InvalidReference
 import numpy as np
 import pandas as pd
 import warnings
@@ -21,6 +23,8 @@ import warnings
 def _jit_calculate_position(references, zmat_values, row):
     bond, angle, dihedral = zmat_values[row]
     vb, va, vd = references
+    zeros = np.zeros(3)
+    err = ERR_CODE_OK
 
     BA = va - vb
     ba = _jit_normalize(BA)
@@ -30,19 +34,30 @@ def _jit_calculate_position(references, zmat_values, row):
         d = bond * ba
     else:
         AD = vd - va
-        n1 = _jit_normalize(_jit_cross(BA, AD))
-        d = bond * ba
-        d = np.dot(_jit_rotation_matrix(n1, angle), d)
-        d = np.dot(_jit_rotation_matrix(ba, dihedral), d)
-    return vb + d
+        N1 = _jit_cross(BA, AD)
+        if _jit_isclose(N1, zeros).all():
+            err = ERR_CODE_InvalidReference
+            d = zeros
+        else:
+            n1 = _jit_normalize(N1)
+            d = bond * ba
+            d = np.dot(_jit_rotation_matrix(n1, angle), d)
+            d = np.dot(_jit_rotation_matrix(ba, dihedral), d)
+
+    return (err, vb + d)
 
 
 @jit(nopython=True)
-def _jit_calculate_rest(positions, c_table, zmat_values):
-    for row in range(3, len(c_table)):
+def _jit_calculate_rest(positions, c_table, zmat_values, start_row=3):
+    for row in range(start_row, len(c_table)):
         b, a, d = c_table[row, :]
-        references = positions[b], positions[a], positions[d]
-        positions[row] = _jit_calculate_position(references, zmat_values, row)
+        refs = positions[b], positions[a], positions[d]
+        err, pos = _jit_calculate_position(refs, zmat_values, row)
+        if err == ERR_CODE_OK:
+            positions[row] = pos
+        elif err == ERR_CODE_InvalidReference:
+            return row
+    return row
 
 
 class Zmat_give_cartesian(Zmat_core):
@@ -51,6 +66,7 @@ class Zmat_give_cartesian(Zmat_core):
     def give_cartesian(self):
         abs_refs = self._metadata['abs_refs']
         old_index = self.index
+        rename = dict(enumerate(old_index))
         self.change_numbering(inplace=True)
         c_table = self.loc[:, ['b', 'a', 'd']].values
         zmat_values = self.loc[:, ['bond', 'angle', 'dihedral']].values
@@ -71,9 +87,15 @@ class Zmat_give_cartesian(Zmat_core):
             vd = abs_refs[d][0]
             refs = vb, va, vd
 
-            positions[row] = _jit_calculate_position(refs, zmat_values, row)
+            err, pos = _jit_calculate_position(refs, zmat_values, row)
+            if err == ERR_CODE_OK:
+                positions[row] = pos
+            elif err == ERR_CODE_InvalidReference:
+                print('Error Handling required', rename[row])
 
-        _jit_calculate_rest(positions, c_table, zmat_values)
+        row = _jit_calculate_rest(positions, c_table, zmat_values)
+        if row < len(self) - 1:
+            print('Error handling required', rename[row])
 
         xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'], dtype=float)
         xyz_frame['atom'] = self['atom']

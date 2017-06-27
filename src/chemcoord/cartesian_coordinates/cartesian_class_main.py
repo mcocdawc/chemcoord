@@ -71,7 +71,7 @@ class Cartesian(Cartesian_io, Cartesian_give_zmat):
     the comparison of floating point numbers is exact and not numerical.
     For this reason you rarely want to use ``==``.
     Usually the question is "are two given molecules chemically the same".
-    For this comparison you have to use the function :func:`isclose`, which
+    For this comparison you have to use the function :func:`allclose`, which
     moves to the barycenter, aligns along the principal axes of inertia and
     compares numerically.
     """

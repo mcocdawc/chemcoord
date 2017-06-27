@@ -17,11 +17,8 @@ LICENSE = 'LGPLv3'
 AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
 URL = 'https://github.com/mcocdawc/chemcoord'
-# numba is not in the INSTALL_REQUIRES because it breaks the
-# automatic generation of the documentation at readthedocs.org.
-# Read the section 'I get import errors on libraries that depend on C modules'
-# at http://docs.readthedocs.io/en/latest/faq.html
-INSTALL_REQUIRES = ['numpy', 'pandas>=0.20', 'sortedcontainers', 'sympy']
+INSTALL_REQUIRES = ['numpy', 'scipy', 'pandas>=0.20', 'numba',
+                    'sortedcontainers', 'sympy']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
             'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
             'coordinate system']

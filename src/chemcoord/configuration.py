@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-import configparser
+try:
+    import configparser
+except ImportError:
+    # Due to PY27 compatibility
+    import ConfigParser as configparser
 import os
 from warnings import warn
 

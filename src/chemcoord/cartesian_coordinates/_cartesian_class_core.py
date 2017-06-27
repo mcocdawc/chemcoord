@@ -74,15 +74,21 @@ class Cartesian_core(_common_class):
         else:
             return selected
 
+    def _test_if_correctly_indexed(self, other):
+        cols = ['atom', 'x', 'y', 'z']
+        if not (set(self.index) == set(other.index)
+                and np.alltrue(self['atom'] == other.loc[self.index, 'atom'])):
+            message = ("You can add only Cartesians which are indexed in the "
+                       "same way and use the same atoms.")
+            raise PhysicalMeaning(message)
+
     def __add__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = self.loc[:, coords] + other
         return new
 
@@ -92,72 +98,53 @@ class Cartesian_core(_common_class):
     def __sub__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = self.loc[:, coords] - other
         return new
 
     def __rsub__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = other - self.loc[:, coords]
         return new
 
     def __mul__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = self.loc[:, coords] * other
         return new
 
     def __rmul__(self, other):
-        coords = ['x', 'y', 'z']
-        new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
-            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
-            new.loc[:, coords] = self.loc[:, coords] * other
-        return new
+        return self.__mul__(other)
 
     def __truediv__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        else:
             new.loc[:, coords] = self.loc[:, coords] / other
         return new
 
     def __rtruediv__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        try:
-            assert set(self.index) == set(other.index)
-            assert np.alltrue(self['atom'] == other.loc[self.index, 'atom'])
-            new.loc[:, coords] = other[:, coords] / self.loc[:, coords]
-        except (TypeError, IndexError, AttributeError):
-            # It is a shape=3 vector or list
+        if isinstance(other, Cartesian_core):
+            self._test_if_correctly_indexed(other)
+            new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
+        else:
             new.loc[:, coords] = other / self.loc[:, coords]
         return new
 
@@ -180,7 +167,11 @@ class Cartesian_core(_common_class):
         return new
 
     def __eq__(self, other):
-        return np.alltrue(self.frame == other.frame)
+        return self.frame == other.frame
+
+    def append(self, other):
+        new = self.frame.append(other.frame, verify_integrity=True)
+        return self.__class__(new)
 
     def _to_ase_Atoms(self):
         import ase
@@ -683,61 +674,66 @@ class Cartesian_core(_common_class):
             output.loc[indices, ['x', 'y', 'z']] = vectors
         return output
 
-    def bond_lengths(self, buildlist, start_row=0):
+    def bond_lengths(self, indices):
         """Return the distances between given atoms.
 
-        In order to know more about the buildlist, go to
-            :func:`to_zmat`.
+        Calculates the distance between the atoms with
+        indices ``i`` and ``b``.
+        The indices can be given in three ways:
+
+        * As simple list ``[i, b]``
+        * As list of lists: ``[[i1, b1], [i2, b2]...]``
+        * As :class:`pd.DataFrame` where ``i`` is taken from the index and
+          ``b`` from the respective column ``'b'``.
 
         Args:
-            buildlist (np.array):
-            start_row (int):
+            indices (list):
 
         Returns:
-            list: Vector of the distances between the first and second
-                atom of every entry in the buildlist.
-        """
-        coords = ['x', 'y', 'z']
-        if isinstance(buildlist, pd.DataFrame):
-            i_pos = self.loc[buildlist.index[start_row:], coords].values
-            b_pos = self.loc[buildlist.iloc[start_row:, 0], coords].values
-        else:
-            buildlist = np.array(buildlist)
-            try:
-                buildlist.shape[1]
-            except IndexError:
-                buildlist = buildlist[None, :]
-            i_pos = self.loc[buildlist[start_row:, 0], coords].values
-            b_pos = self.loc[buildlist[start_row:, 1], coords].values
-        return np.linalg.norm(i_pos - b_pos, axis=1)
-
-    def angle_degrees(self, indices, start_row=0):
-        """Return the angles between given atoms.
-
-        In order to know more about the buildlist, go to :func:`to_zmat`.
-
-        Args:
-            buildlist (list):
-            start_row (int):
-
-        Returns:
-            list: List of the angle between the first, second and
-                third atom of every entry in the buildlist.
+            :class:`numpy.ndarray`: Vector of angles in degrees.
         """
         coords = ['x', 'y', 'z']
         if isinstance(indices, pd.DataFrame):
-            i_pos = self.loc[indices.index[start_row:], coords].values
-            b_pos = self.loc[indices.iloc[start_row:, 0], coords].values
-            a_pos = self.loc[indices.iloc[start_row:, 1], coords].values
+            i_pos = self.loc[indices.index, coords].values
+            b_pos = self.loc[indices.loc[:, 'b'], coords].values
         else:
-            buildlist = np.array(indices)
-            try:
-                buildlist.shape[1]
-            except IndexError:
-                buildlist = buildlist[None, :]
-            i_pos = self.loc[buildlist[start_row:, 0], coords].values
-            b_pos = self.loc[buildlist[start_row:, 1], coords].values
-            a_pos = self.loc[buildlist[start_row:, 2], coords].values
+            indices = np.array(indices)
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
+            i_pos = self.loc[indices[:, 0], coords].values
+            b_pos = self.loc[indices[:, 1], coords].values
+        return np.linalg.norm(i_pos - b_pos, axis=1)
+
+    def angle_degrees(self, indices):
+        """Return the angles between given atoms.
+
+        Calculates the angle in degrees between the atoms with
+        indices ``i, b, a``.
+        The indices can be given in three ways:
+
+        * As simple list ``[i, b, a]``
+        * As list of lists: ``[[i1, b1, a1], [i2, b2, a2]...]``
+        * As :class:`pd.DataFrame` where ``i`` is taken from the index and
+          ``b`` and ``a`` from the respective columns ``'b'`` and ``'a'``.
+
+        Args:
+            indices (list):
+
+        Returns:
+            :class:`numpy.ndarray`: Vector of angles in degrees.
+        """
+        coords = ['x', 'y', 'z']
+        if isinstance(indices, pd.DataFrame):
+            i_pos = self.loc[indices.index, coords].values
+            b_pos = self.loc[indices.loc[:, 'b'], coords].values
+            a_pos = self.loc[indices.loc[:, 'a'], coords].values
+        else:
+            indices = np.array(indices)
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
+            i_pos = self.loc[indices[:, 0], coords].values
+            b_pos = self.loc[indices[:, 1], coords].values
+            a_pos = self.loc[indices[:, 2], coords].values
 
         BI, BA = i_pos - b_pos, a_pos - b_pos
         bi, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (BI, BA)]
@@ -748,34 +744,38 @@ class Cartesian_core(_common_class):
         return angles
 
     def dihedral_degrees(self, buildlist, start_row=0):
-        """Return the angles between given atoms.
+        """Return the dihedrals between given atoms.
 
-        In order to know more about the buildlist, go to :func:`to_zmat`.
+        Calculates the dihedral angle in degrees between the atoms with
+        indices ``i, b, a, d``.
+        The indices can be given in three ways:
+
+        * As simple list ``[i, b, a, d]``
+        * As list of lists: ``[[i1, b1, a1, d1], [i2, b2, a2, d2]...]``
+        * As :class:`pandas.DataFrame` where ``i`` is taken from the index and
+          ``b``, ``a`` and ``d``from the respective columns
+          ``'b'``, ``'a'`` and ``'d'``.
 
         Args:
-            buildlist (list):
-            start_row (int):
+            indices (list):
 
         Returns:
-            list: List of the dihedral between the first, second,
-                third and fourth atom of every entry in the buildlist.
+            :class:`numpy.ndarray`: Vector of angles in degrees.
         """
         coords = ['x', 'y', 'z']
-        if isinstance(buildlist, pd.DataFrame):
-            i_pos = self.loc[buildlist.index[start_row:], coords].values
-            b_pos = self.loc[buildlist.iloc[start_row:, 0], coords].values
-            a_pos = self.loc[buildlist.iloc[start_row:, 1], coords].values
-            d_pos = self.loc[buildlist.iloc[start_row:, 2], coords].values
+        if isinstance(indices, pd.DataFrame):
+            i_pos = self.loc[indices.index, coords].values
+            b_pos = self.loc[indices.loc[:, 'b'], coords].values
+            a_pos = self.loc[indices.loc[:, 'a'], coords].values
+            d_pos = self.loc[indices.loc[:, 'd'], coords].values
         else:
-            buildlist = np.array(buildlist)
-            try:
-                buildlist.shape[1]
-            except IndexError:
-                buildlist = buildlist[None, :]
-            i_pos = self.loc[buildlist[start_row:, 0], coords].values
-            b_pos = self.loc[buildlist[start_row:, 1], coords].values
-            a_pos = self.loc[buildlist[start_row:, 2], coords].values
-            d_pos = self.loc[buildlist[start_row:, 3], coords].values
+            indices = np.array(indices)
+            if len(indices.shape) == 1:
+                indices = indices[None, :]
+            i_pos = self.loc[indices[:, 0], coords].values
+            b_pos = self.loc[indices[:, 1], coords].values
+            a_pos = self.loc[indices[:, 2], coords].values
+            d_pos = self.loc[indices[:, 3], coords].values
 
         IB = b_pos - i_pos
         BA = a_pos - b_pos
@@ -841,6 +841,15 @@ class Cartesian_core(_common_class):
         return fragments
 
     def restrict_bond_dict(self, bond_dict):
+        """Restrict a bond dictionary to self.
+
+        Args:
+            bond_dict (dict): Look into :meth:`~chemcoord.Cartesian.get_bonds`,
+                to see examples for a bond_dict.
+
+        Returns:
+            bond dictionary
+        """
         return {j: bond_dict[j] & set(self.index) for j in self.index}
 
     def get_fragment(self, list_of_indextuples, give_only_index=False,
@@ -876,6 +885,17 @@ class Cartesian_core(_common_class):
 
     def without(self, fragments,
                 use_lookup=settings['defaults']['use_lookup']):
+        """Return self without the specified fragments.
+
+        Args:
+            fragments: Either a list of :class:`~chemcoord.Cartesian` or a
+                :class:`~chemcoord.Cartesian`.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`.
+
+        Returns:
+            list: List containing :class:`~chemcoord.Cartesian`.
+        """
         if pd.api.types.is_list_like(fragments):
             for fragment in fragments:
                 try:
@@ -889,10 +909,13 @@ class Cartesian_core(_common_class):
         return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
     @staticmethod
-    @jit(nopython=True)
+    @jit()
     def _jit_pairwise_distances(pos1, pos2):
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.
+
+        Does use python mode as fallback, if a scalar and not an array is
+        given.
         """
         n1 = pos1.shape[0]
         n2 = pos2.shape[0]
@@ -903,14 +926,32 @@ class Cartesian_core(_common_class):
                 D[i, j] = np.sqrt(((pos1[i] - pos2[j])**2).sum())
         return D
 
-    def _shortest_distance(self, other):
+    def shortest_distance(self, other):
+        """Calculate the shortest distance between self and other
+
+        Args:
+            Cartesian: other
+
+        Returns:
+            tuple: Returns a tuple ``i, j, d`` with the following meaning:
+
+            ``i``:
+            The index on self that minimises the pairwise distance.
+
+            ``j``:
+            The index on other that minimises the pairwise distance.
+
+            ``d``:
+            The distance between self and other. (float)
+        """
         coords = ['x', 'y', 'z']
         pos1 = self.loc[:, coords].values
         pos2 = other.loc[:, coords].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
+        d = D[i, j]
         i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
-        return i, j
+        return i, j, d
 
     def inertia(self):
         """Calculate the inertia tensor and transforms along
@@ -1028,8 +1069,7 @@ class Cartesian_core(_common_class):
             new_cartesian = self.move(
                 matrix=np.linalg.inv(basistransformation))
 
-        assert np.isclose(
-            test_basis, old_basis).all(), 'transformation did not work'
+        assert np.allclose(test_basis, old_basis), "Transformation did'nt work"
         return new_cartesian
 
     def location(self, indexlist=None):

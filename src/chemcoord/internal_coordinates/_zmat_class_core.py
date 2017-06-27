@@ -95,35 +95,90 @@ class Zmat_core(_common_class):
     def _return_appropiate_type(self, selected):
         return selected
 
-    def __add__(self, other):
+    def _test_if_can_be_added(self, other):
         cols = ['atom', 'b', 'a', 'd']
+        if not isinstance(other, Zmat_core):
+            raise PhysicalMeaning('You can only add zmatrices with each other')
+        if not (np.alltrue(self.loc[:, cols] == other.loc[:, cols])
+                and np.alltrue(self.index == other.index)):
+            message = ("You can add only those zmatrices that have the same "
+                       "index, use the same construction table, have the same "
+                       "ordering... The only allowed difference is in the "
+                       "columns ['bond', 'angle', 'dihedral']")
+            raise PhysicalMeaning(message)
+
+    def __add__(self, other):
+        self._test_if_can_be_added(other)
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new._metadata['absolute_zmat'] = (self._metadata['absolute_zmat']
-                                          and other._metadata['absolute_zmat'])
-        try:
-            assert (self.index == other.index).all()
-            # TODO(default values for _metadata)
-            if new._metadata['absolute_zmat']:
-                assert np.alltrue(self[:, cols] == other.loc[:, cols])
-            else:
-                self.loc[:, cols].isnull()
-                where_equal = (self.loc[:, cols] == other.loc[:, cols])
-                where_nan = (self.loc[:, cols].isnull()
-                             | other.loc[:, cols].isnull())
-                for column in cols:
-                    where_equal[where_nan[column], column] = True
-                assert np.alltrue(where_equal)
-
-            new[:, coords] = self.loc[:, coords] + other.loc[:, coords]
-        except AssertionError:
-            raise PhysicalMeaning("You can add only those zmatrices that \
-have the same index, use the same buildlist, have the same ordering... \
-The only allowed difference is ['bond', 'angle', 'dihedral']")
+        new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         return new
 
     def __radd__(self, other):
         return self.__add__(other)
+
+    def __sub__(self, other):
+        self._test_if_can_be_added(other)
+        coords = ['bond', 'angle', 'dihedral']
+        new = self.copy()
+        new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
+        return new
+
+    def __rsub__(self, other):
+        self._test_if_can_be_added(other)
+        coords = ['bond', 'angle', 'dihedral']
+        new = self.copy()
+        new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
+        return new
+
+    def __mul__(self, other):
+        coords = ['bond', 'angle', 'dihedral']
+        new = self.copy()
+        new.loc[:, coords] = self.loc[:, coords] * other
+        return new
+
+    def __rmul__(self, other):
+        coords = ['bond', 'angle', 'dihedral']
+        new = self.copy()
+        new.loc[:, coords] = self.loc[:, coords] * other
+        return new
+
+    def __abs__(self):
+        coords = ['bond', 'angle', 'dihedral']
+        new = self.copy()
+        new.loc[:, coords] = abs(new.loc[:, coords])
+        return new
+
+    def __neg__(self):
+        return -1 * self.copy()
+
+    def subs(self, variable, value):
+        cols = ['bond', 'angle', 'dihedral']
+        out = self.copy()
+
+        def give_subs_function(variable, value):
+            def subs_function(x):
+                try:
+                    new = x.subs(variable, value)
+                except AttributeError:
+                    new = x
+
+                sympy_numbers = (sympy.numbers.Float, sympy.numbers.Integer)
+                if isinstance(new, sympy_numbers):
+                    return float(new)
+                else:
+                    return new
+            return subs_function
+
+        for col in cols:
+            if out[col].dtype is np.dtype('O'):
+                series = out[col]
+                out[col] = series.map(give_subs_function(variable, value))
+                try:
+                    out[col] = out[col].astype('float')
+                except TypeError:
+                    pass
+        return out
 
     def _to_Zmat(self):
         return self.copy()

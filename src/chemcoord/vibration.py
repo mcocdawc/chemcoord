@@ -176,7 +176,7 @@ class mode(object):
                     if (~np.isnan(Y[:, i, j])).all():
                         if warn_condition:
                             P = fit(X, Y[:, i, j], degree)
-                            if np.isclose(P.deriv().coef, 0).all():
+                            if np.allclose(P.deriv().coef, 0):
                                 P = 0
                             else:
                                 P = P - P.coef[0]
@@ -186,7 +186,7 @@ class mode(object):
                                 match = "The fit may be poorly"
                                 warnings.filterwarnings("ignore", match)
                                 P = fit(X, Y[:, i, j], degree)
-                                if np.isclose(P.deriv().coef, 0).all():
+                                if np.allclose(P.deriv().coef, 0):
                                     P = 0
                                 else:
                                     P = P - P(0)

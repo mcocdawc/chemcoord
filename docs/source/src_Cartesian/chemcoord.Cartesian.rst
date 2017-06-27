@@ -13,7 +13,10 @@ chemcoord\.Cartesian
 
          ~Cartesian.__init__
          ~Cartesian.get_bonds
-         ~Cartesian.to_zmat
+         ~Cartesian.restrict_bond_dict
+         ~Cartesian.get_fragment
+         ~Cartesian.fragmentate
+         ~Cartesian.without
          ~Cartesian.add_data
          ~Cartesian.total_mass
          ~Cartesian.connected_to
@@ -30,8 +33,6 @@ chemcoord\.Cartesian
          ~Cartesian.cutsphere
          ~Cartesian.move
          ~Cartesian.basistransform
-         ~Cartesian.get_fragment
-         ~Cartesian.fragmentate
          ~Cartesian.make_similar
          ~Cartesian.align
          ~Cartesian.change_numbering
@@ -51,6 +52,7 @@ chemcoord\.Cartesian
          ~Cartesian.inertia
          ~Cartesian.topologic_center
          ~Cartesian.distance_to
+         ~Cartesian.shortest_distance
 
     .. rubric:: Conversion to internal coordinates
 
@@ -59,8 +61,11 @@ chemcoord\.Cartesian
 
          ~Cartesian.give_zmat
          ~Cartesian.get_construction_table
-         ~Cartesian.check_absolute_refs
          ~Cartesian.check_dihedral
+         ~Cartesian.correct_dihedral
+         ~Cartesian.check_absolute_refs
+         ~Cartesian.correct_absolute_refs
+         ~Cartesian.to_zmat
 
     .. rubric:: IO
 

@@ -1,5 +1,7 @@
 import chemcoord as cc
+from chemcoord.xyz_functions import allclose
 import pytest
+from chemcoord._exceptions import UndefinedCoordinateSystem
 import os
 import sys
 
@@ -9,14 +11,13 @@ def get_script_path():
 
 
 def get_structure_path(script_path):
-    found, n = False, 0
-    while not found:
-        parents = ['..' for _ in range(n)]
-        structure_path = os.path.join(script_path, *parents, 'structures')
+    test_path = os.path.join(script_path)
+    while True:
+        structure_path = os.path.join(test_path, 'structures')
         if os.path.exists(structure_path):
             return structure_path
         else:
-            n += 1
+            test_path = os.path.join(test_path, '..')
 
 
 STRUCTURE_PATH = get_structure_path(get_script_path())
@@ -26,11 +27,15 @@ def back_and_forth(filepath):
     molecule1 = cc.Cartesian.read_xyz(filepath)
     zmolecule = molecule1.give_zmat()
     molecule2 = zmolecule.give_cartesian()
-    assert cc.xyz_functions.isclose(molecule1, molecule2, align=False)
+    assert allclose(molecule1, molecule2, align=False)
 
 
 def test_back_and_forth1():
     back_and_forth(os.path.join(STRUCTURE_PATH, 'MIL53_small.xyz'))
+
+
+def test_back_and_forth1():
+    back_and_forth(os.path.join(STRUCTURE_PATH, 'MIL53_middle.xyz'))
 
 
 def test_back_and_forth2():
@@ -43,3 +48,34 @@ def test_back_and_forth3():
 
 def test_back_and_forth4():
     back_and_forth(os.path.join(STRUCTURE_PATH, 'nasty_cube.xyz'))
+
+
+def test_specified_c_table_assert_first_three_nonlinear():
+    path = os.path.join(STRUCTURE_PATH, 'MIL53_beta.xyz')
+    molecule = cc.Cartesian.read_xyz(path, start_index=1)
+    fragment = molecule.get_fragment([(12, 2), (55, 2), (99, 2)])
+    connection = fragment.get_construction_table()
+    connection.loc[2] = [99, 12, 18]
+    connection.loc[8] = [2, 99, 12]
+    connection = connection.loc[[2, 8]]
+    c_table = molecule.get_construction_table(
+        fragment_list=[(fragment, connection)])
+    with pytest.raises(UndefinedCoordinateSystem):
+        c_table = molecule.correct_dihedral(c_table)
+
+    new = c_table.iloc[:4].copy()
+
+    new.loc[99] = c_table.loc[17]
+    new.loc[17] = c_table.loc[99]
+    new = new.loc[[17, 12, 55, 99]]
+    new.loc[12, 'b'] = 17
+    new.loc[55, 'b'] = 17
+    new.loc[99, 'a'] = 17
+
+    c_table = molecule.get_construction_table(
+        fragment_list=[(molecule.without(fragment)[0], new),
+                       (fragment, connection)])
+    c_table = molecule.correct_dihedral(c_table)
+    zmolecule = molecule.give_zmat(c_table)
+    assert allclose(molecule, zmolecule.give_cartesian(), align=False,
+                   atol=1e-6)

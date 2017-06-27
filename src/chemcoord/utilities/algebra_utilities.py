@@ -12,6 +12,16 @@ def _jit_isclose(a, b, atol=1e-5, rtol=1e-8):
 
 
 @jit(nopython=True)
+def _jit_allclose(a, b, atol=1e-5, rtol=1e-8):
+    n, m = a.shape
+    for i in range(n):
+        for j in range(m):
+            if np.abs(a[i, j] - b[i, j]) > (atol + rtol * np.abs(b[i, j])):
+                return False
+    return True
+
+
+@jit(nopython=True)
 def _jit_cross(A, B):
     C = np.empty_like(A)
     C[0] = A[1] * B[2] - A[2] * B[1]
