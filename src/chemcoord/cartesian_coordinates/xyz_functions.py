@@ -191,18 +191,46 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
             look into :func:`numpy.isclose` for further explanation.
 
     Returns:
+        :class:`numpy.ndarray`: Boolean array.
+    """
+    coords = ['x', 'y', 'z']
+    if not (set(a.index) == set(b.index)
+            and np.alltrue(a.loc[:, 'atom'] == b.loc[a.index, 'atom'])):
+        return False
+    else:
+        if align:
+            a = a.inertia()['transformed_Cartesian']
+            b = b.inertia()['transformed_Cartesian']
+        else:
+            A, B = a.loc[:, coords], b.loc[a.index, coords]
+        return np.isclose(A, B, rtol=rtol, atol=atol)
+
+
+def allclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
+    """Compare two molecules for numerical equality.
+
+    Args:
+        a (Cartesian):
+        b (Cartesian):
+        align (bool): a and b are
+            prealigned along their principal axes of inertia and moved to their
+            barycenters before comparing.
+        rtol (float): Relative tolerance for the numerical equality comparison
+            look into :func:`numpy.allclose` for further explanation.
+        atol (float): Relative tolerance for the numerical equality comparison
+            look into :func:`numpy.allclose` for further explanation.
+
+    Returns:
         bool:
     """
-    pretest = (set(a.index) == set(b.index)
-               and np.alltrue(a.loc[:, 'atom'] == b.loc[a.index, 'atom']))
-
-    if align and pretest:
-        A = a.inertia()['transformed_Cartesian'].location()
-        B = b.inertia()['transformed_Cartesian'].loc[a.index, :].location()
-        return np.allclose(A, B, rtol=rtol, atol=atol)
-    elif pretest:
-        A = a.location()
-        B = b.loc[a.index, :].location()
-        return np.allclose(A, B, rtol=rtol, atol=atol)
-    else:
+    coords = ['x', 'y', 'z']
+    if not (set(a.index) == set(b.index)
+            and np.alltrue(a.loc[:, 'atom'] == b.loc[a.index, 'atom'])):
         return False
+    else:
+        if align:
+            a = a.inertia()['transformed_Cartesian']
+            b = b.inertia()['transformed_Cartesian']
+        else:
+            A, B = a.loc[:, coords], b.loc[a.index, coords]
+        return np.allclose(A, B, rtol=rtol, atol=atol)

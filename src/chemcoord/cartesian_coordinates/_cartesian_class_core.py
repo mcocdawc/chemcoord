@@ -1069,8 +1069,7 @@ class Cartesian_core(_common_class):
             new_cartesian = self.move(
                 matrix=np.linalg.inv(basistransformation))
 
-        assert np.isclose(
-            test_basis, old_basis).all(), 'transformation did not work'
+        assert np.allclose(test_basis, old_basis), "Transformation did'nt work"
         return new_cartesian
 
     def location(self, indexlist=None):

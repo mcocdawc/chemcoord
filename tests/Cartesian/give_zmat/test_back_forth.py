@@ -1,5 +1,5 @@
 import chemcoord as cc
-from chemcoord.xyz_functions import isclose
+from chemcoord.xyz_functions import allclose
 import pytest
 from chemcoord._exceptions import UndefinedCoordinateSystem
 import os
@@ -27,7 +27,7 @@ def back_and_forth(filepath):
     molecule1 = cc.Cartesian.read_xyz(filepath)
     zmolecule = molecule1.give_zmat()
     molecule2 = zmolecule.give_cartesian()
-    assert isclose(molecule1, molecule2, align=False)
+    assert allclose(molecule1, molecule2, align=False)
 
 
 def test_back_and_forth1():
@@ -77,5 +77,5 @@ def test_specified_c_table_assert_first_three_nonlinear():
                        (fragment, connection)])
     c_table = molecule.correct_dihedral(c_table)
     zmolecule = molecule.give_zmat(c_table)
-    assert isclose(molecule, zmolecule.give_cartesian(), align=False,
+    assert allclose(molecule, zmolecule.give_cartesian(), align=False,
                    atol=1e-6)

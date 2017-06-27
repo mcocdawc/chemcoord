@@ -1,6 +1,6 @@
-chemcoord\.xyz\_functions\.isclose
+chemcoord\.xyz\_functions\.allclose
 ==================================
 
 .. currentmodule:: chemcoord.xyz_functions
 
-.. autofunction:: isclose
+.. autofunction:: allclose

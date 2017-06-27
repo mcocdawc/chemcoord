@@ -396,8 +396,8 @@ class Cartesian_give_zmat(Cartesian_core):
         v1, v2 = A[2] - A[1], A[1] - A[0]
         K = np.cross(v1, v2)
         zero = np.full(3, 0.)
-        return not (np.isclose(K, zero).all() or np.isclose(v1, zero).all()
-                    or np.isclose(v2, zero).all())
+        return not (np.allclose(K, zero) or np.allclose(v1, zero)
+                    or np.allclose(v2, zero))
 
     def check_absolute_refs(self, construction_table):
         """Checks first three rows of ``construction_table`` for linear references
