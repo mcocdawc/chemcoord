@@ -61,8 +61,10 @@ chemcoord\.Cartesian
 
          ~Cartesian.give_zmat
          ~Cartesian.get_construction_table
-         ~Cartesian.correct_absolute_refs
          ~Cartesian.check_dihedral
+         ~Cartesian.correct_dihedral
+         ~Cartesian.check_absolute_refs
+         ~Cartesian.correct_absolute_refs
          ~Cartesian.to_zmat
 
     .. rubric:: IO

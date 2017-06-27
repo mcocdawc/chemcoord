@@ -285,6 +285,9 @@ class Cartesian_give_zmat(Cartesian_core):
     def check_dihedral(self, construction_table):
         """Checks, if the dihedral defining atom is colinear.
 
+        Checks for each index starting from the third row of the
+        ``construction_table``, if the reference atoms are colinear.
+
         Args:
             construction_table (pd.DataFrame):
 
@@ -301,6 +304,9 @@ class Cartesian_give_zmat(Cartesian_core):
     def correct_dihedral(self, construction_table,
                          use_lookup=settings['defaults']['use_lookup']):
         """Reindexe the dihedral defining atom if linear reference is used.
+
+        Uses :meth:`~Cartesian.check_dihedral` to obtain the problematic
+        indices.
 
         Args:
             construction_table (pd.DataFrame):
@@ -358,14 +364,34 @@ class Cartesian_give_zmat(Cartesian_core):
                         raise UndefinedCoordinateSystem(message(i))
         return c_table
 
-    def has_valid_abs_ref(self, i, c_table, abs_references):
+    def _has_valid_abs_ref(self, i, construction_table):
+        """Checks, if ``i`` uses valid absolute references.
+
+        Checks for each index from first to third row of the
+        ``construction_table``, if the references are colinear.
+        This case has to be specially treated, because the references
+        are not only atoms (to fix internal degrees of atom) but also points
+        in cartesian space called absolute references.
+        (to fix translational and rotational degrees of freedom)
+
+        Args:
+            i (label): The label has to be in the first three rows.
+            construction_table (pd.DataFrame):
+
+        Returns:
+            bool:
+        """
+        abs_refs = self._metadata['abs_refs']
         A = np.empty((3, 3))
         row = c_table.index.get_loc(i)
+        if row > 2:
+            raise ValueError('The index {i} is not from the first '
+                             'three, rows'.format(i))
         for k in range(3):
             if k < row:
                 A[k] = self.loc[c_table.iloc[row, k], ['x', 'y', 'z']]
             else:
-                A[k] = abs_references[c_table.iloc[row, k]][0]
+                A[k] = abs_refs[c_table.iloc[row, k]][0]
         v1, v2 = A[2] - A[1], A[1] - A[0]
         K = np.cross(v1, v2)
         zero = np.full(3, 0.)
@@ -373,14 +399,33 @@ class Cartesian_give_zmat(Cartesian_core):
                     or np.isclose(v2, zero).all())
 
     def check_absolute_refs(self, construction_table):
+        """Checks first three rows of ``construction_table`` for linear references
+
+        Checks for each index from first to third row of the
+        ``construction_table``, if the references are colinear.
+        This case has to be specially treated, because the references
+        are not only atoms (to fix internal degrees of atom) but also points
+        in cartesian space called absolute references.
+        (to fix translational and rotational degrees of freedom)
+
+        Args:
+            construction_table (pd.DataFrame):
+
+        Returns:
+            list: A list of problematic indices.
+        """
         c_table = construction_table
         abs_refs = self._metadata['abs_refs']
         problem_index = [i for i in c_table.index[:3]
-                         if not self.has_valid_abs_ref(i, c_table, abs_refs)]
+                         if not self._has_valid_abs_ref(i, c_table, abs_refs)]
         return problem_index
 
     def correct_absolute_refs(self, construction_table):
-        """Reindexe the absolute references if linear reference is used.
+        """Reindexe construction_table if linear reference in first three rows
+        present.
+
+        Uses :meth:`~Cartesian.check_absolute_refs` to obtain the problematic
+        indices.
 
         Args:
             construction_table (pd.DataFrame):
@@ -395,7 +440,7 @@ class Cartesian_give_zmat(Cartesian_core):
             order_of_refs = iter(permutations(abs_refs.keys()))
             finished = False
             while not finished:
-                if self.has_valid_abs_ref(i, c_table, abs_refs):
+                if self._has_valid_abs_ref(i, c_table, abs_refs):
                     finished = True
                 else:
                     row = c_table.index.get_loc(i)
@@ -530,24 +575,25 @@ class Cartesian_give_zmat(Cartesian_core):
         based on connectivity to create a "chemical" zmatrix.
 
         If you create several zmatrices based on the same references
-        you can save the buildlist of a zmatrix with
-        :meth:`Zmat.get_buildlist`.
-        If you then pass the buildlist as argument to ``to_zmat``,
-        then the algorithm directly starts with step 3.
+        you can obtain the construction table of a zmatrix with
+        ``Zmat_instance.loc[:, ['b', 'a', 'd']]``
+        If you then pass the buildlist as argument to ``give_zmat``,
+        the algorithm directly starts with step 3 (which is much faster).
 
         If a ``construction_table`` is either manually created,
         or obtained from :meth:`~Cartesian.get_construction_table`
         and passed into :meth:`~Cartesian.give_zmat` the check for
         pathological linearity is not performed!
-        Please use a combination of the following functions:
+        Please use the following methods:
 
-            * :meth:`~Cartesian.check_dihedral`
             * :meth:`~Cartesian.correct_dihedral`
-            * :meth:`~Cartesian.has_valid_abs_ref`
-            * :meth:`~Cartesian.check_absolute_refs`
             * :meth:`~Cartesian.correct_absolute_refs`
 
-        To perform these checks and corrections yourself.
+        If you want to check for problematic indices in order to solve the
+        invalid references yourself, use the following methods:
+
+            * :meth:`~Cartesian.check_dihedral`
+            * :meth:`~Cartesian.check_absolute_refs`
 
         Args:
             construction_table (pandas.DataFrame):
@@ -570,7 +616,7 @@ class Cartesian_give_zmat(Cartesian_core):
         return self._build_zmat(c_table)
 
     def to_zmat(self, *args, **kwargs):
-        """Deprecated, use :meth:`~chemcoord.Zmat.give_zmat`
+        """Deprecated, use :meth:`~Cartesian.give_zmat`
         """
         message = 'Will be removed in the future. Please use give_zmat.'
         with warnings.catch_warnings():
