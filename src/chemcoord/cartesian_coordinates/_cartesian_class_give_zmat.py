@@ -381,6 +381,7 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             bool:
         """
+        c_table = construction_table
         abs_refs = self._metadata['abs_refs']
         A = np.empty((3, 3))
         row = c_table.index.get_loc(i)
@@ -417,7 +418,7 @@ class Cartesian_give_zmat(Cartesian_core):
         c_table = construction_table
         abs_refs = self._metadata['abs_refs']
         problem_index = [i for i in c_table.index[:3]
-                         if not self._has_valid_abs_ref(i, c_table, abs_refs)]
+                         if not self._has_valid_abs_ref(i, c_table)]
         return problem_index
 
     def correct_absolute_refs(self, construction_table):
@@ -440,7 +441,7 @@ class Cartesian_give_zmat(Cartesian_core):
             order_of_refs = iter(permutations(abs_refs.keys()))
             finished = False
             while not finished:
-                if self._has_valid_abs_ref(i, c_table, abs_refs):
+                if self._has_valid_abs_ref(i, c_table):
                     finished = True
                 else:
                     row = c_table.index.get_loc(i)
