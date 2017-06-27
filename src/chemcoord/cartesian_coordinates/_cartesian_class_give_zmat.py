@@ -358,6 +358,27 @@ class Cartesian_give_zmat(Cartesian_core):
                         raise UndefinedCoordinateSystem(message(i))
         return c_table
 
+    def has_valid_abs_ref(self, i, c_table, abs_references):
+        A = np.empty((3, 3))
+        row = c_table.index.get_loc(i)
+        for k in range(3):
+            if k < row:
+                A[k] = self.loc[c_table.iloc[row, k], ['x', 'y', 'z']]
+            else:
+                A[k] = abs_references[c_table.iloc[row, k]][0]
+        v1, v2 = A[2] - A[1], A[1] - A[0]
+        K = np.cross(v1, v2)
+        zero = np.full(3, 0.)
+        return not (np.isclose(K, zero).all() or np.isclose(v1, zero).all()
+                    or np.isclose(v2, zero).all())
+
+    def check_absolute_refs(self, construction_table):
+        c_table = construction_table
+        abs_refs = self._metadata['abs_refs']
+        problem_index = [i for i in c_table.index[:3]
+                         if not self.has_valid_abs_ref(i, c_table, abs_refs)]
+        return problem_index
+
     def correct_absolute_refs(self, construction_table):
         """Reindexe the absolute references if linear reference is used.
 
@@ -369,29 +390,16 @@ class Cartesian_give_zmat(Cartesian_core):
         """
         c_table = construction_table.copy()
         abs_refs = self._metadata['abs_refs']
-
-        def is_valid_abs_ref(self, c_table, abs_references, row):
-            A = np.empty((3, 3))
-            for i in range(3):
-                if i < row:
-                    A[i] = self.loc[c_table.iloc[row, i], ['x', 'y', 'z']]
-                else:
-                    A[i] = abs_references[c_table.iloc[row, i]][0]
-            v1, v2 = A[2] - A[1], A[1] - A[0]
-            K = np.cross(v1, v2)
-            zero = np.array([0, 0, 0])
-            return not (np.isclose(K, zero).all()
-                        or np.isclose(v1, zero).all()
-                        or np.isclose(v2, zero).all())
-
-        for i in range(min(3, len(c_table))):
+        problem_index = self.check_absolute_refs(c_table)
+        for i in problem_index:
             order_of_refs = iter(permutations(abs_refs.keys()))
             finished = False
             while not finished:
-                if not is_valid_abs_ref(self, c_table, abs_refs, i):
-                    c_table.iloc[i, i:] = next(order_of_refs)[i:3]
-                else:
+                if self.has_valid_abs_ref(i, c_table, abs_refs):
                     finished = True
+                else:
+                    row = c_table.index.get_loc(i)
+                    c_table.iloc[row, row:] = next(order_of_refs)[row:3]
         return c_table
 
     def _calculate_values(self, construction_table):
@@ -526,6 +534,20 @@ class Cartesian_give_zmat(Cartesian_core):
         :meth:`Zmat.get_buildlist`.
         If you then pass the buildlist as argument to ``to_zmat``,
         then the algorithm directly starts with step 3.
+
+        If a ``construction_table`` is either manually created,
+        or obtained from :meth:`~Cartesian.get_construction_table`
+        and passed into :meth:`~Cartesian.give_zmat` the check for
+        pathological linearity is not performed!
+        Please use a combination of the following functions:
+
+            * :meth:`~Cartesian.check_dihedral`
+            * :meth:`~Cartesian.correct_dihedral`
+            * :meth:`~Cartesian.has_valid_abs_ref`
+            * :meth:`~Cartesian.check_absolute_refs`
+            * :meth:`~Cartesian.correct_absolute_refs`
+
+        To perform these checks and corrections yourself.
 
         Args:
             construction_table (pandas.DataFrame):
