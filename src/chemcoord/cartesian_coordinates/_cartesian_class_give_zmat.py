@@ -602,7 +602,7 @@ class Cartesian_give_zmat(Cartesian_core):
                 :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
-            Zmat: A new instance of :class:`~.zmat_functions.Zmat`.
+            Zmat: A new instance of :class:`~Zmat`.
         """
         self.get_bonds(use_lookup=use_lookup)
         use_lookup = True
