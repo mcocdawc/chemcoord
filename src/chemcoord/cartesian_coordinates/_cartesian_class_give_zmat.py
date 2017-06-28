@@ -69,6 +69,8 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
+        int_label = self._metadata['int_label_abs_ref']
+
         def modify_priority(bond_dict, user_defined):
             def move_to_start(dct, key):
                 "Due to PY27 compatibility"
@@ -112,7 +114,9 @@ class Cartesian_give_zmat(Cartesian_core):
                 i = start_atom
             order_of_def = [i]
             user_defined = []
-            construction_table = {i: {'b': -4, 'a': -3, 'd': -1}}
+            construction_table = {i: {'b': int_label['origin'],
+                                      'a': int_label['e_z'],
+                                      'd': int_label['e_x']}}
         else:
             i = construction_table.index[0]
             order_of_def = list(construction_table.index)
@@ -138,10 +142,13 @@ class Cartesian_give_zmat(Cartesian_core):
                     b = parent[i]
                     if b in order_of_def[:3]:
                         if len(order_of_def) == 1:
-                            construction_table[i] = {'b': b, 'a': -3, 'd': -1}
+                            construction_table[i] = {'b': b,
+                                                     'a': int_label['e_z'],
+                                                     'd': int_label['e_x']}
                         elif len(order_of_def) == 2:
                             a = (bond_dict[b] & set(order_of_def))[0]
-                            construction_table[i] = {'b': b, 'a': a, 'd': -1}
+                            construction_table[i] = {'b': b, 'a': a,
+                                                     'd': int_label['e_x']}
                         else:
                             try:
                                 a = parent[b]
@@ -201,6 +208,7 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
+        int_label = self._metadata['int_label_abs_ref']
         if fragment_list is None:
             fragments = sorted(self.fragmentate(use_lookup=use_lookup),
                                key=lambda x: len(x), reverse=True)
@@ -254,13 +262,13 @@ class Cartesian_give_zmat(Cartesian_core):
                 constr_table = fragment._get_frag_constr_table(
                     start_atom=i, use_lookup=use_lookup)
                 if len(full_table) == 1:
-                    a, d = -3, -1
+                    a, d = int_label['e_z'], int_label['e_x']
                 elif len(full_table) == 2:
                     if b == full_table.index[0]:
                         a = full_table.index[1]
                     else:
                         a = full_table.index[0]
-                    d = -1
+                    d = int_label['e_x']
                 else:
                     if b in full_table.index[:2]:
                         if b == full_table.index[0]:

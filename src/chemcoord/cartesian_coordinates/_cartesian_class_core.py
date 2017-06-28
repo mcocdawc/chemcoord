@@ -20,6 +20,7 @@ from numba import jit
 import numpy as np
 import pandas as pd
 from sortedcontainers import SortedSet
+import sys
 
 
 class Cartesian_core(_common_class):
@@ -49,11 +50,17 @@ class Cartesian_core(_common_class):
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
+        self._metadata['int_label_abs_ref'] = {'origin': -sys.maxsize - 1,
+                                               'e_x': -sys.maxsize,
+                                               'e_y': -sys.maxsize + 1,
+                                               'e_z': -sys.maxsize + 2
+                                               }
+        int_label = self._metadata['int_label_abs_ref']
         self._metadata['abs_refs'] = {
-            -4: (np.array([0., 0., 0.]), '$\\vec{0}$'),
-            -1: (np.array([1., 0., 0.]), '$\\vec{e}_x$'),
-            -2: (np.array([0., 1., 0.]), '$\\vec{e}_y$'),
-            -3: (np.array([0., 0., 1.]), '$\\vec{e}_z$')}
+            int_label['origin']: (np.array([0., 0., 0.]), '$\\vec{0}$'),
+            int_label['e_x']: (np.array([1., 0., 0.]), '$\\vec{e}_x$'),
+            int_label['e_y']: (np.array([0., 1., 0.]), '$\\vec{e}_y$'),
+            int_label['e_z']: (np.array([0., 0., 1.]), '$\\vec{e}_z$')}
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
@@ -67,7 +74,7 @@ class Cartesian_core(_common_class):
                 and self._required_cols <= set(selected.columns)):
             molecule = self.__class__(selected)
             molecule.metadata = self.metadata.copy()
-            keys_to_keep = ['abs_refs']
+            keys_to_keep = ['abs_refs', 'int_label_abs_ref']
             for key in keys_to_keep:
                 molecule._metadata[key] = self._metadata[key].copy()
             return molecule
@@ -184,7 +191,8 @@ class Cartesian_core(_common_class):
     def copy(self):
         molecule = self.__class__(self.frame)
         molecule.metadata = self.metadata.copy()
-        keys_to_keep = ['bond_dict', 'val_bond_dict', 'abs_refs']
+        keys_to_keep = ['bond_dict', 'val_bond_dict',
+                        'abs_refs', 'int_label_abs_ref']
         for key in keys_to_keep:
             try:
                 molecule._metadata[key] = self._metadata[key].copy()

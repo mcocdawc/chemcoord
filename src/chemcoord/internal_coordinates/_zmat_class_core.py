@@ -23,9 +23,9 @@ import warnings
 
 
 @jit(nopython=True)
-def _jit_calculate_position(references, zmat_values, row):
+def _jit_calculate_single_position(references, zmat_values, row):
     bond, angle, dihedral = zmat_values[row]
-    vb, va, vd = references
+    vb, va, vd = references[0], references[1], references[2]
     zeros = np.zeros(3)
     err = ERR_CODE_OK
 
@@ -51,11 +51,33 @@ def _jit_calculate_position(references, zmat_values, row):
 
 
 @jit(nopython=True)
-def _jit_calculate_rest(positions, c_table, zmat_values, start_row=3):
-    for row in range(start_row, len(c_table)):
-        b, a, d = c_table[row, :]
-        refs = positions[b], positions[a], positions[d]
-        err, pos = _jit_calculate_position(refs, zmat_values, row)
+def _jit_give_reference_absolute_position(j):
+    # Because dicts are not supported in numba :(
+    maxsize = 2**63 - 1
+    if j == -maxsize - 1:
+        return np.array([0., 0., 0.])
+    elif j == -maxsize:
+        return np.array([1., 0., 0.])
+    elif j == -maxsize + 1:
+        return np.array([0., 1., 0.])
+    elif j == -maxsize + 2:
+        return np.array([0., 0., 1.])
+    else:
+        raise ValueError
+
+
+@jit(nopython=True)
+def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
+    for row in range(start_row, c_table.shape[0]):
+        ref_pos = np.empty((3, 3))
+        threshhold = -2**63 + 100
+        for k in range(3):
+            j = c_table[row, k]
+            if j < threshhold:
+                ref_pos[k] = _jit_give_reference_absolute_position(j)
+            else:
+                ref_pos[k] = positions[j]
+        err, pos = _jit_calculate_single_position(ref_pos, zmat_values, row)
         if err == ERR_CODE_OK:
             positions[row] = pos
         elif err == ERR_CODE_InvalidReference:
@@ -373,27 +395,7 @@ class Zmat_core(_common_class):
         zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
         positions = np.empty((len(self), 3), dtype='float64')
 
-        for row in range(min(3, len(c_table))):
-            b, a, d = c_table[row, :]
-            if row == 0:
-                vb = abs_refs[b][0]
-                va = abs_refs[a][0]
-            elif row == 1:
-                vb = positions[b]
-                va = abs_refs[a][0]
-            elif row == 2:
-                vb = positions[b]
-                va = positions[a]
-            vd = abs_refs[d][0]
-            refs = vb, va, vd
-
-            err, pos = _jit_calculate_position(refs, zmat_values, row)
-            if err == ERR_CODE_OK:
-                positions[row] = pos
-            elif err == ERR_CODE_InvalidReference:
-                print('Error Handling required', rename[row])
-
-        row = _jit_calculate_rest(positions, c_table, zmat_values)
+        row = _jit_calculate_everything(positions, c_table, zmat_values)
         if row < len(self) - 1:
             i = rename[row]
             self.change_numbering(old_index, inplace=True)
@@ -401,36 +403,45 @@ class Zmat_core(_common_class):
             raise InvalidReference(i=i, b=b, a=a, d=d)
         return positions
 
-    def _insert_dummy(self, i, b, a, d):
+    def insert_dummy(self, i, references):
         """Insert dummy atom into ``self``
 
         ``i`` uses introduced dummy atom as reference (instead of ``d``)
         """
         coords = ['x', 'y', 'z']
+        cols = ['b', 'a', 'd']
         i_dummy = max(self.index) + 1
 
         def insert_row(df, pos, key):
             if pos < len(df):
-                b = df.iloc[pos:(pos + 1)]
-                b.index = [key]
-                a, c = df.iloc[:pos], df.iloc[pos:]
-                return pd.concat([a, b, c])
+                middle = df.iloc[pos:(pos + 1)]
+                middle.index = [key]
+                start, end = df.iloc[:pos], df.iloc[pos:]
+                return pd.concat([start, middle, end])
             elif pos == len(df):
-                a = df.copy()
-                a.loc[key] = a.iloc[-1]
-                return a
+                start = df.copy()
+                start.loc[key] = start.iloc[-1]
+                return start
         zframe = insert_row(self.frame.copy(), self.index.get_loc(i), i_dummy)
+        zframe.loc[i_dummy, 'atom'] = 'X'
+        zframe.loc[i_dummy, cols] = zframe.loc[references['d'], cols]
+        zframe.loc[i, 'd'] = i_dummy
 
         xyz = self._metadata['cartesian']
 
         def get_dummy_cart_pos(xyz, b, a, d):
-            b_pos, a_pos, d_pos = xyz.loc[[b, a, d], coords].values
+            def get_reference_pos(xyz, b, a, d):
+                return b_pos, a_pos, d_pos
+            b_pos, a_pos, d_pos = get_reference_pos(xyz, b, a, d)
             BA = a_pos - b_pos
             AD = d_pos - a_pos
             N1 = np.cross(BA, AD, axis=1)
             N2 = np.cross(N1, BA, axis=1)
             n2 = N2 / np.linalg.norm(x, N2, axis=1)
-            return a_pos + n2
+            return a_pos + n2 * 2
+
+        dummy_pos = get_dummy_cart_pos(xyz, *zframe.loc[i_dummy, cols])
+        return dummy_pos
 
         # calculate values for i and 'X'
 
@@ -480,27 +491,7 @@ class Zmat_core(_common_class):
         zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
         positions = np.empty((len(self), 3), dtype='float64')
 
-        for row in range(min(3, len(c_table))):
-            b, a, d = c_table[row, :]
-            if row == 0:
-                vb = abs_refs[b][0]
-                va = abs_refs[a][0]
-            elif row == 1:
-                vb = positions[b]
-                va = abs_refs[a][0]
-            elif row == 2:
-                vb = positions[b]
-                va = positions[a]
-            vd = abs_refs[d][0]
-            refs = vb, va, vd
-
-            err, pos = _jit_calculate_position(refs, zmat_values, row)
-            if err == ERR_CODE_OK:
-                positions[row] = pos
-            elif err == ERR_CODE_InvalidReference:
-                print('Error Handling required', rename[row])
-
-        row = _jit_calculate_rest(positions, c_table, zmat_values)
+        row = _jit_calculate_everything(positions, c_table, zmat_values)
         if row < len(self) - 1:
             print('Error handling required', rename[row])
 
