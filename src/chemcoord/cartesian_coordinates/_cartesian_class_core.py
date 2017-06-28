@@ -183,7 +183,7 @@ class Cartesian_core(_common_class):
     def _to_ase_Atoms(self):
         import ase
         atoms = ''.join(self.loc[:, 'atom'])
-        positions = self.location()
+        positions = self.loc[:, ['x', 'y', 'z']]
         # test
         return ase.Atoms(atoms, positions)
 
@@ -527,7 +527,7 @@ class Cartesian_core(_common_class):
     def cutsphere(
             self,
             radius=15.,
-            origin=[0., 0., 0.],
+            origin=None,
             outside_sliced=True,
             preserve_bonds=False):
         """Cut a sphere specified by origin and radius.
@@ -544,16 +544,18 @@ class Cartesian_core(_common_class):
         Returns:
             Cartesian:
         """
-        try:
-            origin[0]
-        except (TypeError, IndexError):
-            origin = self.location(int(origin))
+        if origin is None:
+            origin = np.zeros(3)
+        elif pd.api.types.is_list_like(origin):
+            origin = np.array(origin)
+        else:
+            origin = self.loc[origin, ['x', 'y', 'z']]
 
         molecule = self.distance_to(origin)
         if outside_sliced:
-            molecule = molecule.loc[molecule.loc[:, 'distance'] < radius, :]
+            molecule = molecule[molecule['distance'] < radius]
         else:
-            molecule = molecule.loc[molecule.loc[:, 'distance'] > radius, :]
+            molecule = molecule[molecule['distance'] > radius]
 
         if preserve_bonds:
             molecule = self._preserve_bonds(molecule)
@@ -565,7 +567,7 @@ class Cartesian_core(_common_class):
             a=20,
             b=None,
             c=None,
-            origin=[0, 0, 0],
+            origin=None,
             outside_sliced=True,
             preserve_bonds=False):
         """Cut a cuboid specified by edge and radius.
@@ -578,28 +580,27 @@ class Cartesian_core(_common_class):
                 integer. In this case it is interpreted as the index
                 of the atom which is taken as origin.
             outside_sliced (bool): Atoms outside/inside the sphere are
-                cut out.
+                cut away.
             preserve_bonds (bool): Do not cut covalent bonds.
 
         Returns:
             Cartesian:
         """
-        try:
-            origin[0]
-        except (TypeError, IndexError):
-            origin = self.location(int(origin))
+        if origin is None:
+            origin = np.zeros(3)
+        elif pd.api.types.is_list_like(origin):
+            origin = np.array(origin)
+        else:
+            origin = self.loc[origin, ['x', 'y', 'z']]
         b = a if b is None else b
         c = a if c is None else c
 
-        origin = dict(zip(['x', 'y', 'z'], list(origin)))
-
-        boolean_vector = ((np.abs((self.loc[:, 'x'] - origin['x'])) < a / 2)
-                          & (np.abs((self.loc[:, 'y'] - origin['y'])) < b / 2)
-                          & (np.abs((self.loc[:, 'z'] - origin['z'])) < c / 2))
+        sides = np.array([a, b, c])
+        pos = self.loc[:, ['x', 'y', 'z']]
         if outside_sliced:
-            molecule = self.loc[boolean_vector, :]
+            molecule = self[((pos - origin) / (sides / 2)).max(axis=1) < 1.]
         else:
-            molecule = self.loc[~boolean_vector, :]
+            molecule = self[((pos - origin) / (sides / 2)).max(axis=1) > 1.]
 
         if preserve_bonds:
             molecule = self._preserve_bonds(molecule)
@@ -614,8 +615,7 @@ class Cartesian_core(_common_class):
         Returns:
             np.array:
         """
-        location_array = self.location()
-        return np.mean(location_array, axis=0)
+        return np.mean(self.loc[:, ['x', 'y', 'z']], axis=0)
 
     def barycenter(self):
         """Return the mass weighted average location.
@@ -999,7 +999,7 @@ class Cartesian_core(_common_class):
             mass_vector = molecule.loc[:, 'mass'].values
 
         molecule = molecule - molecule.barycenter()
-        locations = molecule.location()
+        locations = molecule.loc[:, ['x', 'y', 'z']].values
 
         diagonals = (np.sum(locations**2, axis=1)[:, None, None]
                      * np.identity(3)[None, :, :])
@@ -1233,11 +1233,11 @@ class Cartesian_core(_common_class):
                                     - molecule2.topologic_center())
 
         if ignore_hydrogens:
-            location1 = molecule1[molecule1['atom'] != 'H'].location()
-            location2 = molecule2[molecule2['atom'] != 'H'].location()
+            location1 = molecule1.loc[molecule1['atom'] != 'H', coords].values
+            location2 = molecule2.loc[molecule2['atom'] != 'H', coords].values
         else:
-            location1 = molecule1.location()
-            location2 = molecule2.location()
+            location1 = molecule1.loc[:, coords].values
+            location2 = molecule2.loc[:, coords].values
 
         molecule2.loc[:, coords] = algebra_utilities.rotate(location2,
                                                             location1)
