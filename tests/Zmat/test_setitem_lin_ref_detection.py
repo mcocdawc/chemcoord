@@ -28,4 +28,4 @@ def test_assignment_leading_to_linear_reference():
     zmolecule = molecule.give_zmat()
 
     with pytest.raises(InvalidReference):
-        zmolecule.loc[4, 'angle'] = 180
+        zmolecule.safe_loc[3, 'angle'] = 180

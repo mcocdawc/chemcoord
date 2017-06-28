@@ -9,6 +9,7 @@ from chemcoord._exceptions import ERR_CODE_OK, \
     PhysicalMeaning, \
     InvalidReference, ERR_CODE_InvalidReference
 from chemcoord._generic_classes._common_class import _common_class
+import chemcoord.internal_coordinates._safe_indexers as safe_indexers
 from chemcoord.utilities.algebra_utilities import \
     _jit_normalize, \
     _jit_rotation_matrix, \
@@ -92,11 +93,10 @@ class Zmat_core(_common_class):
         self.frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
-        self.metadata['order'] = self.index
         if order_of_definition is None:
-            self.metadata['order'] = self.index
+            self._metadata['order'] = self.index
         else:
-            self.metadata['order'] = order_of_definition
+            self._metadata['order'] = order_of_definition
 
     # overwrites existing method
     def copy(self):
@@ -145,6 +145,97 @@ class Zmat_core(_common_class):
 
     def _return_appropiate_type(self, selected):
         return selected
+
+    @property
+    def safe_loc(self):
+        """Label based indexing
+
+        The indexing behaves like
+        `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        The only question is about the return type.
+        If the information in the columns is enough to draw a molecule,
+        an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
+        is returned.
+        If the information in the columns is not enough to draw a molecule
+        a :class:`~pandas.Series` instance is returned for one dimensional
+        slices and a :class:`~pandas.DataFrame` instance in all other cases.
+
+        Cartesian:
+            In the case of a :class:`~chemcoord.Cartesian` class this means:
+
+                ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
+                :class:`~chemcoord.Cartesian`.
+
+                ``molecule.loc[:, ['atom', 'x']]`` returns a
+                :class:`~pandas.DataFrame`.
+
+                ``molecule.loc[:, 'atom']`` returns a
+                :class:`~pandas.Series`.
+
+        Zmat:
+            If the following definition is used::
+
+                cols = ['atom', 'b', 'bond', 'a', 'angle',
+                        'd', 'dihedral']
+
+            The return types in the case of a :class:`~chemcoord.Zmat`
+            instance are:
+
+                ``molecule.loc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
+
+                ``molecule.loc[:, ['atom', 'b']]`` returns a
+                :class:`~pandas.DataFrame`.
+
+                ``molecule.loc[:, 'atom']`` returns a
+                :class:`~pandas.Series`.
+        """
+        return safe_indexers._Safe_Loc(self)
+
+
+    @property
+    def safe_iloc(self):
+        """Label based indexing
+
+        The indexing behaves like
+        `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        The only question is about the return type.
+        If the information in the columns is enough to draw a molecule,
+        an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
+        is returned.
+        If the information in the columns is not enough to draw a molecule
+        a :class:`~pandas.Series` instance is returned for one dimensional
+        slices and a :class:`~pandas.DataFrame` instance in all other cases.
+
+        Cartesian:
+            In the case of a :class:`~chemcoord.Cartesian` class this means:
+
+                ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
+                :class:`~chemcoord.Cartesian`.
+
+                ``molecule.loc[:, ['atom', 'x']]`` returns a
+                :class:`~pandas.DataFrame`.
+
+                ``molecule.loc[:, 'atom']`` returns a
+                :class:`~pandas.Series`.
+
+        Zmat:
+            If the following definition is used::
+
+                cols = ['atom', 'b', 'bond', 'a', 'angle',
+                        'd', 'dihedral']
+
+            The return types in the case of a :class:`~chemcoord.Zmat`
+            instance are:
+
+                ``molecule.loc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
+
+                ``molecule.loc[:, ['atom', 'b']]`` returns a
+                :class:`~pandas.DataFrame`.
+
+                ``molecule.loc[:, 'atom']`` returns a
+                :class:`~pandas.Series`.
+        """
+        return safe_indexers._Safe_ILoc(self)
 
     def _test_if_can_be_added(self, other):
         cols = ['atom', 'b', 'a', 'd']
