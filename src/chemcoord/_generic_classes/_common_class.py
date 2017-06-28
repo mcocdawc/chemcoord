@@ -81,7 +81,7 @@ class _common_class(_pandas_wrapper):
             new_cols = [new_cols]
         new_frame = data.loc[atoms, set(new_cols) - set(self.columns)]
         new_frame.index = self.index
-        return self.__class__(pd.concat([self.frame, new_frame], axis=1))
+        return self.__class__(pd.concat([self._frame, new_frame], axis=1))
 
     def total_mass(self):
         """Returns the total mass in g/mol.

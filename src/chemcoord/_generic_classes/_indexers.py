@@ -10,9 +10,9 @@ class _Loc(_generic_Indexer):
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
-            selected = self.molecule.frame.loc[key[0], key[1]]
+            selected = self.molecule._frame.loc[key[0], key[1]]
         else:
-            selected = self.molecule.frame.loc[key]
+            selected = self.molecule._frame.loc[key]
         try:
             return self.molecule._return_appropiate_type(selected)
         except AttributeError:
@@ -20,18 +20,18 @@ class _Loc(_generic_Indexer):
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
-            self.molecule.frame.loc[key[0], key[1]] = value
+            self.molecule._frame.loc[key[0], key[1]] = value
         else:
-            self.molecule.frame.loc[key] = value
+            self.molecule._frame.loc[key] = value
 
 
 class _ILoc(_generic_Indexer):
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
-            selected = self.molecule.frame.iloc[key[0], key[1]]
+            selected = self.molecule._frame.iloc[key[0], key[1]]
         else:
-            selected = self.molecule.frame.iloc[key]
+            selected = self.molecule._frame.iloc[key]
         try:
             return self.molecule._return_appropiate_type(selected)
         except AttributeError:
@@ -39,6 +39,6 @@ class _ILoc(_generic_Indexer):
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
-            self.molecule.frame.iloc[key[0], key[1]] = value
+            self.molecule._frame.iloc[key[0], key[1]] = value
         else:
-            self.molecule.frame.iloc[key] = value
+            self.molecule._frame.iloc[key] = value

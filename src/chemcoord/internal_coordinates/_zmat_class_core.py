@@ -112,7 +112,7 @@ class Zmat_core(_common_class):
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning('There are columns missing for a '
                                   'meaningful description of a molecule')
-        self.frame = frame.copy()
+        self._frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
         if order_of_definition is None:
@@ -122,7 +122,7 @@ class Zmat_core(_common_class):
 
     # overwrites existing method
     def copy(self):
-        molecule = self.__class__(self.frame)
+        molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
         keys_to_keep = ['abs_refs', 'cartesian', 'order']
         for key in keys_to_keep:
@@ -161,7 +161,7 @@ class Zmat_core(_common_class):
             """Under the assumption that substr only appears once.
             """
             return (insert_txt + substr).join(txt.split(substr))
-        html_txt = out.frame._repr_html_()
+        html_txt = out._frame._repr_html_()
         insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
         return insert_before_substring(insert_txt, '<thead>', html_txt)
 
@@ -422,7 +422,7 @@ class Zmat_core(_common_class):
                 start = df.copy()
                 start.loc[key] = start.iloc[-1]
                 return start
-        zframe = insert_row(self.frame.copy(), self.index.get_loc(i), i_dummy)
+        zframe = insert_row(self._frame.copy(), self.index.get_loc(i), i_dummy)
         zframe.loc[i_dummy, 'atom'] = 'X'
         zframe.loc[i_dummy, cols] = zframe.loc[references['d'], cols]
         zframe.loc[i, 'd'] = i_dummy

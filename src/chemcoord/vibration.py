@@ -194,7 +194,7 @@ class mode(object):
                     else:
                         functions[i, j] = np.nan
             # TODO write nicer
-            tmp = eq_strct_zmat.frame.copy()
+            tmp = eq_strct_zmat._frame.copy()
             tmp.loc[:, columns] = functions
             functions = tmp
             return functions

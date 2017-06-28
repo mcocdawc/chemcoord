@@ -47,7 +47,7 @@ class Cartesian_core(_common_class):
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning('There are columns missing for a '
                                   'meaningful description of a molecule')
-        self.frame = frame.copy()
+        self._frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
         self._metadata['int_label_abs_ref'] = {'origin': -sys.maxsize - 1,
@@ -174,10 +174,10 @@ class Cartesian_core(_common_class):
         return new
 
     def __eq__(self, other):
-        return self.frame == other.frame
+        return self._frame == other._frame
 
     def append(self, other):
-        new = self.frame.append(other.frame, verify_integrity=True)
+        new = self._frame.append(other._frame, verify_integrity=True)
         return self.__class__(new)
 
     def _to_ase_Atoms(self):
@@ -189,7 +189,7 @@ class Cartesian_core(_common_class):
 
     # overwrites existing method
     def copy(self):
-        molecule = self.__class__(self.frame)
+        molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
         keys_to_keep = ['bond_dict', 'val_bond_dict',
                         'abs_refs', 'int_label_abs_ref']

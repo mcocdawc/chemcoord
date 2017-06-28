@@ -29,7 +29,7 @@ class _pandas_wrapper(object):
         which are passed on when doing slices...
     """
     def __init__(self, frame):
-        self.frame = frame.copy()
+        self._frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
 
@@ -38,7 +38,7 @@ class _pandas_wrapper(object):
 
     @property
     def empty(self):
-        return self.frame.empty
+        return self._frame.empty
 
     @property
     def loc(self):
@@ -186,9 +186,9 @@ class _pandas_wrapper(object):
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
-            selected = self.frame[key[0], key[1]]
+            selected = self._frame[key[0], key[1]]
         else:
-            selected = self.frame[key]
+            selected = self._frame[key]
         try:
             return self._return_appropiate_type(selected)
         except AttributeError:
@@ -196,9 +196,9 @@ class _pandas_wrapper(object):
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
-            self.frame[key[0], key[1]] = value
+            self._frame[key[0], key[1]] = value
         else:
-            self.frame[key] = value
+            self._frame[key] = value
 
     @property
     def index(self):
@@ -206,11 +206,11 @@ class _pandas_wrapper(object):
 
         Assigning a value to it changes the index.
         """
-        return self.frame.index
+        return self._frame.index
 
     @index.setter
     def index(self, value):
-        self.frame.index = value
+        self._frame.index = value
 
     @property
     def columns(self):
@@ -218,25 +218,25 @@ class _pandas_wrapper(object):
 
         Assigning a value to it changes the columns.
         """
-        return self.frame.columns
+        return self._frame.columns
 
     @columns.setter
     def columns(self, value):
         if not self._required_cols <= set(value):
             raise PhysicalMeaning('There are columns missing for a '
                                   'meaningful description of a molecule')
-        self.frame.columns = value
+        self._frame.columns = value
 
     @property
     def shape(self):
-        return self.frame.shape
+        return self._frame.shape
 
     @property
     def dtypes(self):
-        return self.frame.dtypes
+        return self._frame.dtypes
 
     def __repr__(self):
-        return self.frame.__repr__()
+        return self._frame.__repr__()
 
     def _repr_html_(self):
         def formatter(x):
@@ -249,12 +249,12 @@ class _pandas_wrapper(object):
         def insert_before_substring(insert_txt, substr, txt):
             "Under the assumption that substr only appears once."
             return (insert_txt + substr).join(txt.split(substr))
-        html_txt = new.frame._repr_html_()
+        html_txt = new._frame._repr_html_()
         insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
         return insert_before_substring(insert_txt, '<thead>', html_txt)
 
     def copy(self):
-        molecule = self.__class__(self.frame)
+        molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
         molecule._metadata = self._metadata.copy()
         return molecule
@@ -266,11 +266,11 @@ class _pandas_wrapper(object):
         Wrapper around the :meth:`pandas.DataFrame.sort_values` method.
         """
         if inplace:
-                self.frame.sort_values(
+                self._frame.sort_values(
                     by, axis=axis, ascending=ascending,
                     inplace=inplace, kind=kind, na_position=na_position)
         else:
-            new = self.__class__(self.frame.sort_values(
+            new = self.__class__(self._frame.sort_values(
                 by, axis=axis, ascending=ascending, inplace=inplace,
                 kind=kind, na_position=na_position))
             new.metadata = self.metadata.copy()
@@ -285,12 +285,12 @@ class _pandas_wrapper(object):
         Wrapper around the :meth:`pandas.DataFrame.sort_index` method.
         """
         if inplace:
-            self.frame.sort_index(
+            self._frame.sort_index(
                 axis=axis, level=level, ascending=ascending, inplace=inplace,
                 kind=kind, na_position=na_position,
                 sort_remaining=sort_remaining, by=by)
         else:
-            new = self.__class__(self.frame.sort_index(
+            new = self.__class__(self._frame.sort_index(
                 axis=axis, level=level, ascending=ascending,
                 inplace=inplace, kind=kind, na_position=na_position,
                 sort_remaining=sort_remaining, by=by))
@@ -305,11 +305,11 @@ class _pandas_wrapper(object):
         Wrapper around the :meth:`pandas.DataFrame.replace` method.
         """
         if inplace:
-            self.frame.replace(to_replace=to_replace, value=value,
+            self._frame.replace(to_replace=to_replace, value=value,
                                inplace=inplace, limit=limit,
                                regex=regex, method=method, axis=axis)
         else:
-            new = self.__class__(self.frame.replace(
+            new = self.__class__(self._frame.replace(
                 to_replace=to_replace, value=value, inplace=inplace,
                 limit=limit, regex=regex, method=method, axis=axis))
             new.metadata = self.metadata.copy()
@@ -337,11 +337,11 @@ class _pandas_wrapper(object):
                                   'of a molecule.')
 
         if inplace:
-            self.frame.set_index(keys, drop=drop, append=append,
+            self._frame.set_index(keys, drop=drop, append=append,
                                  inplace=inplace,
                                  verify_integrity=verify_integrity)
         else:
-            new = self.frame.set_index(keys, drop=drop, append=append,
+            new = self._frame.set_index(keys, drop=drop, append=append,
                                        inplace=inplace,
                                        verify_integrity=verify_integrity)
             new = self.__class__(new)
@@ -357,7 +357,7 @@ class _pandas_wrapper(object):
         # TODO(think about metadata)
         if not isinstance(other, self.__class__):
             raise ValueError('May only append instances of same type.')
-        new_frame = self.frame.append(other.frame,
+        new_frame = self._frame.append(other._frame,
                                       ignore_index=ignore_index,
                                       verify_integrity=verify_integrity)
         return self.__class__(new_frame)
@@ -368,7 +368,7 @@ class _pandas_wrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.insert` method.
         """
-        self.frame.insert(loc, column, value,
+        self._frame.insert(loc, column, value,
                           allow_duplicates=allow_duplicates)
 
     def apply(self, *args, **kwargs):
@@ -376,7 +376,7 @@ class _pandas_wrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.apply` method.
         """
-        new = self.__class__(self.frame.apply(*args, **kwargs))
+        new = self.__class__(self._frame.apply(*args, **kwargs))
         new.metadata = self.metadata.copy()
         new._metadata = self._metadata.copy()
         return new
@@ -386,7 +386,7 @@ class _pandas_wrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.applymap` method.
         """
-        new = self.__class__(self.frame.applymap(*args, **kwargs))
+        new = self.__class__(self._frame.applymap(*args, **kwargs))
         new.metadata = self.metadata.copy()
         new._metadata = self._metadata.copy()
         return new
@@ -400,7 +400,7 @@ class _pandas_wrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.
         """
-        return self.frame.to_string(buf=buf,
+        return self._frame.to_string(buf=buf,
                                     columns=columns,
                                     col_space=col_space,
                                     header=header,
@@ -428,7 +428,7 @@ class _pandas_wrapper(object):
         Requires ``\\usepackage{booktabs}``.
         Wrapper around the :meth:`pandas.DataFrame.to_latex` method.
         """
-        return self.frame.to_latex(buf=buf, columns=columns,
+        return self._frame.to_latex(buf=buf, columns=columns,
                                    col_space=col_space, header=header,
                                    index=index, na_rep=na_rep,
                                    formatters=formatters,
