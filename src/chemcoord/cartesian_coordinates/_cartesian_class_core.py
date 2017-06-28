@@ -1100,15 +1100,20 @@ class Cartesian_core(_common_class):
         return array
 
     def distance_to(self,
-                    origin=[0., 0., 0.],
+                    origin=None,
                     other_atoms=None,
                     sort=False):
         """Return a Cartesian with a column for the distance from origin.
         """
         coords = ['x', 'y', 'z']
         norm = np.linalg.norm
-        if isinstance(origin, int):
-            origin = self.loc[origin, coords]
+        if origin is None:
+            origin = np.zeros(3)
+        elif pd.api.types.is_list_like(origin):
+            origin = np.array(origin)
+        else:
+            origin = self.loc[origin, ['x', 'y', 'z']]
+
         if other_atoms is None:
             other_atoms = self.index
 
