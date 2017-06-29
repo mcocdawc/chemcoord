@@ -456,32 +456,32 @@ class Cartesian_give_zmat(Cartesian_core):
                     c_table.iloc[row, row:] = next(order_of_refs)[row:3]
         return c_table
 
-    def _calculate_values(self, construction_table):
-        values = np.empty((len(self), 3), dtype='float64')
+    def _get_bond_vectors(self, construction_table):
+        coords = ['x', 'y', 'z']
+        abs_references = self._metadata['abs_refs']
+        pos = np.empty((self.n_atoms, 3, 4))
 
-        def get_position(self, construction_table):
-            coords = ['x', 'y', 'z']
-            abs_references = self._metadata['abs_refs']
-            pos = np.empty((self.n_atoms, 3, 4))
+        pos[:, :, 0] = self.loc[construction_table.index, coords]
 
-            pos[:, :, 0] = self.loc[construction_table.index, coords]
+        pos[0, :, 1] = abs_references[construction_table.iloc[0, 0]][0]
+        pos[1:, :, 1] = self.loc[construction_table.iloc[1:, 0], coords]
 
-            pos[0, :, 1] = abs_references[construction_table.iloc[0, 0]][0]
-            pos[1:, :, 1] = self.loc[construction_table.iloc[1:, 0], coords]
+        pos[0, :, 2] = abs_references[construction_table.iloc[0, 1]][0]
+        pos[1, :, 2] = abs_references[construction_table.iloc[1, 1]][0]
+        pos[2:, :, 2] = self.loc[construction_table.iloc[2:, 1], coords]
 
-            pos[0, :, 2] = abs_references[construction_table.iloc[0, 1]][0]
-            pos[1, :, 2] = abs_references[construction_table.iloc[1, 1]][0]
-            pos[2:, :, 2] = self.loc[construction_table.iloc[2:, 1], coords]
+        pos[0, :, 3] = abs_references[construction_table.iloc[0, 2]][0]
+        pos[1, :, 3] = abs_references[construction_table.iloc[1, 2]][0]
+        pos[2, :, 3] = abs_references[construction_table.iloc[2, 2]][0]
+        pos[3:, :, 3] = self.loc[construction_table.iloc[3:, 2], coords]
 
-            pos[0, :, 3] = abs_references[construction_table.iloc[0, 2]][0]
-            pos[1, :, 3] = abs_references[construction_table.iloc[1, 2]][0]
-            pos[2, :, 3] = abs_references[construction_table.iloc[2, 2]][0]
-            pos[3:, :, 3] = self.loc[construction_table.iloc[3:, 2], coords]
+        IB = pos[:, :, 1] - pos[:, :, 0]
+        BA = pos[:, :, 2] - pos[:, :, 1]
+        AD = pos[:, :, 3] - pos[:, :, 2]
+        return IB, BA, AD
 
-            IB = pos[:, :, 1] - pos[:, :, 0]
-            BA = pos[:, :, 2] - pos[:, :, 1]
-            AD = pos[:, :, 3] - pos[:, :, 2]
-            return IB, BA, AD
+    def _calculate_zmat_values(self, IB, BA, AD):
+        values = np.empty_like(IB, dtype='float64')
 
         def get_bond_length(IB):
             return np.linalg.norm(IB, axis=1)
@@ -513,7 +513,6 @@ class Cartesian_give_zmat(Cartesian_core):
             to_add[where_to_modify] = 360
             return np.nan_to_num(to_add + sign * dihedrals)
 
-        IB, BA, AD = get_position(self, construction_table)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             values[:, 0] = get_bond_length(IB)
@@ -543,8 +542,9 @@ class Cartesian_give_zmat(Cartesian_core):
         zmat_frame.loc[:, 'atom'] = self.loc[c_table.index, 'atom']
         zmat_frame.loc[:, ['b', 'a', 'd']] = c_table
 
-        zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = \
-            self._calculate_values(c_table)
+        IB, BA, AD = self._get_bond_vectors(c_table)
+        zmat_values = self._calculate_zmat_values(IB, BA, AD)
+        zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = zmat_values
 
         zmatrix = Zmat(zmat_frame)
         keys_to_keep = ['abs_refs']

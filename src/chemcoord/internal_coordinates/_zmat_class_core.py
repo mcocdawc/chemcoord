@@ -385,7 +385,76 @@ class Zmat_core(_common_class):
                 break
         return same_atoms
 
-    def _test_give_cartesian(self):
+    def _insert_dummy_cart(self, exception):
+        """Insert dummy atom into the already built cartesian of exception
+        """
+        def get_normal_vector(cartesian, reference_labels):
+            b_pos, a_pos, d_pos = cartesian._get_positions(reference_labels)
+            BA = a_pos - b_pos
+            AD = d_pos - a_pos
+            N1 = np.cross(BA, AD)
+            n1 = N1 / np.linalg.norm(N1)
+            return n1
+
+        def insert_dummy(cartesian, reference_labels, n1):
+            cartesian = cartesian.copy()
+            b_pos, a_pos, d_pos = cartesian._get_positions(reference_labels)
+            BA = a_pos - b_pos
+            N2 = np.cross(n1, BA)
+            n2 = N2 / np.linalg.norm(N2)
+            i_dummy = max(self.index) + 1
+            cartesian.loc[i_dummy, 'atom'] = 'X'
+            cartesian.loc[i_dummy, ['x', 'y', 'z']] = a_pos + n2
+            return cartesian, i_dummy
+
+        reference_labels = self.loc[exception.index, ['b', 'a', 'd']]
+        n1 = get_normal_vector(self._metadata['cartesian'], reference_labels)
+        return insert_dummy(exception.already_built_cartesian,
+                            reference_labels, n1)
+
+    def _insert_dummy_zmat(self, exception):
+        cols = ['b', 'a', 'd']
+        dummy_cart, i_dummy = self._insert_dummy_cart(exception)
+        d = self.loc[exception.index, 'd']
+
+        def calc_zmat_values():
+            reference_labels = [i_dummy] + list(self.loc[d, cols])
+            pos = dummy_cart._get_positions(reference_labels)
+            pos = np.array(pos).T[None, :, :]
+            IB = pos[:, :, 1] - pos[:, :, 0]
+            BA = pos[:, :, 2] - pos[:, :, 1]
+            AD = pos[:, :, 3] - pos[:, :, 2]
+            return dummy_cart._calculate_zmat_values(IB, BA, AD)[0]
+
+        def insert_row(df, pos, key):
+            if pos < len(df):
+                middle = df.iloc[pos:(pos + 1)]
+                middle.index = [key]
+                start, end = df.iloc[:pos], df.iloc[pos:]
+                return pd.concat([start, middle, end])
+            elif pos == len(df):
+                start = df.copy()
+                start.loc[key] = start.iloc[-1]
+                return start
+
+        zframe = insert_row(exception.zmat_after_assignment,
+                            self.index.get_loc(exception.index), i_dummy)
+        zframe.loc[exception.index, 'd'] = i_dummy
+        zframe.loc[i_dummy, 'atom'] = 'X'
+        zframe.loc[i_dummy, cols] = self.loc[d, cols]
+        zframe.loc[i_dummy, ['bond', 'angle', 'dihedral']] = calc_zmat_values()
+
+        zmat = self.__class__(zframe)
+        zmat.metadata = self.metadata.copy()
+        keys_to_keep = ['abs_refs', 'cartesian', 'order']
+        for key in keys_to_keep:
+            try:
+                zmat._metadata[key] = self._metadata[key].copy()
+            except KeyError:
+                pass
+        return zmat
+
+    def give_cartesian(self):
         abs_refs = self._metadata['abs_refs']
         old_index = self.index
         rename = dict(enumerate(old_index))
@@ -400,114 +469,25 @@ class Zmat_core(_common_class):
             i = rename[row]
             self.change_numbering(old_index, inplace=True)
             b, a, d = self.loc[i, ['b', 'a', 'd']]
-            raise InvalidReference(i=i, b=b, a=a, d=d)
-        return positions
 
-    def insert_dummy(self, i, references):
-        """Insert dummy atom into ``self``
+            self.change_numbering(old_index, inplace=True)
+            xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
+                                     index=self.index[:row], dtype=float)
+            xyz_frame['atom'] = self.loc[xyz_frame.index, 'atom']
+            xyz_frame.loc[:, ['x', 'y', 'z']] = positions[:row]
 
-        ``i`` uses introduced dummy atom as reference (instead of ``d``)
-        """
-        coords = ['x', 'y', 'z']
-        cols = ['b', 'a', 'd']
-        i_dummy = max(self.index) + 1
+            from chemcoord.cartesian_coordinates.cartesian_class_main \
+                import Cartesian
+            cartesian = Cartesian(xyz_frame)
+            raise InvalidReference(i=i, b=b, a=a, d=d,
+                                   already_built_cartesian=cartesian)
 
-        def insert_row(df, pos, key):
-            if pos < len(df):
-                middle = df.iloc[pos:(pos + 1)]
-                middle.index = [key]
-                start, end = df.iloc[:pos], df.iloc[pos:]
-                return pd.concat([start, middle, end])
-            elif pos == len(df):
-                start = df.copy()
-                start.loc[key] = start.iloc[-1]
-                return start
-
-        zframe = insert_row(self._frame.copy(), self.index.get_loc(i), i_dummy)
-        zframe.loc[i_dummy, 'atom'] = 'X'
-        zframe.loc[i_dummy, cols] = zframe.loc[references['d'], cols]
-
-        def get_dummy_cart_pos(xyz, reference_labels):
-            b_pos, a_pos, d_pos = xyz._give_location(reference_labels)
-            BA = a_pos - b_pos
-            AD = d_pos - a_pos
-            N1 = np.cross(BA, AD)
-            n1 = N1 / np.linalg.norm(N1)
-            N2 = np.cross(N1, BA)
-            n2 = N2 / np.linalg.norm(N2)
-            return a_pos + n2
-
-        xyz = self._metadata['cartesian']
-        dummy_pos = get_dummy_cart_pos(xyz, zframe.loc[i, cols])
-        xyz.loc[i_dummy, 'atom'] = 'X'
-        xyz.loc[i_dummy, ['x', 'y', 'z']] = dummy_pos
-        return xyz
-
-        def get_zmat_values(positions):
-            IB = positions[1] - positions[0]
-            BA = positions[2] - positions[1]
-            AD = positions[3] - positions[2]
-
-            bond = np.linalg.norm(IB, axis=1)
-
-            ba = BA / np.linalg.norm(BA, axis=1)[:, None]
-            bi = -1 * IB / np.linalg.norm(IB, axis=1)[:, None]
-            dot_product = np.sum(bi * ba, axis=1)
-            dot_product[dot_product > 1] = 1
-            dot_product[dot_product < -1] = -1
-
-            N1 = np.cross(IB, BA, axis=1)
-            N2 = np.cross(BA, AD, axis=1)
-            n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
-            dot_product = np.sum(n1 * n2, axis=1)
-            dot_product[dot_product > 1] = 1
-            dot_product[dot_product < -1] = -1
-            dihedrals = np.degrees(np.arccos(dot_product))
-            # the next lines are to test the direction of rotation.
-            # is a dihedral really 90 or 270 degrees?
-            # Equivalent to direction of rotation of dihedral
-            where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) > 0
-            where_to_modify = np.nonzero(where_to_modify)[0]
-            sign = np.full_like(dihedrals, 1)
-            to_add = np.full_like(dihedrals, 0)
-            sign[where_to_modify] = -1
-            to_add[where_to_modify] = 360
-            return bond, angle, dihedral
-
-        zframe.loc[i, 'd'] = i_dummy
-
-
-        # [dummy_pos] + xyz._give_location(zframe.loc[i_dummy, cols])
-        # get_zmat_values
-
-        # calculate values for i and 'X'
-
-
-        # modify zframe
-
-        # return self.__class__(zframe)
-        return zmolecule
-
-    def give_cartesian(self):
-        abs_refs = self._metadata['abs_refs']
-        old_index = self.index
-        rename = dict(enumerate(old_index))
-        self.change_numbering(inplace=True)
-        c_table = self.loc[:, ['b', 'a', 'd']].values
-        zmat_values = self.loc[:, ['bond', 'angle', 'dihedral']].values
-        zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
-        positions = np.empty((len(self), 3), dtype='float64')
-
-        row = _jit_calculate_everything(positions, c_table, zmat_values)
-        if row < len(self) - 1:
-            print('Error handling required', rename[row])
-
-        xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'], dtype=float)
+        self.change_numbering(old_index, inplace=True)
+        xyz_frame = pd.DataFrame(
+            index=self.index, columns=['atom', 'x', 'y', 'z'], dtype=float)
         xyz_frame['atom'] = self['atom']
         xyz_frame.loc[:, ['x', 'y', 'z']] = positions
 
-        self.change_numbering(old_index, inplace=True)
-        xyz_frame.index = self.index
         from chemcoord.cartesian_coordinates.cartesian_class_main \
             import Cartesian
         return Cartesian(xyz_frame)

@@ -22,7 +22,7 @@ ERR_CODE_InvalidReference = 202
 class InvalidReference(UndefinedCoordinateSystem): # noqa
     def __init__(self, message='', i=None, b=None, a=None, d=None,
                  already_built_cartesian=None,
-                 zmat_before_assignment=None):
+                 zmat_after_assignment=None):
         self.message = message
         if i:
             self.index = i
@@ -32,8 +32,8 @@ class InvalidReference(UndefinedCoordinateSystem): # noqa
             self.references = references
         if already_built_cartesian:
             self.already_built_cartesian = already_built_cartesian
-        if zmat_before_assignment:
-            self.zmat_before_assignment = zmat_before_assignment
+        if zmat_after_assignment:
+            self.zmat_after_assignment = zmat_after_assignment
 
     def __str__(self):
         return repr(self.message)

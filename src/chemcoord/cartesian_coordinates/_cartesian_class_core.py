@@ -97,7 +97,10 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         else:
-            other = np.array(other, dtype='f8')
+            try:
+                other = np.array(other, dtype='f8')
+            except TypeError:
+                pass
             new.loc[:, coords] = self.loc[:, coords] + other
         return new
 
@@ -111,7 +114,10 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         else:
-            other = np.array(other, dtype='f8')
+            try:
+                other = np.array(other, dtype='f8')
+            except TypeError:
+                pass
             new.loc[:, coords] = self.loc[:, coords] - other
         return new
 
@@ -122,7 +128,10 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         else:
-            other = np.array(other, dtype='f8')
+            try:
+                other = np.array(other, dtype='f8')
+            except TypeError:
+                pass
             new.loc[:, coords] = other - self.loc[:, coords]
         return new
 
@@ -133,7 +142,10 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         else:
-            other = np.array(other, dtype='f8')
+            try:
+                other = np.array(other, dtype='f8')
+            except TypeError:
+                pass
             new.loc[:, coords] = self.loc[:, coords] * other
         return new
 
@@ -147,7 +159,10 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         else:
-            other = np.array(other, dtype='f8')
+            try:
+                other = np.array(other, dtype='f8')
+            except TypeError:
+                pass
             new.loc[:, coords] = self.loc[:, coords] / other
         return new
 
@@ -158,7 +173,10 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
         else:
-            other = np.array(other, dtype='f8')
+            try:
+                other = np.array(other, dtype='f8')
+            except TypeError:
+                pass
             new.loc[:, coords] = other / self.loc[:, coords]
         return new
 
@@ -1106,7 +1124,7 @@ class Cartesian_core(_common_class):
         array = self.loc[indexlist, ['x', 'y', 'z']].values
         return array
 
-    def _give_location(self, indices):
+    def _get_positions(self, indices):
         pos = []
         for i in indices:
             try:
