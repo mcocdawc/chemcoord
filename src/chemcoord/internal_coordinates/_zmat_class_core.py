@@ -422,33 +422,31 @@ class Zmat_core(_common_class):
                 start = df.copy()
                 start.loc[key] = start.iloc[-1]
                 return start
+
         zframe = insert_row(self._frame.copy(), self.index.get_loc(i), i_dummy)
         zframe.loc[i_dummy, 'atom'] = 'X'
         zframe.loc[i_dummy, cols] = zframe.loc[references['d'], cols]
-        zframe.loc[i, 'd'] = i_dummy
+
+        def get_dummy_cart_pos(xyz, reference_labels):
+            b_pos, a_pos, d_pos = xyz._give_location(reference_labels)
+            BA = a_pos - b_pos
+            AD = d_pos - a_pos
+            N1 = np.cross(BA, AD)
+            n1 = N1 / np.linalg.norm(N1)
+            N2 = np.cross(N1, BA)
+            n2 = N2 / np.linalg.norm(N2)
+            return a_pos + n2
 
         xyz = self._metadata['cartesian']
+        dummy_pos = get_dummy_cart_pos(xyz, zframe.loc[i, cols])
+        xyz.loc[i_dummy, 'atom'] = 'X'
+        xyz.loc[i_dummy, ['x', 'y', 'z']] = dummy_pos
+        return xyz
 
-        def get_dummy_cart_pos(xyz, b, a, d):
-            def get_reference_pos(xyz, b, a, d):
-                return b_pos, a_pos, d_pos
-            b_pos, a_pos, d_pos = get_reference_pos(xyz, b, a, d)
-            BA = a_pos - b_pos
-            AD = d_pos - a_pos
-            N1 = np.cross(BA, AD, axis=1)
-            N2 = np.cross(N1, BA, axis=1)
-            n2 = N2 / np.linalg.norm(x, N2, axis=1)
-            return a_pos + n2 * 2
-
-        dummy_pos = get_dummy_cart_pos(xyz, *zframe.loc[i_dummy, cols])
-        return dummy_pos
-
-        # calculate values for i and 'X'
-
-        def get_values(i_pos, b_pos, a_pos, d_pos):
-            IB = b_pos - i_pos
-            BA = a_pos - b_pos
-            AD = d_pos - a_pos
+        def get_zmat_values(positions):
+            IB = positions[1] - positions[0]
+            BA = positions[2] - positions[1]
+            AD = positions[3] - positions[2]
 
             bond = np.linalg.norm(IB, axis=1)
 
@@ -475,6 +473,15 @@ class Zmat_core(_common_class):
             sign[where_to_modify] = -1
             to_add[where_to_modify] = 360
             return bond, angle, dihedral
+
+        zframe.loc[i, 'd'] = i_dummy
+
+
+        # [dummy_pos] + xyz._give_location(zframe.loc[i_dummy, cols])
+        # get_zmat_values
+
+        # calculate values for i and 'X'
+
 
         # modify zframe
 

@@ -1099,6 +1099,15 @@ class Cartesian_core(_common_class):
         array = self.loc[indexlist, ['x', 'y', 'z']].values
         return array
 
+    def _give_location(self, indices):
+        pos = []
+        for i in indices:
+            try:
+                pos.append(self.loc[i, ['x', 'y', 'z']].values.astype('f8'))
+            except KeyError:
+                pos.append(self._metadata['abs_refs'][i][0])
+        return pos
+
     def distance_to(self,
                     origin=None,
                     other_atoms=None,
