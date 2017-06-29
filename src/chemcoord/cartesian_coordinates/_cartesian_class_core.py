@@ -65,6 +65,7 @@ class Cartesian_core(_common_class):
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
             frame = pd.DataFrame(selected).T
+            frame = frame.apply(pd.to_numeric, errors='ignore')
             if self._required_cols <= set(frame.columns):
                 selected = frame
             else:
@@ -96,6 +97,7 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         else:
+            other = np.array(other, dtype='f8')
             new.loc[:, coords] = self.loc[:, coords] + other
         return new
 
@@ -109,6 +111,7 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         else:
+            other = np.array(other, dtype='f8')
             new.loc[:, coords] = self.loc[:, coords] - other
         return new
 
@@ -119,6 +122,7 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         else:
+            other = np.array(other, dtype='f8')
             new.loc[:, coords] = other - self.loc[:, coords]
         return new
 
@@ -129,6 +133,7 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         else:
+            other = np.array(other, dtype='f8')
             new.loc[:, coords] = self.loc[:, coords] * other
         return new
 
@@ -142,6 +147,7 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         else:
+            other = np.array(other, dtype='f8')
             new.loc[:, coords] = self.loc[:, coords] / other
         return new
 
@@ -152,6 +158,7 @@ class Cartesian_core(_common_class):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
         else:
+            other = np.array(other, dtype='f8')
             new.loc[:, coords] = other / self.loc[:, coords]
         return new
 
