@@ -135,27 +135,25 @@ class Zmat_core(_common_class):
     # overwrites existing method
     def _repr_html_(self):
         out = self.copy()
-        cols = ['b', 'a', 'd']
         representation = {key: out._metadata['abs_refs'][key][1]
                           for key in out._metadata['abs_refs']}
 
-        def f(x):
-            if len(x) == 1:
-                return x[0]
-            else:
+        def absolute_ref_formatter(x, representation=representation):
+            try:
+                return representation[x]
+            except KeyError:
                 return x
 
-        for row, i in enumerate(out._metadata['order'][:3]):
-            new = f([representation[x] for x in out.loc[i, cols[row:]]])
-            out.loc[i, cols[row:]] = new
-
-        def formatter(x):
+        def sympy_formatter(x):
             if (isinstance(x, sympy.Basic)):
                 return '${}$'.format(sympy.latex(x))
             else:
                 return x
 
-        out = out.applymap(formatter)
+        for col in ['b', 'a', 'd']:
+            out[col] = out[col].apply(absolute_ref_formatter)
+        for col in ['bond', 'angle', 'dihedral']:
+            out[col] = out[col].apply(sympy_formatter)
 
         def insert_before_substring(insert_txt, substr, txt):
             """Under the assumption that substr only appears once.
