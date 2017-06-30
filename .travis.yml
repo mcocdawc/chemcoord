@@ -2,7 +2,9 @@ notifications:
   email:
     on_success: never # default: change
     on_failure: always # default: always
-
+os:
+  - linux
+  - osx
 sudo: required
 dist: trusty
 group: edge
