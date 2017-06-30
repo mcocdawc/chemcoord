@@ -27,7 +27,7 @@ def back_and_forth(filepath):
     molecule1 = cc.Cartesian.read_xyz(filepath)
     zmolecule = molecule1.give_zmat()
     molecule2 = zmolecule.give_cartesian()
-    assert allclose(molecule1, molecule2, align=False)
+    assert allclose(molecule1, molecule2, align=False, atol=1e-7)
 
 
 def test_back_and_forth1():
