@@ -18,10 +18,13 @@ do
 
   conda-build --no-anaconda-upload \
               --python ${py_version} \
-              --output-folder "${root_dir}/${py_version}" .
+              --output-folder "${root_dir}/${py_version}" \
+              .
   for platform in osx-64 linux-{32,64} win-{32,64}
   do
-    conda-convert -p $platform -o "$root_dir/$py_version" "$package_path"
+    conda-convert --platform $platform \
+                  --output-dir "$root_dir/$py_version" \
+                  "$package_path"
     anaconda upload --force "$root_dir/$py_version/$platform/$package_name"
   done
 done
