@@ -19,7 +19,6 @@ def export(func):
 # have to be imported after export definition
 import chemcoord.utilities
 from chemcoord.utilities._print_versions import show_versions
-import chemcoord._generic_classes
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 from chemcoord.internal_coordinates.zmat_class_main import Zmat

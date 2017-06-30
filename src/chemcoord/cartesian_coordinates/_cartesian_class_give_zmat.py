@@ -13,14 +13,14 @@ from chemcoord._exceptions import \
     InvalidReference, \
     UndefinedCoordinateSystem
 from chemcoord.cartesian_coordinates._cartesian_class_core import \
-    Cartesian_core
+    CartesianCore
 from chemcoord.configuration import settings
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from collections import OrderedDict
 from itertools import permutations
 
 
-class Cartesian_give_zmat(Cartesian_core):
+class CartesianGiveZmat(CartesianCore):
     @staticmethod
     def _check_construction_table(construction_table):
         """Checks if a construction table uses valid references.
@@ -551,7 +551,7 @@ class Cartesian_give_zmat(Cartesian_core):
         keys_to_keep = ['abs_refs']
         for key in keys_to_keep:
             zmatrix._metadata[key] = self._metadata[key].copy()
-        zmatrix._metadata['cartesian'] = self.copy()
+        zmatrix._metadata['last_valid_cartesian'] = self.copy()
         return zmatrix
 
     def give_zmat(self, construction_table=None,

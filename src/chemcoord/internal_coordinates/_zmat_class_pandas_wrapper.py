@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 from chemcoord._exceptions import PhysicalMeaning
-import chemcoord._generic_classes._indexers as indexers
+import chemcoord.internal_coordinates._indexers as indexers
 import pandas as pd
 import sympy
 

@@ -9,7 +9,8 @@ try:
 except ImportError:
     pass
 from chemcoord._exceptions import PhysicalMeaning
-from chemcoord._generic_classes._common_class import _common_class
+from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
+    PandasWrapper
 from chemcoord.configuration import settings
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
@@ -24,15 +25,17 @@ from sortedcontainers import SortedSet
 import sys
 
 
-class Cartesian_core(_common_class):
+class CartesianCore(PandasWrapper):
 
     _required_cols = frozenset({'atom', 'x', 'y', 'z'})
+    _metadata_keys = frozenset({'abs_refs'})
+
     # Look into the numpy manual for description of __array_priority__:
     # https://docs.scipy.org/doc/numpy-1.12.0/reference/arrays.classes.html
     __array_priority__ = 15.0
 
     # overwrites existing method
-    def __init__(self, frame):
+    def __init__(self, frame, abs_refs=None):
         """How to initialize a Cartesian instance.
 
         Args:
@@ -51,12 +54,8 @@ class Cartesian_core(_common_class):
         self._frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
-        int_label = constants.int_label
-        self._metadata['abs_refs'] = {
-            int_label['origin']: (np.array([0., 0., 0.]), '$\\vec{0}$'),
-            int_label['e_x']: (np.array([1., 0., 0.]), '$\\vec{e}_x$'),
-            int_label['e_y']: (np.array([0., 1., 0.]), '$\\vec{e}_y$'),
-            int_label['e_z']: (np.array([0., 0., 1.]), '$\\vec{e}_z$')}
+        if abs_refs is None:
+            self._metadata['abs_refs'] = constants.absolute_refs
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
@@ -89,7 +88,7 @@ class Cartesian_core(_common_class):
     def __add__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        if isinstance(other, Cartesian_core):
+        if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         else:
@@ -106,7 +105,7 @@ class Cartesian_core(_common_class):
     def __sub__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        if isinstance(other, Cartesian_core):
+        if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         else:
@@ -120,7 +119,7 @@ class Cartesian_core(_common_class):
     def __rsub__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        if isinstance(other, Cartesian_core):
+        if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         else:
@@ -134,7 +133,7 @@ class Cartesian_core(_common_class):
     def __mul__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        if isinstance(other, Cartesian_core):
+        if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         else:
@@ -151,7 +150,7 @@ class Cartesian_core(_common_class):
     def __truediv__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        if isinstance(other, Cartesian_core):
+        if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         else:
@@ -165,7 +164,7 @@ class Cartesian_core(_common_class):
     def __rtruediv__(self, other):
         coords = ['x', 'y', 'z']
         new = self.copy()
-        if isinstance(other, Cartesian_core):
+        if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
         else:
@@ -208,17 +207,15 @@ class Cartesian_core(_common_class):
         # test
         return ase.Atoms(atoms, positions)
 
-    # overwrites existing method
     def copy(self):
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
-        keys_to_keep = ['bond_dict', 'val_bond_dict', 'abs_refs']
-        for key in keys_to_keep:
-            try:
-                molecule._metadata[key] = self._metadata[key].copy()
-            except KeyError:
-                pass
+        molecule._metadata = self._metadata.copy()
         return molecule
+
+    def _copy_metadata_to(self, other):
+        for key in self._metadata_keys:
+            other._metadata[key] = self._metadata[key].copy()
 
     @staticmethod
     @jit(nopython=True)
@@ -1409,3 +1406,102 @@ class Cartesian_core(_common_class):
             if not same_atoms:
                 break
         return same_atoms
+
+    def add_data(self, new_cols=None):
+        """Adds a column with the requested data.
+
+        If you want to see for example the mass, the colormap used in
+        jmol and the block of the element, just use::
+
+            ['mass', 'jmol_color', 'block']
+
+        The underlying ``pd.DataFrame`` can be accessed with
+        ``constants.elements``.
+        To see all available keys use ``constants.elements.info()``.
+
+        The data comes from the module `mendeleev
+        <http://mendeleev.readthedocs.org/en/latest/>`_ written
+        by Lukasz Mentel.
+
+        Please note that I added three columns to the mendeleev data::
+
+            ['atomic_radius_cc', 'atomic_radius_gv', 'gv_color',
+                'valency']
+
+        The ``atomic_radius_cc`` is used by default by this module
+        for determining bond lengths.
+        The three others are taken from the MOLCAS grid viewer written
+        by Valera Veryazov.
+
+        Args:
+            new_cols (str): You can pass also just one value.
+                E.g. ``'mass'`` is equivalent to ``['mass']``. If
+                ``new_cols`` is ``None`` all available data
+                is returned.
+            inplace (bool):
+
+        Returns:
+            Cartesian:
+        """
+        atoms = self['atom']
+        data = constants.elements
+        if pd.api.types.is_list_like(new_cols):
+            new_cols = set(new_cols)
+            pass
+        elif new_cols is None:
+            new_cols = set(data.columns)
+        else:
+            new_cols = [new_cols]
+        new_frame = data.loc[atoms, set(new_cols) - set(self.columns)]
+        new_frame.index = self.index
+        return self.__class__(pd.concat([self._frame, new_frame], axis=1))
+
+    def total_mass(self):
+        """Returns the total mass in g/mol.
+
+        Args:
+            None
+
+        Returns:
+            float:
+        """
+        try:
+            mass = self.loc[:, 'mass'].sum()
+        except KeyError:
+            mass_molecule = self.add_data('mass')
+            mass = mass_molecule.loc[:, 'mass'].sum()
+        return mass
+
+    def _convert_nan_int(self):
+        """The following functions are necessary to deal with the fact,
+        that pandas does not support "NaN" for integers.
+        It was written by the user LondonRob at StackExchange:
+        http://stackoverflow.com/questions/25789354/
+        exporting-ints-with-missing-values-to-csv-in-pandas/31208873#31208873
+        Begin of the copied code snippet
+        """
+        COULD_BE_ANY_INTEGER = 0
+
+        def _lost_precision(s):
+            """The total amount of precision lost over Series `s`
+            during conversion to int64 dtype
+            """
+            try:
+                diff = (s - s.fillna(COULD_BE_ANY_INTEGER).astype(np.int64))
+                return diff.sum()
+            except ValueError:
+                return np.nan
+
+        def _nansafe_integer_convert(s, epsilon=1e-9):
+            """Convert Series `s` to an object type with `np.nan`
+            represented as an empty string
+            """
+            if _lost_precision(s) < epsilon:
+                # Here's where the magic happens
+                as_object = s.fillna(COULD_BE_ANY_INTEGER)
+                as_object = as_object.astype(np.int64).astype(np.object)
+                as_object[s.isnull()] = "nan"
+                return as_object
+            else:
+                return s
+        return self.apply(_nansafe_integer_convert)

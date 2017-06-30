@@ -8,10 +8,10 @@ from __future__ import unicode_literals
 from chemcoord._exceptions import ERR_CODE_OK, \
     PhysicalMeaning, \
     InvalidReference, ERR_CODE_InvalidReference
-from chemcoord._generic_classes._common_class import _common_class
 import chemcoord.constants as constants
 import chemcoord.internal_coordinates._indexers as indexers
-from chemcoord.internal_coordinates.zmat_pandas_wrapper import PandasWrapper
+from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
+    PandasWrapper
 from chemcoord.utilities.algebra_utilities import \
     _jit_normalize, \
     _jit_rotation_matrix, \
@@ -93,7 +93,7 @@ class ZmatCore(PandasWrapper):
     """
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
-    _metadata_keys = frozenset({'abs_refs', 'cartesian'})
+    _metadata_keys = frozenset({'abs_refs', 'last_valid_cartesian'})
 
     def __init__(self, frame, abs_refs=None, cartesian=None):
         """How to initialize a Zmat instance.
@@ -118,14 +118,9 @@ class ZmatCore(PandasWrapper):
         self._metadata = {}
 
         if abs_refs is None:
-            int_label = constants.int_label
-            self._metadata['abs_refs'] = {
-                int_label['origin']: (np.array([0., 0., 0.]), '$\\vec{0}$'),
-                int_label['e_x']: (np.array([1., 0., 0.]), '$\\vec{e}_x$'),
-                int_label['e_y']: (np.array([0., 1., 0.]), '$\\vec{e}_y$'),
-                int_label['e_z']: (np.array([0., 0., 1.]), '$\\vec{e}_z$')}
+            self._metadata['abs_refs'] = constants.absolute_refs
         if cartesian is None:
-            self._metadata['cartesian'] = self.give_cartesian()
+            self._metadata['last_valid_cartesian'] = self.give_cartesian()
 
     def copy(self):
         molecule = self.__class__(self._frame)
@@ -315,7 +310,7 @@ class ZmatCore(PandasWrapper):
     def _insert_dummy_cart(self, exception):
         """Insert dummy atom into the already built cartesian of exception
         """
-        def get_normal_vector(cartesian, reference_labels):
+        def get_normal_vec(cartesian, reference_labels):
             b_pos, a_pos, d_pos = cartesian._get_positions(reference_labels)
             BA = a_pos - b_pos
             AD = d_pos - a_pos
@@ -334,10 +329,10 @@ class ZmatCore(PandasWrapper):
             cartesian.loc[i_dummy, ['x', 'y', 'z']] = a_pos + n2
             return cartesian, i_dummy
 
-        reference_labels = self.loc[exception.index, ['b', 'a', 'd']]
-        n1 = get_normal_vector(self._metadata['cartesian'], reference_labels)
+        ref_labels = self.loc[exception.index, ['b', 'a', 'd']]
+        n1 = get_normal_vec(self._metadata['last_valid_cartesian'], ref_labels)
         return insert_dummy(exception.already_built_cartesian,
-                            reference_labels, n1)
+                            ref_labels, n1)
 
     def _insert_dummy_zmat(self, exception):
         cols = ['b', 'a', 'd']

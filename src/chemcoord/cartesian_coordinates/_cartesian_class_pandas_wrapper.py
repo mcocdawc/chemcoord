@@ -5,12 +5,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 from chemcoord._exceptions import PhysicalMeaning
-import chemcoord._generic_classes._indexers as indexers
+import chemcoord.cartesian_coordinates._indexers as indexers
 import pandas as pd
 import sympy
 
 
-class _pandas_wrapper(object):
+class PandasWrapper(object):
     """This class provides wrappers for :class:`pandas.DataFrame` methods.
 
     It has the same behaviour as the :class:`~pandas.DataFrame`
@@ -54,34 +54,16 @@ class _pandas_wrapper(object):
         a :class:`~pandas.Series` instance is returned for one dimensional
         slices and a :class:`~pandas.DataFrame` instance in all other cases.
 
-        Cartesian:
-            In the case of a :class:`~chemcoord.Cartesian` class this means:
+        In the case of a :class:`~chemcoord.Cartesian` class this means:
 
-                ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
-                :class:`~chemcoord.Cartesian`.
+            ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
+            :class:`~chemcoord.Cartesian`.
 
-                ``molecule.loc[:, ['atom', 'x']]`` returns a
-                :class:`~pandas.DataFrame`.
+            ``molecule.loc[:, ['atom', 'x']]`` returns a
+            :class:`~pandas.DataFrame`.
 
-                ``molecule.loc[:, 'atom']`` returns a
-                :class:`~pandas.Series`.
-
-        Zmat:
-            If the following definition is used::
-
-                cols = ['atom', 'b', 'bond', 'a', 'angle',
-                        'd', 'dihedral']
-
-            The return types in the case of a :class:`~chemcoord.Zmat`
-            instance are:
-
-                ``molecule.loc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
-
-                ``molecule.loc[:, ['atom', 'b']]`` returns a
-                :class:`~pandas.DataFrame`.
-
-                ``molecule.loc[:, 'atom']`` returns a
-                :class:`~pandas.Series`.
+            ``molecule.loc[:, 'atom']`` returns a
+            :class:`~pandas.Series`.
         """
         return indexers._Loc(self)
 
@@ -99,34 +81,16 @@ class _pandas_wrapper(object):
         a :class:`~pandas.Series` instance is returned for one dimensional
         slices and a :class:`~pandas.DataFrame` instance in all other cases.
 
-        Cartesian:
-            In the case of a :class:`~chemcoord.Cartesian` class this means:
+        In the case of a :class:`~chemcoord.Cartesian` class this means:
 
-                ``molecule.iloc[:, ['atom', 'x', 'y', 'z']]`` returns a
-                :class:`~chemcoord.Cartesian`.
+            ``molecule.iloc[:, ['atom', 'x', 'y', 'z']]`` returns a
+            :class:`~chemcoord.Cartesian`.
 
-                ``molecule.iloc[:, ['atom', 'x']]`` returns a
-                :class:`~pandas.DataFrame`.
+            ``molecule.iloc[:, ['atom', 'x']]`` returns a
+            :class:`~pandas.DataFrame`.
 
-                ``molecule.iloc[:, 'atom']`` returns a
-                :class:`~pandas.Series`.
-
-        Zmat:
-            If the following definition is used::
-
-                cols = ['atom', 'b', 'bond', 'a', 'angle',
-                        'd', 'dihedral']
-
-            The return types in the case of a :class:`~chemcoord.Zmat`
-            instance are:
-
-                ``molecule.iloc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
-
-                ``molecule.iloc[:, ['atom', 'b']]`` returns a
-                :class:`~pandas.DataFrame`.
-
-                ``molecule.iloc[:, 'atom']`` returns a
-                :class:`~pandas.Series`.
+            ``molecule.iloc[:, 'atom']`` returns a
+            :class:`~pandas.Series`.
         """
         return indexers._ILoc(self)
 
@@ -253,12 +217,6 @@ class _pandas_wrapper(object):
         insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
         return insert_before_substring(insert_txt, '<thead>', html_txt)
 
-    def copy(self):
-        molecule = self.__class__(self._frame)
-        molecule.metadata = self.metadata.copy()
-        molecule._metadata = self._metadata.copy()
-        return molecule
-
     def sort_values(self, by, axis=0, ascending=True, inplace=False,
                     kind='quicksort', na_position='last'):
         """Sort by the values along either axis
@@ -358,8 +316,8 @@ class _pandas_wrapper(object):
         if not isinstance(other, self.__class__):
             raise ValueError('May only append instances of same type.')
         new_frame = self._frame.append(other._frame,
-                                      ignore_index=ignore_index,
-                                      verify_integrity=verify_integrity)
+                                       ignore_index=ignore_index,
+                                       verify_integrity=verify_integrity)
         return self.__class__(new_frame)
 
     def insert(self, loc, column, value, allow_duplicates=False,
@@ -369,7 +327,7 @@ class _pandas_wrapper(object):
         Wrapper around the :meth:`pandas.DataFrame.insert` method.
         """
         self._frame.insert(loc, column, value,
-                          allow_duplicates=allow_duplicates)
+                           allow_duplicates=allow_duplicates)
 
     def apply(self, *args, **kwargs):
         """Applies function along input axis of DataFrame.
@@ -400,21 +358,13 @@ class _pandas_wrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.
         """
-        return self._frame.to_string(buf=buf,
-                                    columns=columns,
-                                    col_space=col_space,
-                                    header=header,
-                                    index=index,
-                                    na_rep=na_rep,
-                                    formatters=formatters,
-                                    float_format=float_format,
-                                    sparsify=sparsify,
-                                    index_names=index_names,
-                                    justify=justify,
-                                    line_width=line_width,
-                                    max_rows=max_rows,
-                                    max_cols=max_cols,
-                                    show_dimensions=show_dimensions)
+        return self._frame.to_string(
+            buf=buf, columns=columns, col_space=col_space, header=header,
+            index=index, na_rep=na_rep, formatters=formatters,
+            float_format=float_format, sparsify=sparsify,
+            index_names=index_names, justify=justify, line_width=line_width,
+            max_rows=max_rows, max_cols=max_cols,
+            show_dimensions=show_dimensions)
 
     def to_latex(self, buf=None, columns=None, col_space=None, header=True,
                  index=True, na_rep='NaN', formatters=None, float_format=None,
@@ -428,16 +378,11 @@ class _pandas_wrapper(object):
         Requires ``\\usepackage{booktabs}``.
         Wrapper around the :meth:`pandas.DataFrame.to_latex` method.
         """
-        return self._frame.to_latex(buf=buf, columns=columns,
-                                   col_space=col_space, header=header,
-                                   index=index, na_rep=na_rep,
-                                   formatters=formatters,
-                                   float_format=float_format,
-                                   sparsify=sparsify, index_names=index_names,
-                                   bold_rows=bold_rows,
-                                   column_format=column_format,
-                                   longtable=longtable, escape=escape,
-                                   encoding=encoding, decimal=decimal,
-                                   multicolumn=multicolumn,
-                                   multicolumn_format=multicolumn_format,
-                                   multirow=multirow)
+        return self._frame.to_latex(
+            buf=buf, columns=columns, col_space=col_space, header=header,
+            index=index, na_rep=na_rep, formatters=formatters,
+            float_format=float_format, sparsify=sparsify,
+            index_names=index_names, bold_rows=bold_rows,
+            column_format=column_format, longtable=longtable, escape=escape,
+            encoding=encoding, decimal=decimal, multicolumn=multicolumn,
+            multicolumn_format=multicolumn_format, multirow=multirow)

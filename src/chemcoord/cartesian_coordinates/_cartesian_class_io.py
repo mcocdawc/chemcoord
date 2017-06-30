@@ -6,7 +6,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from chemcoord.cartesian_coordinates._cartesian_class_core \
-    import Cartesian_core
+    import CartesianCore
 from chemcoord.configuration import settings
 from io import open
 import os
@@ -17,7 +17,7 @@ from threading import Thread
 import warnings
 
 
-class Cartesian_io(Cartesian_core):
+class CartesianIO(CartesianCore):
     """This class provides IO-methods.
 
     Contains ``write_filetype`` and ``read_filetype`` methods
