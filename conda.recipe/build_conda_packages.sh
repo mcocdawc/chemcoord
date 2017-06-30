@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # ====================================================
 # Please note the bug, that for conda-build the option '--output' does

@@ -11,8 +11,8 @@ requirements:
     - setuptools
     - numpy
     - scipy
-    - pandas
-    - numba
+    - pandas >=0.20
+    - numba >=0.30
     - sortedcontainers
     - sympy
 
@@ -20,8 +20,8 @@ requirements:
     - python
     - numpy
     - scipy
-    - pandas
-    - numba
+    - pandas >=0.20
+    - numba >=0.30
     - sortedcontainers
     - sympy
 
