@@ -23,6 +23,7 @@ class InvalidReference(UndefinedCoordinateSystem): # noqa
     def __init__(self, message=None, i=None, b=None, a=None, d=None,
                  already_built_cartesian=None,
                  zmat_after_assignment=None):
+                #  zmat_before_assignment=None,):
         self.message = message
         if i:
             self.index = i
@@ -34,6 +35,8 @@ class InvalidReference(UndefinedCoordinateSystem): # noqa
             self.already_built_cartesian = already_built_cartesian
         if zmat_after_assignment:
             self.zmat_after_assignment = zmat_after_assignment
+        # if zmat_before_assignment:
+        #     self.zmat_after_assignment = zmat_after_assignment
 
     def __str__(self):
         if self.message is None:

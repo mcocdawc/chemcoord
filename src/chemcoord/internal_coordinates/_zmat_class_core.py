@@ -96,7 +96,7 @@ class ZmatCore(PandasWrapper):
                                 'd', 'dihedral'})
     _metadata_keys = frozenset({'abs_refs', 'last_valid_cartesian'})
 
-    def __init__(self, frame, abs_refs=None, cartesian=None):
+    def __init__(self, frame, metadata=None, _metadata=None):
         """How to initialize a Zmat instance.
 
         Args:
@@ -115,13 +115,18 @@ class ZmatCore(PandasWrapper):
             raise PhysicalMeaning('There are columns missing for a '
                                   'meaningful description of a molecule')
         self._frame = frame.copy()
-        self.metadata = {}
-        self._metadata = {}
-
-        if abs_refs is None:
-            self._metadata['abs_refs'] = constants.absolute_refs
-        if cartesian is None:
-            self._metadata['last_valid_cartesian'] = self.give_cartesian()
+        if metadata is None:
+            self.metadata = {}
+        else:
+            self.metadata = metadata.copy()
+        if _metadata is None:
+            self._metadata = {}
+        else:
+            self._metadata = _metadata.copy()
+            if 'abs_refs' not in _metadata:
+                self._metadata['abs_refs'] = constants.absolute_refs
+            if 'last_valid_cartesian' not in _metadata:
+                self._metadata['last_valid_cartesian'] = self.give_cartesian()
 
     def copy(self):
         molecule = self.__class__(self._frame)
@@ -371,9 +376,14 @@ class ZmatCore(PandasWrapper):
         zframe.loc[i_dummy, cols] = self.loc[d, cols]
         zframe.loc[i_dummy, ['bond', 'angle', 'dihedral']] = calc_zmat_values()
 
-        zmat = self.__class__(zframe)
-        zmat.metadata = self.metadata.copy()
-        self._copy_metadata_to(zmat)
+        zmat = self.__class__(zframe, metadata=self.metadata,
+                              _metadata=self._metadata)
+        try:
+            zmat._metadata['last_valid_cartesian'] = zmat.give_cartesian()
+        except InvalidReference as e:
+            e.zmat_after_assignment = zmat
+            # Recursion
+            zmat = zmat._insert_dummy_zmat(e)
         return zmat
 
     def give_cartesian(self):
