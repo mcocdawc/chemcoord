@@ -67,7 +67,7 @@ http://chemcoord.readthedocs.io/en/latest/'
         space = ' ' * (self.loc[:, 'atom'].str.len().max()
                        - len(self.iloc[0, 0]))
 
-        output = create_string(n=self.n_atoms, message=message,
+        output = create_string(n=len(self), message=message,
                                alignment=space,
                                frame_string=molecule_string)
 

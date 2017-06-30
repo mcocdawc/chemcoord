@@ -16,14 +16,11 @@ from __future__ import unicode_literals
 from io import StringIO
 import os
 import pandas as pd
+import sys
 
 
-# energy_conversion={
-#        ('hartree', 'kJ per mole') : 2625.50,
-#        ('hartree', 'cm^-1') : 219474.63,
-#        ('bohr', 'angstroem'): 0.529177249,
-#        ('angstroem', 'bohr'): 1/0.529177249
-#        }
+int_label = {'origin': -sys.maxsize - 1, 'e_x': -sys.maxsize,
+             'e_y': -sys.maxsize + 1, 'e_z': -sys.maxsize + 2}
 
 atom_properties = StringIO(
 """,annotation,atomic_number,atomic_radius,atomic_volume,block,boiling_point,density,description,dipole_polarizability,electron_affinity,electronic_configuration,evaporation_heat,fusion_heat,group_id,lattice_constant,lattice_structure,mass,melting_point,name,period,series_id,specific_heat,thermal_conductivity,vdw_radius,covalent_radius_cordero,covalent_radius_pyykko,en_pauling,en_allen,jmol_color,cpk_color,proton_affinity,gas_basicity,heat_of_formation,c6,covalent_radius_bragg,covalent_radius_slater,vdw_radius_bondi,vdw_radius_truhlar,vdw_radius_rt,vdw_radius_batsanov,vdw_radius_dreiding,vdw_radius_uff,vdw_radius_mm3,abundance_crust,abundance_sea,atomic_radius_gv,valency,size_in_gv,gv_color,atomic_radius_cc

@@ -29,7 +29,7 @@ class Cartesian(Cartesian_io, Cartesian_give_zmat):
     vector is added elementwise to the ``'x'`` column of the
     Cartesian instance and so on.
     The last possibility is to add a matrix with
-    ``shape=(Cartesian.n_atoms, 3)`` which is again added elementwise.
+    ``shape=(len(Cartesian), 3)`` which is again added elementwise.
     The same rules are true for subtraction, division and multiplication.
 
     **Matrixmultiplication**:

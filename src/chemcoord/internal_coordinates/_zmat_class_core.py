@@ -9,7 +9,9 @@ from chemcoord._exceptions import ERR_CODE_OK, \
     PhysicalMeaning, \
     InvalidReference, ERR_CODE_InvalidReference
 from chemcoord._generic_classes._common_class import _common_class
-import chemcoord.internal_coordinates._safe_indexers as safe_indexers
+import chemcoord.constants as constants
+import chemcoord.internal_coordinates._indexers as indexers
+from chemcoord.internal_coordinates.zmat_pandas_wrapper import PandasWrapper
 from chemcoord.utilities.algebra_utilities import \
     _jit_normalize, \
     _jit_rotation_matrix, \
@@ -70,6 +72,7 @@ def _jit_give_reference_absolute_position(j):
 def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
     for row in range(start_row, c_table.shape[0]):
         ref_pos = np.empty((3, 3))
+        # Assumes 64 bit system
         threshhold = -2**63 + 100
         for k in range(3):
             j = c_table[row, k]
@@ -85,14 +88,14 @@ def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
     return row
 
 
-class Zmat_core(_common_class):
+class ZmatCore(PandasWrapper):
     """The main class for dealing with internal coordinates.
     """
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
+    _metadata_keys = frozenset({'abs_refs', 'cartesian'})
 
-    # overwrites existing method
-    def __init__(self, frame, order_of_definition=None):
+    def __init__(self, frame, abs_refs=None, cartesian=None):
         """How to initialize a Zmat instance.
 
         Args:
@@ -107,32 +110,33 @@ class Zmat_core(_common_class):
         Returns:
             Zmat: A new zmat instance.
         """
-        if not isinstance(frame, pd.DataFrame):
-            raise ValueError('Need a pd.DataFrame as input')
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning('There are columns missing for a '
                                   'meaningful description of a molecule')
         self._frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
-        if order_of_definition is None:
-            self._metadata['order'] = self.index
-        else:
-            self._metadata['order'] = order_of_definition
 
-    # overwrites existing method
+        if abs_refs is None:
+            int_label = constants.int_label
+            self._metadata['abs_refs'] = {
+                int_label['origin']: (np.array([0., 0., 0.]), '$\\vec{0}$'),
+                int_label['e_x']: (np.array([1., 0., 0.]), '$\\vec{e}_x$'),
+                int_label['e_y']: (np.array([0., 1., 0.]), '$\\vec{e}_y$'),
+                int_label['e_z']: (np.array([0., 0., 1.]), '$\\vec{e}_z$')}
+        if cartesian is None:
+            self._metadata['cartesian'] = self.give_cartesian()
+
     def copy(self):
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
-        keys_to_keep = ['abs_refs', 'cartesian', 'order']
-        for key in keys_to_keep:
-            try:
-                molecule._metadata[key] = self._metadata[key].copy()
-            except KeyError:
-                pass
+        self._copy_metadata_to(molecule)
         return molecule
 
-    # overwrites existing method
+    def _copy_metadata_to(self, other):
+        for key in self._metadata_keys:
+            other._metadata[key] = self._metadata[key].copy()
+
     def _repr_html_(self):
         out = self.copy()
         representation = {key: out._metadata['abs_refs'][key][1]
@@ -151,9 +155,9 @@ class Zmat_core(_common_class):
                 return x
 
         for col in ['b', 'a', 'd']:
-            out[col] = out[col].apply(absolute_ref_formatter)
+            out.unsafe_loc[:, col] = out[col].apply(absolute_ref_formatter)
         for col in ['bond', 'angle', 'dihedral']:
-            out[col] = out[col].apply(sympy_formatter)
+            out.unsafe_loc[:, col] = out[col].apply(sympy_formatter)
 
         def insert_before_substring(insert_txt, substr, txt):
             """Under the assumption that substr only appears once.
@@ -163,99 +167,32 @@ class Zmat_core(_common_class):
         insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
         return insert_before_substring(insert_txt, '<thead>', html_txt)
 
-    def _return_appropiate_type(self, selected):
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            selected = self._frame[key[0], key[1]]
+        else:
+            selected = self._frame[key]
         return selected
 
     @property
+    def loc(self):
+        return indexers._Loc(self)
+
+    @property
+    def unsafe_loc(self):
+        return indexers._Unsafe_Loc(self)
+
+    @property
     def safe_loc(self):
-        """Label based indexing
+        return indexers._Safe_Loc(self)
 
-        The indexing behaves like
-        `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
-        The only question is about the return type.
-        If the information in the columns is enough to draw a molecule,
-        an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
-        is returned.
-        If the information in the columns is not enough to draw a molecule
-        a :class:`~pandas.Series` instance is returned for one dimensional
-        slices and a :class:`~pandas.DataFrame` instance in all other cases.
-
-        Cartesian:
-            In the case of a :class:`~chemcoord.Cartesian` class this means:
-
-                ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
-                :class:`~chemcoord.Cartesian`.
-
-                ``molecule.loc[:, ['atom', 'x']]`` returns a
-                :class:`~pandas.DataFrame`.
-
-                ``molecule.loc[:, 'atom']`` returns a
-                :class:`~pandas.Series`.
-
-        Zmat:
-            If the following definition is used::
-
-                cols = ['atom', 'b', 'bond', 'a', 'angle',
-                        'd', 'dihedral']
-
-            The return types in the case of a :class:`~chemcoord.Zmat`
-            instance are:
-
-                ``molecule.loc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
-
-                ``molecule.loc[:, ['atom', 'b']]`` returns a
-                :class:`~pandas.DataFrame`.
-
-                ``molecule.loc[:, 'atom']`` returns a
-                :class:`~pandas.Series`.
-        """
-        return safe_indexers._Safe_Loc(self)
-
+    @property
+    def unsafe_loc(self):
+        return indexers._Unsafe_Loc(self)
 
     @property
     def safe_iloc(self):
-        """Label based indexing
-
-        The indexing behaves like
-        `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
-        The only question is about the return type.
-        If the information in the columns is enough to draw a molecule,
-        an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
-        is returned.
-        If the information in the columns is not enough to draw a molecule
-        a :class:`~pandas.Series` instance is returned for one dimensional
-        slices and a :class:`~pandas.DataFrame` instance in all other cases.
-
-        Cartesian:
-            In the case of a :class:`~chemcoord.Cartesian` class this means:
-
-                ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
-                :class:`~chemcoord.Cartesian`.
-
-                ``molecule.loc[:, ['atom', 'x']]`` returns a
-                :class:`~pandas.DataFrame`.
-
-                ``molecule.loc[:, 'atom']`` returns a
-                :class:`~pandas.Series`.
-
-        Zmat:
-            If the following definition is used::
-
-                cols = ['atom', 'b', 'bond', 'a', 'angle',
-                        'd', 'dihedral']
-
-            The return types in the case of a :class:`~chemcoord.Zmat`
-            instance are:
-
-                ``molecule.loc[:, cols]`` returns a :class:`~chemcoord.Zmat`.
-
-                ``molecule.loc[:, ['atom', 'b']]`` returns a
-                :class:`~pandas.DataFrame`.
-
-                ``molecule.loc[:, 'atom']`` returns a
-                :class:`~pandas.Series`.
-        """
-        return safe_indexers._Safe_ILoc(self)
+        return indexers._Safe_ILoc(self)
 
     def _test_if_can_be_added(self, other):
         cols = ['atom', 'b', 'a', 'd']
@@ -273,7 +210,7 @@ class Zmat_core(_common_class):
         self._test_if_can_be_added(other)
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
+        new.safe_loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         return new
 
     def __radd__(self, other):
@@ -283,32 +220,32 @@ class Zmat_core(_common_class):
         self._test_if_can_be_added(other)
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
+        new.safe_loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         return new
 
     def __rsub__(self, other):
         self._test_if_can_be_added(other)
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
+        new.safe_loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         return new
 
     def __mul__(self, other):
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new.loc[:, coords] = self.loc[:, coords] * other
+        new.safe_loc[:, coords] = self.loc[:, coords] * other
         return new
 
     def __rmul__(self, other):
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new.loc[:, coords] = self.loc[:, coords] * other
+        new.safe_loc[:, coords] = self.loc[:, coords] * other
         return new
 
     def __abs__(self):
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new.loc[:, coords] = abs(new.loc[:, coords])
+        new.safe_loc[:, coords] = abs(new.loc[:, coords])
         return new
 
     def __neg__(self):
@@ -333,11 +270,12 @@ class Zmat_core(_common_class):
             return subs_function
 
         for col in cols:
-            if out[col].dtype is np.dtype('O'):
-                series = out[col]
-                out[col] = series.map(give_subs_function(variable, value))
+            if out.loc[:, col].dtype is np.dtype('O'):
+                series = out.loc[:, col]
+                out.unsafe_loc[:, col] = series.map(
+                    give_subs_function(variable, value))
                 try:
-                    out[col] = out[col].astype('float')
+                    out.unsafe_loc[:, col] = out.loc[:, col].astype('float')
                 except TypeError:
                     pass
         return out
@@ -368,20 +306,11 @@ class Zmat_core(_common_class):
             raise ValueError('len(new_index) has to be the same as len(self)')
 
         cols = ['b', 'a', 'd']
-        out.loc[:, cols] = out.loc[:, cols].replace(out.index, new_index)
-        out.index = new_index
+        out.unsafe_loc[:, cols] = out.loc[:, cols].replace(
+            out.index, new_index)
+        out._frame.index = new_index
         if not inplace:
             return out
-
-    def has_same_sumformula(self, other):
-        same_atoms = True
-        for atom in set(self.loc[:, 'atom']):
-            own_atom_number = len(self[self['atom'] == atom])
-            other_atom_number = len(other[other['atom'] == atom])
-            same_atoms = (own_atom_number == other_atom_number)
-            if not same_atoms:
-                break
-        return same_atoms
 
     def _insert_dummy_cart(self, exception):
         """Insert dummy atom into the already built cartesian of exception
@@ -435,7 +364,7 @@ class Zmat_core(_common_class):
                 start.loc[key] = start.iloc[-1]
                 return start
 
-        zframe = insert_row(exception.zmat_after_assignment,
+        zframe = insert_row(exception.zmat_after_assignment._frame,
                             self.index.get_loc(exception.index), i_dummy)
         zframe.loc[exception.index, 'd'] = i_dummy
         zframe.loc[i_dummy, 'atom'] = 'X'
@@ -444,12 +373,7 @@ class Zmat_core(_common_class):
 
         zmat = self.__class__(zframe)
         zmat.metadata = self.metadata.copy()
-        keys_to_keep = ['abs_refs', 'cartesian', 'order']
-        for key in keys_to_keep:
-            try:
-                zmat._metadata[key] = self._metadata[key].copy()
-            except KeyError:
-                pass
+        self._copy_metadata_to(zmat)
         return zmat
 
     def give_cartesian(self):
@@ -498,3 +422,100 @@ class Zmat_core(_common_class):
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)
         return self.give_cartesian(*args, **kwargs)
+
+    def add_data(self, new_cols=None):
+        """Adds a column with the requested data.
+
+        If you want to see for example the mass, the colormap used in
+        jmol and the block of the element, just use::
+
+            ['mass', 'jmol_color', 'block']
+
+        The underlying ``pd.DataFrame`` can be accessed with
+        ``constants.elements``.
+        To see all available keys use ``constants.elements.info()``.
+
+        The data comes from the module `mendeleev
+        <http://mendeleev.readthedocs.org/en/latest/>`_ written
+        by Lukasz Mentel.
+
+        Please note that I added three columns to the mendeleev data::
+
+            ['atomic_radius_cc', 'atomic_radius_gv', 'gv_color',
+                'valency']
+
+        The ``atomic_radius_cc`` is used by default by this module
+        for determining bond lengths.
+        The three others are taken from the MOLCAS grid viewer written
+        by Valera Veryazov.
+
+        Args:
+            new_cols (str): You can pass also just one value.
+                E.g. ``'mass'`` is equivalent to ``['mass']``. If
+                ``new_cols`` is ``None`` all available data
+                is returned.
+            inplace (bool):
+
+        Returns:
+            Cartesian:
+        """
+        atoms = self['atom']
+        data = constants.elements
+        if pd.api.types.is_list_like(new_cols):
+            new_cols = set(new_cols)
+            pass
+        elif new_cols is None:
+            new_cols = set(data.columns)
+        else:
+            new_cols = [new_cols]
+        new_frame = data.loc[atoms, set(new_cols) - set(self.columns)]
+        new_frame.index = self.index
+        return self.__class__(pd.concat([self._frame, new_frame], axis=1))
+
+    def total_mass(self):
+        """Returns the total mass in g/mol.
+
+        Args:
+            None
+
+        Returns:
+            float:
+        """
+        try:
+            return self['mass'].sum()
+        except KeyError:
+            return self.add_data('mass')['mass'].sum()
+
+    def _convert_nan_int(self):
+        """The following functions are necessary to deal with the fact,
+        that pandas does not support "NaN" for integers.
+        It was written by the user LondonRob at StackExchange:
+        http://stackoverflow.com/questions/25789354/
+        exporting-ints-with-missing-values-to-csv-in-pandas/31208873#31208873
+        Begin of the copied code snippet
+        """
+        COULD_BE_ANY_INTEGER = 0
+
+        def _lost_precision(s):
+            """The total amount of precision lost over Series `s`
+            during conversion to int64 dtype
+            """
+            try:
+                diff = (s - s.fillna(COULD_BE_ANY_INTEGER).astype(np.int64))
+                return diff.sum()
+            except ValueError:
+                return np.nan
+
+        def _nansafe_integer_convert(s, epsilon=1e-9):
+            """Convert Series `s` to an object type with `np.nan`
+            represented as an empty string
+            """
+            if _lost_precision(s) < epsilon:
+                # Here's where the magic happens
+                as_object = s.fillna(COULD_BE_ANY_INTEGER)
+                as_object = as_object.astype(np.int64).astype(np.object)
+                as_object[s.isnull()] = "nan"
+                return as_object
+            else:
+                return s
+        return self.apply(_nansafe_integer_convert)

@@ -61,5 +61,4 @@ chemcoord\.Zmat
       ~Zmat.iloc
       ~Zmat.index
       ~Zmat.loc
-      ~Zmat.n_atoms
       ~Zmat.shape

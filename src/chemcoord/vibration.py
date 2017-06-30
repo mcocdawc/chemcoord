@@ -170,8 +170,8 @@ class mode(object):
 
             n_coord = Y.shape[2]
             assert (n_coord == 3)
-            functions = np.empty((eq_strct_zmat.n_atoms, n_coord), dtype='O')
-            for i in range(eq_strct_zmat.n_atoms):
+            functions = np.empty((len(eq_strct_zmat), n_coord), dtype='O')
+            for i in range(len(eq_strct_zmat)):
                 for j in range(n_coord):
                     if (~np.isnan(Y[:, i, j])).all():
                         if warn_condition:

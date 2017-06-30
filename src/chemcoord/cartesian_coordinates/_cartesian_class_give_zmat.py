@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 import numpy as np
 import pandas as pd
 import warnings
+import chemcoord.constants as constants
 from chemcoord._exceptions import \
     IllegalArgumentCombination, \
     InvalidReference, \
@@ -69,7 +70,7 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
-        int_label = self._metadata['int_label_abs_ref']
+        int_label = constants.int_label
 
         def modify_priority(bond_dict, user_defined):
             def move_to_start(dct, key):
@@ -124,7 +125,7 @@ class Cartesian_give_zmat(Cartesian_core):
             construction_table = construction_table.to_dict(orient='index')
 
         visited = {i}
-        if self.n_atoms > 1:
+        if len(self) > 1:
             parent = {j: i for j in bond_dict[i]}
             bond_dict[i]
             work_bond_dict = OrderedDict(
@@ -208,7 +209,7 @@ class Cartesian_give_zmat(Cartesian_core):
         Returns:
             pd.DataFrame: Construction table
         """
-        int_label = self._metadata['int_label_abs_ref']
+        int_label = constants.int_label
         if fragment_list is None:
             fragments = sorted(self.fragmentate(use_lookup=use_lookup),
                                key=lambda x: len(x), reverse=True)
@@ -459,7 +460,7 @@ class Cartesian_give_zmat(Cartesian_core):
     def _get_bond_vectors(self, construction_table):
         coords = ['x', 'y', 'z']
         abs_references = self._metadata['abs_refs']
-        pos = np.empty((self.n_atoms, 3, 4))
+        pos = np.empty((len(self), 3, 4))
 
         pos[:, :, 0] = self.loc[construction_table.index, coords]
 

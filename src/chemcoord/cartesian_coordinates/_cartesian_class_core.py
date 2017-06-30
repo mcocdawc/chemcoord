@@ -13,6 +13,7 @@ from chemcoord._generic_classes._common_class import _common_class
 from chemcoord.configuration import settings
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.set_utilities import pick
+import chemcoord.constants as constants
 import collections
 from itertools import product
 import numba as nb
@@ -50,12 +51,7 @@ class Cartesian_core(_common_class):
         self._frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
-        self._metadata['int_label_abs_ref'] = {'origin': -sys.maxsize - 1,
-                                               'e_x': -sys.maxsize,
-                                               'e_y': -sys.maxsize + 1,
-                                               'e_z': -sys.maxsize + 2
-                                               }
-        int_label = self._metadata['int_label_abs_ref']
+        int_label = constants.int_label
         self._metadata['abs_refs'] = {
             int_label['origin']: (np.array([0., 0., 0.]), '$\\vec{0}$'),
             int_label['e_x']: (np.array([1., 0., 0.]), '$\\vec{e}_x$'),
@@ -75,7 +71,7 @@ class Cartesian_core(_common_class):
                 and self._required_cols <= set(selected.columns)):
             molecule = self.__class__(selected)
             molecule.metadata = self.metadata.copy()
-            keys_to_keep = ['abs_refs', 'int_label_abs_ref']
+            keys_to_keep = ['abs_refs']
             for key in keys_to_keep:
                 molecule._metadata[key] = self._metadata[key].copy()
             return molecule
@@ -216,8 +212,7 @@ class Cartesian_core(_common_class):
     def copy(self):
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
-        keys_to_keep = ['bond_dict', 'val_bond_dict',
-                        'abs_refs', 'int_label_abs_ref']
+        keys_to_keep = ['bond_dict', 'val_bond_dict', 'abs_refs']
         for key in keys_to_keep:
             try:
                 molecule._metadata[key] = self._metadata[key].copy()
@@ -285,9 +280,9 @@ class Cartesian_core(_common_class):
         def ceil(x):
             return int(np.ceil(x))
 
-        n_sets = self.n_atoms / n_atoms_per_set
+        n_sets = len(self) / n_atoms_per_set
         n_sets_along_axis = ceil(n_sets**(1 / 3))
-        n_atoms_per_set_along_axis = ceil(self.n_atoms / n_sets_along_axis)
+        n_atoms_per_set_along_axis = ceil(len(self) / n_sets_along_axis)
 
         def give_index(series, i, n_atoms_per_set_along_axis, offset=offset):
             N = n_atoms_per_set_along_axis
@@ -365,7 +360,7 @@ class Cartesian_core(_common_class):
         """
         def complete_calculation():
             old_index = self.index
-            self.index = range(self.n_atoms)
+            self.index = range(len(self))
             fragments = self._divide_et_impera(offset=offset)
             positions = np.array(self.loc[:, ['x', 'y', 'z']], order='F')
             data = self.add_data([atomic_radius_data, 'valency'])
@@ -1408,8 +1403,8 @@ class Cartesian_core(_common_class):
     def has_same_sumformula(self, other):
         same_atoms = True
         for atom in set(self['atom']):
-            own_atom_number = self[self['atom'] == atom].n_atoms
-            other_atom_number = other[other['atom'] == atom].n_atoms
+            own_atom_number = len(self[self['atom'] == atom])
+            other_atom_number = len(other[other['atom'] == atom])
             same_atoms = (own_atom_number == other_atom_number)
             if not same_atoms:
                 break

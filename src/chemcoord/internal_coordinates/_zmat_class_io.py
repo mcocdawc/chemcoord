@@ -5,12 +5,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from chemcoord.internal_coordinates._zmat_class_core import Zmat_core
+from chemcoord.internal_coordinates._zmat_class_core import ZmatCore
 import pandas as pd
 import warnings
 
 
-class Zmat_io(Zmat_core):
+class ZmatIO(ZmatCore):
     @classmethod
     def read_zmat(cls, inputfile, implicit_index=True):
         """Reads a zmat file.
@@ -33,7 +33,7 @@ class Zmat_io(Zmat_core):
                                        delim_whitespace=True,
                                        names=cols)
             Zmat = cls(zmat_frame)
-            Zmat.index = range(1, Zmat.n_atoms + 1)
+            Zmat.index = range(1, len(Zmat) + 1)
         else:
             zmat_frame = pd.read_table(inputfile, comment='#',
                                        delim_whitespace=True,
@@ -51,7 +51,7 @@ class Zmat_io(Zmat_core):
         Args:
             buf (str): StringIO-like, optional buffer to write to
             implicit_index (bool): If implicit_index is set, the zmat indexing
-                is changed to ``range(1, self.n_atoms + 1)``.
+                is changed to ``range(1, len(self) + 1)``.
                 Using :meth:`~chemcoord.Zmat.change_numbering`
                 Besides the index is omitted while writing which means,
                 that the index is given
