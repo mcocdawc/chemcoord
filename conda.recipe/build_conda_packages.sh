@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# ====================================================
+# =============================================================================
 # Please note the bug, that for conda-build the option '--output' does
 # not respect the directories given by '--output-folder':
 # https://github.com/conda/conda-build/issues/1957
-# ====================================================
+# =============================================================================
 
 tmp=$(dirname "$(conda-build --output .)")
 system=$(basename "$tmp")
@@ -19,7 +19,7 @@ do
   conda-build --no-anaconda-upload \
               --python ${py_version} \
               --output-folder "${root_dir}/${py_version}" \
-              .
+              "."
   for platform in osx-64 linux-{32,64} win-{32,64}
   do
     conda-convert --platform $platform \
