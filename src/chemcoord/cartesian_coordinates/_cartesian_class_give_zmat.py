@@ -159,8 +159,8 @@ class CartesianGiveZmat(CartesianCore):
                                 d = parent[a]
                                 if d in set([b, a]):
                                     message = "Don't make self references"
-                                    raise InvalidReference(message)
-                            except (KeyError, InvalidReference):
+                                    raise UndefinedCoordinateSystem(message)
+                            except (KeyError, UndefinedCoordinateSystem):
                                 try:
                                     d = ((bond_dict[a] & set(order_of_def))
                                          - set([b, a]))[0]

@@ -36,12 +36,21 @@ class _Safe_Loc(_Loc):
         try:
             zmat_after_assignment.give_cartesian()
             if isinstance(key, tuple):
-                self.molecule._frame.iloc[key[0], key[1]] = value
+                self.molecule._frame.loc[key[0], key[1]] = value
             else:
-                self.molecule._frame.iloc[key] = value
+                self.molecule._frame.loc[key] = value
         except InvalidReference as e:
             e.zmat_after_assignment = zmat_after_assignment
             raise e
+
+
+class _ILoc(_generic_Indexer):
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            selected = self.molecule._frame.iloc[key[0], key[1]]
+        else:
+            selected = self.molecule._frame.iloc[key]
+        return selected
 
 
 class _Unsafe_ILoc(_generic_Indexer):

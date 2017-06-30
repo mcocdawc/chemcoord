@@ -39,6 +39,7 @@ def _jit_calculate_single_position(references, zmat_values, row):
         d = bond * ba
     else:
         AD = vd - va
+        # N1 = _jit_cross(_jit_normalize(BA), _jit_normalize(AD))
         N1 = _jit_cross(BA, AD)
         if _jit_isclose(N1, zeros).all():
             err = ERR_CODE_InvalidReference
@@ -84,8 +85,8 @@ def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
         if err == ERR_CODE_OK:
             positions[row] = pos
         elif err == ERR_CODE_InvalidReference:
-            return row
-    return row
+            return (ERR_CODE_InvalidReference, row)
+    return (ERR_CODE_OK, row)
 
 
 class ZmatCore(PandasWrapper):
@@ -182,8 +183,12 @@ class ZmatCore(PandasWrapper):
         return indexers._Safe_Loc(self)
 
     @property
-    def unsafe_loc(self):
-        return indexers._Unsafe_Loc(self)
+    def iloc(self):
+        return indexers._ILoc(self)
+
+    @property
+    def unsafe_iloc(self):
+        return indexers._Unsafe_ILoc(self)
 
     @property
     def safe_iloc(self):
@@ -381,8 +386,8 @@ class ZmatCore(PandasWrapper):
         zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
         positions = np.empty((len(self), 3), dtype='float64')
 
-        row = _jit_calculate_everything(positions, c_table, zmat_values)
-        if row < len(self) - 1:
+        err, row = _jit_calculate_everything(positions, c_table, zmat_values)
+        if err == ERR_CODE_InvalidReference:
             i = rename[row]
             self.change_numbering(old_index, inplace=True)
             b, a, d = self.loc[i, ['b', 'a', 'd']]

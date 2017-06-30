@@ -20,7 +20,7 @@ class UndefinedCoordinateSystem(PhysicalMeaning): # noqa
 
 ERR_CODE_InvalidReference = 202
 class InvalidReference(UndefinedCoordinateSystem): # noqa
-    def __init__(self, message='', i=None, b=None, a=None, d=None,
+    def __init__(self, message=None, i=None, b=None, a=None, d=None,
                  already_built_cartesian=None,
                  zmat_after_assignment=None):
         self.message = message
@@ -36,7 +36,12 @@ class InvalidReference(UndefinedCoordinateSystem): # noqa
             self.zmat_after_assignment = zmat_after_assignment
 
     def __str__(self):
-        return repr(self.message)
+        if self.message is None:
+            give_message = ('Atom {i} uses an invalid/linear reference '
+                            'spanned by: {r}'.format)
+            return give_message(i=self.index, r=self.references)
+        else:
+            return repr(self.message)
 
 
 class IllegalArgumentCombination(ValueError):
