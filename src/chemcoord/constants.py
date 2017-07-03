@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-######################################################################################################
+###############################################################################
 # If you are editing this file please consider commiting the change
 # and sending a pull request to my Github account 'mcocdawc'.
 # Normal dictionaries "cost" nearly nothing to be kept in RAM.
 # Besides you don't introduce bugs by defining keys that are unused lateron.
-# So there is no harm in having a key like e.g. 'first_discovery_of_element' which is hardly used in everyday work.
-# But if there is only one other person in the world which does not have to repeat your steps,
-# typing in those values by hand, it is already a win.
-######################################################################################################
+# So there is no harm in having a key like e.g. 'first_discovery_of_element'
+# which is hardly used in everyday work.
+# But if there is only one other person in the world which does not have to
+# repeat your steps, # typing in those values by hand, it is already a win.
+###############################################################################
 from __future__ import with_statement
 from __future__ import division
 from __future__ import absolute_import
@@ -161,6 +162,7 @@ def replace_data(path, data):
             if improve.notnull().loc[index, column]:
                 data.loc[index, column] = improve.at[index, column]
     return data
+
 
 try:
     if os.path.exists('~/.chemcoord_data_rc'):

@@ -1116,13 +1116,23 @@ class CartesianCore(PandasWrapper):
         return array
 
     def _get_positions(self, indices):
-        pos = []
-        for i in indices:
-            try:
-                pos.append(self.loc[i, ['x', 'y', 'z']].values.astype('f8'))
-            except KeyError:
-                pos.append(self._metadata['abs_refs'][i][0])
-        return pos
+        old_index = self.index
+        self.index = range(len(self))
+        rename = {j: i for i, j in enumerate(old_index)}
+
+        pos = self.loc[:, ['x', 'y', 'z']].values.astype('f8')
+        out = np.empty((len(indices), 3))
+        indices = np.array([rename.get(i, i) for i in indices], dtype='i8')
+        # Assumes 64bit system
+        keys_below_are_abs_refs = -2**63 + 100
+
+        selection = indices > keys_below_are_abs_refs
+        out[selection] = pos[indices[selection]]
+        for row, i in zip(np.nonzero(~selection), indices[~selection]):
+            out[row] = self._metadata['abs_refs'][i][0]
+
+        self.index = old_index
+        return out
 
     def distance_to(self,
                     origin=None,

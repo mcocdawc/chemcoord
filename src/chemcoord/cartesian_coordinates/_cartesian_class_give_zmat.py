@@ -459,29 +459,26 @@ class CartesianGiveZmat(CartesianCore):
 
     def _get_bond_vectors(self, construction_table):
         coords = ['x', 'y', 'z']
+        c_table = construction_table
         abs_references = self._metadata['abs_refs']
-        pos = np.empty((len(self), 3, 4))
+        pos = np.empty((len(c_table), 3, 4))
 
-        pos[:, :, 0] = self.loc[construction_table.index, coords]
-
-        pos[0, :, 1] = abs_references[construction_table.iloc[0, 0]][0]
-        pos[1:, :, 1] = self.loc[construction_table.iloc[1:, 0], coords]
-
-        pos[0, :, 2] = abs_references[construction_table.iloc[0, 1]][0]
-        pos[1, :, 2] = abs_references[construction_table.iloc[1, 1]][0]
-        pos[2:, :, 2] = self.loc[construction_table.iloc[2:, 1], coords]
-
-        pos[0, :, 3] = abs_references[construction_table.iloc[0, 2]][0]
-        pos[1, :, 3] = abs_references[construction_table.iloc[1, 2]][0]
-        pos[2, :, 3] = abs_references[construction_table.iloc[2, 2]][0]
-        pos[3:, :, 3] = self.loc[construction_table.iloc[3:, 2], coords]
+        if isinstance(c_table, pd.DataFrame):
+            pos[:, :, 0] = self._get_positions(c_table.index)
+            pos[:, :, 1] = self._get_positions(c_table['b'])
+            pos[:, :, 2] = self._get_positions(c_table['a'])
+            pos[:, :, 3] = self._get_positions(c_table['d'])
+        else:
+            for col in range(4):
+                pos[:, :, col] = self._get_positions(c_table[:, col])
 
         IB = pos[:, :, 1] - pos[:, :, 0]
         BA = pos[:, :, 2] - pos[:, :, 1]
         AD = pos[:, :, 3] - pos[:, :, 2]
         return IB, BA, AD
 
-    def _calculate_zmat_values(self, IB, BA, AD):
+    def _calculate_zmat_values(self, construction_table):
+        IB, BA, AD = self._get_bond_vectors(construction_table)
         values = np.empty_like(IB, dtype='float64')
 
         def get_bond_length(IB):
@@ -543,8 +540,7 @@ class CartesianGiveZmat(CartesianCore):
         zmat_frame.loc[:, 'atom'] = self.loc[c_table.index, 'atom']
         zmat_frame.loc[:, ['b', 'a', 'd']] = c_table
 
-        IB, BA, AD = self._get_bond_vectors(c_table)
-        zmat_values = self._calculate_zmat_values(IB, BA, AD)
+        zmat_values = self._calculate_zmat_values(c_table)
         zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = zmat_values
 
         zmatrix = Zmat(zmat_frame)
