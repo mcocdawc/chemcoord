@@ -934,7 +934,7 @@ class CartesianCore(PandasWrapper):
         return sorted(missing_part, key=lambda x: len(x), reverse=True)
 
     @staticmethod
-    @jit()
+    @jit(nopython=True)
     def _jit_pairwise_distances(pos1, pos2):
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.

@@ -74,10 +74,10 @@ def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
     for row in range(start_row, c_table.shape[0]):
         ref_pos = np.empty((3, 3))
         # Assumes 64 bit system
-        threshhold = -2**63 + 100
+        keys_below_are_abs_refs = -2**63 + 100
         for k in range(3):
             j = c_table[row, k]
-            if j < threshhold:
+            if j < keys_below_are_abs_refs:
                 ref_pos[k] = _jit_give_reference_absolute_position(j)
             else:
                 ref_pos[k] = positions[j]
@@ -127,16 +127,14 @@ class ZmatCore(PandasWrapper):
                 self._metadata['abs_refs'] = constants.absolute_refs
             if 'last_valid_cartesian' not in _metadata:
                 self._metadata['last_valid_cartesian'] = self.give_cartesian()
+            if 'inserted_dummies' not in _metadata:
+                self._metadata['inserted_dummies'] = {}
 
     def copy(self):
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
-        self._copy_metadata_to(molecule)
+        molecule._metadata = self._metadata.copy()
         return molecule
-
-    def _copy_metadata_to(self, other):
-        for key in self._metadata_keys:
-            other._metadata[key] = self._metadata[key].copy()
 
     def _repr_html_(self):
         out = self.copy()
@@ -348,10 +346,10 @@ class ZmatCore(PandasWrapper):
         cols = ['b', 'a', 'd']
         dummy_cart, i_dummy = self._insert_dummy_cart(exception)
         d = self.loc[exception.index, 'd']
+        reference_labels = [i_dummy] + list(self.loc[d, cols])
 
-        def calc_zmat_values():
-            reference_labels = [i_dummy] + list(self.loc[d, cols])
-            pos = dummy_cart._get_positions(reference_labels)
+        def calc_zmat_values(xyz, reference_labels):
+            pos = xyz._get_positions(reference_labels)
             pos = np.array(pos).T[None, :, :]
             IB = pos[:, :, 1] - pos[:, :, 0]
             BA = pos[:, :, 2] - pos[:, :, 1]
@@ -374,10 +372,12 @@ class ZmatCore(PandasWrapper):
         zframe.loc[exception.index, 'd'] = i_dummy
         zframe.loc[i_dummy, 'atom'] = 'X'
         zframe.loc[i_dummy, cols] = self.loc[d, cols]
-        zframe.loc[i_dummy, ['bond', 'angle', 'dihedral']] = calc_zmat_values()
+        zframe.loc[i_dummy, ['bond', 'angle', 'dihedral']] = calc_zmat_values(dummy_cart, reference_labels)
 
         zmat = self.__class__(zframe, metadata=self.metadata,
                               _metadata=self._metadata)
+
+        zmat._metadata['inserted_dummies'][exception.index] = {'dummy': i_dummy, 'd': d}
         try:
             zmat._metadata['last_valid_cartesian'] = zmat.give_cartesian()
         except InvalidReference as e:
@@ -385,6 +385,27 @@ class ZmatCore(PandasWrapper):
             # Recursion
             zmat = zmat._insert_dummy_zmat(e)
         return zmat
+
+    def _dummies_can_be_removed(self):
+        # coords = ['x', 'y', 'z']
+        xyz = self.give_cartesian().loc[:, ['x', 'y', 'z']]
+        inserted_dummies = self._metadata['inserted_dummies']
+        indices_to_test = inserted_dummies.keys()
+        c_table = self.loc[indices_to_test, ['b', 'a', 'd']]
+        c_table['d'] = [inserted_dummies[key]['d'] for key in indices_to_test]
+        BA = (xyz.loc[c_table['a']].values - xyz.loc[c_table['b']].values)
+        AD = (xyz.loc[c_table['d']].values - xyz.loc[c_table['a']].values)
+
+        may_be_removed = ~np.isclose(
+            np.cross(BA, AD), np.zeros_like(BA)).all(axis=1)
+        return [key for row, key in enumerate(indices_to_test)
+                if may_be_removed[row]]
+
+    def _remove_dummies(self):
+        zmat = self.copy()
+        may_be_removed = self._dummies_can_be_removed()
+        for i in may_be_removed:
+            pass
 
     def give_cartesian(self):
         abs_refs = self._metadata['abs_refs']
