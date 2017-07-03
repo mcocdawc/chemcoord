@@ -3,7 +3,10 @@
 <table>
 <tr>
   <td>Latest Release</td>
-  <td><img src="https://img.shields.io/pypi/v/chemcoord.svg" alt="latest release" /></td>
+  <td>
+    <a href="https://pypi.python.org/pypi/chemcoord">
+    <img src="https://img.shields.io/pypi/v/chemcoord.svg" alt="latest release" />
+  </td>
 <!-- </tr>
   <td></td>
   <td><img src="https://anaconda.org/conda-forge/pandas/badges/version.svg" alt="latest release" /></td>
