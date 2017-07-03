@@ -1,6 +1,44 @@
 # chemcoord: A python module for coordinates of molecules
 
-[![Build Status](https://travis-ci.org/mcocdawc/chemcoord.svg?branch=master)](https://travis-ci.org/mcocdawc/chemcoord)
+<table>
+<tr>
+  <td>Latest Release</td>
+  <td><img src="https://img.shields.io/pypi/v/chemcoord.svg" alt="latest release" /></td>
+<!-- </tr>
+  <td></td>
+  <td><img src="https://anaconda.org/conda-forge/pandas/badges/version.svg" alt="latest release" /></td>
+</tr> -->
+<tr>
+  <td>Package Status</td>
+  <td><img src="https://img.shields.io/pypi/status/chemcoord.svg" alt="status" /></td>
+</tr>
+<tr>
+  <td>License</td>
+  <td><img src="https://img.shields.io/pypi/l/chemcoord.svg" alt="license" /></td>
+</tr>
+<tr>
+  <td>Build Status</td>
+  <td>
+    <a href="https://travis-ci.org/mcocdawc/chemcoord">
+    <img src="https://travis-ci.org/mcocdawc/chemcoord.svg?branch=master"
+      alt="travis build status" />
+    </a>
+  </td>
+</tr>
+<tr>
+  <td>Code Quality</td>
+  <td>
+      <a href="https://landscape.io/github/mcocdawc/chemcoord/master">
+      <img  src="https://landscape.io/github/mcocdawc/chemcoord/master/landscape.svg?style=flat"
+        alt="Code Health" />
+    </a>
+  </td>
+</tr>
+<!-- <tr>
+  <td>Coverage</td>
+  <td><img src="https://codecov.io/github/pandas-dev/pandas/coverage.svg?branch=master" alt="coverage" /></td>
+</tr> -->
+</table>
 
 ## Website
 
