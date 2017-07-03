@@ -13,11 +13,18 @@
 </tr> -->
 <tr>
   <td>Package Status</td>
-  <td><img src="https://img.shields.io/pypi/status/chemcoord.svg" alt="status" /></td>
+  <td>
+    <a href="https://pypi.python.org/pypi/chemcoord">
+    <img src="https://img.shields.io/pypi/status/chemcoord.svg"
+      alt="status" />
+  </td>
 </tr>
 <tr>
   <td>License</td>
-  <td><img src="https://img.shields.io/pypi/l/chemcoord.svg" alt="license" /></td>
+  <td>
+    <a href="https://www.gnu.org/licenses/lgpl-3.0.en.html">
+    <img src="https://img.shields.io/pypi/l/chemcoord.svg" alt="license" />
+  </td>
 </tr>
 <tr>
   <td>Build Status</td>
