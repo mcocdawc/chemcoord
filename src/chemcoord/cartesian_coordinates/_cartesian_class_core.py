@@ -60,9 +60,8 @@ class CartesianCore(PandasWrapper):
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
             frame = pd.DataFrame(selected).T
-            frame = frame.apply(pd.to_numeric, errors='ignore')
             if self._required_cols <= set(frame.columns):
-                selected = frame
+                selected = frame.apply(pd.to_numeric, errors='ignore')
             else:
                 return selected
 
