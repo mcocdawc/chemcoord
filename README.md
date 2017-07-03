@@ -6,17 +6,15 @@
   <td>
     <a href="https://pypi.python.org/pypi/chemcoord">
     <img src="https://img.shields.io/pypi/v/chemcoord.svg" alt="latest release" />
+    </a>
   </td>
-<!-- </tr>
-  <td></td>
-  <td><img src="https://anaconda.org/conda-forge/pandas/badges/version.svg" alt="latest release" /></td>
-</tr> -->
 <tr>
   <td>Package Status</td>
   <td>
     <a href="https://pypi.python.org/pypi/chemcoord">
     <img src="https://img.shields.io/pypi/status/chemcoord.svg"
       alt="status" />
+    </a>
   </td>
 </tr>
 <tr>
@@ -24,6 +22,7 @@
   <td>
     <a href="https://www.gnu.org/licenses/lgpl-3.0.en.html">
     <img src="https://img.shields.io/pypi/l/chemcoord.svg" alt="license" />
+    </a>
   </td>
 </tr>
 <tr>
@@ -38,16 +37,20 @@
 <tr>
   <td>Code Quality</td>
   <td>
-      <a href="https://landscape.io/github/mcocdawc/chemcoord/master">
-      <img  src="https://landscape.io/github/mcocdawc/chemcoord/master/landscape.svg?style=flat"
-        alt="Code Health" />
+    <a href="https://landscape.io/github/mcocdawc/chemcoord/master">
+    <img  src="https://landscape.io/github/mcocdawc/chemcoord/master/landscape.svg?style=flat"
+      alt="Code Health" />
     </a>
   </td>
 </tr>
-<!-- <tr>
+<tr>
   <td>Coverage</td>
-  <td><img src="https://codecov.io/github/pandas-dev/pandas/coverage.svg?branch=master" alt="coverage" /></td>
-</tr> -->
+  <td>
+    <a href="https://codecov.io/gh/mcocdawc/chemcoord">
+    <img src="https://codecov.io/gh/mcocdawc/chemcoord/branch/master/graph/badge.svg" alt="Codecov" />
+    </a>
+  </td>
+</tr>
 </table>
 
 ## Website
