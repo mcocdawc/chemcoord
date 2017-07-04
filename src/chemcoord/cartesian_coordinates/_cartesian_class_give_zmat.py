@@ -539,7 +539,7 @@ class CartesianGiveZmat(CartesianCore):
         zmat_values = self._calculate_zmat_values(c_table)
         zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = zmat_values
 
-        zmatrix = Zmat(zmat_frame)
+        zmatrix = Zmat(zmat_frame, metadata=self.metadata)
         keys_to_keep = ['abs_refs']
         for key in keys_to_keep:
             zmatrix._metadata[key] = self._metadata[key].copy()

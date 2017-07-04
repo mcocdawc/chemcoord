@@ -17,6 +17,7 @@ from chemcoord.utilities.algebra_utilities import \
     _jit_rotation_matrix, \
     _jit_isclose, \
     _jit_cross
+from collections import namedtuple
 from numba import jit
 import numpy as np
 import pandas as pd
@@ -96,6 +97,7 @@ class ZmatCore(PandasWrapper):
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
     _metadata_keys = frozenset({'abs_refs', 'last_valid_cartesian'})
+    _References = namedtuple('References', ['dummy_d', 'actual_d'])
 
     def __init__(self, frame, metadata=None, _metadata=None):
         """How to initialize a Zmat instance.
@@ -120,21 +122,25 @@ class ZmatCore(PandasWrapper):
             self.metadata = {}
         else:
             self.metadata = metadata.copy()
+
         if _metadata is None:
             self._metadata = {}
         else:
             self._metadata = _metadata.copy()
+
+        def fill_missing_keys_with_defaults(_metadata):
             if 'abs_refs' not in _metadata:
-                self._metadata['abs_refs'] = constants.absolute_refs
+                _metadata['abs_refs'] = constants.absolute_refs
             if 'last_valid_cartesian' not in _metadata:
-                self._metadata['last_valid_cartesian'] = self.give_cartesian()
-            if 'inserted_dummies' not in _metadata:
-                self._metadata['inserted_dummies'] = {}
+                _metadata['last_valid_cartesian'] = self.give_cartesian()
+            if 'has_dummies' not in _metadata:
+                _metadata['has_dummies'] = {}
+
+        fill_missing_keys_with_defaults(self._metadata)
 
     def copy(self):
-        molecule = self.__class__(self._frame)
-        molecule.metadata = self.metadata.copy()
-        molecule._metadata = self._metadata.copy()
+        molecule = self.__class__(self._frame, metadata=self.metadata,
+                                  _metadata=self._metadata)
         return molecule
 
     def _repr_html_(self):
@@ -344,11 +350,6 @@ class ZmatCore(PandasWrapper):
                             ref_labels, n1)
 
     def _insert_dummy_zmat(self, exception):
-        cols = ['b', 'a', 'd']
-        dummy_cart, i_dummy = self._insert_dummy_cart(exception)
-        d = self.loc[exception.index, 'd']
-        ref_labels = np.array([i_dummy] + list(self.loc[d, cols]))
-
         def insert_row(df, pos, key):
             if pos < len(df):
                 middle = df.iloc[pos:(pos + 1)]
@@ -360,19 +361,32 @@ class ZmatCore(PandasWrapper):
                 start.loc[key] = start.iloc[-1]
                 return start
 
-        zframe = insert_row(exception.zmat_after_assignment._frame,
-                            self.index.get_loc(exception.index), i_dummy)
-        zframe.loc[exception.index, 'd'] = i_dummy
-        zframe.loc[i_dummy, 'atom'] = 'X'
-        zframe.loc[i_dummy, cols] = self.loc[d, cols]
-        zmat_values = dummy_cart._calculate_zmat_values(ref_labels[None, :])[0]
-        zframe.loc[i_dummy, ['bond', 'angle', 'dihedral']] = zmat_values
+        def create_zmat(self, i, dummy_cart, dummy_d):
+            cols = ['b', 'a', 'd']
+            actual_d = self.loc[i, 'd']
+            ref_labels = list(self.loc[actual_d, cols])
+            zframe = insert_row(exception.zmat_after_assignment._frame,
+                                self.index.get_loc(i), dummy_d)
+            zframe.loc[i, 'd'] = dummy_d
+            zframe.loc[dummy_d, 'atom'] = 'X'
+            zframe.loc[dummy_d, cols] = ref_labels
+            ref_labels = np.array([dummy_d] + ref_labels)[None, :]
+            zmat_values = dummy_cart._calculate_zmat_values(ref_labels)[0]
+            zframe.loc[dummy_d, ['bond', 'angle', 'dihedral']] = zmat_values
 
-        zmat = self.__class__(zframe, metadata=self.metadata,
-                              _metadata=self._metadata)
+            zmat = self.__class__(zframe, metadata=self.metadata,
+                                  _metadata=self._metadata)
+            references = self._References(dummy_d, actual_d)
+            zmat._metadata['has_dummies'][i] = references
+            return zmat
 
-        zmat._metadata['inserted_dummies'][exception.index] = {
-            'dummy': i_dummy, 'd': d}
+        i = exception.index
+        has_dummies = self._metadata['has_dummies']
+        if i not in [has_dummies[k].dummy_d for k in has_dummies]:
+            zmat = create_zmat(self, i, *self._insert_dummy_cart(exception))
+        else:
+            zmat = exception.zmat_after_assignment._remove_dummies()
+
         try:
             zmat._metadata['last_valid_cartesian'] = zmat.give_cartesian()
         except InvalidReference as e:
@@ -381,34 +395,32 @@ class ZmatCore(PandasWrapper):
             zmat = zmat._insert_dummy_zmat(e)
         return zmat
 
-    def _has_removable_dummies(self):
-        # coords = ['x', 'y', 'z']
+    def _give_removable_dummies(self):
         xyz = self.give_cartesian().loc[:, ['x', 'y', 'z']]
-        inserted_dummies = self._metadata['inserted_dummies']
-        indices_to_test = inserted_dummies.keys()
-        c_table = self.loc[indices_to_test, ['b', 'a', 'd']]
-        c_table['d'] = [inserted_dummies[key]['d'] for key in indices_to_test]
+        has_dummies = self._metadata['has_dummies']
+        to_be_tested = has_dummies.keys()
+        c_table = self.loc[to_be_tested, ['b', 'a', 'd']]
+        c_table['d'] = [has_dummies[i].actual_d for i in to_be_tested]
         BA = (xyz.loc[c_table['a']].values - xyz.loc[c_table['b']].values)
         AD = (xyz.loc[c_table['d']].values - xyz.loc[c_table['a']].values)
 
-        may_be_removed = ~np.isclose(
-            np.cross(BA, AD), np.zeros_like(BA)).all(axis=1)
-        return [key for row, key in enumerate(indices_to_test)
-                if may_be_removed[row]]
+        remove = ~np.isclose(np.cross(BA, AD), np.zeros_like(BA)).all(axis=1)
+        return [k for r, k in enumerate(to_be_tested) if remove[r]]
 
     def _remove_dummies(self):
+        cols = ['b', 'a', 'd']
         zmat = self.copy()
         xyz = zmat.give_cartesian()
-        has_remove_dum = self._has_removable_dummies()
-        inserted_dummies = self._metadata['inserted_dummies']
-        zmat.unsafe_loc[has_remove_dum, 'd'] = [inserted_dummies[k]['d']
-                                                for k in has_remove_dum]
-        c_table = zmat.loc[has_remove_dum, ['b', 'a', 'd']]
-        value_cols = ['bond', 'angle', 'dihedral']
-        zmat_values = xyz._calculate_zmat_values(c_table)
-        zmat.unsafe_loc[has_remove_dum, value_cols] = zmat_values
+        to_remove = self._give_removable_dummies()
+        has_dummies = self._metadata['has_dummies']
+        dummies = [has_dummies[k].dummy_d for k in to_remove]
 
-        dummies = [inserted_dummies[k]['dummy'] for k in has_remove_dum]
+        c_table = zmat.loc[to_remove, ['b', 'a', 'd']]
+        c_table['d'] = [has_dummies[k].actual_d for k in to_remove]
+        zmat.unsafe_loc[to_remove, 'd'] = c_table['d']
+
+        zmat_values = xyz._calculate_zmat_values(c_table)
+        zmat.unsafe_loc[to_remove, ['bond', 'angle', 'dihedral']] = zmat_values
 
         return self.__class__(zmat[~zmat.index.isin(dummies)],
                               metadata=self.metadata, _metadata=self._metadata)
