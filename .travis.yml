@@ -26,4 +26,5 @@ script:
   - pytest --cov=./src/chemcoord --cov-report=xml
 
 after_success:
+  - cat coverage.xml
   - codecov
