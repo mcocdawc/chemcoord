@@ -6,6 +6,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from chemcoord.internal_coordinates._zmat_class_core import ZmatCore
+import numpy as np
 import pandas as pd
 import warnings
 

@@ -9,6 +9,7 @@ from chemcoord.cartesian_coordinates._cartesian_class_core \
     import CartesianCore
 from chemcoord.configuration import settings
 from io import open
+import numpy as np
 import os
 import pandas as pd
 import subprocess

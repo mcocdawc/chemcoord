@@ -9,6 +9,7 @@ from ase.constraints import FixAtoms
 from ase.calculators.emt import EMT
 from ase.vibrations import Vibrations
 import ase.io
+import numpy as np
 
 import chemcoord as cc
 

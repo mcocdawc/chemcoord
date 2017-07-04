@@ -22,7 +22,6 @@ from numba import jit
 import numpy as np
 import pandas as pd
 from sortedcontainers import SortedSet
-import sys
 
 
 class CartesianCore(PandasWrapper):
@@ -77,7 +76,6 @@ class CartesianCore(PandasWrapper):
             return selected
 
     def _test_if_correctly_indexed(self, other):
-        cols = ['atom', 'x', 'y', 'z']
         if not (set(self.index) == set(other.index)
                 and np.alltrue(self['atom'] == other.loc[self.index, 'atom'])):
             message = ("You can add only Cartesians which are indexed in the "
@@ -652,8 +650,8 @@ class CartesianCore(PandasWrapper):
 
     def move(
             self,
-            vector=[0, 0, 0],
-            matrix=np.identity(3),
+            vector=None,
+            matrix=None,
             matrix_first=True,
             indices=None,
             copy=False):
@@ -676,6 +674,8 @@ class CartesianCore(PandasWrapper):
         output = self.copy()
 
         indices = self.index if (indices is None) else indices
+        vector = np.zeros(3) if vector is None else vector
+        matrix = np.identity(3) if matrix is None else matrix
         vectors = output.loc[indices, ['x', 'y', 'z']]
 
         if matrix_first:
@@ -767,7 +767,7 @@ class CartesianCore(PandasWrapper):
         angles = np.degrees(np.arccos(dot_product))
         return angles
 
-    def dihedral_degrees(self, buildlist, start_row=0):
+    def dihedral_degrees(self, indices, start_row=0):
         """Return the dihedrals between given atoms.
 
         Calculates the dihedral angle in degrees between the atoms with

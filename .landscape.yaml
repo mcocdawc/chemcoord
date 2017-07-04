@@ -1,5 +1,12 @@
 # ignore-paths:
 #   - docs
+ignore-paths:
+  - docs
+  - src/chemcoord/__init__.py
+pylint:
+  disable:
+    - redefined-builtin
+    - protected-access
 python-targets:
   - 2
   - 3

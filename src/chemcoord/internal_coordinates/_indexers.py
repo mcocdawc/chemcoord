@@ -63,7 +63,7 @@ class _Unsafe_ILoc(_generic_Indexer):
 
 class _Safe_ILoc(_Unsafe_ILoc):
     def __setitem__(self, key, value):
-        raise NotImplemented
+        raise NotImplementedError
         # before_assignment = self.molecule.copy()
         # if isinstance(key, tuple):
         #     self.molecule._frame.iloc[key[0], key[1]] = value
