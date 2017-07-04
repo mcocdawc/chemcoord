@@ -24,5 +24,4 @@ script:
   - pytest --cov=./src/chemcoord
 
 after_success:
-  - coverage report
   - codecov
