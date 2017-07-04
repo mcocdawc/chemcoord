@@ -23,7 +23,7 @@ install:
 script:
   # - coverage run --source ./src/chemcoord -m pytest
   # - coverage run --source ./src/chemcoord -m pytest
-  - pytest --cov=./ --cov-report=xml
+  - pytest --cov=./src/chemcoord --cov-report=xml
 
 after_success:
   - codecov
