@@ -127,7 +127,6 @@ class CartesianGiveZmat(CartesianCore):
         visited = {i}
         if len(self) > 1:
             parent = {j: i for j in bond_dict[i]}
-            bond_dict[i]
             work_bond_dict = OrderedDict(
                 [(j, bond_dict[j] - visited) for j in bond_dict[i]])
             modify_priority(work_bond_dict, user_defined)
@@ -425,7 +424,6 @@ class CartesianGiveZmat(CartesianCore):
             list: A list of problematic indices.
         """
         c_table = construction_table
-        abs_refs = self._metadata['abs_refs']
         problem_index = [i for i in c_table.index[:3]
                          if not self._has_valid_abs_ref(i, c_table)]
         return problem_index
@@ -458,9 +456,7 @@ class CartesianGiveZmat(CartesianCore):
         return c_table
 
     def _get_bond_vectors(self, construction_table):
-        coords = ['x', 'y', 'z']
         c_table = construction_table
-        abs_references = self._metadata['abs_refs']
         pos = np.empty((len(c_table), 3, 4))
 
         if isinstance(c_table, pd.DataFrame):

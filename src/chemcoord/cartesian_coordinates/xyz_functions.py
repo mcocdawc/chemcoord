@@ -162,7 +162,7 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
             f.seek(current_line)
 
     list_of_cartesians = []
-    for i in range(number_of_molecules):
+    for _ in range(number_of_molecules):
         molecule_in = [f.readline()
                        for j in range(number_of_atoms + 2)]
         molecule_in = ''.join(molecule_in)
@@ -222,5 +222,4 @@ def allclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
     Returns:
         bool:
     """
-    coords = ['x', 'y', 'z']
     return np.alltrue(isclose(a, b, align=align, rtol=rtol, atol=atol))

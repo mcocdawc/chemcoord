@@ -326,8 +326,11 @@ class PandasWrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.insert` method.
         """
-        self._frame.insert(loc, column, value,
-                           allow_duplicates=allow_duplicates)
+        out = self if inplace else self.copy()
+        out._frame.insert(loc, column, value,
+                          allow_duplicates=allow_duplicates)
+        if not inplace:
+            return out
 
     def apply(self, *args, **kwargs):
         """Applies function along input axis of DataFrame.
