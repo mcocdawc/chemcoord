@@ -21,11 +21,8 @@ install:
   - pip install -e .
 
 script:
-  # - coverage run --source ./src/chemcoord -m pytest
-  # - coverage run --source ./src/chemcoord -m pytest
-  - pytest --cov=./src/chemcoord --cov-report=xml
+  - pytest --cov=./src/chemcoord
 
 after_success:
-  - cat coverage.xml
   - coverage report
   - codecov
