@@ -1,5 +1,7 @@
 numpy
-pandas
+scipy
+pandas>=0.20
+numba>=0.30
 sortedcontainers
 sympy
-numba
+six
