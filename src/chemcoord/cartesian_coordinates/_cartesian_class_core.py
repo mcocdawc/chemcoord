@@ -820,7 +820,7 @@ class CartesianCore(PandasWrapper):
         where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) > 0
         where_to_modify = np.nonzero(where_to_modify)[0]
 
-        length = buildlist.shape[0] - start_row
+        length = indices.shape[0] - start_row
         sign = np.full(length, 1, dtype='float64')
         to_add = np.full(length, 0, dtype='float64')
         sign[where_to_modify] = -1
