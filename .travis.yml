@@ -18,7 +18,7 @@ python:
 install:
   - pip install codecov
   - pip install pytest-cov
-  - pip install .
+  - pip install -e .
 
 script:
   # - coverage run --source ./src/chemcoord -m pytest
