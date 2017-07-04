@@ -1456,7 +1456,6 @@ class CartesianCore(PandasWrapper):
         data = constants.elements
         if pd.api.types.is_list_like(new_cols):
             new_cols = set(new_cols)
-            pass
         elif new_cols is None:
             new_cols = set(data.columns)
         else:

@@ -10,7 +10,6 @@ import warnings
 import chemcoord.constants as constants
 from chemcoord._exceptions import \
     IllegalArgumentCombination, \
-    InvalidReference, \
     UndefinedCoordinateSystem
 from chemcoord.cartesian_coordinates._cartesian_class_core import \
     CartesianCore
@@ -92,12 +91,13 @@ class CartesianGiveZmat(CartesianCore):
             for j in reversed(user_defined):
                 try:
                     try:
-                        work_bond_dict.move_to_end(j, last=False)
+                        bond_dict.move_to_end(j, last=False)
                     except AttributeError:
                         # No move_to_end method in python 2.x
-                        move_to_start(work_bond_dict, j)
+                        move_to_start(bond_dict, j)
                 except KeyError:
                     pass
+
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination('Either start_atom or '
                                              'predefined_table has to be None')
