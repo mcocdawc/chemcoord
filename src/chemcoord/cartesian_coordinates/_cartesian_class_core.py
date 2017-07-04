@@ -4,10 +4,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    import itertools.izip as zip
-except ImportError:
-    pass
 from chemcoord._exceptions import PhysicalMeaning
 from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
     PandasWrapper
@@ -21,6 +17,7 @@ import numba as nb
 from numba import jit
 import numpy as np
 import pandas as pd
+from six.moves import zip  # pylint:disable=redefined-builtin
 from sortedcontainers import SortedSet
 
 

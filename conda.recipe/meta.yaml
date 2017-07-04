@@ -15,6 +15,7 @@ requirements:
     - numba >=0.30
     - sortedcontainers
     - sympy
+    - six
 
   run:
     - python
@@ -24,6 +25,7 @@ requirements:
     - numba >=0.30
     - sortedcontainers
     - sympy
+    - six
 
 about:
   home: http://chemcoord.readthedocs.io/

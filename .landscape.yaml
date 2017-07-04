@@ -6,7 +6,7 @@ ignore-paths:
   - src/chemcoord/constants.py
 pylint:
   disable:
-    - redefined-builtin
+    - cyclic-import
     - protected-access
 python-targets:
   - 2

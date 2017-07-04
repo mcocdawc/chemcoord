@@ -18,7 +18,7 @@ AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
 URL = 'https://github.com/mcocdawc/chemcoord'
 INSTALL_REQUIRES = ['numpy', 'scipy', 'pandas>=0.20', 'numba>=0.30',
-                    'sortedcontainers', 'sympy']
+                    'sortedcontainers', 'sympy', 'six']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
             'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
             'coordinate system']
