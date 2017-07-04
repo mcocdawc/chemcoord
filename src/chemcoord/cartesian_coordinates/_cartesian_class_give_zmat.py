@@ -394,7 +394,7 @@ class CartesianGiveZmat(CartesianCore):
         A = np.empty((3, 3))
         row = c_table.index.get_loc(i)
         if row > 2:
-            messsage = 'The index {i} is not from the first three, rows'.format
+            message = 'The index {i} is not from the first three, rows'.format
             raise ValueError(message(i))
         for k in range(3):
             if k < row:

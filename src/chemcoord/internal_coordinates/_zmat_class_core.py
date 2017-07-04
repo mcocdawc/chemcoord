@@ -414,7 +414,6 @@ class ZmatCore(PandasWrapper):
                               metadata=self.metadata, _metadata=self._metadata)
 
     def give_cartesian(self):
-        abs_refs = self._metadata['abs_refs']
         old_index = self.index
         rename = dict(enumerate(old_index))
         self.change_numbering(inplace=True)
@@ -500,7 +499,6 @@ class ZmatCore(PandasWrapper):
         data = constants.elements
         if pd.api.types.is_list_like(new_cols):
             new_cols = set(new_cols)
-            pass
         elif new_cols is None:
             new_cols = set(data.columns)
         else:
