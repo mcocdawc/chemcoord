@@ -4,10 +4,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-from chemcoord._exceptions import PhysicalMeaning
-import chemcoord.internal_coordinates._indexers as indexers
-import pandas as pd
-import sympy
 
 
 class PandasWrapper(object):
@@ -80,7 +76,7 @@ class PandasWrapper(object):
         Wrapper around the :meth:`pandas.DataFrame.sort_index` method.
         """
         return self._frame.sort_index(axis=axis, level=level,
-                                      ascending=ascending, inplace=False,
+                                      ascending=ascending, inplace=inplace,
                                       kind=kind, na_position=na_position,
                                       sort_remaining=sort_remaining, by=by)
 

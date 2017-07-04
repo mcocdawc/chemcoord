@@ -3,6 +3,7 @@
 ignore-paths:
   - docs
   - src/chemcoord/__init__.py
+  - src/chemcoord/constants.py
 pylint:
   disable:
     - redefined-builtin
