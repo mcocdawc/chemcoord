@@ -224,3 +224,30 @@ def allclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
         bool:
     """
     return np.alltrue(isclose(a, b, align=align, rtol=rtol, atol=atol))
+
+
+def concat(cartesians, ignore_index=False, keys=None):
+    """Join list of cartesians into one molecule.
+
+    Wrapper around the :func:`pandas.concat` function.
+    Default values are the same as in the pandas function except for
+    ``verify_integrity`` which is set to true in case of this library.
+
+    Args:
+        ignore_index (bool): If True, do not use the index values along the
+            concatenation axis. The resulting axis will be labeled 0, …, n - 1.
+            This is useful if you are concatenating objects where the
+            concatenation axis does not have meaningful indexing information.
+            Note the index values on the other axes are still
+            respected in the join.
+        keys (sequence): If multiple levels passed, should contain tuples.
+            Construct hierarchical index using the passed keys as
+            the outermost level
+
+    Returns:
+        Cartesian:
+    """
+    frames = [molecule._frame for molecule in cartesians]
+    new = pd.concat(frames, ignore_index=ignore_index, keys=keys,
+                    verify_integrity=True)
+    return cartesians[0].__class__(new)
