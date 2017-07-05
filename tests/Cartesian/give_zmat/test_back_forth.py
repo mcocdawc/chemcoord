@@ -2,6 +2,7 @@ import chemcoord as cc
 from chemcoord.xyz_functions import allclose
 import pytest
 from chemcoord._exceptions import UndefinedCoordinateSystem
+import itertools
 import os
 import sys
 
@@ -59,7 +60,7 @@ def test_specified_c_table_assert_first_three_nonlinear():
     connection.loc[8] = [2, 99, 12]
     connection = connection.loc[[2, 8]]
     c_table = molecule.get_construction_table(
-        fragment_list=[(fragment, connection)])
+        fragment_list=[(fragment, connection)], perform_checks=False)
     with pytest.raises(UndefinedCoordinateSystem):
         c_table = molecule.correct_dihedral(c_table)
 
@@ -78,4 +79,21 @@ def test_specified_c_table_assert_first_three_nonlinear():
     c_table = molecule.correct_dihedral(c_table)
     zmolecule = molecule.give_zmat(c_table)
     assert allclose(molecule, zmolecule.give_cartesian(), align=False,
-                   atol=1e-6)
+                    atol=1e-6)
+
+
+def test_issue_18():
+    path = os.path.join(STRUCTURE_PATH, 'temp_lig.xyz')
+    a = cc.Cartesian.read_xyz(path)
+    con_table = a.get_construction_table()
+    amat = a.give_zmat(con_table)
+    a_new = amat.give_cartesian()
+    # without construction table
+    b = cc.Cartesian.read_xyz(path)
+    bmat = a.give_zmat()
+    b_new = bmat.give_cartesian()
+
+    structures = [a, a_new, b, b_new]
+
+    for i, j in itertools.product(structures, structures):
+        assert cc.xyz_functions.allclose(i, j, align=False)

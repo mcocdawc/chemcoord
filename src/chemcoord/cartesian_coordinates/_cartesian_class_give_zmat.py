@@ -184,7 +184,8 @@ class CartesianGiveZmat(CartesianCore):
         return output
 
     def get_construction_table(self, fragment_list=None,
-                               use_lookup=settings['defaults']['use_lookup']):
+                               use_lookup=settings['defaults']['use_lookup'],
+                               perform_checks=True):
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
@@ -204,6 +205,9 @@ class CartesianGiveZmat(CartesianCore):
                 may be provided. The rest is created automatically.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
+            perform_checks (bool): The checks for invalid references are
+                performed using :meth:`~chemcoord.Cartesian.correct_dihedral`
+                and :meth:`~chemcoord.Cartesian.correct_absolute_refs`.
 
         Returns:
             pd.DataFrame: Construction table
@@ -288,7 +292,13 @@ class CartesianGiveZmat(CartesianCore):
                     constr_table.iloc[2, 2] = b
 
             full_table = pd.concat([full_table, constr_table])
-        return full_table
+
+        c_table = full_table
+        if perform_checks:
+            c_table = self.correct_dihedral(c_table)
+            c_table = self.correct_dihedral(c_table, use_lookup=use_lookup)
+            c_table = self.correct_absolute_refs(c_table)
+        return c_table
 
     def check_dihedral(self, construction_table):
         """Checks, if the dihedral defining atom is colinear.
@@ -582,11 +592,12 @@ class CartesianGiveZmat(CartesianCore):
         If you then pass the buildlist as argument to ``give_zmat``,
         the algorithm directly starts with step 3 (which is much faster).
 
-        If a ``construction_table`` is either manually created,
+        If a ``construction_table`` is passed into :meth:`~Cartesian.give_zmat`
+        the check for pathological linearity is not performed!
+        So if a ``construction_table`` is either manually created,
         or obtained from :meth:`~Cartesian.get_construction_table`
-        and passed into :meth:`~Cartesian.give_zmat` the check for
-        pathological linearity is not performed!
-        Please use the following methods:
+        under the option ``perform_checks = False``, it is recommended to use
+        the following methods:
 
             * :meth:`~Cartesian.correct_dihedral`
             * :meth:`~Cartesian.correct_absolute_refs`

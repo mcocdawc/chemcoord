@@ -196,13 +196,14 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
     coords = ['x', 'y', 'z']
     if not (set(a.index) == set(b.index)
             and np.alltrue(a.loc[:, 'atom'] == b.loc[a.index, 'atom'])):
-        return False
-    else:
-        if align:
-            a = a.inertia()['transformed_Cartesian']
-            b = b.inertia()['transformed_Cartesian']
-        A, B = a.loc[:, coords], b.loc[a.index, coords]
-        return np.isclose(A, B, rtol=rtol, atol=atol)
+        message = 'Can only compare molecules with the same atoms and labels'
+        raise ValueError(message)
+
+    if align:
+        a = a.inertia()['transformed_Cartesian']
+        b = b.inertia()['transformed_Cartesian']
+    A, B = a.loc[:, coords], b.loc[a.index, coords]
+    return np.isclose(A, B, rtol=rtol, atol=atol)
 
 
 def allclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
