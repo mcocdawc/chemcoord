@@ -144,14 +144,11 @@ class ZmatCore(PandasWrapper):
 
     def _repr_html_(self):
         out = self.copy()
-        representation = {key: out._metadata['abs_refs'][key][1]
-                          for key in out._metadata['abs_refs']}
 
-        def absolute_ref_formatter(x, representation=representation):
-            try:
-                return representation[x]
-            except KeyError:
-                return x
+        def absolute_ref_formatter(out):
+            abs_refs = out._metadata['abs_refs']
+            out._frame.replace(to_replace=abs_refs.keys(),
+                               value=abs_refs.values(), inplace=True)
 
         def sympy_formatter(x):
             if (isinstance(x, sympy.Basic)):

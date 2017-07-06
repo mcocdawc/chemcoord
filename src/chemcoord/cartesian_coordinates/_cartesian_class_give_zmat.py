@@ -233,7 +233,7 @@ class CartesianGiveZmat(CartesianCore):
                 and :meth:`~chemcoord.Cartesian.correct_absolute_refs`.
 
         Returns:
-            pd.DataFrame: Construction table
+            :class:`pandas.DataFrame`: Construction table
         """
         int_label = constants.int_label
         if fragment_list is None:

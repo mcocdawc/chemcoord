@@ -6,13 +6,15 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from chemcoord.internal_coordinates._zmat_class_core import ZmatCore
+from chemcoord.constants import int_label
 import numpy as np
 import pandas as pd
 import warnings
 
 
 class ZmatIO(ZmatCore):
-    def to_string(self, buf=None, columns=None, col_space=None, header=True,
+    def to_string(self, buf=None, upper_triangle='string', columns=None,
+                  col_space=None, header=True,
                   index=True, na_rep='NaN', formatters=None,
                   float_format=None, sparsify=None, index_names=True,
                   justify=None, line_width=None, max_rows=None,
@@ -21,13 +23,23 @@ class ZmatIO(ZmatCore):
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.
         """
-        return self._frame.to_string(
+        def upper_triangle_with_strings():
+            new = self._frame.replace(to_replace=int_label.values(),
+                                      value=int_label.keys())
+            return new
+        def upper_triangle_with_latex():
+            new = self._frame.replace(to_replace=int_label.values(),
+                                      value=int_label.keys())
+            return new
+
+        content = frame.to_string(
             buf=buf, columns=columns, col_space=col_space, header=header,
             index=index, na_rep=na_rep, formatters=formatters,
             float_format=float_format, sparsify=sparsify,
             index_names=index_names, justify=justify, line_width=line_width,
             max_rows=max_rows, max_cols=max_cols,
             show_dimensions=show_dimensions)
+        return content
 
     def to_latex(self, buf=None, columns=None, col_space=None, header=True,
                  index=True, na_rep='NaN', formatters=None, float_format=None,
@@ -104,7 +116,7 @@ class ZmatIO(ZmatCore):
             formatted : string (or unicode, depending on data and options)
         """
         if implicit_index:
-            molecule = self.change_numbering(new_index=range(1, len(self)))
+            molecule = self.change_numbering(new_index=range(1, len(self) + 1))
 
         content = molecule.to_string(index=(not implicit_index),
                                      float_format=float_format, header=header)
