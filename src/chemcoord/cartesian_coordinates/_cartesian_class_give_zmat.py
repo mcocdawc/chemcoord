@@ -198,11 +198,35 @@ class CartesianGiveZmat(CartesianCore):
         This method creates a so called "chemical" construction table,
         which makes use of the connectivity table in this molecule.
 
-        By default the first atom is the one nearest to the topologic center.
-        (Compare with :meth:`~Cartesian.topologic_center()`)
-
         Args:
-            fragment_list (sequence):
+            fragment_list (sequence): There are four possibilities to specify
+                the sequence of fragments:
+
+                1. A list of tuples is given. Each tuple contains the fragment
+                with its corresponding construction table in the form of::
+
+                    [(frag1, c_table1), (frag2, c_table2)...]
+
+                If the construction table of a fragment is not complete,
+                the rest of each fragment's
+                construction table is calculated automatically.
+
+                2. It is possible to omit the construction tables for some
+                or all fragments as in the following example::
+
+                    [(frag1, c_table1), frag2, (frag3, c_table3)...]
+
+                3. If ``self`` contains more atoms than the union over all
+                fragments, the rest of the molecule without the fragments
+                is automatically prepended using :meth:`~Cartesian.without`::
+
+                    self.without(fragments) + fragment_list
+
+                4. If fragment_list is ``None`` then fragmentation, etc.
+                is done automatically. The fragments are then sorted by
+                their number of atoms, in order to use the largest fragment
+                as reference for the other ones.
+
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
             perform_checks (bool): The checks for invalid references are
@@ -388,7 +412,7 @@ class CartesianGiveZmat(CartesianCore):
         Checks for each index from first to third row of the
         ``construction_table``, if the references are colinear.
         This case has to be specially treated, because the references
-        are not only atoms (to fix internal degrees of atom) but also points
+        are not only atoms (to fix internal degrees of freedom) but also points
         in cartesian space called absolute references.
         (to fix translational and rotational degrees of freedom)
 
@@ -423,7 +447,7 @@ class CartesianGiveZmat(CartesianCore):
         Checks for each index from first to third row of the
         ``construction_table``, if the references are colinear.
         This case has to be specially treated, because the references
-        are not only atoms (to fix internal degrees of atom) but also points
+        are not only atoms (to fix internal degrees of freedom) but also points
         in cartesian space called absolute references.
         (to fix translational and rotational degrees of freedom)
 

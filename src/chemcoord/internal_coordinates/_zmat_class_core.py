@@ -572,3 +572,21 @@ class ZmatCore(PandasWrapper):
             return self['mass'].sum()
         except KeyError:
             return self.add_data('mass')['mass'].sum()
+
+    def has_same_sumformula(self, other):
+        """Determines if ``other``  has the same sumformula
+
+        Args:
+            other (molecule):
+
+        Returns:
+            bool:
+        """
+        same_atoms = True
+        for atom in set(self['atom']):
+            own_atom_number = len(self[self['atom'] == atom])
+            other_atom_number = len(other[other['atom'] == atom])
+            same_atoms = (own_atom_number == other_atom_number)
+            if not same_atoms:
+                break
+        return same_atoms

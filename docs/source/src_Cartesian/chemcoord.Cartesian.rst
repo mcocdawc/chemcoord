@@ -33,7 +33,6 @@ chemcoord\.Cartesian
          ~Cartesian.cutsphere
          ~Cartesian.move
          ~Cartesian.basistransform
-         ~Cartesian.make_similar
          ~Cartesian.align
          ~Cartesian.change_numbering
          ~Cartesian.loc_set_copy

@@ -1315,6 +1315,14 @@ class CartesianCore(PandasWrapper):
         return Cartesian_list
 
     def has_same_sumformula(self, other):
+        """Determines if ``other``  has the same sumformula
+
+        Args:
+            other (molecule):
+
+        Returns:
+            bool:
+        """
         same_atoms = True
         for atom in set(self['atom']):
             own_atom_number = len(self[self['atom'] == atom])
