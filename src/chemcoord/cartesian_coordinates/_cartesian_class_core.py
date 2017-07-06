@@ -191,6 +191,7 @@ class CartesianCore(PandasWrapper):
         return self._frame == other._frame
 
     def append(self, other):
+        # TODO(write Docstrign)
         new = self._frame.append(other._frame, verify_integrity=True)
         return self.__class__(new)
 

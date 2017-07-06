@@ -176,6 +176,7 @@ class CartesianGiveZmat(CartesianCore):
                 for j in work_bond_dict[i]:
                     new_work_bond_dict[j] = bond_dict[j] - visited
                     parent[j] = i
+
             work_bond_dict = new_work_bond_dict
             modify_priority(work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient='index')
@@ -183,6 +184,7 @@ class CartesianGiveZmat(CartesianCore):
         output = output.loc[order_of_def, ['b', 'a', 'd']]
         return output
 
+    # TODO(better docstring)
     def get_construction_table(self, fragment_list=None,
                                use_lookup=settings['defaults']['use_lookup'],
                                perform_checks=True):
@@ -200,9 +202,7 @@ class CartesianGiveZmat(CartesianCore):
         (Compare with :meth:`~Cartesian.topologic_center()`)
 
         Args:
-            start_atom: An index for the first atom may be provided.
-            predefined_table (pd.DataFrame): An uncomplete construction table
-                may be provided. The rest is created automatically.
+            fragment_list (sequence):
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
             perform_checks (bool): The checks for invalid references are

@@ -40,7 +40,6 @@ def _jit_calculate_single_position(references, zmat_values, row):
         d = bond * ba
     else:
         AD = vd - va
-        # N1 = _jit_cross(_jit_normalize(BA), _jit_normalize(AD))
         N1 = _jit_cross(BA, AD)
         if _jit_isclose(N1, zeros).all():
             err = ERR_CODE_InvalidReference
@@ -86,9 +85,9 @@ def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
         err, pos = _jit_calculate_single_position(ref_pos, zmat_values, row)
         if err == ERR_CODE_OK:
             positions[row] = pos
-        elif err == ERR_CODE_InvalidReference:
-            return (ERR_CODE_InvalidReference, row)
-    return (ERR_CODE_OK, row)
+        else:
+            break
+    return (err, row)
 
 
 class ZmatCore(PandasWrapper):
@@ -293,7 +292,48 @@ class ZmatCore(PandasWrapper):
     def _to_Zmat(self):
         return self.copy()
 
-    def change_numbering(self, new_index=None, inplace=False):
+    def change_numbering(self, new_index=None, inplace=False,
+                         exclude_upper_triangle=True):
+        """Change numbering to a new index.
+
+        Changes the numbering of index and all dependent numbering
+            (bond_with...) to a new_index.
+        The user has to make sure that the new_index consists of distinct
+            elements.
+
+        Args:
+            new_index (list): If None the new_index is taken from 1 to the
+                number of atoms.
+            exclude_upper_triangle (bool): Exclude the upper triangle from
+                being replaced with the new index
+
+        Returns:
+            Zmat: Reindexed version of the zmatrix.
+        """
+        cols = ['b', 'a', 'd']
+        out = self if inplace else self.copy()
+
+        if (new_index is None):
+            new_index = range(len(self))
+        elif len(new_index) != len(self):
+            raise ValueError('len(new_index) has to be the same as len(self)')
+
+        if exclude_upper_triangle:
+            previous = [out.iloc[i, [1, 3, 5][i:]]
+                        if i < 2 else out.iloc[i, 5]
+                        for i in range(min(len(self), 3))]
+            out.unsafe_loc[:, cols] = out.loc[:, cols].replace(
+                out.index, new_index)
+            for i in range(min(len(self), 3)):
+                out.unsafe_iloc[i, [1, 3, 5][i:]] = previous[i]
+        else:
+            out.unsafe_loc[:, cols] = out.loc[:, cols].replace(
+                out.index, new_index)
+        out._frame.index = new_index
+        if not inplace:
+            return out
+
+    def change_numbering_old(self, new_index=None, inplace=False):
         """Change numbering to a new index.
 
         Changes the numbering of index and all dependent numbering

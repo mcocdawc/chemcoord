@@ -53,7 +53,7 @@ class _ILoc(_generic_Indexer):
         return selected
 
 
-class _Unsafe_ILoc(_generic_Indexer):
+class _Unsafe_ILoc(_ILoc):
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
             self.molecule._frame.iloc[key[0], key[1]] = value
