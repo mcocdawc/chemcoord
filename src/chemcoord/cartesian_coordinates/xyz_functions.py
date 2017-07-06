@@ -176,7 +176,7 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     return list_of_cartesians
 
 
-def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
+def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
     """Compare two molecules for numerical equality.
 
     Args:
@@ -206,7 +206,7 @@ def isclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
     return np.isclose(A, B, rtol=rtol, atol=atol)
 
 
-def allclose(a, b, align=True, rtol=1.e-5, atol=1.e-8):
+def allclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
     """Compare two molecules for numerical equality.
 
     Args:
