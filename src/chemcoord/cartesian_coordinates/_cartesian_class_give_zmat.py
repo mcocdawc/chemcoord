@@ -184,7 +184,6 @@ class CartesianGiveZmat(CartesianCore):
         output = output.loc[order_of_def, ['b', 'a', 'd']]
         return output
 
-    # TODO(better docstring)
     def get_construction_table(self, fragment_list=None,
                                use_lookup=settings['defaults']['use_lookup'],
                                perform_checks=True):
