@@ -41,3 +41,30 @@ def test_concat():
 
     key_joined = cc.xyz_functions.concat(cartesians, keys=['a', 'b'])
     assert allclose(key_joined.loc['a'], (key_joined.loc['b'] - 10))
+
+
+def test_concat_with_zmats():
+    path = os.path.join(STRUCTURES, 'MIL53_small.xyz')
+    m = cc.Cartesian.read_xyz(path, start_index=1)
+    zm = m.give_zmat()
+    zm1 = zm.change_numbering(new_index=range(1, len(zm) + 1))
+    zm2 = zm.change_numbering(new_index=zm1.index + len(zm1))
+
+    new = cc.xyz_functions.concat([zm1.give_cartesian(),
+                                   zm2.give_cartesian() + [0, 0, 10]])
+
+    c_table = zm2.loc[:, ['b', 'a', 'd']]
+    c_table.loc[57, ['b', 'a', 'd']] = [4, 1, 2]
+    c_table.loc[58, ['a', 'd']] = [1, 2]
+    c_table.loc[59, 'd'] = 1
+
+    large_c_table = new.get_construction_table(
+        fragment_list=[(zm2.give_cartesian(), c_table)])
+    znew = new.give_zmat(large_c_table)
+
+    cc.xyz_functions.allclose(new, znew.give_cartesian())
+
+    znew.safe_loc[57, 'bond'] = 20. - 0.89
+    assert allclose(
+        zm1.give_cartesian().append(zm2.give_cartesian() + [0, 0, 20]),
+        znew.give_cartesian())
