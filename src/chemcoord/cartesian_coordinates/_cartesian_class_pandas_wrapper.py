@@ -199,24 +199,6 @@ class PandasWrapper(object):
     def dtypes(self):
         return self._frame.dtypes
 
-    def __repr__(self):
-        return self._frame.__repr__()
-
-    def _repr_html_(self):
-        def formatter(x):
-            if (isinstance(x, sympy.Basic)):
-                return '${}$'.format(sympy.latex(x))
-            else:
-                return x
-        new = self.applymap(formatter)
-
-        def insert_before_substring(insert_txt, substr, txt):
-            "Under the assumption that substr only appears once."
-            return (insert_txt + substr).join(txt.split(substr))
-        html_txt = new._frame._repr_html_()
-        insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
-        return insert_before_substring(insert_txt, '<thead>', html_txt)
-
     def sort_values(self, by, axis=0, ascending=True, inplace=False,
                     kind='quicksort', na_position='last'):
         """Sort by the values along either axis
@@ -264,8 +246,8 @@ class PandasWrapper(object):
         """
         if inplace:
             self._frame.replace(to_replace=to_replace, value=value,
-                               inplace=inplace, limit=limit,
-                               regex=regex, method=method, axis=axis)
+                                inplace=inplace, limit=limit, regex=regex,
+                                method=method, axis=axis)
         else:
             new = self.__class__(self._frame.replace(
                 to_replace=to_replace, value=value, inplace=inplace,

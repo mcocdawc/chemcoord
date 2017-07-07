@@ -12,6 +12,7 @@ import chemcoord.constants as constants
 import chemcoord.internal_coordinates._indexers as indexers
 from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
     PandasWrapper
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.utilities.algebra_utilities import \
     _jit_normalize, \
     _jit_rotation_matrix, \
@@ -54,32 +55,13 @@ def _jit_calculate_single_position(references, zmat_values, row):
 
 
 @jit(nopython=True)
-def _jit_give_reference_absolute_position(j):
-    # Because dicts are not supported in numba :(
-    # Assumes 64bit system
-    maxsize = 2**63 - 1
-    if j == -maxsize - 1:
-        return np.array([0., 0., 0.])
-    elif j == -maxsize:
-        return np.array([1., 0., 0.])
-    elif j == -maxsize + 1:
-        return np.array([0., 1., 0.])
-    elif j == -maxsize + 2:
-        return np.array([0., 0., 1.])
-    else:
-        raise ValueError
-
-
-@jit(nopython=True)
 def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
     for row in range(start_row, c_table.shape[0]):
         ref_pos = np.empty((3, 3))
-        # Assumes 64bit system
-        keys_below_are_abs_refs = -2**63 + 100
         for k in range(3):
             j = c_table[row, k]
-            if j < keys_below_are_abs_refs:
-                ref_pos[k] = _jit_give_reference_absolute_position(j)
+            if j < constants.keys_below_are_abs_refs:
+                ref_pos[k] = constants._jit_absolute_refs(j)
             else:
                 ref_pos[k] = positions[j]
         err, pos = _jit_calculate_single_position(ref_pos, zmat_values, row)
@@ -90,12 +72,12 @@ def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
     return (err, row)
 
 
-class ZmatCore(PandasWrapper):
+class ZmatCore(PandasWrapper, GenericCore):
     """The main class for dealing with internal coordinates.
     """
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
-    _metadata_keys = frozenset({'abs_refs', 'last_valid_cartesian'})
+    _metadata_keys = frozenset({'last_valid_cartesian'})
     _References = namedtuple('References', ['dummy_d', 'actual_d'])
 
     def __init__(self, frame, metadata=None, _metadata=None):
@@ -128,8 +110,6 @@ class ZmatCore(PandasWrapper):
             self._metadata = _metadata.copy()
 
         def fill_missing_keys_with_defaults(_metadata):
-            if 'abs_refs' not in _metadata:
-                _metadata['abs_refs'] = constants.absolute_refs
             if 'last_valid_cartesian' not in _metadata:
                 _metadata['last_valid_cartesian'] = self.give_cartesian()
             if 'has_dummies' not in _metadata:
@@ -146,9 +126,8 @@ class ZmatCore(PandasWrapper):
         out = self.copy()
 
         def absolute_ref_formatter(out):
-            abs_refs = out._metadata['abs_refs']
-            out._frame.replace(to_replace=abs_refs.keys(),
-                               value=abs_refs.values(), inplace=True)
+            rename = {col: constants.absolute_refs for col in ['b', 'a', 'd']}
+            return out._frame.replace(to_replace=rename)
 
         def sympy_formatter(x):
             if (isinstance(x, sympy.Basic)):
@@ -156,8 +135,7 @@ class ZmatCore(PandasWrapper):
             else:
                 return x
 
-        for col in ['b', 'a', 'd']:
-            out.unsafe_loc[:, col] = out[col].apply(absolute_ref_formatter)
+        out.unsafe_loc[:, ['b', 'a', 'd']] = absolute_ref_formatter(out)
         for col in ['bond', 'angle', 'dihedral']:
             out.unsafe_loc[:, col] = out[col].apply(sympy_formatter)
 
@@ -507,83 +485,3 @@ class ZmatCore(PandasWrapper):
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)
         return self.give_cartesian(*args, **kwargs)
-
-    def add_data(self, new_cols=None):
-        """Adds a column with the requested data.
-
-        If you want to see for example the mass, the colormap used in
-        jmol and the block of the element, just use::
-
-            ['mass', 'jmol_color', 'block']
-
-        The underlying ``pd.DataFrame`` can be accessed with
-        ``constants.elements``.
-        To see all available keys use ``constants.elements.info()``.
-
-        The data comes from the module `mendeleev
-        <http://mendeleev.readthedocs.org/en/latest/>`_ written
-        by Lukasz Mentel.
-
-        Please note that I added three columns to the mendeleev data::
-
-            ['atomic_radius_cc', 'atomic_radius_gv', 'gv_color',
-                'valency']
-
-        The ``atomic_radius_cc`` is used by default by this module
-        for determining bond lengths.
-        The three others are taken from the MOLCAS grid viewer written
-        by Valera Veryazov.
-
-        Args:
-            new_cols (str): You can pass also just one value.
-                E.g. ``'mass'`` is equivalent to ``['mass']``. If
-                ``new_cols`` is ``None`` all available data
-                is returned.
-            inplace (bool):
-
-        Returns:
-            Cartesian:
-        """
-        atoms = self['atom']
-        data = constants.elements
-        if pd.api.types.is_list_like(new_cols):
-            new_cols = set(new_cols)
-        elif new_cols is None:
-            new_cols = set(data.columns)
-        else:
-            new_cols = [new_cols]
-        new_frame = data.loc[atoms, set(new_cols) - set(self.columns)]
-        new_frame.index = self.index
-        return self.__class__(pd.concat([self._frame, new_frame], axis=1))
-
-    def total_mass(self):
-        """Returns the total mass in g/mol.
-
-        Args:
-            None
-
-        Returns:
-            float:
-        """
-        try:
-            return self['mass'].sum()
-        except KeyError:
-            return self.add_data('mass')['mass'].sum()
-
-    def has_same_sumformula(self, other):
-        """Determines if ``other``  has the same sumformula
-
-        Args:
-            other (molecule):
-
-        Returns:
-            bool:
-        """
-        same_atoms = True
-        for atom in set(self['atom']):
-            own_atom_number = len(self[self['atom'] == atom])
-            other_atom_number = len(other[other['atom'] == atom])
-            same_atoms = (own_atom_number == other_atom_number)
-            if not same_atoms:
-                break
-        return same_atoms

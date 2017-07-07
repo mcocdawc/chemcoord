@@ -423,7 +423,7 @@ class CartesianGiveZmat(CartesianCore):
             bool:
         """
         c_table = construction_table
-        abs_refs = self._metadata['abs_refs']
+        abs_refs = constants.absolute_refs
         A = np.empty((3, 3))
         row = c_table.index.get_loc(i)
         if row > 2:
@@ -433,7 +433,7 @@ class CartesianGiveZmat(CartesianCore):
             if k < row:
                 A[k] = self.loc[c_table.iloc[row, k], ['x', 'y', 'z']]
             else:
-                A[k] = abs_refs[c_table.iloc[row, k]][0]
+                A[k] = abs_refs[c_table.iloc[row, k]]
         v1, v2 = A[2] - A[1], A[1] - A[0]
         K = np.cross(v1, v2)
         zero = np.full(3, 0.)
@@ -475,7 +475,7 @@ class CartesianGiveZmat(CartesianCore):
             pd.DataFrame: Appropiately renamed construction table.
         """
         c_table = construction_table.copy()
-        abs_refs = self._metadata['abs_refs']
+        abs_refs = constants.absolute_refs
         problem_index = self.check_absolute_refs(c_table)
         for i in problem_index:
             order_of_refs = iter(permutations(abs_refs.keys()))
@@ -573,9 +573,6 @@ class CartesianGiveZmat(CartesianCore):
         zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = zmat_values
 
         zmatrix = Zmat(zmat_frame, metadata=self.metadata)
-        keys_to_keep = ['abs_refs']
-        for key in keys_to_keep:
-            zmatrix._metadata[key] = self._metadata[key].copy()
         zmatrix._metadata['last_valid_cartesian'] = self.copy()
         return zmatrix
 

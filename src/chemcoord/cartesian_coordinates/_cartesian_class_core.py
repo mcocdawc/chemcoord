@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 from chemcoord._exceptions import PhysicalMeaning
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
     PandasWrapper
 from chemcoord.configuration import settings
@@ -21,17 +22,17 @@ from six.moves import zip  # pylint:disable=redefined-builtin
 from sortedcontainers import SortedSet
 
 
-class CartesianCore(PandasWrapper):
+class CartesianCore(PandasWrapper, GenericCore):
 
     _required_cols = frozenset({'atom', 'x', 'y', 'z'})
-    _metadata_keys = frozenset({'abs_refs'})
+    _metadata_keys = frozenset([])
 
     # Look into the numpy manual for description of __array_priority__:
     # https://docs.scipy.org/doc/numpy-1.12.0/reference/arrays.classes.html
     __array_priority__ = 15.0
 
     # overwrites existing method
-    def __init__(self, frame, abs_refs=None):
+    def __init__(self, frame):
         """How to initialize a Cartesian instance.
 
         Args:
@@ -50,8 +51,6 @@ class CartesianCore(PandasWrapper):
         self._frame = frame.copy()
         self.metadata = {}
         self._metadata = {}
-        if abs_refs is None:
-            self._metadata['abs_refs'] = constants.absolute_refs
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
@@ -65,9 +64,7 @@ class CartesianCore(PandasWrapper):
                 and self._required_cols <= set(selected.columns)):
             molecule = self.__class__(selected)
             molecule.metadata = self.metadata.copy()
-            keys_to_keep = ['abs_refs']
-            for key in keys_to_keep:
-                molecule._metadata[key] = self._metadata[key].copy()
+            molecule._metadata = self._metadata.copy()
             return molecule
         else:
             return selected
@@ -207,10 +204,6 @@ class CartesianCore(PandasWrapper):
         molecule.metadata = self.metadata.copy()
         molecule._metadata = self._metadata.copy()
         return molecule
-
-    def _copy_metadata_to(self, other):
-        for key in self._metadata_keys:
-            other._metadata[key] = self._metadata[key].copy()
 
     @staticmethod
     @jit(nopython=True)
@@ -1121,13 +1114,12 @@ class CartesianCore(PandasWrapper):
         pos = self.loc[:, ['x', 'y', 'z']].values.astype('f8')
         out = np.empty((len(indices), 3))
         indices = np.array([rename.get(i, i) for i in indices], dtype='i8')
-        # Assumes 64bit system
-        keys_below_are_abs_refs = -2**63 + 100
 
-        selection = indices > keys_below_are_abs_refs
-        out[selection] = pos[indices[selection]]
-        for row, i in zip(np.nonzero(~selection), indices[~selection]):
-            out[row] = self._metadata['abs_refs'][i][0]
+        normal = indices > constants.keys_below_are_abs_refs
+        out[normal] = pos[indices[normal]]
+
+        for row, i in zip(np.nonzero(~normal), indices[~normal]):
+            out[row] = constants.absolute_refs[i]
 
         self.index = old_index
         return out
@@ -1313,85 +1305,3 @@ class CartesianCore(PandasWrapper):
                 + step_frame.loc[:, coords] * t)
             Cartesian_list.append(temp_Cartesian.copy())
         return Cartesian_list
-
-    def has_same_sumformula(self, other):
-        """Determines if ``other``  has the same sumformula
-
-        Args:
-            other (molecule):
-
-        Returns:
-            bool:
-        """
-        same_atoms = True
-        for atom in set(self['atom']):
-            own_atom_number = len(self[self['atom'] == atom])
-            other_atom_number = len(other[other['atom'] == atom])
-            same_atoms = (own_atom_number == other_atom_number)
-            if not same_atoms:
-                break
-        return same_atoms
-
-    def add_data(self, new_cols=None):
-        """Adds a column with the requested data.
-
-        If you want to see for example the mass, the colormap used in
-        jmol and the block of the element, just use::
-
-            ['mass', 'jmol_color', 'block']
-
-        The underlying ``pd.DataFrame`` can be accessed with
-        ``constants.elements``.
-        To see all available keys use ``constants.elements.info()``.
-
-        The data comes from the module `mendeleev
-        <http://mendeleev.readthedocs.org/en/latest/>`_ written
-        by Lukasz Mentel.
-
-        Please note that I added three columns to the mendeleev data::
-
-            ['atomic_radius_cc', 'atomic_radius_gv', 'gv_color',
-                'valency']
-
-        The ``atomic_radius_cc`` is used by default by this module
-        for determining bond lengths.
-        The three others are taken from the MOLCAS grid viewer written
-        by Valera Veryazov.
-
-        Args:
-            new_cols (str): You can pass also just one value.
-                E.g. ``'mass'`` is equivalent to ``['mass']``. If
-                ``new_cols`` is ``None`` all available data
-                is returned.
-            inplace (bool):
-
-        Returns:
-            Cartesian:
-        """
-        atoms = self['atom']
-        data = constants.elements
-        if pd.api.types.is_list_like(new_cols):
-            new_cols = set(new_cols)
-        elif new_cols is None:
-            new_cols = set(data.columns)
-        else:
-            new_cols = [new_cols]
-        new_frame = data.loc[atoms, set(new_cols) - set(self.columns)]
-        new_frame.index = self.index
-        return self.__class__(pd.concat([self._frame, new_frame], axis=1))
-
-    def total_mass(self):
-        """Returns the total mass in g/mol.
-
-        Args:
-            None
-
-        Returns:
-            float:
-        """
-        try:
-            mass = self.loc[:, 'mass'].sum()
-        except KeyError:
-            mass_molecule = self.add_data('mass')
-            mass = mass_molecule.loc[:, 'mass'].sum()
-        return mass

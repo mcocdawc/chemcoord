@@ -17,16 +17,35 @@ from __future__ import unicode_literals
 from io import StringIO
 import os
 import pandas as pd
+from numba import jit
 import numpy as np
 import sys
 
 
+keys_below_are_abs_refs = -sys.maxsize + 100
 int_label = {'origin': -sys.maxsize - 1, 'e_x': -sys.maxsize,
              'e_y': -sys.maxsize + 1, 'e_z': -sys.maxsize + 2}
-absolute_refs = {int_label['origin']: (np.array([0., 0., 0.]), '$\\vec{0}$'),
-                 int_label['e_x']: (np.array([1., 0., 0.]), '$\\vec{e}_x$'),
-                 int_label['e_y']: (np.array([0., 1., 0.]), '$\\vec{e}_y$'),
-                 int_label['e_z']: (np.array([0., 0., 1.]), '$\\vec{e}_z$')}
+string_label = {j: i for i, j in int_label.items()}
+absolute_refs = {int_label['origin']: np.array([0., 0., 0.]),
+                 int_label['e_x']: np.array([1., 0., 0.]),
+                 int_label['e_y']: np.array([0., 1., 0.]),
+                 int_label['e_z']: np.array([0., 0., 1.])}
+
+
+@jit(nopython=True)
+def _jit_absolute_refs(j):
+    # Because dicts are not supported in numba :(
+    if j == -sys.maxsize - 1:
+        return np.array([0., 0., 0.])
+    elif j == -sys.maxsize:
+        return np.array([1., 0., 0.])
+    elif j == -sys.maxsize + 1:
+        return np.array([0., 1., 0.])
+    elif j == -sys.maxsize + 2:
+        return np.array([0., 0., 1.])
+    else:
+        raise ValueError
+
 
 atom_properties = StringIO(
 """,annotation,atomic_number,atomic_radius,atomic_volume,block,boiling_point,density,description,dipole_polarizability,electron_affinity,electronic_configuration,evaporation_heat,fusion_heat,group_id,lattice_constant,lattice_structure,mass,melting_point,name,period,series_id,specific_heat,thermal_conductivity,vdw_radius,covalent_radius_cordero,covalent_radius_pyykko,en_pauling,en_allen,jmol_color,cpk_color,proton_affinity,gas_basicity,heat_of_formation,c6,covalent_radius_bragg,covalent_radius_slater,vdw_radius_bondi,vdw_radius_truhlar,vdw_radius_rt,vdw_radius_batsanov,vdw_radius_dreiding,vdw_radius_uff,vdw_radius_mm3,abundance_crust,abundance_sea,atomic_radius_gv,valency,size_in_gv,gv_color,atomic_radius_cc

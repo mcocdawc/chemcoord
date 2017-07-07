@@ -80,6 +80,7 @@ class PandasWrapper(object):
                                       kind=kind, na_position=na_position,
                                       sort_remaining=sort_remaining, by=by)
 
+    # TODO(think about removal)
     def replace(self, to_replace=None, value=None, inplace=False,
                 limit=None, regex=False, method='pad', axis=None):
         """Replace values given in 'to_replace' with 'value'.
