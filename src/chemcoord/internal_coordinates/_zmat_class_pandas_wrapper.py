@@ -55,9 +55,6 @@ class PandasWrapper(object):
     def dtypes(self):
         return self._frame.dtypes
 
-    def __repr__(self):
-        return self._frame.__repr__()
-
     def sort_values(self, by, axis=0, ascending=True,
                     kind='quicksort', na_position='last'):
         """Sort by the values along either axis

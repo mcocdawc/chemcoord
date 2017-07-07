@@ -20,6 +20,7 @@ from chemcoord.utilities.algebra_utilities import \
     _jit_cross
 from collections import namedtuple
 from numba import jit
+import numba as nb
 import numpy as np
 import pandas as pd
 import sympy
@@ -30,10 +31,11 @@ import warnings
 def _jit_calculate_single_position(references, zmat_values, row):
     bond, angle, dihedral = zmat_values[row]
     vb, va, vd = references[0], references[1], references[2]
-    zeros = np.zeros(3)
-    err = ERR_CODE_OK
+    zeros = np.zeros(3, dtype=nb.types.f8)
 
     BA = va - vb
+    if _jit_isclose(BA, zeros).all():
+        return (ERR_CODE_InvalidReference, zeros)
     ba = _jit_normalize(BA)
     if _jit_isclose(angle, np.pi):
         d = bond * -ba
@@ -43,15 +45,14 @@ def _jit_calculate_single_position(references, zmat_values, row):
         AD = vd - va
         N1 = _jit_cross(BA, AD)
         if _jit_isclose(N1, zeros).all():
-            err = ERR_CODE_InvalidReference
-            d = zeros
+            return (ERR_CODE_InvalidReference, zeros)
         else:
             n1 = _jit_normalize(N1)
             d = bond * ba
             d = np.dot(_jit_rotation_matrix(n1, angle), d)
             d = np.dot(_jit_rotation_matrix(ba, dihedral), d)
 
-    return (err, vb + d)
+    return (ERR_CODE_OK, vb + d)
 
 
 @jit(nopython=True)
@@ -121,31 +122,6 @@ class ZmatCore(PandasWrapper, GenericCore):
         molecule = self.__class__(self._frame, metadata=self.metadata,
                                   _metadata=self._metadata)
         return molecule
-
-    def _repr_html_(self):
-        out = self.copy()
-
-        def absolute_ref_formatter(out):
-            rename = {col: constants.absolute_refs for col in ['b', 'a', 'd']}
-            return out._frame.replace(to_replace=rename)
-
-        def sympy_formatter(x):
-            if (isinstance(x, sympy.Basic)):
-                return '${}$'.format(sympy.latex(x))
-            else:
-                return x
-
-        out.unsafe_loc[:, ['b', 'a', 'd']] = absolute_ref_formatter(out)
-        for col in ['bond', 'angle', 'dihedral']:
-            out.unsafe_loc[:, col] = out[col].apply(sympy_formatter)
-
-        def insert_before_substring(insert_txt, substr, txt):
-            """Under the assumption that substr only appears once.
-            """
-            return (insert_txt + substr).join(txt.split(substr))
-        html_txt = out._frame._repr_html_()
-        insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
-        return insert_before_substring(insert_txt, '<thead>', html_txt)
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
@@ -234,6 +210,15 @@ class ZmatCore(PandasWrapper, GenericCore):
 
     def __neg__(self):
         return -1 * self.copy()
+
+    @staticmethod
+    def _cast_correct_types(frame):
+        new = frame.copy()
+        zmat_values = ['bond', 'angle', 'dihedral']
+        new.loc[:, zmat_values] = frame.loc[:, zmat_values].astype('f8')
+        zmat_cols = ['b', 'a', 'd']
+        new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype('i8')
+        return new
 
     def subs(self, variable, value):
         cols = ['bond', 'angle', 'dihedral']

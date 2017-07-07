@@ -6,61 +6,86 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from chemcoord.internal_coordinates._zmat_class_core import ZmatCore
-from chemcoord.constants import int_label
+from chemcoord._generic_classes.generic_IO import GenericIO
+from chemcoord._exceptions import InvalidReference, UndefinedCoordinateSystem
+import chemcoord.constants as constants
 import numpy as np
 import pandas as pd
 import warnings
 
 
-class ZmatIO(ZmatCore):
-    def to_string(self, buf=None, upper_triangle='string', columns=None,
-                  col_space=None, header=True,
-                  index=True, na_rep='NaN', formatters=None,
-                  float_format=None, sparsify=None, index_names=True,
-                  justify=None, line_width=None, max_rows=None,
-                  max_cols=None, show_dimensions=False):
+class ZmatIO(ZmatCore, GenericIO):
+    def __repr__(self):
+        return self._frame.__repr__()
+
+    def _abs_ref_formatter(self, format_as='string'):
+        out = self.copy()
+        if format_as == 'raw':
+            pass
+        elif format_as == 'string':
+            rename = constants.string_repr
+        elif format_as == 'latex':
+            rename = constants.latex_repr
+        else:
+            message = "Give either 'latex', 'string' or 'raw' as format"
+            raise ValueError(message)
+        if format_as != 'raw':
+            out._frame.replace(
+                to_replace={col: rename for col in ['b', 'a', 'd']},
+                inplace=True)
+        return out
+
+    def _repr_html_(self):
+        out = self._sympy_formatter()._abs_ref_formatter(format_as='latex')
+
+        def insert_before_substring(insert_txt, substr, txt):
+            """Under the assumption that substr only appears once.
+            """
+            return (insert_txt + substr).join(txt.split(substr))
+        html_txt = out._frame._repr_html_()
+        insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
+        return insert_before_substring(insert_txt, '<thead>', html_txt)
+
+    def _remove_upper_triangle(self):
+        out = self.copy()
+        for i in range(min(len(self), 3)):
+            out.unsafe_iloc[i, (2 * i + 1):] = ''
+        return out
+
+    def to_string(self, buf=None, format_abs_ref_as='string',
+                  upper_triangle=True, header=True, index=True, **kwargs):
         """Render a DataFrame to a console-friendly tabular output.
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.
         """
-        def upper_triangle_with_strings():
-            new = self._frame.replace(to_replace=int_label.values(),
-                                      value=int_label.keys())
-            return new
-        def upper_triangle_with_latex():
-            new = self._frame.replace(to_replace=int_label.values(),
-                                      value=int_label.keys())
-            return new
+        out = self._sympy_formatter()
+        out = out._abs_ref_formatter(format_as=format_abs_ref_as)
+        if not upper_triangle:
+            out = out._remove_upper_triangle()
 
-        content = frame.to_string(
-            buf=buf, columns=columns, col_space=col_space, header=header,
-            index=index, na_rep=na_rep, formatters=formatters,
-            float_format=float_format, sparsify=sparsify,
-            index_names=index_names, justify=justify, line_width=line_width,
-            max_rows=max_rows, max_cols=max_cols,
-            show_dimensions=show_dimensions)
+        content = out._frame.to_string(buf=buf, header=header, index=index,
+                                       **kwargs)
+        if not index and not header:
+            # NOTE(the following might be removed in the future)
+            # introduced because of formatting bug in pandas
+            # See https://github.com/pandas-dev/pandas/issues/13032
+            space = ' ' * (out.loc[:, 'atom'].str.len().max()
+                           - len(out.iloc[0, 0]))
+            content = space + content
         return content
 
-    def to_latex(self, buf=None, columns=None, col_space=None, header=True,
-                 index=True, na_rep='NaN', formatters=None, float_format=None,
-                 sparsify=None, index_names=True, bold_rows=True,
-                 column_format=None, longtable=None, escape=None,
-                 encoding=None, decimal='.', multicolumn=None,
-                 multicolumn_format=None, multirow=None):
+    def to_latex(self, buf=None, upper_triangle=True):
         """Render a DataFrame to a tabular environment table.
 
         You can splice this into a LaTeX document.
         Requires ``\\usepackage{booktabs}``.
         Wrapper around the :meth:`pandas.DataFrame.to_latex` method.
         """
-        return self._frame.to_latex(
-            buf=buf, columns=columns, col_space=col_space, header=header,
-            index=index, na_rep=na_rep, formatters=formatters,
-            float_format=float_format, sparsify=sparsify,
-            index_names=index_names, bold_rows=bold_rows,
-            column_format=column_format, longtable=longtable, escape=escape,
-            encoding=encoding, decimal=decimal, multicolumn=multicolumn,
-            multicolumn_format=multicolumn_format, multirow=multirow)
+        out = self._sympy_formatter()
+        out = out._abs_ref_formatter(format_as='latex')
+        if not upper_triangle:
+            out = out._remove_upper_triangle()
+        return out._frame.to_latex(**kwargs)
 
     @classmethod
     def read_zmat(cls, inputfile, implicit_index=True):
@@ -77,24 +102,45 @@ class ZmatIO(ZmatCore):
         Returns:
             Zmat:
         """
-        cols = ['atom', 'b', 'bond', 'a', 'angle',
-                'd', 'dihedral']
+        cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
         if implicit_index:
             zmat_frame = pd.read_table(inputfile, comment='#',
                                        delim_whitespace=True,
                                        names=cols)
-            Zmat = cls(zmat_frame)
-            Zmat.index = range(1, len(Zmat) + 1)
+            zmat_frame.index = range(1, len(zmat_frame) + 1)
         else:
             zmat_frame = pd.read_table(inputfile, comment='#',
                                        delim_whitespace=True,
                                        names=['temp_index'] + cols)
+            zmat_frame.set_index('temp_index', drop=True, inplace=True)
+            zmat_frame.index.name = None
+        if pd.isnull(zmat_frame.iloc[0, 1]):
+            zmat_values = [1.27, 127., 127.]
+            zmat_refs = [constants.int_label[x] for x in
+                         ['origin', 'e_z', 'e_x']]
+            for row, i in enumerate(zmat_frame.index[:3]):
+                cols = ['b', 'a', 'd']
+                zmat_frame.loc[:, cols] = zmat_frame.loc[:, cols].astype('O')
+                if row < 2:
+                    zmat_frame.loc[i, cols[row:]] = zmat_refs[row:]
+                    zmat_frame.loc[i, ['bond', 'angle', 'dihedral'][row:]
+                                   ] = zmat_values[row:]
+                else:
+                    zmat_frame.loc[i, 'd'] = zmat_refs[2]
+                    zmat_frame.loc[i, 'dihedral'] = zmat_values[2]
+
+        elif zmat_frame.iloc[0, 1] in constants.int_label.keys():
+            zmat_frame = zmat_frame.replace(
+                {col: constants.int_label for col in ['b', 'a', 'd']})
+        zmat_frame = cls._cast_correct_types(zmat_frame)
+        try:
             Zmat = cls(zmat_frame)
-            Zmat.set_index('temp_index', drop=True, inplace=True)
-            Zmat.index.name = None
+        except InvalidReference:
+            raise UndefinedCoordinateSystem(
+                'Your zmatrix cannot be transformed to cartesian coordinates')
         return Zmat
 
-    def to_zmat(self, buf=None, implicit_index=True,
+    def to_zmat(self, buf=None, upper_triangle=True, implicit_index=True,
                 float_format='{:.6f}'.format, overwrite=True,
                 header=False):
         """Write zmat-file
@@ -115,21 +161,14 @@ class ZmatIO(ZmatCore):
         Returns:
             formatted : string (or unicode, depending on data and options)
         """
+        out = self.copy()
         if implicit_index:
-            molecule = self.change_numbering(new_index=range(1, len(self) + 1))
+            out = out.change_numbering(new_index=range(1, len(self) + 1))
+        if not upper_triangle:
+            out = out._remove_upper_triangle()
 
-        content = molecule.to_string(index=(not implicit_index),
-                                     float_format=float_format, header=header)
-
-        # TODO the following might be removed in the future
-        # introduced because of formatting bug in pandas
-        # See https://github.com/pandas-dev/pandas/issues/13032
-        if not header:
-            space = ' ' * (molecule.loc[:, 'atom'].str.len().max()
-                           - len(molecule.iloc[0, 0]))
-            output = space + content
-        else:
-            output = content
+        output = out.to_string(index=(not implicit_index),
+                               float_format=float_format, header=header)
 
         if buf is not None:
             if overwrite:

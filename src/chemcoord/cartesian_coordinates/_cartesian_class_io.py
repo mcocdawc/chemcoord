@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 
 from chemcoord.cartesian_coordinates._cartesian_class_core \
     import CartesianCore
+from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord.configuration import settings
 from io import open
 import numpy as np
@@ -18,7 +19,7 @@ from threading import Thread
 import warnings
 
 
-class CartesianIO(CartesianCore):
+class CartesianIO(CartesianCore, GenericIO):
     """This class provides IO-methods.
 
     Contains ``write_filetype`` and ``read_filetype`` methods
@@ -35,12 +36,7 @@ class CartesianIO(CartesianCore):
         return self._frame.__repr__()
 
     def _repr_html_(self):
-        def formatter(x):
-            if (isinstance(x, sympy.Basic)):
-                return '${}$'.format(sympy.latex(x))
-            else:
-                return x
-        new = self.applymap(formatter)
+        new = self._sympy_formatter()
 
         def insert_before_substring(insert_txt, substr, txt):
             "Under the assumption that substr only appears once."

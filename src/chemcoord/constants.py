@@ -25,11 +25,15 @@ import sys
 keys_below_are_abs_refs = -sys.maxsize + 100
 int_label = {'origin': -sys.maxsize - 1, 'e_x': -sys.maxsize,
              'e_y': -sys.maxsize + 1, 'e_z': -sys.maxsize + 2}
-string_label = {j: i for i, j in int_label.items()}
 absolute_refs = {int_label['origin']: np.array([0., 0., 0.]),
                  int_label['e_x']: np.array([1., 0., 0.]),
                  int_label['e_y']: np.array([0., 1., 0.]),
                  int_label['e_z']: np.array([0., 0., 1.])}
+string_repr = {j: i for i, j in int_label.items()}
+latex_repr = {int_label['origin']: '$\\vec{0}$',
+              int_label['e_x']: '$\\vec{e_x}$',
+              int_label['e_y']: '$\\vec{e_y}$',
+              int_label['e_z']: '$\\vec{e_z}$', }
 
 
 @jit(nopython=True)
