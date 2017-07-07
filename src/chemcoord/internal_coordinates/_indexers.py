@@ -27,21 +27,34 @@ class _Unsafe_Loc(_Loc):
 
 class _Safe_Loc(_Loc):
     def __setitem__(self, key, value):
-        zmat_after_assignment = self.molecule.copy()
-        if isinstance(key, tuple):
-            zmat_after_assignment._frame.loc[key[0], key[1]] = value
-        else:
-            zmat_after_assignment._frame.loc[key] = value
-
-        try:
-            zmat_after_assignment.give_cartesian()
+        if self.molecule._metadata['insertion_allowed']:
+            molecule = self.molecule
             if isinstance(key, tuple):
-                self.molecule._frame.loc[key[0], key[1]] = value
+                molecule._frame.loc[key[0], key[1]] = value
             else:
-                self.molecule._frame.loc[key] = value
-        except InvalidReference as e:
-            e.zmat_after_assignment = zmat_after_assignment
-            raise e
+                molecule._frame.loc[key] = value
+
+            try:
+                molecule.give_cartesian()
+            except InvalidReference as e:
+                molecule._insert_dummy_zmat(e)
+                # molecule._remove_dummies()
+        else:
+            zmat_after_assignment = self.molecule.copy()
+            if isinstance(key, tuple):
+                zmat_after_assignment._frame.loc[key[0], key[1]] = value
+            else:
+                zmat_after_assignment._frame.loc[key] = value
+
+            try:
+                zmat_after_assignment.give_cartesian()
+                if isinstance(key, tuple):
+                    self.molecule._frame.loc[key[0], key[1]] = value
+                else:
+                    self.molecule._frame.loc[key] = value
+            except InvalidReference as e:
+                e.zmat_after_assignment = zmat_after_assignment
+                raise e
 
 
 class _ILoc(_generic_Indexer):

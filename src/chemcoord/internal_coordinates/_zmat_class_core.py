@@ -78,7 +78,8 @@ class ZmatCore(PandasWrapper, GenericCore):
     """
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
-    _metadata_keys = frozenset({'last_valid_cartesian'})
+    _metadata_keys = frozenset({'last_valid_cartesian', 'has_dummies',
+                                'insertion_allowed'})
     _References = namedtuple('References', ['dummy_d', 'actual_d'])
 
     def __init__(self, frame, metadata=None, _metadata=None):
@@ -115,6 +116,8 @@ class ZmatCore(PandasWrapper, GenericCore):
                 _metadata['last_valid_cartesian'] = self.give_cartesian()
             if 'has_dummies' not in _metadata:
                 _metadata['has_dummies'] = {}
+            if 'insertion_allowed' not in _metadata:
+                _metadata['insertion_allowed'] = True
 
         fill_missing_keys_with_defaults(self._metadata)
 
@@ -350,6 +353,7 @@ class ZmatCore(PandasWrapper, GenericCore):
                             ref_labels, n1)
 
     def _insert_dummy_zmat(self, exception):
+        """Works INPLACE"""
         def insert_row(df, pos, key):
             if pos < len(df):
                 middle = df.iloc[pos:(pos + 1)]
@@ -361,43 +365,41 @@ class ZmatCore(PandasWrapper, GenericCore):
                 start.loc[key] = start.iloc[-1]
                 return start
 
-        def create_zmat(self, i, dummy_cart, dummy_d):
+        def insert_dummy(self, i, dummy_cart, dummy_d):
+            """Works INPLACE on self._frame"""
             cols = ['b', 'a', 'd']
             actual_d = self.loc[i, 'd']
             ref_labels = list(self.loc[actual_d, cols])
-            zframe = insert_row(exception.zmat_after_assignment._frame,
+            zframe = insert_row(self,
                                 self.index.get_loc(i), dummy_d)
             zframe.loc[i, 'd'] = dummy_d
             zframe.loc[dummy_d, 'atom'] = 'X'
             zframe.loc[dummy_d, cols] = ref_labels
+            print(zframe.dtypes)
             ref_labels = np.array([dummy_d] + ref_labels)[None, :]
             zmat_values = dummy_cart._calculate_zmat_values(ref_labels)[0]
             zframe.loc[dummy_d, ['bond', 'angle', 'dihedral']] = zmat_values
 
-            zmat = self.__class__(zframe, metadata=self.metadata,
-                                  _metadata=self._metadata)
+            self._frame = zframe
             references = self._References(dummy_d, actual_d)
-            zmat._metadata['has_dummies'][i] = references
-            return zmat
+            self._metadata['has_dummies'][i] = references
 
         i = exception.index
         has_dummies = self._metadata['has_dummies']
         if i not in [has_dummies[k].dummy_d for k in has_dummies]:
-            zmat = create_zmat(self, i, *self._insert_dummy_cart(exception))
+            insert_dummy(self, i, *self._insert_dummy_cart(exception))
         else:
-            zmat = exception.zmat_after_assignment._remove_dummies()
+            self._remove_dummies()
 
         try:
-            zmat._metadata['last_valid_cartesian'] = zmat.give_cartesian()
+            self._metadata['last_valid_cartesian'] = self.give_cartesian()
         except InvalidReference as e:
-            e.zmat_after_assignment = zmat
-            # Recursion
-            zmat = zmat._insert_dummy_zmat(e)
-        return zmat
+            self._insert_dummy_zmat(e)
 
     def _give_removable_dummies(self):
         xyz = self.give_cartesian().loc[:, ['x', 'y', 'z']]
         has_dummies = self._metadata['has_dummies']
+        print(has_dummies)
         to_be_tested = has_dummies.keys()
         c_table = self.loc[to_be_tested, ['b', 'a', 'd']]
         c_table['d'] = [has_dummies[i].actual_d for i in to_be_tested]
@@ -408,22 +410,28 @@ class ZmatCore(PandasWrapper, GenericCore):
         return [k for r, k in enumerate(to_be_tested) if remove[r]]
 
     def _remove_dummies(self):
+        """Works INPLACE"""
         cols = ['b', 'a', 'd']
         zmat = self.copy()
         xyz = zmat.give_cartesian()
         to_remove = self._give_removable_dummies()
+        print(to_remove)
         has_dummies = self._metadata['has_dummies']
         dummies = [has_dummies[k].dummy_d for k in to_remove]
 
-        c_table = zmat.loc[to_remove, ['b', 'a', 'd']]
+        c_table = self.loc[to_remove, ['b', 'a', 'd']]
+        # print(c_table.dtypes)
+        # print()
+        print(to_remove)
+        print(c_table)
+        # print()
         c_table['d'] = [has_dummies[k].actual_d for k in to_remove]
-        zmat.unsafe_loc[to_remove, 'd'] = c_table['d']
+        # print(self.dtypes)
+        # print(type(c_table['d']), c_table['d'])
+        self.unsafe_loc[to_remove, 'd'] = c_table['d']
 
         zmat_values = xyz._calculate_zmat_values(c_table)
-        zmat.unsafe_loc[to_remove, ['bond', 'angle', 'dihedral']] = zmat_values
-
-        return self.__class__(zmat[~zmat.index.isin(dummies)],
-                              metadata=self.metadata, _metadata=self._metadata)
+        self.unsafe_loc[to_remove, ['bond', 'angle', 'dihedral']] = zmat_values
 
     def give_cartesian(self):
         old_index = self.index
