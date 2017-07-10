@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import warnings
 import chemcoord.constants as constants
-from chemcoord._exceptions import \
+from chemcoord.exceptions import \
     IllegalArgumentCombination, \
     UndefinedCoordinateSystem
 from chemcoord.cartesian_coordinates._cartesian_class_core import \

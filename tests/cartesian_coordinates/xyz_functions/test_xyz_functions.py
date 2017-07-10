@@ -1,7 +1,7 @@
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
 import pytest
-from chemcoord._exceptions import UndefinedCoordinateSystem
+from chemcoord.exceptions import UndefinedCoordinateSystem
 import itertools
 import numpy as np
 import os

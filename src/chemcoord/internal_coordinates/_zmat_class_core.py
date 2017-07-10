@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from chemcoord._exceptions import ERR_CODE_OK, \
+from chemcoord.exceptions import ERR_CODE_OK, \
     PhysicalMeaning, \
     InvalidReference, ERR_CODE_InvalidReference
 import chemcoord.constants as constants

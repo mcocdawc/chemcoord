@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from chemcoord._exceptions import InvalidReference
+from chemcoord.exceptions import InvalidReference
 
 
 class _generic_Indexer(object):

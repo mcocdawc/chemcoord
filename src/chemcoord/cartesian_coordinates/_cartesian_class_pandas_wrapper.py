@@ -4,7 +4,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-from chemcoord._exceptions import PhysicalMeaning
+from chemcoord.exceptions import PhysicalMeaning
 import chemcoord.cartesian_coordinates._indexers as indexers
 import pandas as pd
 import sympy

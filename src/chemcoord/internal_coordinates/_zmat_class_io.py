@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 
 from chemcoord.internal_coordinates._zmat_class_core import ZmatCore
 from chemcoord._generic_classes.generic_IO import GenericIO
-from chemcoord._exceptions import InvalidReference, UndefinedCoordinateSystem
+from chemcoord.exceptions import InvalidReference, UndefinedCoordinateSystem
 import chemcoord.constants as constants
 import numpy as np
 import pandas as pd
