@@ -436,10 +436,11 @@ class ZmatCore(PandasWrapper, GenericCore):
     def give_cartesian(self):
         old_index = self.index
         rename = dict(enumerate(old_index))
+        zmat_values = self.loc[:, ['bond', 'angle', 'dihedral']].values
+        # TODO(explicit break because of AttributeError)
+        zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
         self.change_numbering(inplace=True)
         c_table = self.loc[:, ['b', 'a', 'd']].values
-        zmat_values = self.loc[:, ['bond', 'angle', 'dihedral']].values
-        zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
         positions = np.empty((len(self), 3), dtype='float64')
 
         err, row = _jit_calculate_everything(positions, c_table, zmat_values)

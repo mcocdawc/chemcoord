@@ -31,9 +31,9 @@ class InvalidReference(UndefinedCoordinateSystem): # noqa
         if references:
             self.references = references
         if already_built_cartesian:
-            self.already_built_cartesian = already_built_cartesian
+            self.already_built_cartesian = already_built_cartesian.copy()
         if zmat_after_assignment:
-            self.zmat_after_assignment = zmat_after_assignment
+            self.zmat_after_assignment = zmat_after_assignment.copy()
 
     def __str__(self):
         if self.message is None:

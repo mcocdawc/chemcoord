@@ -29,29 +29,28 @@ class _Safe_Loc(_Loc):
     def __setitem__(self, key, value):
         if self.molecule._metadata['dummy_manipulation_allowed']:
             molecule = self.molecule
-            if isinstance(key, tuple):
-                self.molecule._frame.loc[key[0], key[1]] = value
-            else:
-                self.molecule._frame.loc[key] = value
-            try:
-                self.molecule.give_cartesian()
-            except InvalidReference as exception:
-                self.molecule._insert_dummy_zmat(exception, inplace=True)
-            finally:
-                self.molecule._remove_dummies(inplace=True)
         else:
-            zmat_after_assignment = self.molecule.copy()
-            if isinstance(key, tuple):
-                zmat_after_assignment._frame.loc[key[0], key[1]] = value
-            else:
-                zmat_after_assignment._frame.loc[key] = value
+            molecule = self.molecule.copy()
+        if isinstance(key, tuple):
+            molecule._frame.loc[key[0], key[1]] = value
+        else:
+            molecule._frame.loc[key] = value
 
+        try:
+            self.molecule.give_cartesian()
+        except AttributeError:
+            self.molecule = molecule
+        except InvalidReference as exception:
+            if molecule._metadata['dummy_manipulation_allowed']:
+                self.molecule._insert_dummy_zmat(exception, inplace=True)
+            else:
+                exception.zmat_after_assignment = molecule
+                raise exception
+        if molecule._metadata['dummy_manipulation_allowed']:
             try:
-                zmat_after_assignment.give_cartesian()
-                self.molecule = zmat_after_assignment
-            except InvalidReference as e:
-                e.zmat_after_assignment = zmat_after_assignment
-                raise e
+                self.molecule._remove_dummies(inplace=True)
+            except AttributeError:
+                pass
 
 
 class _ILoc(_generic_Indexer):
@@ -73,15 +72,27 @@ class _Unsafe_ILoc(_ILoc):
 
 class _Safe_ILoc(_Unsafe_ILoc):
     def __setitem__(self, key, value):
-        raise NotImplementedError
-        # before_assignment = self.molecule.copy()
-        # if isinstance(key, tuple):
-        #     self.molecule._frame.iloc[key[0], key[1]] = value
-        # else:
-        #     self.molecule._frame.iloc[key] = value
-        #
-        # try:
-        #     self.molecule._test_give_cartesian()
-        # except InvalidReference as e:
-        #     e.zmat_before_assignment = zmat_before_assignment
-        #     raise e
+        if self.molecule._metadata['dummy_manipulation_allowed']:
+            molecule = self.molecule
+        else:
+            molecule = self.molecule.copy()
+        if isinstance(key, tuple):
+            molecule._frame.iloc[key[0], key[1]] = value
+        else:
+            molecule._frame.iloc[key] = value
+
+        try:
+            self.molecule.give_cartesian()
+        except AttributeError:
+            self.molecule = molecule
+        except InvalidReference as exception:
+            if molecule._metadata['dummy_manipulation_allowed']:
+                self.molecule._insert_dummy_zmat(exception, inplace=True)
+            else:
+                exception.zmat_after_assignment = molecule
+                raise exception
+        if molecule._metadata['dummy_manipulation_allowed']:
+            try:
+                self.molecule._remove_dummies(inplace=True)
+            except AttributeError:
+                pass
