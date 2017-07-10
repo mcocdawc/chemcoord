@@ -74,7 +74,7 @@ class ZmatIO(ZmatCore, GenericIO):
             content = space + content
         return content
 
-    def to_latex(self, buf=None, upper_triangle=True):
+    def to_latex(self, buf=None, upper_triangle=True, **kwargs):
         """Render a DataFrame to a tabular environment table.
 
         You can splice this into a LaTeX document.
