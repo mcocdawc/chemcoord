@@ -37,7 +37,7 @@ class _Safe_Loc(_Loc):
             molecule._frame.loc[key] = value
 
         try:
-            self.molecule.give_cartesian()
+            molecule.give_cartesian()
         except AttributeError:
             self.molecule = molecule
         except InvalidReference as exception:
@@ -82,7 +82,7 @@ class _Safe_ILoc(_Unsafe_ILoc):
             molecule._frame.iloc[key] = value
 
         try:
-            self.molecule.give_cartesian()
+            molecule.give_cartesian()
         except AttributeError:
             self.molecule = molecule
         except InvalidReference as exception:
