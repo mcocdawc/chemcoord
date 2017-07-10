@@ -41,26 +41,3 @@ def test_addition_with_sympy():
 
     zmolecule = zmolecule + zmolecule2
     zmolecule.subs(x, 3)
-
-# def test_assignment_leading_to_linear_reference():
-#     molecule = cc.Cartesian.read_xyz(
-#         os.path.join(STRUCTURE_PATH, 'water.xyz'), start_index=1)
-#     zmolecule1 = molecule.give_zmat()
-#
-#     angle_before_assignment = zmolecule1.loc[4, 'angle']
-#
-#     with cc.dummy_manipulation(zmolecule1, False):
-#         with pytest.raises(InvalidReference):
-#             zmolecule1.safe_loc[4, 'angle'] = 180
-#
-#     with pytest.warns(UserWarning):
-#         zmolecule1.safe_loc[4, 'angle'] = 180
-#         zmolecule1.safe_loc[5, 'dihedral'] = 90
-#
-#     with pytest.warns(UserWarning):
-#         zmolecule1.safe_loc[4, 'angle'] = angle_before_assignment
-#
-#     zmolecule2 = molecule.give_zmat()
-#     zmolecule2.unsafe_loc[5, 'dihedral'] = 90
-#     assert cc.xyz_functions.allclose(
-#         zmolecule2.give_cartesian(), zmolecule1.give_cartesian())
