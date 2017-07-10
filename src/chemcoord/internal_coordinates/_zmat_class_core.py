@@ -223,33 +223,42 @@ class ZmatCore(PandasWrapper, GenericCore):
         new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype('i8')
         return new
 
-    def subs(self, variable, value):
+    def subs(self, variable, value, perform_checks=True):
         cols = ['bond', 'angle', 'dihedral']
         out = self.copy()
 
         def give_subs_function(variable, value):
             def subs_function(x):
                 try:
-                    new = x.subs(variable, value)
+                    x = x.subs(variable, value)
+                    try:
+                        x = float(x)
+                    except TypeError:
+                        pass
                 except AttributeError:
-                    new = x
-
-                sympy_numbers = (sympy.numbers.Float, sympy.numbers.Integer)
-                if isinstance(new, sympy_numbers):
-                    return float(new)
-                else:
-                    return new
+                    pass
+                return x
             return subs_function
 
         for col in cols:
             if out.loc[:, col].dtype is np.dtype('O'):
-                series = out.loc[:, col]
-                out.unsafe_loc[:, col] = series.map(
+                out.unsafe_loc[:, col] = out.loc[:, col].map(
                     give_subs_function(variable, value))
                 try:
                     out.unsafe_loc[:, col] = out.loc[:, col].astype('float')
                 except TypeError:
                     pass
+        if perform_checks:
+            try:
+                out._metadata['last_valid_cartesian'] = out.give_cartesian()
+            except AttributeError:
+                # Unevaluated symbolic expressions are remaining.
+                pass
+            except InvalidReference as e:
+                if out._metadata['dummy_manipulation_allowed']:
+                    out._manipulate_dummies(e, inplace=True)
+                else:
+                    raise e
         return out
 
     def _to_Zmat(self):
