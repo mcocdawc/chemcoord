@@ -27,5 +27,12 @@ def test_assignment_leading_to_linear_reference():
     molecule = cc.Cartesian.read_xyz(os.path.join(STRUCTURE_PATH, 'water.xyz'))
     zmolecule = molecule.give_zmat()
 
-    with pytest.raises(InvalidReference):
-        zmolecule.safe_loc[3, 'angle'] = 180
+    with cc.allow_dummy_insertion(zmolecule, False):
+        with pytest.raises(InvalidReference):
+            zmolecule.safe_loc[3, 'angle'] = 180
+
+    with pytest.warns(UserWarning):
+        zmolecule.safe_loc[4, 'angle'] = 180
+
+    with pytest.warns(UserWarning):
+        zmolecule.safe_loc[4, 'angle'] = 70
