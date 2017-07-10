@@ -371,32 +371,38 @@ class ZmatCore(PandasWrapper, GenericCore):
                             'dummy atom {dummy_d} was inserted').format
             warnings.warn(give_message(i=i, dummy_d=dummy_d), UserWarning)
 
-        def insert_dummy(self, i, dummy_cart, dummy_d):
+        def insert_dummy(zmat, i, dummy_cart, dummy_d, inplace=inplace):
             """Works INPLACE on self._frame"""
             cols = ['b', 'a', 'd']
-            actual_d = self.loc[i, 'd']
-            zframe = insert_row(self, self.index.get_loc(i), dummy_d)
+            actual_d = zmat.loc[i, 'd']
+            zframe = insert_row(zmat, zmat.index.get_loc(i), dummy_d)
             zframe.loc[i, 'd'] = dummy_d
             zframe.loc[dummy_d, 'atom'] = 'X'
-            zframe.loc[dummy_d, cols] = self.loc[actual_d, cols]
+            zframe.loc[dummy_d, cols] = zmat.loc[actual_d, cols]
             zmat_values = dummy_cart._calculate_zmat_values(
-                [dummy_d] + list(self.loc[actual_d, cols]))[0]
+                [dummy_d] + list(zmat.loc[actual_d, cols]))[0]
             zframe.loc[dummy_d, ['bond', 'angle', 'dihedral']] = zmat_values
 
-            self._frame = zframe
-            self._metadata['has_dummies'][i] = {'dummy_d': dummy_d,
+            zmat._frame = zframe
+            zmat._metadata['has_dummies'][i] = {'dummy_d': dummy_d,
                                                 'actual_d': actual_d}
             raise_warning(i, dummy_d)
-        if exception.index in self._metadata['has_dummies']:
-            self._remove_dummies(to_remove=[exception.index], inplace=True)
+
+        zmat = self if inplace else self.copy()
+
+        if exception.index in zmat._metadata['has_dummies']:
+            zmat._remove_dummies(to_remove=[exception.index], inplace=True)
         else:
-            insert_dummy(self, exception.index,
-                         *self._insert_dummy_cart(exception))
+            insert_dummy(zmat, exception.index,
+                         *zmat._insert_dummy_cart(exception))
 
         try:
-            self._metadata['last_valid_cartesian'] = self.give_cartesian()
+            zmat._metadata['last_valid_cartesian'] = zmat.give_cartesian()
         except InvalidReference as e:
-            self._insert_dummy_zmat(e, inplace=True)
+            zmat._insert_dummy_zmat(e, inplace=True)
+
+        if not inplace:
+            return zmat
 
     def _has_removable_dummies(self):
         has_dummies = self._metadata['has_dummies']
@@ -437,6 +443,15 @@ class ZmatCore(PandasWrapper, GenericCore):
             zmat._metadata['has_dummies'].pop(k)
         if not inplace:
             return zmat
+
+    def _manipulate_dummies(self, exception, inplace=False):
+        if inplace:
+            self._insert_dummy_zmat(exception, inplace=True)
+            self._remove_dummies(inplace=True)
+        else:
+            zmat = self.copy()
+            zmat = zmat._insert_dummy_zmat(exception, inplace=False)
+            return zmat._remove_dummies(inplace=False)
 
     def give_cartesian(self):
         old_index = self.index

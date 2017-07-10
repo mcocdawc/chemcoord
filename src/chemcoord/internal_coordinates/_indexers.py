@@ -33,12 +33,12 @@ class _Safe_Loc(_Loc):
                 self.molecule._frame.loc[key[0], key[1]] = value
             else:
                 self.molecule._frame.loc[key] = value
-
             try:
                 self.molecule.give_cartesian()
-            except InvalidReference as e:
-                self.molecule._insert_dummy_zmat(e, inplace=True)
-            self.molecule._remove_dummies(inplace=True)
+            except InvalidReference as exception:
+                self.molecule._insert_dummy_zmat(exception, inplace=True)
+            finally:
+                self.molecule._remove_dummies(inplace=True)
         else:
             zmat_after_assignment = self.molecule.copy()
             if isinstance(key, tuple):
@@ -48,10 +48,7 @@ class _Safe_Loc(_Loc):
 
             try:
                 zmat_after_assignment.give_cartesian()
-                if isinstance(key, tuple):
-                    self.molecule._frame.loc[key[0], key[1]] = value
-                else:
-                    self.molecule._frame.loc[key] = value
+                self.molecule = zmat_after_assignment
             except InvalidReference as e:
                 e.zmat_after_assignment = zmat_after_assignment
                 raise e

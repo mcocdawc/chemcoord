@@ -25,14 +25,22 @@ STRUCTURE_PATH = get_structure_path(get_script_path())
 
 def test_assignment_leading_to_linear_reference():
     molecule = cc.Cartesian.read_xyz(os.path.join(STRUCTURE_PATH, 'water.xyz'))
-    zmolecule = molecule.give_zmat()
+    zmolecule1 = molecule.give_zmat()
 
-    with cc.dummy_manipulation(zmolecule, False):
+    angle_before_assignment = zmolecule1.loc[4, 'angle']
+
+    with cc.dummy_manipulation(zmolecule1, False):
         with pytest.raises(InvalidReference):
-            zmolecule.safe_loc[3, 'angle'] = 180
+            zmolecule1.safe_loc[3, 'angle'] = 180
 
     with pytest.warns(UserWarning):
-        zmolecule.safe_loc[4, 'angle'] = 180
+        zmolecule1.safe_loc[4, 'angle'] = 180
+        zmolecule1.safe_loc[5, 'dihedral'] = 90
 
     with pytest.warns(UserWarning):
-        zmolecule.safe_loc[4, 'angle'] = 70
+        zmolecule1.safe_loc[4, 'angle'] = angle_before_assignment
+
+    zmolecule2 = molecule.give_zmat()
+    zmolecule2.unsafe_loc[5, 'dihedral'] = 90
+    assert cc.xyz_functions.allclose(
+        zmolecule2.give_cartesian(), zmolecule1.give_cartesian())
