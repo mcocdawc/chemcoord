@@ -27,7 +27,7 @@ class _Unsafe_Loc(_Loc):
 
 class _Safe_Loc(_Loc):
     def __setitem__(self, key, value):
-        if self.molecule._metadata['insertion_allowed']:
+        if self.molecule._metadata['dummy_manipulation_allowed']:
             molecule = self.molecule
             if isinstance(key, tuple):
                 self.molecule._frame.loc[key[0], key[1]] = value

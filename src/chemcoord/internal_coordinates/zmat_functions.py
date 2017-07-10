@@ -34,10 +34,12 @@ class dummy_manipulation(object):
     def __init__(self, zmat, insertion_allowed):
         self.zmat = zmat
         self.insertion_allowed = insertion_allowed
-        self.old_value = self.zmat._metadata['insertion_allowed']
+        self.old_value = self.zmat._metadata['dummy_manipulation_allowed']
 
     def __enter__(self):
-        self.zmat._metadata['insertion_allowed'] = self.insertion_allowed
+        self.zmat._metadata[
+            'dummy_manipulation_allowed'] = self.insertion_allowed
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.zmat._metadata['insertion_allowed'] = self.old_value
+        self.zmat._metadata[
+            'dummy_manipulation_allowed'] = self.old_value

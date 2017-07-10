@@ -80,7 +80,7 @@ class ZmatCore(PandasWrapper, GenericCore):
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
     _metadata_keys = frozenset({'last_valid_cartesian', 'has_dummies',
-                                'insertion_allowed'})
+                                'dummy_manipulation_allowed'})
 
     def __init__(self, frame, metadata=None, _metadata=None):
         """How to initialize a Zmat instance.
@@ -116,8 +116,8 @@ class ZmatCore(PandasWrapper, GenericCore):
                 _metadata['last_valid_cartesian'] = self.give_cartesian()
             if 'has_dummies' not in _metadata:
                 _metadata['has_dummies'] = {}
-            if 'insertion_allowed' not in _metadata:
-                _metadata['insertion_allowed'] = True
+            if 'dummy_manipulation_allowed' not in _metadata:
+                _metadata['dummy_manipulation_allowed'] = True
 
         fill_missing_keys_with_defaults(self._metadata)
 
