@@ -30,15 +30,15 @@ class _Safe_Loc(_Loc):
         if self.molecule._metadata['insertion_allowed']:
             molecule = self.molecule
             if isinstance(key, tuple):
-                molecule._frame.loc[key[0], key[1]] = value
+                self.molecule._frame.loc[key[0], key[1]] = value
             else:
-                molecule._frame.loc[key] = value
+                self.molecule._frame.loc[key] = value
 
             try:
-                molecule.give_cartesian()
+                self.molecule.give_cartesian()
             except InvalidReference as e:
-                molecule._insert_dummy_zmat(e)
-                # molecule._remove_dummies()
+                self.molecule._insert_dummy_zmat(e, inplace=True)
+            self.molecule._remove_dummies(inplace=True)
         else:
             zmat_after_assignment = self.molecule.copy()
             if isinstance(key, tuple):

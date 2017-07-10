@@ -498,6 +498,9 @@ class CartesianGiveZmat(CartesianCore):
             pos[:, :, 2] = self._get_positions(c_table['a'])
             pos[:, :, 3] = self._get_positions(c_table['d'])
         else:
+            c_table = np.array(c_table)
+            if len(c_table.shape) == 1:
+                c_table = c_table[None, :]
             for col in range(4):
                 pos[:, :, col] = self._get_positions(c_table[:, col])
 
