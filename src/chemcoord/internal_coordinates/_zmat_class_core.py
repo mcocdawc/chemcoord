@@ -305,35 +305,6 @@ class ZmatCore(PandasWrapper, GenericCore):
         if not inplace:
             return out
 
-    def change_numbering_old(self, new_index=None, inplace=False):
-        """Change numbering to a new index.
-
-        Changes the numbering of index and all dependent numbering
-            (bond_with...) to a new_index.
-        The user has to make sure that the new_index consists of distinct
-            elements.
-
-        Args:
-            new_index (list): If None the new_index is taken from 1 to the
-            number of atoms.
-
-        Returns:
-            Zmat: Reindexed version of the zmatrix.
-        """
-        out = self if inplace else self.copy()
-
-        if (new_index is None):
-            new_index = range(len(self))
-        elif len(new_index) != len(self):
-            raise ValueError('len(new_index) has to be the same as len(self)')
-
-        cols = ['b', 'a', 'd']
-        out.unsafe_loc[:, cols] = out.loc[:, cols].replace(
-            out.index, new_index)
-        out._frame.index = new_index
-        if not inplace:
-            return out
-
     def _insert_dummy_cart(self, exception, last_valid_cartesian=None):
         """Insert dummy atom into the already built cartesian of exception
         """
