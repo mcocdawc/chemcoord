@@ -57,8 +57,10 @@ def _jit_calculate_single_position(references, zmat_values, row):
 
 
 @jit(nopython=True)
-def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
-    for row in range(start_row, c_table.shape[0]):
+def _jit_calculate_everything(c_table, zmat_values):
+    n_atoms = c_table.shape[0]
+    positions = np.empty((n_atoms, 3), dtype=nb.types.f8)
+    for row in range(n_atoms):
         ref_pos = np.empty((3, 3))
         for k in range(3):
             j = c_table[row, k]
@@ -70,8 +72,8 @@ def _jit_calculate_everything(positions, c_table, zmat_values, start_row=0):
         if err == ERR_CODE_OK:
             positions[row] = pos
         else:
-            break
-    return (err, row)
+            return (err, row, positions)
+    return (ERR_CODE_OK, row, positions)
 
 
 class ZmatCore(PandasWrapper, GenericCore):
@@ -449,8 +451,7 @@ class ZmatCore(PandasWrapper, GenericCore):
             cartesian = Cartesian(xyz_frame)
             return cartesian
 
-        positions = np.empty((len(zmat), 3), dtype='f8')
-        err, row = _jit_calculate_everything(positions, c_table, zmat_values)
+        err, row, positions = _jit_calculate_everything(c_table, zmat_values)
 
         if err == ERR_CODE_InvalidReference:
             rename = dict(enumerate(self.index))
