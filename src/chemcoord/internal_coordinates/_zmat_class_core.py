@@ -400,7 +400,6 @@ class ZmatCore(PandasWrapper, GenericCore):
 
     def _remove_dummies(self, to_remove=None, inplace=False):
         """Works INPLACE"""
-        cols = ['b', 'a', 'd']
         zmat = self if inplace else self.copy()
         if to_remove is None:
             to_remove = zmat._has_removable_dummies()

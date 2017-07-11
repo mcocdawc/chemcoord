@@ -9,7 +9,6 @@ from chemcoord.internal_coordinates._zmat_class_core import ZmatCore
 from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord.exceptions import InvalidReference, UndefinedCoordinateSystem
 import chemcoord.constants as constants
-import numpy as np
 import pandas as pd
 import warnings
 
