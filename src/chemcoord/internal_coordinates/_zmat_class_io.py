@@ -84,7 +84,7 @@ class ZmatIO(ZmatCore, GenericIO):
         out = out._abs_ref_formatter(format_as='latex')
         if not upper_triangle:
             out = out._remove_upper_triangle()
-        return out._frame.to_latex(**kwargs)
+        return out._frame.to_latex(buf=buf, **kwargs)
 
     @classmethod
     def read_zmat(cls, inputfile, implicit_index=True):

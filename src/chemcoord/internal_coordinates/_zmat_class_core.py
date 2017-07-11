@@ -18,12 +18,10 @@ from chemcoord.utilities.algebra_utilities import \
     _jit_rotation_matrix, \
     _jit_isclose, \
     _jit_cross
-from collections import namedtuple
 from numba import jit
 import numba as nb
 import numpy as np
 import pandas as pd
-import sympy
 import warnings
 import copy
 
@@ -353,7 +351,7 @@ class ZmatCore(PandasWrapper, GenericCore):
                             'dummy atom {dummy_d} was inserted').format
             warnings.warn(give_message(i=i, dummy_d=dummy_d), UserWarning)
 
-        def insert_dummy(zmat, i, dummy_cart, dummy_d, inplace=inplace):
+        def insert_dummy(zmat, i, dummy_cart, dummy_d):
             """Works INPLACE on self._frame"""
             cols = ['b', 'a', 'd']
             actual_d = zmat.loc[i, 'd']
