@@ -1,5 +1,5 @@
-chemcoord\.allow\_dummy\_insertion
-==================================
+chemcoord\.dummy\_manipulation
+==============================
 
 .. currentmodule:: chemcoord
 

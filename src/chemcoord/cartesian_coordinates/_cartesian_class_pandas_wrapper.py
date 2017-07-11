@@ -43,8 +43,8 @@ class PandasWrapper(object):
     def loc(self):
         """Label based indexing
 
-        The indexing behaves like
-        `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        The indexing behaves like Indexing and Selecting data in
+        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
         The only question is about the return type.
         If the information in the columns is enough to draw a molecule,
         an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
@@ -70,8 +70,8 @@ class PandasWrapper(object):
     def iloc(self):
         """Row based indexing
 
-        The indexing behaves like
-        `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        The indexing behaves like Indexing and Selecting data in Pandas
+        `<http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
         The only question is about the return type.
         If the information in the columns is enough to draw a molecule,
         an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
@@ -277,18 +277,18 @@ class PandasWrapper(object):
 
         if inplace:
             self._frame.set_index(keys, drop=drop, append=append,
-                                 inplace=inplace,
-                                 verify_integrity=verify_integrity)
+                                  inplace=inplace,
+                                  verify_integrity=verify_integrity)
         else:
             new = self._frame.set_index(keys, drop=drop, append=append,
-                                       inplace=inplace,
-                                       verify_integrity=verify_integrity)
+                                        inplace=inplace,
+                                        verify_integrity=verify_integrity)
             new = self.__class__(new)
             new.metadata = self.metadata.copy()
             new._metadata = self._metadata.copy()
             return new
 
-    def append(self, other, ignore_index=False, verify_integrity=False):
+    def append(self, other, ignore_index=False):
         """Append rows of `other` to the end of this frame, returning a new object.
 
         Wrapper around the :meth:`pandas.DataFrame.append` method.
@@ -297,7 +297,7 @@ class PandasWrapper(object):
             raise ValueError('May only append instances of same type.')
         new_frame = self._frame.append(other._frame,
                                        ignore_index=ignore_index,
-                                       verify_integrity=verify_integrity)
+                                       verify_integrity=True)
         return self.__class__(new_frame)
 
     def insert(self, loc, column, value, allow_duplicates=False,

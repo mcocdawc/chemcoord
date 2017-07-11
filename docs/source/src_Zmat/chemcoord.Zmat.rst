@@ -28,8 +28,7 @@ chemcoord\.Zmat
       ~Zmat.copy
       ~Zmat.index
       ~Zmat.columns
-      ~Zmat.replace
-      ~Zmat.sort_index
+      Zmat.sort_index
       ~Zmat.insert
       ~Zmat.sort_values
       ~Zmat.loc

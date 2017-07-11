@@ -187,11 +187,6 @@ class CartesianCore(PandasWrapper, GenericCore):
     def __eq__(self, other):
         return self._frame == other._frame
 
-    def append(self, other):
-        # TODO(write Docstrign)
-        new = self._frame.append(other._frame, verify_integrity=True)
-        return self.__class__(new)
-
     def _to_ase_Atoms(self):
         import ase
         atoms = ''.join(self.loc[:, 'atom'])
