@@ -433,6 +433,35 @@ class ZmatCore(PandasWrapper, GenericCore):
             zmat = zmat._insert_dummy_zmat(exception, inplace=False)
             return zmat._remove_dummies(inplace=False)
 
+    def give_cartesian2(self):
+        zmat = self.change_numbering()
+        c_table = zmat.loc[:, ['b', 'a', 'd']].values
+        zmat_values = zmat.loc[:, ['bond', 'angle', 'dihedral']].values
+        zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
+
+        def create_cartesian(positions, row):
+            xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
+                                     index=self.index[:row], dtype='f8')
+            xyz_frame['atom'] = self.loc[xyz_frame.index, 'atom']
+            xyz_frame.loc[:, ['x', 'y', 'z']] = positions[:row]
+            from chemcoord.cartesian_coordinates.cartesian_class_main \
+                import Cartesian
+            cartesian = Cartesian(xyz_frame)
+            return cartesian
+
+        positions = np.empty((len(zmat), 3), dtype='f8')
+        err, row = _jit_calculate_everything(positions, c_table, zmat_values)
+        cartesian = create_cartesian(positions, row)
+
+        if err == ERR_CODE_InvalidReference:
+            rename = dict(enumerate(self.index))
+            i = rename[row]
+            b, a, d = self.loc[i, ['b', 'a', 'd']]
+            raise InvalidReference(i=i, b=b, a=a, d=d,
+                                   already_built_cartesian=cartesian)
+        elif err == ERR_CODE_OK:
+            return cartesian
+
     def give_cartesian(self):
         old_index = self.index
         rename = dict(enumerate(old_index))
