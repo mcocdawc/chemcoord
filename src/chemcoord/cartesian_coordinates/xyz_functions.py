@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord.configuration import settings
 import io
-from io import open
+from io import open  # pylint:disable=redefined-builtin
 import numpy as np
 import os
 import pandas as pd

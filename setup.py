@@ -6,7 +6,7 @@
 from __future__ import with_statement
 from __future__ import absolute_import
 from setuptools import setup, find_packages
-from io import open
+from io import open  # pylint:disable=redefined-builtin
 import os
 import subprocess
 import version

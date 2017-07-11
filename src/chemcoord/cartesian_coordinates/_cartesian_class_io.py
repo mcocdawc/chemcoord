@@ -9,7 +9,7 @@ from chemcoord.cartesian_coordinates._cartesian_class_core \
     import CartesianCore
 from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord.configuration import settings
-from io import open
+from io import open  # pylint:disable=redefined-builtin
 import numpy as np
 import os
 import pandas as pd
