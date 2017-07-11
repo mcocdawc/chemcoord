@@ -65,9 +65,9 @@ class ZmatIO(ZmatCore, GenericIO):
         content = out._frame.to_string(buf=buf, header=header, index=index,
                                        **kwargs)
         if not index and not header:
-            # NOTE(the following might be removed in the future)
+            # NOTE(the following might be removed in the future
             # introduced because of formatting bug in pandas
-            # See https://github.com/pandas-dev/pandas/issues/13032
+            # See https://github.com/pandas-dev/pandas/issues/13032)
             space = ' ' * (out.loc[:, 'atom'].str.len().max()
                            - len(out.iloc[0, 0]))
             content = space + content

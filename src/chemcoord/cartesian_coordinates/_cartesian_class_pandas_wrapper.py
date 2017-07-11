@@ -293,7 +293,6 @@ class PandasWrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.append` method.
         """
-        # TODO(think about metadata)
         if not isinstance(other, self.__class__):
             raise ValueError('May only append instances of same type.')
         new_frame = self._frame.append(other._frame,

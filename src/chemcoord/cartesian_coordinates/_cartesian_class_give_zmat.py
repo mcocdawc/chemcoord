@@ -368,7 +368,6 @@ class CartesianGiveZmat(CartesianCore):
                 c_table.loc[i, 'd'] = (bond_dict[a] - {b, a, problem_d}
                                        - set(c_table.index[loc_i:]))[0]
             except IndexError:
-                # TODO(Use only already defined atoms as reference)
                 visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
                 tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
                                              for j in bond_dict[problem_d]])

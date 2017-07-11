@@ -103,9 +103,8 @@ class CartesianIO(CartesianCore, GenericIO):
         """
         create_string = '{n}\n{message}\n{alignment}{frame_string}'.format
 
-        # TODO(automatically insert last stable version)
         message = 'Created by chemcoord \
-http://chemcoord.readthedocs.io/en/latest/'
+http://chemcoord.readthedocs.io/'
 
         if sort_index:
             molecule_string = self.sort_index().to_string(
