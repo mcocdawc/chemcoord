@@ -575,8 +575,8 @@ class CartesianGiveZmat(CartesianCore):
         zmat_values = self._calculate_zmat_values(c_table)
         zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = zmat_values
 
-        zmatrix = Zmat(zmat_frame, metadata=self.metadata)
-        zmatrix._metadata['last_valid_cartesian'] = self.copy()
+        zmatrix = Zmat(zmat_frame, metadata=self.metadata,
+                       _metadata={'last_valid_cartesian': self.copy()})
         return zmatrix
 
     def give_zmat(self, construction_table=None,

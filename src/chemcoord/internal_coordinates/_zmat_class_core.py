@@ -433,7 +433,7 @@ class ZmatCore(PandasWrapper, GenericCore):
             zmat = zmat._insert_dummy_zmat(exception, inplace=False)
             return zmat._remove_dummies(inplace=False)
 
-    def give_cartesian2(self):
+    def give_cartesian(self):
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']].values
         zmat_values = zmat.loc[:, ['bond', 'angle', 'dihedral']].values
@@ -451,54 +451,16 @@ class ZmatCore(PandasWrapper, GenericCore):
 
         positions = np.empty((len(zmat), 3), dtype='f8')
         err, row = _jit_calculate_everything(positions, c_table, zmat_values)
-        cartesian = create_cartesian(positions, row)
 
         if err == ERR_CODE_InvalidReference:
             rename = dict(enumerate(self.index))
             i = rename[row]
             b, a, d = self.loc[i, ['b', 'a', 'd']]
+            cartesian = create_cartesian(positions, row)
             raise InvalidReference(i=i, b=b, a=a, d=d,
                                    already_built_cartesian=cartesian)
         elif err == ERR_CODE_OK:
-            return cartesian
-
-    def give_cartesian(self):
-        old_index = self.index
-        rename = dict(enumerate(old_index))
-        zmat_values = self.loc[:, ['bond', 'angle', 'dihedral']].values
-        # TODO(explicit break because of AttributeError)
-        zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
-        self.change_numbering(inplace=True)
-        c_table = self.loc[:, ['b', 'a', 'd']].values
-        positions = np.empty((len(self), 3), dtype='float64')
-
-        err, row = _jit_calculate_everything(positions, c_table, zmat_values)
-        if err == ERR_CODE_InvalidReference:
-            i = rename[row]
-            self.change_numbering(old_index, inplace=True)
-            b, a, d = self.loc[i, ['b', 'a', 'd']]
-
-            self.change_numbering(old_index, inplace=True)
-            xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
-                                     index=self.index[:row], dtype=float)
-            xyz_frame['atom'] = self.loc[xyz_frame.index, 'atom']
-            xyz_frame.loc[:, ['x', 'y', 'z']] = positions[:row]
-
-            from chemcoord.cartesian_coordinates.cartesian_class_main \
-                import Cartesian
-            cartesian = Cartesian(xyz_frame)
-            raise InvalidReference(i=i, b=b, a=a, d=d,
-                                   already_built_cartesian=cartesian)
-
-        self.change_numbering(old_index, inplace=True)
-        xyz_frame = pd.DataFrame(
-            index=self.index, columns=['atom', 'x', 'y', 'z'], dtype=float)
-        xyz_frame['atom'] = self['atom']
-        xyz_frame.loc[:, ['x', 'y', 'z']] = positions
-
-        from chemcoord.cartesian_coordinates.cartesian_class_main \
-            import Cartesian
-        return Cartesian(xyz_frame)
+            return create_cartesian(positions, row + 1)
 
     def to_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Zmat.give_cartesian`
