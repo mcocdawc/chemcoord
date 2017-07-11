@@ -82,6 +82,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
+        elif isinstance(other, pd.DataFrame):
+            new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         else:
             try:
                 other = np.array(other, dtype='f8')
@@ -99,6 +101,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
+        elif isinstance(other, pd.DataFrame):
+            new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         else:
             try:
                 other = np.array(other, dtype='f8')
@@ -113,6 +117,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
+        elif isinstance(other, pd.DataFrame):
+            new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         else:
             try:
                 other = np.array(other, dtype='f8')
@@ -126,6 +132,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         new = self.copy()
         if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
+            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
+        elif isinstance(other, pd.DataFrame):
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         else:
             try:
@@ -144,6 +152,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
+        elif isinstance(other, pd.DataFrame):
+            new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         else:
             try:
                 other = np.array(other, dtype='f8')
@@ -157,6 +167,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         new = self.copy()
         if isinstance(other, CartesianCore):
             self._test_if_correctly_indexed(other)
+            new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
+        elif isinstance(other, pd.DataFrame):
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
         else:
             try:
@@ -547,7 +559,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         if origin is None:
             origin = np.zeros(3)
         elif pd.api.types.is_list_like(origin):
-            origin = np.array(origin)
+            origin = np.array(origin, dtype='f8')
         else:
             origin = self.loc[origin, ['x', 'y', 'z']]
 
@@ -589,7 +601,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         if origin is None:
             origin = np.zeros(3)
         elif pd.api.types.is_list_like(origin):
-            origin = np.array(origin)
+            origin = np.array(origin, dtype='f8')
         else:
             origin = self.loc[origin, ['x', 'y', 'z']]
         b = a if b is None else b
@@ -1130,7 +1142,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         if origin is None:
             origin = np.zeros(3)
         elif pd.api.types.is_list_like(origin):
-            origin = np.array(origin)
+            origin = np.array(origin, dtype='f8')
         else:
             origin = self.loc[origin, ['x', 'y', 'z']]
 

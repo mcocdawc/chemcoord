@@ -205,9 +205,9 @@ class PandasWrapper(object):
         Wrapper around the :meth:`pandas.DataFrame.sort_values` method.
         """
         if inplace:
-                self._frame.sort_values(
-                    by, axis=axis, ascending=ascending,
-                    inplace=inplace, kind=kind, na_position=na_position)
+            self._frame.sort_values(
+                by, axis=axis, ascending=ascending,
+                inplace=inplace, kind=kind, na_position=na_position)
         else:
             new = self.__class__(self._frame.sort_values(
                 by, axis=axis, ascending=ascending, inplace=inplace,
