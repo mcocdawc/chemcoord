@@ -119,6 +119,8 @@ def test_overloaded_operators():
                            | np.isclose(molecule['z'], 0))]
     assert np.allclose(np.full(molecule2.loc[:, ['x', 'y', 'z']].shape, 1),
                        (molecule2 / molecule2).loc[:, ['x', 'y', 'z']])
+    assert np.allclose(np.full(molecule2.loc[:, ['x', 'y', 'z']].shape, 0),
+                       (molecule2 - molecule2).loc[:, ['x', 'y', 'z']])
 
 
 def test_get_bonds():
@@ -126,6 +128,23 @@ def test_get_bonds():
     molecule._metadata['bond_dict'][56].add(4)
     assert not (bond_dict == molecule.get_bonds(use_lookup=True))
     assert bond_dict == molecule.get_bonds()
+    modified_expected = {1: {2, 51}, 2: {1, 9, 27}, 3: set(), 4: {5, 52},
+                         5: {4, 31}, 6: set(), 7: {53}, 8: {10}, 9: {2},
+                         10: {8, 12, 24}, 11: set(), 12: {10}, 13: {14},
+                         14: {13}, 15: set(), 16: {17}, 17: {16, 20},
+                         18: set(), 19: {21}, 20: {17}, 21: {19, 23},
+                         22: set(), 23: {21, 50}, 24: {10, 26, 36},
+                         25: set(), 26: {24}, 27: {2, 29, 30}, 28: set(),
+                         29: {27}, 30: {27}, 31: {5, 41, 44, 47}, 32: set(),
+                         33: set(), 34: set(), 35: set(), 36: {24}, 37: set(),
+                         38: set(), 39: set(), 40: set(), 41: {31}, 42: set(),
+                         43: set(), 44: {31}, 45: set(), 46: set(), 47: {31},
+                         48: set(), 49: set(), 50: {23}, 51: {1}, 52: {4},
+                         53: {7}, 54: set(), 55: set(), 56: set()}
+    assert molecule.get_bonds(
+        modified_properties={
+            k: 0. for k in
+            molecule[molecule['atom'] == 'C'].index}) == modified_expected
 
 
 def test_coordination_sphere():
@@ -162,3 +181,9 @@ def test_cutcuboid():
     assert (set(molecule.index) - expected
             == set(molecule.cutcuboid(a=2, origin=7,
                                       outside_sliced=False).index))
+
+
+def test_inertia():
+    A = molecule.inertia()
+    eig, t_mol = A['eigenvectors'], A['transformed_Cartesian']
+    cc.xyz_functions.allclose(eig @ (molecule - molecule.barycenter()), t_mol)

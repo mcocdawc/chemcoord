@@ -40,6 +40,13 @@ def test_bond_length():
     assert np.allclose(calculated, expct_res)
 
 
+def test_dihedral_degrees():
+    zmolecule = molecule.give_zmat()
+    c_table = zmolecule.loc[:, ['b', 'a', 'd']]
+    assert (molecule.dihedral_degrees(c_table.iloc[3:])
+            == zmolecule['dihedral'][3:]).all()
+
+
 def test_fragmentate():
     fragments = molecule.fragmentate()
     assert len(fragments) == 1
