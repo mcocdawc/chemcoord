@@ -114,7 +114,7 @@ def test_overloaded_operators():
     assert allclose(molecule * 1, molecule)
     assert allclose(1 * molecule, +molecule)
     assert allclose(-1 * molecule, -molecule)
-    assert allclose(molecule, 0 - molecule)
+    assert allclose(-molecule, 0 - molecule)
     assert allclose(molecule, molecule - 0)
     molecule2 = molecule[~(np.isclose(molecule['x'], 0)
                            | np.isclose(molecule['y'], 0)
