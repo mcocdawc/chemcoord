@@ -186,11 +186,7 @@ def test_cutcuboid():
 def test_inertia():
     A = molecule.inertia()
     eig, t_mol = A['eigenvectors'], A['transformed_Cartesian']
-    try:
-        cc.xyz_functions.allclose(eig @ (molecule - molecule.barycenter()),
-                                  t_mol)
-    except SyntaxError:
-        # @ operator not defined in py27
-        pass
+    cc.xyz_functions.allclose(
+        (molecule - molecule.barycenter()).__rmatmul__(eig), t_mol)
     cc.xyz_functions.allclose(
         (molecule - molecule.barycenter()).move(matrix=eig), t_mol)
