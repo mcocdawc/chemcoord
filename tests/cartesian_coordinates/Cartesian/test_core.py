@@ -192,3 +192,35 @@ def test_inertia():
         (molecule - molecule.barycenter()).__rmatmul__(eig), t_mol)
     cc.xyz_functions.allclose(
         (molecule - molecule.barycenter()).move(matrix=eig), t_mol)
+
+
+def test_partition_chem_env():
+    xpctd = {('C', frozenset({('C', 4), ('Cr', 2), ('H', 7), ('O', 7)})):
+             {2, 5, 14, 21},
+             ('C', frozenset({('C', 6), ('Cr', 2), ('H', 8), ('O', 11)})):
+             {10, 17},
+             ('C', frozenset({('C', 1), ('Cr', 2), ('H', 3), ('O', 11)})):
+             {24, 32},
+             ('C', frozenset({('C', 1), ('Cr', 1), ('H', 4), ('O', 7)})):
+             {27, 31, 33, 34},
+             ('Cr', frozenset({('C', 10), ('Cr', 1), ('H', 19), ('O', 13)})):
+             {6, 11},
+             ('H', frozenset({('C', 2), ('Cr', 2), ('H', 2), ('O', 2)})):
+             {25, 26, 35, 36, 37, 38},
+             ('H', frozenset({('C', 2), ('Cr', 1), ('H', 3), ('O', 2)})):
+             {28, 29, 30, 39, 40, 41, 42, 43, 44, 45, 46, 47, 49, 50, 51, 52},
+             ('H', frozenset({('C', 4), ('Cr', 2), ('H', 2), ('O', 6)})):
+             {48, 54, 55, 56},
+             ('H', frozenset({('C', 6), ('Cr', 2), ('H', 4), ('O', 11)})):
+             {53},
+             ('O', frozenset({('C', 2), ('Cr', 1), ('H', 4), ('O', 6)})):
+             {1, 4, 22, 23},
+             ('O', frozenset({('C', 8), ('Cr', 2), ('H', 3), ('O', 12)})):
+             {3, 18},
+             ('O', frozenset({('C', 12), ('Cr', 2), ('H', 5), ('O', 14)})):
+             {7},
+             ('O', frozenset({('C', 8), ('Cr', 2), ('H', 6), ('O', 12)})):
+             {8, 12, 16, 20},
+             ('O', frozenset({('C', 8), ('Cr', 2), ('H', 7), ('O', 12)})):
+             {9, 13, 15, 19}}
+    assert xpctd == molecule.partition_chem_env()
