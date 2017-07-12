@@ -223,14 +223,35 @@ class ZmatCore(PandasWrapper, GenericCore):
         new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype('i8')
         return new
 
-    def subs(self, variable, value, perform_checks=True):
+    def subs(self, symb_expr, value, perform_checks=True):
+        """Substitute a symbolic expression in ``['bond', 'angle', 'dihedral']``
+
+        This is a wrapper around the substitution mechanism of
+        `sympy <http://docs.sympy.org/latest/tutorial/basic_operations.html>`_.
+        Any symbolic expression in the columns
+        ``['bond', 'angle', 'dihedral']`` of ``self`` will be substituted
+        with value.
+
+        Args:
+            symb_expr (sympy expression):
+            value :
+            perform_checks (bool): If ``perform_checks is True``,
+                it is asserted, that the resulting Zmatrix can be converted
+                to cartesian coordinates.
+                Dummy atoms will be inserted automatically if necessary.
+
+        Returns:
+            Zmat: Zmatrix with substituted symbolic expressions.
+            If all resulting sympy expressions in a column are numbers,
+            the column is recasted to 64bit float.
+        """
         cols = ['bond', 'angle', 'dihedral']
         out = self.copy()
 
-        def give_subs_function(variable, value):
+        def give_subs_function(symb_expr, value):
             def subs_function(x):
                 try:
-                    x = x.subs(variable, value)
+                    x = x.subs(symb_expr, value)
                     try:
                         x = float(x)
                     except TypeError:
@@ -243,7 +264,7 @@ class ZmatCore(PandasWrapper, GenericCore):
         for col in cols:
             if out.loc[:, col].dtype is np.dtype('O'):
                 out.unsafe_loc[:, col] = out.loc[:, col].map(
-                    give_subs_function(variable, value))
+                    give_subs_function(symb_expr, value))
                 try:
                     out.unsafe_loc[:, col] = out.loc[:, col].astype('float')
                 except TypeError:
@@ -260,9 +281,6 @@ class ZmatCore(PandasWrapper, GenericCore):
                 else:
                     raise e
         return out
-
-    def _to_Zmat(self):
-        return self.copy()
 
     def change_numbering(self, new_index=None, inplace=False,
                          exclude_upper_triangle=True):

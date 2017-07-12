@@ -18,5 +18,5 @@ class GenericIO(object):
         new = self.copy()
         for col in self.columns.drop('atom'):
             if self[col].dtype == np.dtype('O'):
-                new.unsafe_loc[:, col] = self[col].apply(formatter)
+                new._frame.loc[:, col] = self[col].apply(formatter)
         return new

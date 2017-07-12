@@ -35,8 +35,7 @@ chemcoord\.Cartesian
          ~Cartesian.basistransform
          ~Cartesian.align
          ~Cartesian.change_numbering
-         ~Cartesian.loc_set_copy
-         ~Cartesian.iloc_set_copy
+         ~Cartesian.subs
 
     .. rubric:: Geometry
 

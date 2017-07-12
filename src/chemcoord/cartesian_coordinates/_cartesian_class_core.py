@@ -212,6 +212,54 @@ class CartesianCore(PandasWrapper, GenericCore):
         molecule._metadata = self._metadata.copy()
         return molecule
 
+    def subs(self, variable, value):
+        """Substitute a symbolic expression in ``['x', 'y', 'z']``
+
+        This is a wrapper around the substitution mechanism of
+        `sympy <http://docs.sympy.org/latest/tutorial/basic_operations.html>`_.
+        Any symbolic expression in the columns
+        ``['x', 'y', 'z']`` of ``self`` will be substituted
+        with value.
+
+        Args:
+            symb_expr (sympy expression):
+            value :
+            perform_checks (bool): If ``perform_checks is True``,
+                it is asserted, that the resulting Zmatrix can be converted
+                to cartesian coordinates.
+                Dummy atoms will be inserted automatically if necessary.
+
+        Returns:
+            Cartesian: Cartesian with substituted symbolic expressions.
+            If all resulting sympy expressions in a column are numbers,
+            the column is recasted to 64bit float.
+        """
+        cols = ['x', 'y', 'z']
+        out = self.copy()
+
+        def give_subs_function(variable, value):
+            def subs_function(x):
+                try:
+                    x = x.subs(variable, value)
+                    try:
+                        x = float(x)
+                    except TypeError:
+                        pass
+                except AttributeError:
+                    pass
+                return x
+            return subs_function
+
+        for col in cols:
+            if out.loc[:, col].dtype is np.dtype('O'):
+                out.loc[:, col] = out.loc[:, col].map(
+                    give_subs_function(variable, value))
+                try:
+                    out.loc[:, col] = out.loc[:, col].astype('float')
+                except TypeError:
+                    pass
+        return out
+
     @staticmethod
     @jit(nopython=True)
     def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):

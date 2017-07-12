@@ -72,9 +72,11 @@ extensions = [
     # u'sphinx.ext.inheritance_diagram'
 ]
 
-intersphinx_mapping = {'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+intersphinx_mapping = {'numpy': ('https://docs.scipy.org/doc/numpy/', None),
                        'ase': ('https://wiki.fysik.dtu.dk/ase/', None),
-                       'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None)}
+                       'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None),
+                       'sympy': ('http://docs.sympy.org/latest/', None)}
+                    #    'sympy': ('http://www.sympy.org/', None)}
 # intersphinx_mapping = {'ase' : ('https://wiki.fysik.dtu.dk/ase/', None)}
 
 

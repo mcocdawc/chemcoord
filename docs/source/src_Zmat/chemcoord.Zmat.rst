@@ -18,6 +18,7 @@ chemcoord\.Zmat
       ~Zmat.give_cartesian
       ~Zmat.to_xyz
       ~Zmat.total_mass
+      ~Zmat.subs
 
 
    .. rubric:: Pandas DataFrame Wrapper

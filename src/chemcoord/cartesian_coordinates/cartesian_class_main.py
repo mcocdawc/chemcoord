@@ -41,8 +41,8 @@ class Cartesian(CartesianIO, CartesianGiveZmat):
 
     **Indexing**:
 
-    The indexing behaves like
-    `Indexing and Selecting data in Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
+    The indexing behaves like Indexing and Selecting data in
+    `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
     You can slice with :meth:`~chemcoord.Cartesian.loc`,
     :meth:`~chemcoord.Cartesian.iloc`
     and ``[key]``.
