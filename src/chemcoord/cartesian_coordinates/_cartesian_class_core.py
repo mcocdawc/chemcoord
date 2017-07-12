@@ -1222,7 +1222,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         if not inplace:
             return output
 
-    def partition_chem_env(self, follow_bonds=4,
+    def partition_chem_env(self, n_sphere=4,
                            use_lookup=settings['defaults']['use_lookup']):
         """This function partitions the molecule into subsets of the
         same chemical environment.
@@ -1231,31 +1231,31 @@ class CartesianCore(PandasWrapper, GenericCore):
         surrounding atoms of a certain kind around an atom with a
         certain atomic number represented by a tuple of a string
         and a frozenset of tuples.
-        The ``follow_bonds`` option determines how many branches the
+        The ``n_sphere`` option determines how many branches the
         algorithm follows to determine the chemical environment.
 
         Example:
         A carbon atom in ethane has bonds with three hydrogen (atomic
         number 1) and one carbon atom (atomic number 6).
-        If ``follow_bonds=1`` these are the only atoms we are
+        If ``n_sphere=1`` these are the only atoms we are
         interested in and the chemical environment is::
 
         ('C', frozenset([('H', 3), ('C', 1)]))
 
-        If ``follow_bonds=2`` we follow every atom in the chemical
-        enviromment of ``follow_bonds=1`` to their direct neighbours.
+        If ``n_sphere=2`` we follow every atom in the chemical
+        enviromment of ``n_sphere=1`` to their direct neighbours.
         In the case of ethane this gives::
 
         ('C', frozenset([('H', 6), ('C', 1)]))
 
         In the special case of ethane this is the whole molecule;
         in other cases you can apply this operation recursively and
-        stop after ``follow_bonds`` or after reaching the end of
+        stop after ``n_sphere`` or after reaching the end of
         branches.
 
 
         Args:
-            follow_bonds (int):
+            n_sphere (int):
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
 
@@ -1266,27 +1266,19 @@ class CartesianCore(PandasWrapper, GenericCore):
 
                 A dictionary mapping from a chemical environment to
                 the set of indices of atoms in this environment.
-    """
-        env_dict = {}
-
-        def get_chem_env(self, i, follow_bonds):
-            indices_of_env_atoms = self.connected_to(i,
-                                                     follow_bonds=follow_bonds,
-                                                     give_only_index=True,
-                                                     use_lookup=use_lookup)
+        """
+        def get_chem_env(self, i, n_sphere):
+            indices_of_env_atoms = self.connected_to(
+                i, n_sphere=n_sphere, give_only_index=True,
+                use_lookup=use_lookup)
             indices_of_env_atoms.remove(i)
-            own_symbol, atoms = (
-                self.loc[i, 'atom'], self.loc[indices_of_env_atoms, 'atom'])
-            environment = collections.Counter(atoms).most_common()
-            environment = frozenset(environment)
-            return (own_symbol, environment)
+            atoms = self.loc[indices_of_env_atoms, 'atom']
+            environment = frozenset(collections.Counter(atoms).most_common())
+            return (self.loc[i, 'atom'], environment)
 
+        env_dict = collections.defaultdict(set)
         for i in self.index:
-            chem_env = get_chem_env(self, i, follow_bonds)
-            try:
-                env_dict[chem_env].add(i)
-            except KeyError:
-                env_dict[chem_env] = set([i])
+            env_dict[get_chem_env(self, i, n_sphere)].add(i)
         return env_dict
 
     def align(self, Cartesian2, ignore_hydrogens=False):
