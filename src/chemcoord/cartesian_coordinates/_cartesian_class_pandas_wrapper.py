@@ -229,10 +229,8 @@ class PandasWrapper(object):
             new = self._frame.set_index(keys, drop=drop, append=append,
                                         inplace=inplace,
                                         verify_integrity=verify_integrity)
-            new = self.__class__(new)
-            new.metadata = self.metadata.copy()
-            new._metadata = self._metadata.copy()
-            return new
+            return self.__class__(new, metadata=self.metadata,
+                                  _metadata=self._metadata)
 
     def append(self, other, ignore_index=False):
         """Append rows of `other` to the end of this frame, returning a new object.
