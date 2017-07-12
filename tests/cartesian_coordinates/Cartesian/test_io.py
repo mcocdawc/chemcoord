@@ -28,4 +28,36 @@ def get_structure_path(script_path):
             test_path = os.path.join(test_path, '..')
 
 
-STRUCTURES = get_structure_path(get_script_path())
+def get_complete_path(structure):
+    STRUCTURES = get_structure_path(get_script_path())
+    return os.path.join(STRUCTURES, structure)
+
+
+molecule = cc.Cartesian.read_xyz(get_complete_path('water.xyz'),
+                                 start_index=1)
+
+
+def test_to_string():
+    expected = ('  atom         x    y         z\n'
+                '1    O  0.000000  0.0  0.000000\n'
+                '2    H  0.758602  0.0  0.504284\n'
+                '3    H  0.260455  0.0 -0.872893\n'
+                '4    O  3.000000  0.5  0.000000\n'
+                '5    H  3.758602  0.5  0.504284\n'
+                '6    H  3.260455  0.5 -0.872893')
+    assert molecule.to_string() == expected
+
+
+def test_to_xyz():
+    expected = """6
+Created by chemcoord http://chemcoord.readthedocs.io/
+O 0.000000 0.000000  0.000000
+H 0.758602 0.000000  0.504284
+H 0.260455 0.000000 -0.872893
+O 3.000000 0.500000  0.000000
+H 3.758602 0.500000  0.504284
+H 3.260455 0.500000 -0.872893"""
+    assert molecule.to_xyz() == expected
+
+    with pytest.warns(DeprecationWarning):
+        assert molecule.write_xyz() == expected
