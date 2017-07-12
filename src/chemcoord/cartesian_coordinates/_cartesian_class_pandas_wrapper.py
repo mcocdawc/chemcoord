@@ -261,17 +261,15 @@ class PandasWrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.apply` method.
         """
-        new = self.__class__(self._frame.apply(*args, **kwargs))
-        new.metadata = self.metadata.copy()
-        new._metadata = self._metadata.copy()
-        return new
+        return self.__class__(self._frame.apply(*args, **kwargs),
+                              metadata=self.metadata,
+                              _metadata=self._metadata)
 
     def applymap(self, *args, **kwargs):
         """Applies function elementwise
 
         Wrapper around the :meth:`pandas.DataFrame.applymap` method.
         """
-        new = self.__class__(self._frame.applymap(*args, **kwargs))
-        new.metadata = self.metadata.copy()
-        new._metadata = self._metadata.copy()
-        return new
+        return self.__class__(self._frame.applymap(*args, **kwargs),
+                              metadata=self.metadata,
+                              _metadata=self._metadata)
