@@ -1142,25 +1142,6 @@ class CartesianCore(PandasWrapper, GenericCore):
         assert np.allclose(test_basis, old_basis), "Transformation did'nt work"
         return new_cartesian
 
-    def location(self, indexlist=None):
-        """Return the location of an atom.
-
-        You can pass an indexlist or an index.
-
-        Args:
-            frame (pd.dataframe):
-            indexlist (list): If indexlist is None, the complete index
-                is used.
-
-        Returns:
-            np.array: A matrix of 3D rowvectors of the location of the
-            atoms specified by indexlist. In the case of one index
-            given a 3D vector is returned one index.
-        """
-        indexlist = self.index if indexlist is None else indexlist
-        array = self.loc[indexlist, ['x', 'y', 'z']].values
-        return array
-
     def _get_positions(self, indices):
         old_index = self.index
         self.index = range(len(self))
@@ -1320,35 +1301,23 @@ class CartesianCore(PandasWrapper, GenericCore):
                                                             location1)
         return molecule1, molecule2
 
-    def get_movement_to(self, Cartesian2, step=5, extrapolate=(0, 0)):
+    def get_movement_to(self, other, n_steps=5, extrapolate=(0, 0)):
         """Return list of Cartesians for the movement from
         self to Cartesian2.
 
         Args:
             Cartesian2 (Cartesian):
-            step (int):
+            n_steps (int):
             extrapolate (tuple):
 
         Returns:
-            list: The list contains ``self`` as first and ``Cartesian2``
+            list: The list contains ``self`` as first and ``other``
             as last element.
-            The number of intermediate frames is defined by step.
+            The number of intermediate Cartesians is defined by step.
             Please note, that for this reason: len(list) = (step + 1).
             The numbers in extrapolate define how many frames are
             appended to the left and right of the list continuing
             the movement.
         """
-        coords = ['x', 'y', 'z']
-        difference = Cartesian2.loc[:, coords] - self.loc[:, coords]
-
-        step_frame = difference.copy() / step
-
-        Cartesian_list = []
-        temp_Cartesian = self.copy()
-
-        for t in range(-extrapolate[0], step + 1 + extrapolate[1]):
-            temp_Cartesian.loc[:, coords] = (
-                self.loc[:, coords]
-                + step_frame.loc[:, coords] * t)
-            Cartesian_list.append(temp_Cartesian.copy())
-        return Cartesian_list
+        limits = -extrapolate[0], n_steps + 1 + extrapolate[1]
+        return [self + (other - self) / n_steps * t for t in range(*limits)]

@@ -42,7 +42,6 @@ chemcoord\.Cartesian
     .. autosummary::
          :toctree: src_Cartesian
 
-         ~Cartesian.location
          ~Cartesian.bond_lengths
          ~Cartesian.angle_degrees
          ~Cartesian.dihedral_degrees

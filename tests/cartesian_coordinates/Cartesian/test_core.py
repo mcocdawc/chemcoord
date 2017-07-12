@@ -224,3 +224,10 @@ def test_partition_chem_env():
              ('O', frozenset({('C', 8), ('Cr', 2), ('H', 7), ('O', 12)})):
              {9, 13, 15, 19}}
     assert xpctd == molecule.partition_chem_env()
+
+
+def test_change_numbering():
+    molecule2 = molecule.copy()
+    molecule2.index = reversed(molecule.index)
+    dct = dict(zip(molecule.index, reversed(molecule.index)))
+    assert np.alltrue(molecule2.index == molecule.change_numbering(dct).index)
