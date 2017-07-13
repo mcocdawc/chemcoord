@@ -51,6 +51,8 @@ def _jit_absolute_refs(j):
         raise ValueError
 
 
+# The data comes from the mendeleev package written by Lukasz Mentel
+# https://bitbucket.org/lukaszmentel/mendeleev/
 atom_properties = StringIO(
 """,annotation,atomic_number,atomic_radius,atomic_volume,block,boiling_point,density,description,dipole_polarizability,electron_affinity,electronic_configuration,evaporation_heat,fusion_heat,group_id,lattice_constant,lattice_structure,mass,melting_point,name,period,series_id,specific_heat,thermal_conductivity,vdw_radius,covalent_radius_cordero,covalent_radius_pyykko,en_pauling,en_allen,jmol_color,cpk_color,proton_affinity,gas_basicity,heat_of_formation,c6,covalent_radius_bragg,covalent_radius_slater,vdw_radius_bondi,vdw_radius_truhlar,vdw_radius_rt,vdw_radius_batsanov,vdw_radius_dreiding,vdw_radius_uff,vdw_radius_mm3,abundance_crust,abundance_sea,atomic_radius_gv,valency,size_in_gv,gv_color,atomic_radius_cc
 H,"density(@ -253C), evaporation_heat(H-H), fusion_heat(H-H), ",1.0,79.0,14.1,s,20.28,0.0708,"Colourless, odourless gaseous chemical element. Lightest and most abundant element in the universe. Present in water and in all organic compounds. Chemically reacts with most elements. Discovered by Henry Cavendish in 1776.",4.50710742367,0.754195,1s,0.904,0.117,1.0,3.75,HEX,1.00794,14.01,Hydrogen,1.0,1.0,,0.1815,110.0,31.0,32.0,2.2,13.61,#ffffff,#ffffff,,,217.998,6.499026705,,25.0,120.0,,110.0,,319.5,288.6,162.0,1400.0,108000.0,0.37,1.0,0.32,#f2f2f2,0.37

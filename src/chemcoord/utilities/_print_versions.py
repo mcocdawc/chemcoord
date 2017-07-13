@@ -1,3 +1,5 @@
+# The following code was taken from the pandas project and modified.
+# http://pandas.pydata.org/
 import codecs
 import importlib
 import locale
@@ -16,8 +18,8 @@ def get_sys_info():
     # blob.append(('commit', commit))
 
     try:
-        (sysname, nodename, release,
-         version, machine, processor) = platform.uname()
+        (sysname, nodename, release, version  # pylint:disable=unused-variable
+         machine, processor) = platform.uname()  # pylint:disable=unused-variable
         blob.extend([
             ("python", "%d.%d.%d.%s.%s" % sys.version_info[:]),
             ("python-bits", struct.calcsize("P") * 8),
@@ -127,7 +129,7 @@ def main():
                       help="Save output as JSON into file, pass in "
                       "'-' to output to stdout")
 
-    (options, args) = parser.parse_args()
+    options = parser.parse_args()[0]
 
     if options.json == "-":
         options.json = True
