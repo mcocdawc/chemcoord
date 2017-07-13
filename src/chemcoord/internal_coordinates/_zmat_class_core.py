@@ -27,7 +27,7 @@ import copy
 
 
 @jit(nopython=True)
-def _jit_calculate_single_position(references, zmat_values, row):
+def _jit_calc_singe_position(references, zmat_values, row):
     bond, angle, dihedral = zmat_values[row]
     vb, va, vd = references[0], references[1], references[2]
     zeros = np.zeros(3, dtype=nb.types.f8)
@@ -50,28 +50,7 @@ def _jit_calculate_single_position(references, zmat_values, row):
             d = bond * ba
             d = np.dot(_jit_rotation_matrix(n1, angle), d)
             d = np.dot(_jit_rotation_matrix(ba, dihedral), d)
-
     return (ERR_CODE_OK, vb + d)
-
-
-@jit(nopython=True)
-def _jit_calculate_everything(c_table, zmat_values):
-    n_atoms = c_table.shape[0]
-    positions = np.empty((n_atoms, 3), dtype=nb.types.f8)
-    for row in range(n_atoms):
-        ref_pos = np.empty((3, 3))
-        for k in range(3):
-            j = c_table[row, k]
-            if j < constants.keys_below_are_abs_refs:
-                ref_pos[k] = constants._jit_absolute_refs(j)
-            else:
-                ref_pos[k] = positions[j]
-        err, pos = _jit_calculate_single_position(ref_pos, zmat_values, row)
-        if err == ERR_CODE_OK:
-            positions[row] = pos
-        else:
-            return (err, row, positions)
-    return (ERR_CODE_OK, row, positions)
 
 
 class ZmatCore(PandasWrapper, GenericCore):
@@ -448,6 +427,27 @@ class ZmatCore(PandasWrapper, GenericCore):
             zmat = zmat._insert_dummy_zmat(exception, inplace=False)
             return zmat._remove_dummies(inplace=False)
 
+    @staticmethod
+    @jit(nopython=True)
+    def _jit_calc_positions(c_table, zmat_values):
+
+        n_atoms = c_table.shape[0]
+        positions = np.empty((n_atoms, 3), dtype=nb.types.f8)
+        for row in range(n_atoms):
+            ref_pos = np.empty((3, 3))
+            for k in range(3):
+                j = c_table[row, k]
+                if j < constants.keys_below_are_abs_refs:
+                    ref_pos[k] = constants._jit_absolute_refs(j)
+                else:
+                    ref_pos[k] = positions[j]
+            err, pos = _jit_calc_singe_position(ref_pos, zmat_values, row)
+            if err == ERR_CODE_OK:
+                positions[row] = pos
+            else:
+                return (err, row, positions)
+        return (ERR_CODE_OK, row, positions)
+
     def give_cartesian(self):
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']].values
@@ -464,7 +464,7 @@ class ZmatCore(PandasWrapper, GenericCore):
             cartesian = Cartesian(xyz_frame)
             return cartesian
 
-        err, row, positions = _jit_calculate_everything(c_table, zmat_values)
+        err, row, positions = self._jit_calc_positions(c_table, zmat_values)
 
         if err == ERR_CODE_InvalidReference:
             rename = dict(enumerate(self.index))
