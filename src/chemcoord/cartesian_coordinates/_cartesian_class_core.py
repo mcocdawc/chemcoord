@@ -25,14 +25,13 @@ from sortedcontainers import SortedSet
 class CartesianCore(PandasWrapper, GenericCore):
 
     _required_cols = frozenset({'atom', 'x', 'y', 'z'})
-    _metadata_keys = frozenset([])
 
     # Look into the numpy manual for description of __array_priority__:
     # https://docs.scipy.org/doc/numpy-1.12.0/reference/arrays.classes.html
     __array_priority__ = 15.0
 
     # overwrites existing method
-    def __init__(self, frame):
+    def __init__(self, frame, metadata=None, _metadata=None):
         """How to initialize a Cartesian instance.
 
         Args:
@@ -49,8 +48,20 @@ class CartesianCore(PandasWrapper, GenericCore):
             raise PhysicalMeaning('There are columns missing for a '
                                   'meaningful description of a molecule')
         self._frame = frame.copy()
-        self.metadata = {}
-        self._metadata = {}
+        if metadata is None:
+            self.metadata = {}
+        else:
+            self.metadata = metadata.copy()
+
+        if _metadata is None:
+            self._metadata = {}
+        else:
+            self._metadata = copy.deepcopy(_metadata)
+
+        def fill_missing_keys_with_defaults(_metadata):
+            pass
+
+        fill_missing_keys_with_defaults(self._metadata)
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):

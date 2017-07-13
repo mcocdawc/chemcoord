@@ -18,8 +18,8 @@ def get_sys_info():
     # blob.append(('commit', commit))
 
     try:
-        (sysname, nodename, release, version  # pylint:disable=unused-variable
-         machine, processor) = platform.uname()  # pylint:disable=unused-variable
+        (sysname, nodename, release, version,
+         machine, processor) = platform.uname()
         blob.extend([
             ("python", "%d.%d.%d.%s.%s" % sys.version_info[:]),
             ("python-bits", struct.calcsize("P") * 8),

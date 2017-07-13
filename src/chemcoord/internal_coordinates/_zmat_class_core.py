@@ -79,8 +79,6 @@ class ZmatCore(PandasWrapper, GenericCore):
     """
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
-    _metadata_keys = frozenset({'last_valid_cartesian', 'has_dummies',
-                                'dummy_manipulation_allowed'})
 
     def __init__(self, frame, metadata=None, _metadata=None):
         """How to initialize a Zmat instance.
