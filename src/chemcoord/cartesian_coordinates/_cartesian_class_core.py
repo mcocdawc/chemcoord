@@ -4,7 +4,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-from chemcoord.exceptions import PhysicalMeaning
+from chemcoord.exceptions import PhysicalMeaning, IllegalArgumentCombination
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
     PandasWrapper
@@ -1064,55 +1064,41 @@ class CartesianCore(PandasWrapper, GenericCore):
             ``eigenvectors``:
             The eigenvectors of the inertia tensor in the old basis.
         """
-        try:
-            mass_vector = self.loc[:, 'mass'].values
-            molecule = self.copy()
-        except KeyError:
-            molecule = self.add_data('mass')
-            mass_vector = molecule.loc[:, 'mass'].values
+        def calculate_inertia_tensor(molecule):
+            masses = molecule.loc[:, 'mass'].values
+            pos = molecule.loc[:, ['x', 'y', 'z']].values
+            inertia = np.sum(
+                masses[:, None, None]
+                * ((pos**2).sum(axis=1)[:, None, None]
+                   * np.identity(3)[None, :, :]
+                   - pos[:, :, None] * pos[:, None, :]),
+                axis=0)
+            diag_inertia, eig_v = np.linalg.eig(inertia)
+            sorted_index = np.argsort(diag_inertia)
+            diag_inertia = diag_inertia[sorted_index]
+            eig_v = eig_v[:, sorted_index]
+            return inertia, eig_v, diag_inertia
 
+        molecule = self.add_data('mass')
         molecule = molecule - molecule.barycenter()
-        locations = molecule.loc[:, ['x', 'y', 'z']].values
+        inertia, eig_v, diag_inertia = calculate_inertia_tensor(molecule)
+        molecule = molecule.basistransform(eig_v)
+        return {'transformed_Cartesian': molecule, 'eigenvectors': eig_v,
+                'diag_inertia_tensor': diag_inertia, 'inertia_tensor': inertia}
 
-        diagonals = (np.sum(locations**2, axis=1)[:, None, None]
-                     * np.identity(3)[None, :, :])
-        dyadic_product = locations[:, :, None] * locations[:, None, :]
-        inertia_tensor = (mass_vector[:, None, None]
-                          * (diagonals - dyadic_product)).sum(axis=0)
-        diag_inertia_tensor, eigenvectors = np.linalg.eig(inertia_tensor)
-
-        # Sort ascending
-        sorted_index = np.argsort(diag_inertia_tensor)
-        diag_inertia_tensor = diag_inertia_tensor[sorted_index]
-        eigenvectors = eigenvectors[:, sorted_index]
-
-        new_basis = eigenvectors
-        new_basis = algebra_utilities.orthormalize(new_basis)
-        old_basis = np.identity(3)
-        Cartesian_mass = self.basistransform(new_basis, old_basis)
-        Cartesian_mass = Cartesian_mass - Cartesian_mass.barycenter()
-
-        dic_of_values = {'transformed_Cartesian': Cartesian_mass,
-                         'diag_inertia_tensor': diag_inertia_tensor,
-                         'inertia_tensor': inertia_tensor,
-                         'eigenvectors': eigenvectors}
-        return dic_of_values
-
-    def basistransform(
-            self, new_basis,
-            old_basis=np.identity(3),
-            rotate_only=True):
+    def basistransform(self, new_basis, old_basis=None,
+                       orthonormalize=True):
         """Transform the frame to a new basis.
 
         This function transforms the cartesian coordinates from an
-            old basis to a new one. Please note that old_basis and
-            new_basis are supposed to have full Rank and consist of
-            three linear independent vectors. If rotate_only is True,
-            it is asserted, that both bases are orthonormal and right
-            handed. Besides all involved matrices are transposed
-            instead of inverted.
+        old basis to a new one. Please note that old_basis and
+        new_basis are supposed to have full Rank and consist of
+        three linear independent vectors. If rotate_only is True,
+        it is asserted, that both bases are orthonormal and right
+        handed. Besides all involved matrices are transposed
+        instead of inverted.
         In some applications this may require the function
-            :func:`algebra_utilities.orthonormalize` as a previous step.
+        :func:`algebra_utilities.orthonormalize` as a previous step.
 
         Args:
             old_basis (np.array):
@@ -1122,36 +1108,19 @@ class CartesianCore(PandasWrapper, GenericCore):
         Returns:
             Cartesian: The transformed molecule.
         """
-        old_basis = np.array(old_basis)
-        new_basis = np.array(new_basis)
-        # tuples are extracted row wise
-        # For this reason you need to transpose e.g. ex is the first column
-        # from new_basis
-        if rotate_only:
-            ex, ey, ez = np.transpose(old_basis)
-            v1, v2, v3 = np.transpose(new_basis)
-            assert np.allclose(
-                np.dot(old_basis, np.transpose(old_basis)),
-                np.identity(3)), 'old basis not orthonormal'
-            assert np.allclose(
-                np.dot(new_basis, np.transpose(new_basis)),
-                np.identity(3)), 'new_basis not orthonormal'
-            assert np.allclose(
-                np.cross(ex, ey), ez), 'old_basis not righthanded'
-            assert np.allclose(
-                np.cross(v1, v2), v3), 'new_basis not righthanded'
+        if old_basis is None:
+            old_basis = np.identity(3)
 
-            basistransformation = np.dot(new_basis, np.transpose(old_basis))
-            test_basis = np.dot(np.transpose(basistransformation), new_basis)
-            new_cartesian = self.move(matrix=np.transpose(basistransformation))
+        is_rotation_matrix = np.isclose(np.linalg.det(new_basis), 1)
+        if not is_rotation_matrix and orthonormalize:
+            new_basis = algebra_utilities.orthormalize(new_basis)
+            is_rotation_matrix = True
+
+        if is_rotation_matrix:
+            return self.move(matrix=np.dot(new_basis.T, old_basis))
         else:
-            basistransformation = np.dot(new_basis, np.linalg.inv(old_basis))
-            test_basis = np.dot(np.linalg.inv(basistransformation), new_basis)
-            new_cartesian = self.move(
-                matrix=np.linalg.inv(basistransformation))
-
-        assert np.allclose(test_basis, old_basis), "Transformation did'nt work"
-        return new_cartesian
+            return self.move(matrix=np.dot(np.linalg.inv(new_basis),
+                                           old_basis))
 
     def _get_positions(self, indices):
         old_index = self.index
@@ -1177,8 +1146,6 @@ class CartesianCore(PandasWrapper, GenericCore):
                     sort=False):
         """Return a Cartesian with a column for the distance from origin.
         """
-        coords = ['x', 'y', 'z']
-        norm = np.linalg.norm
         if origin is None:
             origin = np.zeros(3)
         elif pd.api.types.is_list_like(origin):
@@ -1190,11 +1157,13 @@ class CartesianCore(PandasWrapper, GenericCore):
             other_atoms = self.index
 
         new = self.loc[other_atoms, :].copy()
+        norm = np.linalg.norm
         try:
-            new.loc[:, 'distance'] = norm(new.loc[:, coords] - origin, axis=1)
+            new['distance'] = norm((new - origin).loc[:, ['x', 'y', 'z']],
+                                   axis=1)
         except AttributeError:
             # Happens if molecule consists of only one atom
-            new.loc[:, 'distance'] = norm(new.loc[:, coords] - origin)
+            new['distance'] = norm((new - origin).loc[:, ['x', 'y', 'z']])
         if sort:
             new.sort_values(by='distance', inplace=True)
         return new
@@ -1260,20 +1229,20 @@ class CartesianCore(PandasWrapper, GenericCore):
                 the set of indices of atoms in this environment.
         """
         def get_chem_env(self, i, n_sphere):
-            indices_of_env_atoms = self.connected_to(
-                i, n_sphere=n_sphere, give_only_index=True,
-                use_lookup=use_lookup)
-            indices_of_env_atoms.remove(i)
-            atoms = self.loc[indices_of_env_atoms, 'atom']
+            env_index = self.connected_to(i, n_sphere=n_sphere,
+                                          give_only_index=True,
+                                          use_lookup=use_lookup)
+            env_index.remove(i)
+            atoms = self.loc[env_index, 'atom']
             environment = frozenset(collections.Counter(atoms).most_common())
             return (self.loc[i, 'atom'], environment)
 
-        env_dict = collections.defaultdict(set)
+        chemical_environments = collections.defaultdict(set)
         for i in self.index:
-            env_dict[get_chem_env(self, i, n_sphere)].add(i)
-        return env_dict
+            chemical_environments[get_chem_env(self, i, n_sphere)].add(i)
+        return dict(chemical_environments)
 
-    def align(self, Cartesian2, ignore_hydrogens=False):
+    def align(self, other, indices=None, ignore_hydrogens=False):
         """Align two Cartesians.
 
         Searches for the optimal rotation matrix that minimizes
@@ -1293,23 +1262,23 @@ class CartesianCore(PandasWrapper, GenericCore):
         Returns:
             tuple:
         """
-        coords = ['x', 'y', 'z']
-        molecule1 = self.sort_index()
-        molecule2 = Cartesian2.sort_index()
-        molecule1.loc[:, coords] = (molecule1.loc[:, coords]
-                                    - molecule1.topologic_center())
-        molecule2.loc[:, coords] = (molecule2.loc[:, coords]
-                                    - molecule2.topologic_center())
-
-        if ignore_hydrogens:
-            location1 = molecule1.loc[molecule1['atom'] != 'H', coords].values
-            location2 = molecule2.loc[molecule2['atom'] != 'H', coords].values
+        molecule1 = self.sort_index() - self.topologic_center()
+        molecule2 = other.sort_index() - other.topologic_center()
+        if indices is not None and ignore_hydrogens:
+            message = 'Indices != None and ignore_hydrogens == True is invalid'
+            raise IllegalArgumentCombination(message)
+        elif ignore_hydrogens:
+            def remove_H(molecule):
+                return molecule[molecule['atom'] != 'H']
+            molecule1, molecule2 = remove_H(molecule1), remove_H(molecule2)
+        elif indices is not None:
+            position1 = molecule1.loc[indices[0], ['x', 'y', 'z']].values
+            position2 = molecule2.loc[indices[1], ['x', 'y', 'z']].values
         else:
-            location1 = molecule1.loc[:, coords].values
-            location2 = molecule2.loc[:, coords].values
-
-        molecule2.loc[:, coords] = algebra_utilities.rotate(location2,
-                                                            location1)
+            position1 = molecule1.loc[:, ['x', 'y', 'z']].values
+            position2 = molecule2.loc[:, ['x', 'y', 'z']].values
+        molecule2.loc[:, ['x', 'y', 'z']] = algebra_utilities.rotate(
+                                                    position2, position1)
         return molecule1, molecule2
 
     def get_movement_to(self, other, n_steps=5, extrapolate=(0, 0)):

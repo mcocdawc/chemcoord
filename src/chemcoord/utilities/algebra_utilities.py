@@ -97,27 +97,6 @@ def _jit_rotation_matrix(axis, angle):
     return rot_matrix
 
 
-def give_angle(Vector1, Vector2):
-    '''Calculate the angle in degrees between two vectors.
-    The vectors do not have to be normalized.
-    '''
-    vector1 = normalize(Vector1)
-    vector2 = normalize(Vector2)
-
-    # Is this ok
-    scalar_product = np.dot(vector1, vector2)
-    if -1.00000000000001 < scalar_product < -1.:
-        scalar_product = -1.
-
-    elif 1.00000000000001 > scalar_product > 1.:
-        scalar_product = 1.
-
-    angle = m.acos(scalar_product)
-    angle = np.degrees(angle)
-
-    return angle
-
-
 def orthormalize(basis):
     """Orthonormalizes a given basis.
 
@@ -137,34 +116,11 @@ def orthormalize(basis):
     Returns:
         new_basis (np.array): A right handed orthonormalized basis.
     """
-    def local_orthonormalize(basis):
-        v1, v2 = basis[:, 0], basis[:, 1]
-        e1 = normalize(v1)
-        e3 = normalize(np.cross(e1, v2))
-        e2 = normalize(np.cross(e3, e1))
-        basis = np.transpose(np.array([e1, e2, e3]))
-        return basis
-
-    for _ in range(3):
-        basis = local_orthonormalize(basis)
-    return basis
-
-
-def distance(vector1, vector2):
-    """Calculates the distance between vector1 and vector2
-    """
-    length = np.linalg.norm(vector1 - vector2)
-    return length
-
-
-def give_distance_array(location_array):
-    """Returns a xyz_frame with a column for the distance from origin.
-    """
-    A = np.expand_dims(location_array, axis=1)
-    B = np.expand_dims(location_array, axis=0)
-    C = A - B
-    return_array = np.linalg.norm(C, axis=2)
-    return return_array
+    v1, v2 = basis[:, 0], basis[:, 1]
+    e1 = normalize(v1)
+    e3 = normalize(np.cross(e1, v2))
+    e2 = normalize(np.cross(e3, e1))
+    return np.array([e1, e2, e3]).T
 
 
 def kabsch(P, Q):

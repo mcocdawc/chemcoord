@@ -188,10 +188,15 @@ def test_cutcuboid():
 def test_inertia():
     A = molecule.inertia()
     eig, t_mol = A['eigenvectors'], A['transformed_Cartesian']
-    cc.xyz_functions.allclose(
+    assert cc.xyz_functions.allclose(
         (molecule - molecule.barycenter()).__rmatmul__(eig), t_mol)
-    cc.xyz_functions.allclose(
+    assert cc.xyz_functions.allclose(
         (molecule - molecule.barycenter()).move(matrix=eig), t_mol)
+
+    rot_mat = cc.utilities.algebra_utilities.rotation_matrix([1, 1, 1], 72)
+    molecule2 = molecule.move(matrix=rot_mat)
+    B = molecule2.inertia()
+    assert cc.xyz_functions.allclose(B['transformed_Cartesian'], t_mol)
 
 
 def test_partition_chem_env():
