@@ -1041,6 +1041,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         This function calculates the inertia tensor and returns
         a 4-tuple.
 
+        The unit is ``amu * length-unit-of-xyz-file**2``
+
         Args:
             None
 
