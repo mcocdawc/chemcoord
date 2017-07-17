@@ -126,12 +126,12 @@ def orthonormalize_righthanded(basis):
 
 
 def kabsch(P, Q):
-    """The optimal rotation matrix U is calculated and then used to rotate matrix
-    P unto matrix Q so the minimum root-mean-square deviation (RMSD) can be
-    calculated.
+    """The optimal rotation matrix U is calculated and then used to rotate
+    matrix P unto matrix Q so the minimum root-mean-square deviation (RMSD)
+    can be calculated.
 
     Using the Kabsch algorithm with two sets of paired point P and Q,
-    centered around the center-of-mass.
+    centered around the centroid.
     Each vector set is represented as an NxD matrix, where D is the
     the dimension of the space.
 
@@ -145,10 +145,8 @@ def kabsch(P, Q):
 
 
     Args:
-        P (numpy.array): ``(N, number of points)*(D, dimension)`` matrix
-        Q (numpy.array): ``(N, number of points)*(D, dimension)`` matrix
-        ignore_hydrogens (bool): Hydrogens are ignored for the
-        RMSD.
+        P (numpy.array): ``(N, number of points) * (D, dimension)`` matrix
+        Q (numpy.array): ``(N, number of points) * (D, dimension)`` matrix
 
     Returns:
         :func:`~numpy.array`: Rotation matrix
@@ -165,16 +163,12 @@ def kabsch(P, Q):
     # And finally calculating the optimal rotation matrix U
     # see http://en.wikipedia.org/wiki/Kabsch_algorithm
     V, S, W = np.linalg.svd(C)
-    d = (np.linalg.det(V) * np.linalg.det(W)) < 0.0
 
-    if d:
+    if (np.linalg.det(V) * np.linalg.det(W)) < 0.0:
         S[-1] = -S[-1]
         V[:, -1] = -V[:, -1]
 
-    # Create Rotation matrix U
-    U = np.dot(V, W)
-
-    return U
+    return np.dot(V, W)
 
 
 def rotate(P, Q):

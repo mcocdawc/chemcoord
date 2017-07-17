@@ -677,7 +677,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             molecule = self._preserve_bonds(molecule)
         return molecule
 
-    def topologic_center(self):
+    def give_centroid(self):
         """Return the average location.
 
         Args:
@@ -1257,7 +1257,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         the RMSD (root mean squared deviation) of ``self`` to
         Cartesian2.
         Returns a tuple of copies of ``self`` and ``Cartesian2`` where
-        both are centered around their topologic center and
+        both are centered around their centroid and
         ``Cartesian2`` is aligned along ``self``.
         Uses the Kabsch algorithm implemented within
         :func:`~.algebra_utilities.kabsch`
@@ -1270,8 +1270,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         Returns:
             tuple:
         """
-        molecule1 = self.sort_index() - self.topologic_center()
-        molecule2 = other.sort_index() - other.topologic_center()
+        molecule1 = self.sort_index() - self.give_centroid()
+        molecule2 = other.sort_index() - other.give_centroid()
         if indices is not None and ignore_hydrogens:
             message = 'Indices != None and ignore_hydrogens == True is invalid'
             raise IllegalArgumentCombination(message)

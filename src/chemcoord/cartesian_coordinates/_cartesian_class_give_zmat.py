@@ -56,8 +56,8 @@ class CartesianGiveZmat(CartesianCore):
         This method creates a so called "chemical" construction table,
         which makes use of the connectivity table in this molecule.
 
-        By default the first atom is the one nearest to the topologic center.
-        (Compare with :meth:`~Cartesian.topologic_center()`)
+        By default the first atom is the one nearest to the centroid.
+        (Compare with :meth:`~Cartesian.give_centroid()`)
 
         Args:
             start_atom: An index for the first atom may be provided.
@@ -109,7 +109,7 @@ class CartesianGiveZmat(CartesianCore):
 
         if predefined_table is None:
             if start_atom is None:
-                molecule = self.distance_to(self.topologic_center())
+                molecule = self.distance_to(self.give_centroid())
                 i = molecule['distance'].idxmin()
             else:
                 i = start_atom

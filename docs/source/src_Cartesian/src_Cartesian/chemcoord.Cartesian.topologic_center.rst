@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.topologic\_center
+chemcoord\.Cartesian\.give\_centroid
 =======================================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.topologic_center
+.. automethod:: Cartesian.give_centroid

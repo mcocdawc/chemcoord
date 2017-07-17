@@ -46,7 +46,7 @@ chemcoord\.Cartesian
          ~Cartesian.dihedral_degrees
          ~Cartesian.barycenter
          ~Cartesian.inertia
-         ~Cartesian.topologic_center
+         ~Cartesian.give_centroid
          ~Cartesian.distance_to
          ~Cartesian.shortest_distance
 
