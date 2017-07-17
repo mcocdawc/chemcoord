@@ -188,8 +188,10 @@ def test_cutcuboid():
 def test_inertia():
     A = molecule.inertia()
     eig, t_mol = A['eigenvectors'], A['transformed_Cartesian']
+    print((molecule - molecule.barycenter()).__rmatmul__(eig))
+    print(t_mol)
     assert cc.xyz_functions.allclose(
-        (molecule - molecule.barycenter()).__rmatmul__(eig), t_mol)
+        (molecule - molecule.barycenter()).__rmatmul__(eig), t_mol, atol=1e-4)
     assert cc.xyz_functions.allclose(
         (molecule - molecule.barycenter()).move(matrix=eig), t_mol)
 
