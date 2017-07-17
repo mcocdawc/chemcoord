@@ -167,7 +167,7 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
                        for j in range(number_of_atoms + 2)]
         molecule_in = ''.join(molecule_in)
         molecule_in = io.StringIO(molecule_in)
-        molecule = Cartesian.from_xyz(molecule_in,
+        molecule = Cartesian.read_xyz(molecule_in,
                                       start_index=start_index,
                                       get_bonds=get_bonds)
         list_of_cartesians.append(molecule)

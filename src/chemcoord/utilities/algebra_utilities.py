@@ -125,57 +125,25 @@ def orthonormalize_righthanded(basis):
     return np.array([e1, e2, e3]).T
 
 
-def kabsch(P, Q):
-    """The optimal rotation matrix U is calculated and then used to rotate
-    matrix P unto matrix Q so the minimum root-mean-square deviation (RMSD)
-    can be calculated.
+def give_kabsch_rotation(Q, P):
+    """Calculate the optimal rotation from ``P`` unto ``Q``.
 
-    Using the Kabsch algorithm with two sets of paired point P and Q,
-    centered around the centroid.
-    Each vector set is represented as an NxD matrix, where D is the
-    the dimension of the space.
-
-    The algorithm works in three steps:
-
-        - a translation of P and Q
-        - the computation of a covariance matrix C
-        - computation of the optimal rotation matrix U
-
-    http://en.wikipedia.org/wiki/Kabsch_algorithm
-
+    Using the Kabsch algorithm the optimal rotation matrix
+    for the rotation of ``other`` unto ``self`` is calculated.
+    The algorithm is described very well in
+    `wikipedia <http://en.wikipedia.org/wiki/Kabsch_algorithm>`_.
 
     Args:
-        P (numpy.array): ``(N, number of points) * (D, dimension)`` matrix
-        Q (numpy.array): ``(N, number of points) * (D, dimension)`` matrix
+        other (Cartesian):
 
     Returns:
-        :func:`~numpy.array`: Rotation matrix
+        :class:`~numpy.array`: Rotation matrix
     """
-
-    # Computation of the covariance matrix
-    C = np.dot(np.transpose(P), Q)
-
-    # Computation of the optimal rotation matrix
-    # This can be done using singular value decomposition (SVD)
-    # Getting the sign of the det(V)*(W) to decide
-    # whether we need to correct our rotation matrix to ensure a
-    # right-handed coordinate system.
-    # And finally calculating the optimal rotation matrix U
-    # see http://en.wikipedia.org/wiki/Kabsch_algorithm
-    V, S, W = np.linalg.svd(C)
-
-    if (np.linalg.det(V) * np.linalg.det(W)) < 0.0:
-        S[-1] = -S[-1]
-        V[:, -1] = -V[:, -1]
-
-    return np.dot(V, W)
-
-
-def rotate(P, Q):
-    """Rotate matrix P unto matrix Q using Kabsch algorithm
-    """
-    U = kabsch(P, Q)
-
-    # Rotate P
-    P = np.dot(P, U)
-    return P
+    # Q = self.loc[:, ['x', 'y', 'z']].values
+    # P = other.loc[self.index, ['x', 'y', 'z']].values
+    # Naming of variables follows the wikipedia article:
+    # http://en.wikipedia.org/wiki/Kabsch_algorithm
+    A = np.dot(np.transpose(P), Q)
+    V, S, W = np.linalg.svd(A)
+    d = (np.linalg.det(np.dot(W, V.T)))
+    return np.linalg.multi_dot((W, np.diag([1., 1., d]), V.T))

@@ -10,6 +10,7 @@ from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
     PandasWrapper
 from chemcoord.configuration import settings
 from chemcoord.utilities import algebra_utilities
+from chemcoord.utilities.algebra_utilities import give_kabsch_rotation
 from chemcoord.utilities.set_utilities import pick
 import chemcoord.constants as constants
 import collections
@@ -1254,37 +1255,34 @@ class CartesianCore(PandasWrapper, GenericCore):
         """Align two Cartesians.
 
         Searches for the optimal rotation matrix that minimizes
-        the RMSD (root mean squared deviation) of ``self`` to
-        Cartesian2.
-        Returns a tuple of copies of ``self`` and ``Cartesian2`` where
+        the RMSD (root mean squared deviation) of ``self`` to ``other``.
+        Returns a tuple of copies of ``self`` and ``other`` where
         both are centered around their centroid and
-        ``Cartesian2`` is aligned along ``self``.
+        ``other`` is aligned along ``self``.
         Uses the Kabsch algorithm implemented within
         :func:`~.algebra_utilities.kabsch`
 
         Args:
-            Cartesian2 (Cartesian):
+            other (Cartesian):
             ignore_hydrogens (bool): Hydrogens are ignored for the
             RMSD.
 
         Returns:
             tuple:
         """
-        molecule1 = self.sort_index() - self.give_centroid()
-        molecule2 = other.sort_index() - other.give_centroid()
+        m1 = (self - self.give_centroid()).sort_index()
+        m2 = (other - other.give_centroid()).sort_index()
         if indices is not None and ignore_hydrogens:
             message = 'Indices != None and ignore_hydrogens == True is invalid'
             raise IllegalArgumentCombination(message)
         elif ignore_hydrogens:
-            def remove_H(molecule):
-                return molecule[molecule['atom'] != 'H']
-            molecule1, molecule2 = remove_H(molecule1), remove_H(molecule2)
+            m1 = m1[m1['atom'] != 'H']
+            m2 = m2[m2['atom'] != 'H']
         elif indices is not None:
-            position1 = molecule1.loc[indices[0], ['x', 'y', 'z']].values
-            position2 = molecule2.loc[indices[1], ['x', 'y', 'z']].values
+            pos1 = m1.loc[indices[0], ['x', 'y', 'z']].values
+            pos2 = m2.loc[indices[1], ['x', 'y', 'z']].values
         else:
-            position1 = molecule1.loc[:, ['x', 'y', 'z']].values
-            position2 = molecule2.loc[:, ['x', 'y', 'z']].values
-        molecule2.loc[:, ['x', 'y', 'z']] = algebra_utilities.rotate(
-                                                    position2, position1)
-        return molecule1, molecule2
+            pos1 = m1.loc[:, ['x', 'y', 'z']].values
+            pos2 = m2.loc[:, ['x', 'y', 'z']].values
+        molecule2 = m2.move(matrix=give_kabsch_rotation(pos1, pos2))
+        return m1, m2
