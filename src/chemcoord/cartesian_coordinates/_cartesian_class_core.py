@@ -1286,24 +1286,3 @@ class CartesianCore(PandasWrapper, GenericCore):
         molecule2.loc[:, ['x', 'y', 'z']] = algebra_utilities.rotate(
                                                     position2, position1)
         return molecule1, molecule2
-
-    def get_movement_to(self, other, n_steps=5, extrapolate=(0, 0)):
-        """Return list of Cartesians for the movement from
-        self to Cartesian2.
-
-        Args:
-            Cartesian2 (Cartesian):
-            n_steps (int):
-            extrapolate (tuple):
-
-        Returns:
-            list: The list contains ``self`` as first and ``other``
-            as last element.
-            The number of intermediate Cartesians is defined by step.
-            Please note, that for this reason: len(list) = (step + 1).
-            The numbers in extrapolate define how many frames are
-            appended to the left and right of the list continuing
-            the movement.
-        """
-        limits = -extrapolate[0], n_steps + 1 + extrapolate[1]
-        return [self + (other - self) / n_steps * t for t in range(*limits)]

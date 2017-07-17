@@ -20,7 +20,6 @@ chemcoord\.Cartesian
          ~Cartesian.add_data
          ~Cartesian.total_mass
          ~Cartesian.connected_to
-         ~Cartesian.get_movement_to
          ~Cartesian.partition_chem_env
 
 
