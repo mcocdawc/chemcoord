@@ -1063,6 +1063,10 @@ class CartesianCore(PandasWrapper, GenericCore):
 
             ``eigenvectors``:
             The eigenvectors of the inertia tensor in the old basis.
+            Since the inertia_tensor is hermitian, they are orthogonal and
+            are returned as an orthonormal righthanded basis.
+            The i-th eigenvector corresponds to the i-th eigenvalue in
+            ``diag_inertia_tensor``.
         """
         def calculate_inertia_tensor(molecule):
             masses = molecule.loc[:, 'mass'].values
