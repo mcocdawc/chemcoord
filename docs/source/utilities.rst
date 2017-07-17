@@ -10,10 +10,8 @@ Algebra Utilities
     :toctree: src_algebra_utilities
 
     rotation_matrix
-    give_angle
     orthonormalize_righthanded
     normalize
-    distance
     kabsch
 
 

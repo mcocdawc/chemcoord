@@ -1048,14 +1048,15 @@ class CartesianCore(PandasWrapper, GenericCore):
             dict: The returned dictionary has four possible keys:
 
             ``transformed_Cartesian``:
-            A frame that is transformed to the basis spanned by
+            A :class:`~chemcoord.Cartesian`
+            that is transformed to the basis spanned by
             the eigenvectors of the inertia tensor. The x-axis
             is the axis with the lowest inertia moment, the
             z-axis the one with the highest. Contains also a
             column for the mass
 
             ``diag_inertia_tensor``:
-            A vector containing the sorted inertia moments after
+            A vector containing the ascendingly sorted inertia moments after
             diagonalization.
 
             ``inertia_tensor``:

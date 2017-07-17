@@ -106,9 +106,11 @@ def orthonormalize_righthanded(basis):
 
     Right handed means, that:
 
-        - np.cross(e1, e2) = e3
-        - np.cross(e2, e3) = e1
-        - np.cross(e3, e1) = e2
+    .. math::
+
+        \\vec{e_1} \\times \\vec{e_2} &= \\vec{e_3} \\\\
+        \\vec{e_2} \\times \\vec{e_3} &= \\vec{e_1} \\\\
+        \\vec{e_3} \\times \\vec{e_1} &= \\vec{e_2} \\\\
 
     Args:
         basis (np.array): An array of shape = (3,2) or (3,3)
