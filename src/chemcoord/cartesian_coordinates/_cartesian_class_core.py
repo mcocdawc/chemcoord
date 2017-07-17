@@ -1082,6 +1082,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         molecule = self.add_data('mass')
         molecule = molecule - molecule.barycenter()
         inertia, eig_v, diag_inertia = calculate_inertia_tensor(molecule)
+        eig_v = algebra_utilities.orthormalize(eig_v)
         molecule = molecule.basistransform(eig_v)
         return {'transformed_Cartesian': molecule, 'eigenvectors': eig_v,
                 'diag_inertia_tensor': diag_inertia, 'inertia_tensor': inertia}
