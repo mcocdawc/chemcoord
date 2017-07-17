@@ -14,6 +14,7 @@ from chemcoord.utilities.algebra_utilities import give_kabsch_rotation
 from chemcoord.utilities.set_utilities import pick
 import chemcoord.constants as constants
 import collections
+import itertools
 from itertools import product
 import numba as nb
 from numba import jit
@@ -1302,3 +1303,75 @@ class CartesianCore(PandasWrapper, GenericCore):
             pos2 = m2.loc[m1.index, ['x', 'y', 'z']].values
         m2 = m2.move(matrix=give_kabsch_rotation(pos1, pos2))
         return m1, m2
+
+    def make_similar(self, other, follow_bonds=4):
+        """Similarize two Cartesians.
+
+        Returns a reindexed copy of ``other`` that minimizes the
+        distance for each atom in the same chemical environemt
+        from ``self`` to ``other``.
+        Read more about the definition of the chemical environment in
+        :func:`Cartesian.partition_chem_env`
+
+        .. warning:: Please check the result with e.g.
+            :func:`Cartesian.get_movement_to()`
+            It is probably necessary to use the function
+            :func:`Cartesian.change_numbering()`.
+
+        Args:
+            other (Cartesian):
+            max_follow_bonds (int):
+            prealign (bool): The method :func:`Cartesian.align()`
+            is applied before reindexing.
+
+        Returns:
+            tuple: Aligned copy of ``self`` and aligned + reindexed
+            version of ``other``
+        """
+        def make_subset_similar(m1, subset1, m2, subset2, index_dct):
+            """Changes index_dct INPLACE"""
+            coords = ['x', 'y', 'z']
+            index1, index2 = list(subset1), list(subset2)
+            for m1_i in index1:
+                dist_m2_to_m1_i = m2.distance_to(m1.loc[m1_i, coords],
+                                                 subset2, sort=True)
+
+                m2_i = dist_m2_to_m1_i.index[0]
+                dist_new = dist_m2_to_m1_i.loc[m2_i, 'distance']
+                m2_pos_i = dist_m2_to_m1_i.loc[m2_i, coords]
+
+                counter = itertools.count()
+                found = False
+                while not found:
+                    if m2_i in index_dct.keys():
+                        old_m1_pos = m1.loc[index_dct[m2_i], coords]
+                        if dist_new < np.linalg.norm(m2_pos_i - old_m1_pos):
+                            index1.append(index_dct[m2_i])
+                            index_dct[m2_i] = m1_i
+                            found = True
+                        else:
+                            m2_i = dist_m2_to_m1_i.index[next(counter)]
+                            dist_new = dist_m2_to_m1_i.loc[m2_i, 'distance']
+                            m2_pos_i = dist_m2_to_m1_i.loc[m2_i, coords]
+                    else:
+                        index_dct[m2_i] = m1_i
+                        found = True
+            return index_dct
+
+        molecule1 = self.copy()
+        molecule2 = other.copy()
+
+        partition1 = molecule1.partition_chem_env(follow_bonds)
+        partition2 = molecule2.partition_chem_env(follow_bonds)
+
+        index_dct = {}
+        for key in partition1:
+            message = ('You have chemically different molecules, regarding '
+                       'the topology of their connectivity.')
+            assert len(partition1[key]) == len(partition2[key]), message
+            index_dct = make_subset_similar(molecule1, partition1[key],
+                                            molecule2, partition2[key],
+                                            index_dct)
+
+        molecule2.index = [index_dct[old_i] for old_i in molecule2.index]
+        return molecule1, molecule2.loc[molecule1.index]
