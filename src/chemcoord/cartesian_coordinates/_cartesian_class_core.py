@@ -1082,7 +1082,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         molecule = self.add_data('mass')
         molecule = molecule - molecule.barycenter()
         inertia, eig_v, diag_inertia = calculate_inertia_tensor(molecule)
-        eig_v = algebra_utilities.orthormalize(eig_v)
+        eig_v = algebra_utilities.orthonormalize_righthanded(eig_v)
         molecule = molecule.basistransform(eig_v)
         return {'transformed_Cartesian': molecule, 'eigenvectors': eig_v,
                 'diag_inertia_tensor': diag_inertia, 'inertia_tensor': inertia}
@@ -1114,7 +1114,7 @@ class CartesianCore(PandasWrapper, GenericCore):
 
         is_rotation_matrix = np.isclose(np.linalg.det(new_basis), 1)
         if not is_rotation_matrix and orthonormalize:
-            new_basis = algebra_utilities.orthormalize(new_basis)
+            new_basis = algebra_utilities.orthonormalize_righthanded(new_basis)
             is_rotation_matrix = True
 
         if is_rotation_matrix:

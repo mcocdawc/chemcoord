@@ -97,10 +97,10 @@ def _jit_rotation_matrix(axis, angle):
     return rot_matrix
 
 
-def orthormalize(basis):
-    """Orthonormalizes a given basis.
+def orthonormalize_righthanded(basis):
+    """Orthonormalizes righthandedly a given 3D basis.
 
-    This functions returns a right handed orthormalized basis.
+    This functions returns a right handed orthonormalize_righthandedd basis.
     Since only the first two vectors in the basis are used, it does not matter
     if you give two or three vectors.
 

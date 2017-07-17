@@ -11,7 +11,7 @@ Algebra Utilities
 
     rotation_matrix
     give_angle
-    orthormalize
+    orthonormalize_righthanded
     normalize
     distance
     kabsch

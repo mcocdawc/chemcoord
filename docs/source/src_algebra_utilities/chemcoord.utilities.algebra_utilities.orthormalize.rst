@@ -1,6 +1,6 @@
-chemcoord\.utilities\.algebra\_utilities\.orthormalize
+chemcoord\.utilities\.algebra\_utilities\.orthonormalize_righthanded
 ======================================================
 
 .. currentmodule:: chemcoord.utilities.algebra_utilities
 
-.. autofunction:: orthormalize
+.. autofunction:: orthonormalize_righthanded
