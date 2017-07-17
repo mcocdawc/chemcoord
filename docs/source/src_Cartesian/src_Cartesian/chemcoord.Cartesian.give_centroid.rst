@@ -1,5 +1,5 @@
 chemcoord\.Cartesian\.give\_centroid
-=======================================
+====================================
 
 .. currentmodule:: chemcoord
 

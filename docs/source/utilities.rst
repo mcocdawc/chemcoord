@@ -12,7 +12,7 @@ Algebra Utilities
     rotation_matrix
     orthonormalize_righthanded
     normalize
-    kabsch
+    give_kabsch_rotation
 
 
 Set Utilities

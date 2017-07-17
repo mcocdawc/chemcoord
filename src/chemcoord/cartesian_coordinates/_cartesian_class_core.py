@@ -1254,18 +1254,34 @@ class CartesianCore(PandasWrapper, GenericCore):
     def align(self, other, indices=None, ignore_hydrogens=False):
         """Align two Cartesians.
 
-        Searches for the optimal rotation matrix that minimizes
-        the RMSD (root mean squared deviation) of ``self`` to ``other``.
+
+
+        Minimize the RMSD (root mean squared deviation) between
+        ``self`` and ``other``.
         Returns a tuple of copies of ``self`` and ``other`` where
         both are centered around their centroid and
-        ``other`` is aligned along ``self``.
+        ``other`` is rotated unto ``self``.
+        The rotation minimises the distances between the
+        atom pairs of same label.
         Uses the Kabsch algorithm implemented within
-        :func:`~.algebra_utilities.kabsch`
+        :func:`~.algebra_utilities.give_kabsch_rotation`
+
+        .. note:: If ``indices is None``, then ``len(self) == len(other)``
+            must be true and the elements in each index have to be the same.
+
 
         Args:
             other (Cartesian):
-            ignore_hydrogens (bool): Hydrogens are ignored for the
-            RMSD.
+            indices (sequence): It is possible to specify a subset of indices
+                that is used for the determination of
+                the best rotation matrix::
+
+                    [[i1, i2,...], [j1, j2,...]]
+
+                If ``indices`` is given in this form, the rotation matrix
+                minimises the distance between ``i1`` and ``j1``,
+                ``i2`` and ``j2`` and so on.
+            ignore_hydrogens (bool):
 
         Returns:
             tuple:
@@ -1283,6 +1299,6 @@ class CartesianCore(PandasWrapper, GenericCore):
             pos2 = m2.loc[indices[1], ['x', 'y', 'z']].values
         else:
             pos1 = m1.loc[:, ['x', 'y', 'z']].values
-            pos2 = m2.loc[:, ['x', 'y', 'z']].values
-        molecule2 = m2.move(matrix=give_kabsch_rotation(pos1, pos2))
+            pos2 = m2.loc[m1.index, ['x', 'y', 'z']].values
+        m2 = m2.move(matrix=give_kabsch_rotation(pos1, pos2))
         return m1, m2
