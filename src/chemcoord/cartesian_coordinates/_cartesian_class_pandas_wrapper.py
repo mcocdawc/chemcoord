@@ -96,6 +96,7 @@ class PandasWrapper(object):
         if isinstance(key, tuple):
             selected = self._frame[key[0], key[1]]
         else:
+            # print(len(self), key)
             selected = self._frame[key]
         try:
             return self._return_appropiate_type(selected)

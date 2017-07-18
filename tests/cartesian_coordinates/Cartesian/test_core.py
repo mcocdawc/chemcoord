@@ -236,3 +236,30 @@ def test_change_numbering():
     molecule2.index = reversed(molecule.index)
     dct = dict(zip(molecule.index, reversed(molecule.index)))
     assert np.alltrue(molecule2.index == molecule.change_numbering(dct).index)
+
+
+def test_align():
+    cartesians = cc.xyz_functions.read_molden(
+        get_complete_path('total_movement.molden'), start_index=1)
+    m1, m2 = cartesians[0], cartesians[-1]
+    rotation_matrix = cc.utilities.algebra_utilities.rotation_matrix
+    m2 = (m2 + 5).move(matrix=rotation_matrix([1, 1, 1], 0.334))
+    m1, m2_aligned = m1.align(m2)
+    dev = abs((m2_aligned - m1).loc[:, ['x', 'y', 'z']]).sum() / len(m1)
+    assert np.allclose(dev, [0.73398451, 1.61863496, 0.13181807])
+
+
+def test_align_and_make_similar():
+    cartesians = cc.xyz_functions.read_molden(
+        get_complete_path('total_movement.molden'), start_index=1)
+    m2 = cartesians[-1]
+
+    rotation_matrix = cc.utilities.algebra_utilities.rotation_matrix
+    m2_shuffled = rotation_matrix([1, 1, 1], 1.2) @ m2 + 8
+    np.random.seed(77)
+    m2_shuffled.index = np.random.permutation(m2.index)
+
+    m2, m2_shuffled = m2.align(m2_shuffled, indices=[[42, 41, 153, 152],
+                                                     [87, 115, 24, 208]])
+    m2_backindexed = m2.make_similar(m2_shuffled)
+    assert cc.xyz_functions.allclose(m2, m2_backindexed)

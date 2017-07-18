@@ -144,6 +144,8 @@ def give_kabsch_rotation(Q, P):
     # Naming of variables follows the wikipedia article:
     # http://en.wikipedia.org/wiki/Kabsch_algorithm
     A = np.dot(np.transpose(P), Q)
-    V, S, W = np.linalg.svd(A)
-    d = (np.linalg.det(np.dot(W, V.T)))
+    V, S, tmp = np.linalg.svd(A)
+    # One can't initialize an array over its transposed
+    W = tmp.T
+    d = np.linalg.det(np.dot(W, V.T))
     return np.linalg.multi_dot((W, np.diag([1., 1., d]), V.T))

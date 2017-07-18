@@ -1328,7 +1328,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             tuple: Aligned copy of ``self`` and aligned + reindexed
             version of ``other``
         """
-        def make_subset_similar(m1, subset1, m2, subset2, index_dct):
+        def make_subset_similar(m1, subset1, m2, subset2, index_dct, i):
             """Changes index_dct INPLACE"""
             coords = ['x', 'y', 'z']
             index1, index2 = list(subset1), list(subset2)
@@ -1365,13 +1365,12 @@ class CartesianCore(PandasWrapper, GenericCore):
         partition2 = molecule2.partition_chem_env(follow_bonds)
 
         index_dct = {}
-        for key in partition1:
+        for i, key in enumerate(partition1):
             message = ('You have chemically different molecules, regarding '
                        'the topology of their connectivity.')
             assert len(partition1[key]) == len(partition2[key]), message
             index_dct = make_subset_similar(molecule1, partition1[key],
                                             molecule2, partition2[key],
-                                            index_dct)
-
-        molecule2.index = [index_dct[old_i] for old_i in molecule2.index]
-        return molecule1, molecule2.loc[molecule1.index]
+                                            index_dct, i)
+        molecule2.index = [index_dct[i] for i in molecule2.index]
+        return molecule2.loc[molecule1.index]
