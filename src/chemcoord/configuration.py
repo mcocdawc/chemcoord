@@ -80,13 +80,13 @@ def read_configuration_file(filepath=_give_default_file_path()):
         def getstring(section, key, config):
             return config[section][key]
 
-        def getinteger(section, key, config):
+        def getinteger(section, key, config):  # pylint:disable=unused-variable
             return config[section].getint(key)
 
         def getboolean(section, key, config):
             return config[section].getboolean(key)
 
-        def getfloat(section, key, config):
+        def getfloat(section, key, config):  # pylint:disable=unused-variable
             return config[section].getfloat(key)
         special_actions = {}  # Something different than a string is expected
         special_actions['defaults'] = {}

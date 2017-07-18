@@ -27,11 +27,6 @@ class PandasWrapper(object):
         called `metadata` and `_metadata`
         which are passed on when doing slices...
     """
-    def __init__(self, frame):
-        self._frame = frame.copy()
-        self.metadata = {}
-        self._metadata = {}
-
     def __len__(self):
         return self.shape[0]
 
@@ -230,8 +225,8 @@ class PandasWrapper(object):
             new = self._frame.set_index(keys, drop=drop, append=append,
                                         inplace=inplace,
                                         verify_integrity=verify_integrity)
-            return self.__class__(new, metadata=self.metadata,
-                                  _metadata=self._metadata)
+            return self.__class__(new, _metadata=self._metadata,
+                                  metadata=self.metadata)
 
     def append(self, other, ignore_index=False):
         """Append rows of `other` to the end of this frame, returning a new object.
