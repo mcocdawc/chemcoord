@@ -1331,7 +1331,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         def make_subset_similar(m1, subset1, m2, subset2, index_dct):
             """Changes index_dct INPLACE"""
             coords = ['x', 'y', 'z']
-            index1, index2 = list(subset1), list(subset2)
+            index1 = list(subset1)
             for m1_i in index1:
                 dist_m2_to_m1_i = m2.distance_to(m1.loc[m1_i, coords],
                                                  subset2, sort=True)
