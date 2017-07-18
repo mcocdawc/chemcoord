@@ -255,7 +255,7 @@ def test_align_and_make_similar():
     m2 = cartesians[-1]
 
     rotation_matrix = cc.utilities.algebra_utilities.rotation_matrix
-    m2_shuffled = rotation_matrix([1, 1, 1], 1.2) @ m2 + 8
+    m2_shuffled = m2.move(matrix=rotation_matrix([1, 1, 1], 1.2)) + 8
     np.random.seed(77)
     m2_shuffled.index = np.random.permutation(m2.index)
 
