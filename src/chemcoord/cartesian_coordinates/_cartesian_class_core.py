@@ -14,6 +14,7 @@ from chemcoord.utilities.algebra_utilities import give_kabsch_rotation
 from chemcoord.utilities.set_utilities import pick
 import chemcoord.constants as constants
 import collections
+import copy
 import itertools
 from itertools import product
 import numba as nb
@@ -77,7 +78,7 @@ class CartesianCore(PandasWrapper, GenericCore):
                 and self._required_cols <= set(selected.columns)):
             molecule = self.__class__(selected)
             molecule.metadata = self.metadata.copy()
-            molecule._metadata = self._metadata.copy()
+            molecule._metadata = copy.deepcopy(self._metadata)
             return molecule
         else:
             return selected
@@ -222,7 +223,7 @@ class CartesianCore(PandasWrapper, GenericCore):
     def copy(self):
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
-        molecule._metadata = self._metadata.copy()
+        molecule._metadata = copy.deepcopy(self._metadata)
         return molecule
 
     def subs(self, variable, value):

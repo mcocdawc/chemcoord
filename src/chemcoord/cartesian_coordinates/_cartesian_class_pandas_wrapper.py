@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 from chemcoord.exceptions import PhysicalMeaning
+import copy
 import chemcoord.cartesian_coordinates._indexers as indexers
 
 
@@ -159,7 +160,7 @@ class PandasWrapper(object):
                 by, axis=axis, ascending=ascending, inplace=inplace,
                 kind=kind, na_position=na_position))
             new.metadata = self.metadata.copy()
-            new._metadata = self._metadata.copy()
+            new._metadata = copy.deepcopy(self._metadata)
             return new
 
     def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
@@ -180,7 +181,7 @@ class PandasWrapper(object):
                 inplace=inplace, kind=kind, na_position=na_position,
                 sort_remaining=sort_remaining, by=by))
             new.metadata = self.metadata.copy()
-            new._metadata = self._metadata.copy()
+            new._metadata = copy.deepcopy(self._metadata)
             return new
 
     def replace(self, to_replace=None, value=None, inplace=False,
@@ -198,7 +199,7 @@ class PandasWrapper(object):
                 to_replace=to_replace, value=value, inplace=inplace,
                 limit=limit, regex=regex, method=method, axis=axis))
             new.metadata = self.metadata.copy()
-            new._metadata = self._metadata.copy()
+            new._metadata = copy.deepcopy(self._metadata)
             return new
 
     def set_index(self, keys, drop=True, append=False,
