@@ -61,10 +61,9 @@ class CartesianCore(PandasWrapper, GenericCore):
         else:
             self._metadata = copy.deepcopy(_metadata)
 
-        def fill_missing_keys_with_defaults(_metadata):
-            pass
-
-        fill_missing_keys_with_defaults(self._metadata)
+        # def fill_missing_keys_with_defaults(_metadata):
+        #     pass
+        # fill_missing_keys_with_defaults(self._metadata)
 
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
@@ -1329,7 +1328,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             tuple: Aligned copy of ``self`` and aligned + reindexed
             version of ``other``
         """
-        def make_subset_similar(m1, subset1, m2, subset2, index_dct, i):
+        def make_subset_similar(m1, subset1, m2, subset2, index_dct):
             """Changes index_dct INPLACE"""
             coords = ['x', 'y', 'z']
             index1, index2 = list(subset1), list(subset2)
@@ -1366,12 +1365,12 @@ class CartesianCore(PandasWrapper, GenericCore):
         partition2 = molecule2.partition_chem_env(follow_bonds)
 
         index_dct = {}
-        for i, key in enumerate(partition1):
+        for key in partition1:
             message = ('You have chemically different molecules, regarding '
                        'the topology of their connectivity.')
             assert len(partition1[key]) == len(partition2[key]), message
             index_dct = make_subset_similar(molecule1, partition1[key],
                                             molecule2, partition2[key],
-                                            index_dct, i)
+                                            index_dct)
         molecule2.index = [index_dct[i] for i in molecule2.index]
         return molecule2.loc[molecule1.index]
