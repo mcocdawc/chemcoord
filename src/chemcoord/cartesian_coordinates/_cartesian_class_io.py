@@ -142,7 +142,8 @@ http://chemcoord.readthedocs.io/'
         return self.to_xyz(*args, **kwargs)
 
     @classmethod
-    def read_xyz(cls, inputfile, start_index=0, get_bonds=True):
+    def read_xyz(cls, inputfile, start_index=0, get_bonds=True,
+                 nrows=None, engine=None):
         """Read a file of coordinate information.
 
         Reads xyz-files.
@@ -151,13 +152,17 @@ http://chemcoord.readthedocs.io/'
             inputfile (str):
             start_index (int):
             get_bonds (bool):
+            nrows (int): Number of rows of file to read.
+                Note that the first two rows are implicitly excluded.
+            engine (str): Wrapper for argument of :func:`pandas.read_csv`.
 
         Returns:
             Cartesian:
         """
         frame = pd.read_table(inputfile, skiprows=2, comment='#',
+                              nrows=nrows,
                               delim_whitespace=True,
-                              names=['atom', 'x', 'y', 'z'])
+                              names=['atom', 'x', 'y', 'z'], engine=engine)
 
         molecule = cls(frame)
         molecule.index = range(start_index, start_index + len(molecule))

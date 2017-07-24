@@ -143,37 +143,29 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
-    f = open(inputfile, 'r')
+    with open(inputfile, 'r') as f:
+        found = False
+        while not found:
+            line = f.readline()
+            if line.strip() == '[N_GEO]':
+                found = True
+                number_of_molecules = int(f.readline().strip())
 
-    found = False
-    while not found:
-        line = f.readline()
-        if line.strip() == '[N_GEO]':
-            found = True
-            number_of_molecules = int(f.readline().strip())
+        found = False
+        while not found:
+            line = f.readline()
+            if line.strip() == '[GEOMETRIES] (XYZ)':
+                found = True
+                current_line = f.tell()
+                number_of_atoms = int(f.readline().strip())
+                f.seek(current_line)
 
-    found = False
-    while not found:
-        line = f.readline()
-        if line.strip() == '[GEOMETRIES] (XYZ)':
-            found = True
-            current_line = f.tell()
-            number_of_atoms = int(f.readline().strip())
-            f.seek(current_line)
-
-    list_of_cartesians = []
-    for _ in range(number_of_molecules):
-        molecule_in = [f.readline()
-                       for j in range(number_of_atoms + 2)]
-        molecule_in = ''.join(molecule_in)
-        molecule_in = io.StringIO(molecule_in)
-        molecule = Cartesian.read_xyz(molecule_in,
-                                      start_index=start_index,
-                                      get_bonds=get_bonds)
-        list_of_cartesians.append(molecule)
-
-    f.close()
-    return list_of_cartesians
+        cartesians = []
+        for _ in range(number_of_molecules):
+            cartesians.append(Cartesian.read_xyz(
+                f, start_index=start_index, get_bonds=get_bonds,
+                nrows=number_of_atoms, engine='python'))
+    return cartesians
 
 
 def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
