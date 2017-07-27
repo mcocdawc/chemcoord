@@ -8,9 +8,11 @@ from __future__ import unicode_literals
 from chemcoord.cartesian_coordinates._cartesian_class_give_zmat \
     import CartesianGiveZmat
 from chemcoord.cartesian_coordinates._cartesian_class_io import CartesianIO
+from chemcoord.cartesian_coordinates._cartesian_class_symmetry \
+    import CartesianSymmetry
 
 
-class Cartesian(CartesianIO, CartesianGiveZmat):
+class Cartesian(CartesianIO, CartesianGiveZmat, CartesianSymmetry):
     """The main class for dealing with cartesian Coordinates.
 
     **Mathematical Operations**:
