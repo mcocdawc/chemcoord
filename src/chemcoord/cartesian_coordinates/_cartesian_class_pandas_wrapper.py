@@ -232,12 +232,35 @@ class PandasWrapper(object):
         """Append rows of `other` to the end of this frame, returning a new object.
 
         Wrapper around the :meth:`pandas.DataFrame.append` method.
+
+        Args:
+            other (Cartesian):
+            ignore_index (sequence, bool, int): If it is a boolean, it
+                behaves like in the description of
+                :meth:`pandas.DataFrame.append`.
+                If it is a sequence, it becomes the new index.
+                If it is an integer,
+                ``range(ignore_index, ignore_index + len(new))``
+                becomes the new index.
+
+        Returns:
+            Cartesian:
         """
         if not isinstance(other, self.__class__):
             raise ValueError('May only append instances of same type.')
-        new_frame = self._frame.append(other._frame,
-                                       ignore_index=ignore_index,
-                                       verify_integrity=True)
+        if type(ignore_index) is bool:
+            new_frame = self._frame.append(other._frame,
+                                           ignore_index=ignore_index,
+                                           verify_integrity=True)
+        else:
+            new_frame = self._frame.append(other._frame,
+                                           ignore_index=True,
+                                           verify_integrity=True)
+            if type(ignore_index) is int:
+                new_frame.index = range(ignore_index,
+                                        ignore_index + len(new_frame))
+            else:
+                new_frame.index = ignore_index
         return self.__class__(new_frame)
 
     def insert(self, loc, column, value, allow_duplicates=False,
