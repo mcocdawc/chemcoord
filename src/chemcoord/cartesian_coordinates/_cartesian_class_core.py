@@ -34,18 +34,36 @@ class CartesianCore(PandasWrapper, GenericCore):
     __array_priority__ = 15.0
 
     # overwrites existing method
-    def __init__(self, frame, metadata=None, _metadata=None):
+    def __init__(self, frame=None, atoms=None, coords=None,
+                 metadata=None, _metadata=None):
         """How to initialize a Cartesian instance.
 
         Args:
             frame (pd.DataFrame): A Dataframe with at least the
                 columns ``['atom', 'x', 'y', 'z']``.
                 Where ``'atom'`` is a string for the elementsymbol.
+            atoms (sequence): A list of strings. (Elementsymbols)
+            coords (sequence): A ``n_atoms * 3`` array containg the positions
+                of the atoms. Note that atoms and coords are mutually exclusive
+                to frame. Besides atoms and coords have to be both either None
+                or not None.
 
         Returns:
             Cartesian: A new cartesian instance.
         """
-        if not isinstance(frame, pd.DataFrame):
+        if (bool(atoms is None and coords is None)
+                == bool(atoms is not None and coords is not None)):
+            message = 'atoms and coords have to be both None or not None'
+            raise IllegalArgumentCombination(message)
+        elif frame is None and atoms is None and coords is None:
+            message = 'Either frame or atoms and coords have to be not None'
+            raise IllegalArgumentCombination(message)
+        elif atoms is not None and coords is not None:
+            frame = pd.DataFrame(index=range(len(atoms)),
+                                 columns=['atom', 'x', 'y', 'z'])
+            frame['atom'] = atoms
+            frame.loc[:, ['x', 'y', 'z']] = coords
+        elif not isinstance(frame, pd.DataFrame):
             raise ValueError('Need a pd.DataFrame as input')
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning('There are columns missing for a '
