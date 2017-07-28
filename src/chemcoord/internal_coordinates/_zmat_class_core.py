@@ -27,7 +27,7 @@ import copy
 
 
 @jit(nopython=True)
-def _jit_calc_singe_position(references, zmat_values, row):
+def _jit_calc_single_position(references, zmat_values, row):
     bond, angle, dihedral = zmat_values[row]
     vb, va, vd = references[0], references[1], references[2]
     zeros = np.zeros(3, dtype=nb.types.f8)
@@ -441,7 +441,7 @@ class ZmatCore(PandasWrapper, GenericCore):
                     ref_pos[k] = constants._jit_absolute_refs(j)
                 else:
                     ref_pos[k] = positions[j]
-            err, pos = _jit_calc_singe_position(ref_pos, zmat_values, row)
+            err, pos = _jit_calc_single_position(ref_pos, zmat_values, row)
             if err == ERR_CODE_OK:
                 positions[row] = pos
             else:
