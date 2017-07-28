@@ -4,7 +4,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-import libmsym as msym
+import pymatgen as mg
+from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 import numpy as np
 import pandas as pd
 import warnings
@@ -21,14 +22,9 @@ from itertools import permutations
 
 
 class CartesianSymmetry(CartesianCore):
-    def _give_msym_elements(self):
-        return [msym.Element(name=self.loc[i, 'atom'],
-                             coordinates=self.loc[i, ['x', 'y', 'z']])
-                for i in self.index]
+    def _give_mg_molecule(self):
+        return mg.Molecule(self['atom'].values,
+                           self.loc[:, ['x', 'y', 'z']].values)
 
-    def give_symmetry_group(self):
-        with msym.Context(elements=self._give_msym_elements()) as ctx:
-            sym_group = ctx.find_symmetry()
-        return sym_group
-
-    # def symmetrise(self):
+    def give_point_group_analyzer(self):
+        return PointGroupAnalyzer(self._give_mg_molecule())

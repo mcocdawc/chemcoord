@@ -5,6 +5,7 @@
 # not respect the directories given by '--output-folder':
 # https://github.com/conda/conda-build/issues/1957
 # =============================================================================
+set -e
 
 tmp=$(dirname "$(conda-build --output .)")
 system=$(basename "$tmp")
@@ -17,6 +18,7 @@ do
   package_path=$root_dir/$py_version/$system/$package_name
 
   conda-build --no-anaconda-upload \
+              --channel matsci \
               --python ${py_version} \
               --output-folder "${root_dir}/${py_version}" \
               "."
