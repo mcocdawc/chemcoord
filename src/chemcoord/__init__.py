@@ -25,10 +25,8 @@ from chemcoord.internal_coordinates.zmat_class_main import Zmat
 import chemcoord.internal_coordinates.zmat_functions as zmat_functions
 import chemcoord.configuration as configuration
 from chemcoord.configuration import settings
-import chemcoord.vibration as vibration
 import chemcoord.constants
 
 import sys
 sys.modules['chemcoord.xyz_functions'] = xyz_functions
 sys.modules['chemcoord.zmat_functions'] = zmat_functions
-sys.modules['chemcoord.vibration'] = vibration

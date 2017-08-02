@@ -12,4 +12,3 @@ Contents:
     configuration
     internal_coordinates
     utilities
-    vibration
