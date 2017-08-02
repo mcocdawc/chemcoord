@@ -273,7 +273,10 @@ def dot(A, B):
     Returns:
         sequence:
     """
-    result = A.__matmul__(B)
-    if result is NotImplemented:
+    try:
+        result = A.__matmul__(B)
+        if result is NotImplemented:
+            result = B.__rmatmul__(A)
+    except AttributeError:
         result = B.__rmatmul__(A)
     return result
