@@ -12,6 +12,7 @@ from chemcoord.configuration import settings
 from chemcoord.utilities import algebra_utilities
 from chemcoord.utilities.algebra_utilities import give_kabsch_rotation
 from chemcoord.utilities.set_utilities import pick
+from chemcoord.cartesian_coordinates.xyz_functions import dot
 import chemcoord.constants as constants
 import collections
 import copy
@@ -220,6 +221,9 @@ class CartesianCore(PandasWrapper, GenericCore):
 
     def __neg__(self):
         return -1 * self.copy()
+
+    def __matmul__(self, other):
+        return NotImplemented
 
     def __rmatmul__(self, other):
         coords = ['x', 'y', 'z']
@@ -718,7 +722,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             None
 
         Returns:
-            np.array:
+            :class:`numpy.ndarray`:
         """
         try:
             mass = self['mass'].values
@@ -727,56 +731,6 @@ class CartesianCore(PandasWrapper, GenericCore):
         pos = self.loc[:, ['x', 'y', 'z']].values
         barycenter = (pos * mass[:, None]).sum(axis=0) / self.total_mass()
         return barycenter
-
-    def move(
-            self,
-            vector=None,
-            matrix=None,
-            matrix_first=True,
-            indices=None,
-            copy=False):
-        """Move a Cartesian.
-
-        The Cartesian is first rotated, mirrored... by the matrix
-        and afterwards translated by the vector.
-
-        Args:
-            vector (np.array): default is np.zeros(3)
-            matrix (np.array): default is np.identity(3)
-            matrix_first (bool): If True the multiplication with the matrix
-            is the first operation.
-            indices (list): Indices to be moved.
-            copy (bool): Atoms are copied or translated to the new location.
-
-        Returns:
-            Cartesian:
-        """
-        output = self.copy()
-
-        indices = self.index if (indices is None) else indices
-        vector = np.zeros(3) if vector is None else vector
-        matrix = np.identity(3) if matrix is None else matrix
-        vectors = output.loc[indices, ['x', 'y', 'z']]
-
-        if matrix_first:
-            vectors = np.dot(np.array(matrix), vectors.T).T
-            vectors = vectors + np.array(vector)
-        else:
-            vectors = vectors + np.array(vector)
-            vectors = np.dot(np.array(matrix), vectors.T).T
-
-        if copy:
-            max_index = self.index.max()
-            index_for_copied_atoms = range(max_index + 1,
-                                           max_index + len(indices) + 1)
-            temp = self.loc[indices, :].copy()
-            temp.index = index_for_copied_atoms
-            temp[index_for_copied_atoms, ['x', 'y', 'z']] = vectors
-            output = output.append(temp)
-
-        else:
-            output.loc[indices, ['x', 'y', 'z']] = vectors
-        return output
 
     def bond_lengths(self, indices):
         """Return the distances between given atoms.
@@ -1148,10 +1102,9 @@ class CartesianCore(PandasWrapper, GenericCore):
             is_rotation_matrix = True
 
         if is_rotation_matrix:
-            return self.move(matrix=np.dot(new_basis.T, old_basis))
+            return dot(np.dot(new_basis.T, old_basis), self)
         else:
-            return self.move(matrix=np.dot(np.linalg.inv(new_basis),
-                                           old_basis))
+            return dot(np.dot(np.linalg.inv(new_basis), old_basis), self)
 
     def _get_positions(self, indices):
         old_index = self.index
@@ -1322,7 +1275,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         else:
             pos1 = m1.loc[:, ['x', 'y', 'z']].values
             pos2 = m2.loc[m1.index, ['x', 'y', 'z']].values
-        m2 = m2.move(matrix=give_kabsch_rotation(pos1, pos2))
+        m2 = dot(give_kabsch_rotation(pos1, pos2), m2)
         return m1, m2
 
     def make_similar(self, other, follow_bonds=4):

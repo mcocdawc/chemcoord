@@ -8,6 +8,7 @@ import chemcoord as cc
 from chemcoord.xyz_functions import allclose
 import pytest
 from chemcoord.exceptions import UndefinedCoordinateSystem, PhysicalMeaning
+from chemcoord.cartesian_coordinates.xyz_functions import dot
 import itertools
 import os
 import sys
@@ -191,10 +192,10 @@ def test_inertia():
     assert cc.xyz_functions.allclose(
         (molecule - molecule.barycenter()).__rmatmul__(eig), t_mol)
     assert cc.xyz_functions.allclose(
-        (molecule - molecule.barycenter()).move(matrix=eig), t_mol)
+        dot(eig, (molecule - molecule.barycenter())), t_mol)
 
     rot_mat = cc.utilities.algebra_utilities.rotation_matrix([1, 1, 1], 72)
-    molecule2 = molecule.move(matrix=rot_mat)
+    molecule2 = dot(rot_mat, molecule)
     B = molecule2.inertia()
     assert cc.xyz_functions.allclose(B['transformed_Cartesian'], t_mol)
 
@@ -243,7 +244,7 @@ def test_align():
         get_complete_path('total_movement.molden'), start_index=1)
     m1, m2 = cartesians[0], cartesians[-1]
     rotation_matrix = cc.utilities.algebra_utilities.rotation_matrix
-    m2 = (m2 + 5).move(matrix=rotation_matrix([1, 1, 1], 0.334))
+    m2 = dot(rotation_matrix([1, 1, 1], 0.334), m2) + 5
     m1, m2_aligned = m1.align(m2)
     dev = abs((m2_aligned - m1).loc[:, ['x', 'y', 'z']]).sum() / len(m1)
     assert np.allclose(dev, [0.73398451, 1.61863496, 0.13181807])
@@ -255,7 +256,7 @@ def test_align_and_make_similar():
     m2 = cartesians[-1]
 
     rotation_matrix = cc.utilities.algebra_utilities.rotation_matrix
-    m2_shuffled = m2.move(matrix=rotation_matrix([1, 1, 1], 1.2)) + 8
+    m2_shuffled = dot(rotation_matrix([1, 1, 1], 1.2), m2) + 8
     np.random.seed(77)
     m2_shuffled.index = np.random.permutation(m2.index)
 

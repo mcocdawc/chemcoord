@@ -30,7 +30,6 @@ chemcoord\.Cartesian
 
          ~Cartesian.cutcuboid
          ~Cartesian.cutsphere
-         ~Cartesian.move
          ~Cartesian.basistransform
          ~Cartesian.align
          ~Cartesian.change_numbering

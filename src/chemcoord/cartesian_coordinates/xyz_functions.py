@@ -4,7 +4,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord.configuration import settings
 from io import open  # pylint:disable=redefined-builtin
 import numpy as np
@@ -142,6 +141,7 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
+    from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
     with open(inputfile, 'r') as f:
         found = False
         while not found:
@@ -255,3 +255,22 @@ def concat(cartesians, ignore_index=False, keys=None):
         else:
             new.index = ignore_index
     return cartesians[0].__class__(new)
+
+
+def dot(A, B):
+    """Matrix multiplication between A and B
+
+    This function is equivalent to ``A @ B``, which is unfortunately
+    not possible under python 2.x.
+
+    Args:
+        A (sequence):
+        B (sequence):
+
+    Returns:
+        sequence:
+    """
+    result = A.__matmul__(B)
+    if result is NotImplemented:
+        result = B.__rmatmul__(A)
+    return result
