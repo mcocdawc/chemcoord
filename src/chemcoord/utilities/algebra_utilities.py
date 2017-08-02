@@ -139,13 +139,11 @@ def give_kabsch_rotation(Q, P):
     Returns:
         :class:`~numpy.array`: Rotation matrix
     """
-    # Q = self.loc[:, ['x', 'y', 'z']].values
-    # P = other.loc[self.index, ['x', 'y', 'z']].values
     # Naming of variables follows the wikipedia article:
     # http://en.wikipedia.org/wiki/Kabsch_algorithm
     A = np.dot(np.transpose(P), Q)
-    V, S, W = np.linalg.svd(A)
     # One can't initialize an array over its transposed
+    V, S, W = np.linalg.svd(A)
     W = W.T
     d = np.linalg.det(np.dot(W, V.T))
     return np.linalg.multi_dot((W, np.diag([1., 1., d]), V.T))
