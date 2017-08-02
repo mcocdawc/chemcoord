@@ -100,11 +100,6 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             formatted : string (or unicode, depending on data and options)
         """
-        create_string = '{n}\n{message}\n{alignment}{frame_string}'.format
-
-        message = 'Created by chemcoord \
-http://chemcoord.readthedocs.io/'
-
         if sort_index:
             molecule_string = self.sort_index().to_string(
                 header=header, index=index, float_format=float_format)
@@ -118,9 +113,9 @@ http://chemcoord.readthedocs.io/'
         space = ' ' * (self.loc[:, 'atom'].str.len().max()
                        - len(self.iloc[0, 0]))
 
-        output = create_string(n=len(self), message=message,
-                               alignment=space,
-                               frame_string=molecule_string)
+        output = '{n}\n{message}\n{alignment}{frame_string}'.format(
+            n=len(self), alignment=space, frame_string=molecule_string,
+            message='Created by chemcoord http://chemcoord.readthedocs.io/')
 
         if buf is not None:
             if overwrite:
