@@ -36,7 +36,7 @@ class Cartesian(CartesianIO, CartesianGiveZmat, CartesianSymmetry):
 
     **Matrixmultiplication**:
     Only leftsided multiplication with a matrix of ``shape=(n, 3)``,
-    where ``n`` is a natural number, are supported.
+    where ``n`` is a natural number, is supported.
     The usual usecase is for example
     ``np.diag([1, 1, -1]) @ cartesian_instance``
     to mirror on the x-y plane.
