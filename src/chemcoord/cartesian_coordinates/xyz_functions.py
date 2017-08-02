@@ -194,7 +194,10 @@ def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
         a = a.inertia()['transformed_Cartesian']
         b = b.inertia()['transformed_Cartesian']
     A, B = a.loc[:, coords], b.loc[a.index, coords]
-    return np.isclose(A, B, rtol=rtol, atol=atol)
+    out = a._frame.copy()
+    out['atom'] = True
+    out.loc[:, coords] = np.isclose(A, B, rtol=rtol, atol=atol)
+    return out
 
 
 def allclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
