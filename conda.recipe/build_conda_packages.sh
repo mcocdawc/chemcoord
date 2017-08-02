@@ -21,6 +21,7 @@ do
 
   conda-build --no-anaconda-upload \
               --python ${py_version} \
+              --channel matsci \
               --output-folder "${root_dir}/${py_version}" \
               "."
   for platform in osx-64 linux-{32,64} win-{32,64}
