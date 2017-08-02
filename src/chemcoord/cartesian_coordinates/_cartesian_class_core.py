@@ -711,7 +711,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             None
 
         Returns:
-            np.array:
+            :class:`numpy.ndarray`:
         """
         return np.mean(self.loc[:, ['x', 'y', 'z']], axis=0)
 
