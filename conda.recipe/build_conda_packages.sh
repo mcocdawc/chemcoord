@@ -20,7 +20,6 @@ do
   package_path=$root_dir/$py_version/$system/$package_name
 
   conda-build --no-anaconda-upload \
-              --channel matsci \
               --python ${py_version} \
               --output-folder "${root_dir}/${py_version}" \
               "."
