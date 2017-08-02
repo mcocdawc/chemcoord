@@ -225,12 +225,13 @@ def concat(cartesians, ignore_index=False, keys=None):
     ``verify_integrity`` which is set to true in case of this library.
 
     Args:
-        ignore_index (bool): If True, do not use the index values along the
-            concatenation axis. The resulting axis will be labeled 0, …, n - 1.
-            This is useful if you are concatenating objects where the
-            concatenation axis does not have meaningful indexing information.
-            Note the index values on the other axes are still
-            respected in the join.
+        ignore_index (sequence, bool, int): If it is a boolean, it
+            behaves like in the description of
+            :meth:`pandas.DataFrame.append`.
+            If it is a sequence, it becomes the new index.
+            If it is an integer,
+            ``range(ignore_index, ignore_index + len(new))``
+            becomes the new index.
         keys (sequence): If multiple levels passed, should contain tuples.
             Construct hierarchical index using the passed keys as
             the outermost level
@@ -241,4 +242,16 @@ def concat(cartesians, ignore_index=False, keys=None):
     frames = [molecule._frame for molecule in cartesians]
     new = pd.concat(frames, ignore_index=ignore_index, keys=keys,
                     verify_integrity=True)
+
+    if type(ignore_index) is bool:
+        new = pd.concat(frames, ignore_index=ignore_index, keys=keys,
+                        verify_integrity=True)
+    else:
+        new = pd.concat(frames, ignore_index=True, keys=keys,
+                        verify_integrity=True)
+        if type(ignore_index) is int:
+            new.index = range(ignore_index,
+                              ignore_index + len(new))
+        else:
+            new.index = ignore_index
     return cartesians[0].__class__(new)
