@@ -150,7 +150,7 @@ class ZmatCore(PandasWrapper, GenericCore):
         return new
 
     def __radd__(self, other):
-        return self.__add__(other)
+        return self + other
 
     def __sub__(self, other):
         self._test_if_can_be_added(other)
@@ -173,10 +173,7 @@ class ZmatCore(PandasWrapper, GenericCore):
         return new
 
     def __rmul__(self, other):
-        coords = ['bond', 'angle', 'dihedral']
-        new = self.copy()
-        new.safe_loc[:, coords] = self.loc[:, coords] * other
-        return new
+        return self * other
 
     def __abs__(self):
         coords = ['bond', 'angle', 'dihedral']
@@ -186,6 +183,14 @@ class ZmatCore(PandasWrapper, GenericCore):
 
     def __neg__(self):
         return -1 * self.copy()
+
+    def __eq__(self, other):
+        self._test_if_can_be_added(other)
+        return self._frame == other._frame
+
+    def __ne__(self, other):
+        self._test_if_can_be_added(other)
+        return self._frame != other._frame
 
     @staticmethod
     def _cast_correct_types(frame):
