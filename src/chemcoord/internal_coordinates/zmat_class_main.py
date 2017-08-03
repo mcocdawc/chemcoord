@@ -50,14 +50,14 @@ class Zmat(ZmatIO):
 
     This means that:
 
-            ``molecule.loc[:, ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']]``
-            returns a :class:`~chemcoord.Zmat`.
+        ``molecule.loc[:, ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']]``
+        returns a :class:`~chemcoord.Zmat`.
 
-            ``molecule.loc[:, ['atom', 'bond']]`` returns a
-            :class:`pandas.DataFrame`.
+        ``molecule.loc[:, ['atom', 'bond']]`` returns a
+        :class:`pandas.DataFrame`.
 
-            ``molecule.loc[:, 'atom']`` returns a
-            :class:`pandas.Series`.
+        ``molecule.loc[:, 'atom']`` returns a
+        :class:`pandas.Series`.
 
     **Comparison**:
 

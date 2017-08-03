@@ -58,14 +58,14 @@ class Cartesian(CartesianIO, CartesianGiveZmat, CartesianSymmetry):
 
     This means that:
 
-            ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
-            :class:`~chemcoord.Cartesian`.
+        ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
+        :class:`~chemcoord.Cartesian`.
 
-            ``molecule.loc[:, ['atom', 'x']]`` returns a
-            :class:`pandas.DataFrame`.
+        ``molecule.loc[:, ['atom', 'x']]`` returns a
+        :class:`pandas.DataFrame`.
 
-            ``molecule.loc[:, 'atom']`` returns a
-            :class:`pandas.Series`.
+        ``molecule.loc[:, 'atom']`` returns a
+        :class:`pandas.Series`.
 
     **Comparison**:
 
