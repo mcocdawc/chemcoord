@@ -9,5 +9,5 @@ Just follow the link to the example notebooks.
   * `Transformation <http://nbviewer.jupyter.org/github/mcocdawc/chemcoord/blob/master/Tutorial/Transformation.ipynb>`_
 
 If you want to have an interactive session, just download the following
-`zip file <https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/mcocdawc/chemcoord/tree/master/Tutorial>`_,
+`zip file <https://minhaskamal.github.io/DownGit/#/home?url=https:%2F%2Fgithub.com%2Fmcocdawc%2Fchemcoord%2Ftree%2Fmaster%2FTutorial>`_,
 which contains all notebooks and coordinates.
