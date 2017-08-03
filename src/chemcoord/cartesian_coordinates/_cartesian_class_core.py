@@ -234,7 +234,7 @@ class CartesianCore(PandasWrapper, GenericCore):
     def __eq__(self, other):
         return self._frame == other._frame
 
-    def __neq__(self, other):
+    def __ne__(self, other):
         return self._frame != other._frame
 
     def _to_ase_Atoms(self):
