@@ -101,7 +101,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         else:
             return selected
 
-    def _test_if_correctly_indexed(self, other):
+    def _test_if_can_be_added(self, other):
         if not (set(self.index) == set(other.index)
                 and np.alltrue(self['atom'] == other.loc[self.index, 'atom'])):
             message = ("You can add only Cartesians which are indexed in the "
@@ -112,7 +112,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         coords = ['x', 'y', 'z']
         new = self.copy()
         if isinstance(other, CartesianCore):
-            self._test_if_correctly_indexed(other)
+            self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         elif isinstance(other, pd.DataFrame):
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
@@ -131,7 +131,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         coords = ['x', 'y', 'z']
         new = self.copy()
         if isinstance(other, CartesianCore):
-            self._test_if_correctly_indexed(other)
+            self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         elif isinstance(other, pd.DataFrame):
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
@@ -147,7 +147,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         coords = ['x', 'y', 'z']
         new = self.copy()
         if isinstance(other, CartesianCore):
-            self._test_if_correctly_indexed(other)
+            self._test_if_can_be_added(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         elif isinstance(other, pd.DataFrame):
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
@@ -163,7 +163,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         coords = ['x', 'y', 'z']
         new = self.copy()
         if isinstance(other, CartesianCore):
-            self._test_if_correctly_indexed(other)
+            self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         elif isinstance(other, pd.DataFrame):
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
@@ -182,7 +182,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         coords = ['x', 'y', 'z']
         new = self.copy()
         if isinstance(other, CartesianCore):
-            self._test_if_correctly_indexed(other)
+            self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         elif isinstance(other, pd.DataFrame):
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
@@ -198,7 +198,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         coords = ['x', 'y', 'z']
         new = self.copy()
         if isinstance(other, CartesianCore):
-            self._test_if_correctly_indexed(other)
+            self._test_if_can_be_added(other)
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
         elif isinstance(other, pd.DataFrame):
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
@@ -210,17 +210,23 @@ class CartesianCore(PandasWrapper, GenericCore):
             new.loc[:, coords] = other / self.loc[:, coords]
         return new
 
+    def __pow__(self, other):
+        coords = ['x', 'y', 'z']
+        new = self.copy()
+        new.loc[:, coords] = self.loc[:, coords]**other
+        return new
+
     def __pos__(self):
         return self.copy()
+
+    def __neg__(self):
+        return -1 * self.copy()
 
     def __abs__(self):
         coords = ['x', 'y', 'z']
         new = self.copy()
         new.loc[:, coords] = abs(new.loc[:, coords])
         return new
-
-    def __neg__(self):
-        return -1 * self.copy()
 
     def __matmul__(self, other):
         return NotImplemented

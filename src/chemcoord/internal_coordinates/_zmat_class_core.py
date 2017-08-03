@@ -132,8 +132,6 @@ class ZmatCore(PandasWrapper, GenericCore):
 
     def _test_if_can_be_added(self, other):
         cols = ['atom', 'b', 'a', 'd']
-        if not isinstance(other, ZmatCore):
-            raise PhysicalMeaning('You can only add zmatrices with each other')
         if not (np.alltrue(self.loc[:, cols] == other.loc[:, cols])
                 and np.alltrue(self.index == other.index)):
             message = ("You can add only those zmatrices that have the same "
@@ -143,46 +141,94 @@ class ZmatCore(PandasWrapper, GenericCore):
             raise PhysicalMeaning(message)
 
     def __add__(self, other):
-        self._test_if_can_be_added(other)
         coords = ['bond', 'angle', 'dihedral']
+        if isinstance(other, ZmatCore):
+            self._test_if_can_be_added(other)
+            result = self.loc[:, coords] + other.loc[:, coords]
+        else:
+            result = self.loc[:, coords] + other
         new = self.copy()
-        new.safe_loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
+        new.safe_loc[:, coords] = result
         return new
 
     def __radd__(self, other):
         return self + other
 
     def __sub__(self, other):
-        self._test_if_can_be_added(other)
         coords = ['bond', 'angle', 'dihedral']
+        if isinstance(other, ZmatCore):
+            self._test_if_can_be_added(other)
+            result = self.loc[:, coords] - other.loc[:, coords]
+        else:
+            result = self.loc[:, coords] - other
         new = self.copy()
-        new.safe_loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
+        new.safe_loc[:, coords] = result
         return new
 
     def __rsub__(self, other):
-        self._test_if_can_be_added(other)
         coords = ['bond', 'angle', 'dihedral']
+        if isinstance(other, ZmatCore):
+            self._test_if_can_be_added(other)
+            result = other.loc[:, coords] - self.loc[:, coords]
+        else:
+            result = other - self.loc[:, coords]
         new = self.copy()
-        new.safe_loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
+        new.safe_loc[:, coords] = result
         return new
 
     def __mul__(self, other):
         coords = ['bond', 'angle', 'dihedral']
+        if isinstance(other, ZmatCore):
+            self._test_if_can_be_added(other)
+            result = self.loc[:, coords] * other.loc[:, coords]
+        else:
+            result = self.loc[:, coords] * other
         new = self.copy()
-        new.safe_loc[:, coords] = self.loc[:, coords] * other
+        new.safe_loc[:, coords] = result
         return new
 
     def __rmul__(self, other):
         return self * other
+
+    def __truediv__(self, other):
+        coords = ['bond', 'angle', 'dihedral']
+        if isinstance(other, ZmatCore):
+            self._test_if_can_be_added(other)
+            result = self.loc[:, coords] / other.loc[:, coords]
+        else:
+            result = self.loc[:, coords] / other
+        new = self.copy()
+        new.safe_loc[:, coords] = result
+        return new
+
+    def __rtruediv__(self, other):
+        coords = ['bond', 'angle', 'dihedral']
+        if isinstance(other, ZmatCore):
+            self._test_if_can_be_added(other)
+            result = other.loc[:, coords] / self.loc[:, coords]
+        else:
+            result = other / self.loc[:, coords]
+        new = self.copy()
+        new.safe_loc[:, coords] = result
+        return new
+
+    def __pow__(self, other):
+        coords = ['bond', 'angle', 'dihedral']
+        new = self.copy()
+        new.loc[:, coords] = self.loc[:, coords]**other
+        return new
+
+    def __pos__(self):
+        return self.copy()
+
+    def __neg__(self):
+        return -1 * self
 
     def __abs__(self):
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
         new.safe_loc[:, coords] = abs(new.loc[:, coords])
         return new
-
-    def __neg__(self):
-        return -1 * self.copy()
 
     def __eq__(self, other):
         self._test_if_can_be_added(other)
