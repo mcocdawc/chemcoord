@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-from chemcoord.exceptions import PhysicalMeaning, IllegalArgumentCombination
-from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
-    PandasWrapper
-from chemcoord.configuration import settings
-from chemcoord.utilities import algebra_utilities
-from chemcoord.utilities.algebra_utilities import give_kabsch_rotation
-from chemcoord.utilities.set_utilities import pick
-from chemcoord.cartesian_coordinates.xyz_functions import dot
-import chemcoord.constants as constants
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
+
 import collections
 import copy
 import itertools
 from itertools import product
+
 import numba as nb
-from numba import jit
 import numpy as np
 import pandas as pd
-from six.moves import zip  # pylint:disable=redefined-builtin
+from numba import jit
 from sortedcontainers import SortedSet
+
+import chemcoord.constants as constants
+from chemcoord._generic_classes.generic_core import GenericCore
+from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
+    PandasWrapper
+from chemcoord.cartesian_coordinates.xyz_functions import dot
+from chemcoord.configuration import settings
+from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
+from chemcoord.utilities import algebra_utilities
+from chemcoord.utilities.algebra_utilities import give_kabsch_rotation
+from chemcoord.utilities.set_utilities import pick
+from six.moves import zip  # pylint:disable=redefined-builtin
 
 
 class CartesianCore(PandasWrapper, GenericCore):

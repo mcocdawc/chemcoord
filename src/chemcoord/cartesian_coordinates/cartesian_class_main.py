@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
 
-from chemcoord.cartesian_coordinates._cartesian_class_give_zmat \
-    import CartesianGiveZmat
+from chemcoord.cartesian_coordinates._cartesian_class_give_zmat import \
+    CartesianGiveZmat
 from chemcoord.cartesian_coordinates._cartesian_class_io import CartesianIO
-from chemcoord.cartesian_coordinates._cartesian_class_symmetry \
-    import CartesianSymmetry
+from chemcoord.cartesian_coordinates._cartesian_class_symmetry import \
+    CartesianSymmetry
 
 
 class Cartesian(CartesianIO, CartesianGiveZmat, CartesianSymmetry):

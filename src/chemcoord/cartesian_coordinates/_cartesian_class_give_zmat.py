@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-import numpy as np
-import pandas as pd
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
+
 import warnings
-import chemcoord.constants as constants
-from chemcoord.exceptions import \
-    IllegalArgumentCombination, \
-    UndefinedCoordinateSystem
-from chemcoord.cartesian_coordinates._cartesian_class_core import \
-    CartesianCore
-from chemcoord.configuration import settings
-from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from collections import OrderedDict
 from itertools import permutations
+
+import numpy as np
+import pandas as pd
+
+import chemcoord.constants as constants
+from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
+from chemcoord.configuration import settings
+from chemcoord.exceptions import (IllegalArgumentCombination,
+                                  UndefinedCoordinateSystem)
+from chemcoord.internal_coordinates.zmat_class_main import Zmat
 
 
 class CartesianGiveZmat(CartesianCore):

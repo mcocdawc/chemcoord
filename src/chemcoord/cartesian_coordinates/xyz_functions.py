@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-from chemcoord.configuration import settings
-from io import open  # pylint:disable=redefined-builtin
-import numpy as np
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
+
 import os
-import pandas as pd
 import subprocess
 import tempfile
-from threading import Thread
 import warnings
+from io import open  # pylint:disable=redefined-builtin
+from threading import Thread
+
+import numpy as np
+import pandas as pd
+
+from chemcoord.configuration import settings
 
 
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):

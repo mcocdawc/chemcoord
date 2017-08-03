@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
 
-from chemcoord.internal_coordinates._zmat_class_core import ZmatCore
+import warnings
+
+import pandas as pd
+
+import chemcoord.constants as constants
 from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord.exceptions import InvalidReference, UndefinedCoordinateSystem
-import chemcoord.constants as constants
-import pandas as pd
-import warnings
+from chemcoord.internal_coordinates._zmat_class_core import ZmatCore
 
 
 class ZmatIO(ZmatCore, GenericIO):

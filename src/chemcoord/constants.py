@@ -9,18 +9,16 @@
 # But if there is only one other person in the world which does not have to
 # repeat your steps, # typing in those values by hand, it is already a win.
 ###############################################################################
-from __future__ import with_statement
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-from io import StringIO
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
+
 import os
+import sys
+from io import StringIO
+
+import numpy as np
 import pandas as pd
 from numba import jit
-import numpy as np
-import sys
-
 
 keys_below_are_abs_refs = -sys.maxsize + 100
 int_label = {'origin': -sys.maxsize - 1, 'e_x': -sys.maxsize,

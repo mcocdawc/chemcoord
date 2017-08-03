@@ -1,29 +1,25 @@
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
 
-from chemcoord.exceptions import ERR_CODE_OK, \
-    PhysicalMeaning, \
-    InvalidReference, ERR_CODE_InvalidReference
-import chemcoord.constants as constants
-import chemcoord.internal_coordinates._indexers as indexers
-from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
-    PandasWrapper
-from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord.utilities.algebra_utilities import \
-    _jit_normalize, \
-    _jit_rotation_matrix, \
-    _jit_isclose, \
-    _jit_cross
-from numba import jit
+import copy
+import warnings
+
 import numba as nb
 import numpy as np
 import pandas as pd
-import warnings
-import copy
+from numba import jit
+
+import chemcoord.constants as constants
+import chemcoord.internal_coordinates._indexers as indexers
+from chemcoord._generic_classes.generic_core import GenericCore
+from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
+                                  InvalidReference, PhysicalMeaning)
+from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
+    PandasWrapper
+from chemcoord.utilities.algebra_utilities import (_jit_cross, _jit_isclose,
+                                                   _jit_normalize,
+                                                   _jit_rotation_matrix)
 
 
 @jit(nopython=True)
