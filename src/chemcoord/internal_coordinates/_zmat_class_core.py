@@ -108,6 +108,8 @@ class ZmatCore(PandasWrapper, GenericCore):
                 _metadata['has_dummies'] = {}
             if 'dummy_manipulation_allowed' not in _metadata:
                 _metadata['dummy_manipulation_allowed'] = True
+            if 'test_operators' not in _metadata:
+                _metadata['test_operators'] = True
 
         fill_missing_keys_with_defaults(self._metadata)
 
@@ -183,6 +185,26 @@ and assigning values safely.
                        "columns ['bond', 'angle', 'dihedral']")
             raise PhysicalMeaning(message)
 
+    # def _add(self, other):
+    #     coords = ['bond', 'angle', 'dihedral']
+    #     if isinstance(other, ZmatCore):
+    #         self._test_if_can_be_added(other)
+    #         result = self.loc[:, coords] + other.loc[:, coords]
+    #     else:
+    #         result = self.loc[:, coords] + other
+    #     return result
+    #
+    # def unsafe_add(self, other):
+    #     coords = ['bond', 'angle', 'dihedral']
+    #     new = self.copy()
+    #     new.unsafe_loc[:, coords] = self._add(other)
+    #     return new
+    #
+    # def unsafe_radd(self, other):
+    #     coords = ['bond', 'angle', 'dihedral']
+    #     new = self.copy()
+    #     new.unsafe_loc[:, coords] = self._add(other)
+    #     return new
     def __add__(self, other):
         coords = ['bond', 'angle', 'dihedral']
         if isinstance(other, ZmatCore):
@@ -191,7 +213,10 @@ and assigning values safely.
         else:
             result = self.loc[:, coords] + other
         new = self.copy()
-        new.safe_loc[:, coords] = result
+        if self._metadata['test_operators']:
+            new.safe_loc[:, coords] = result
+        else:
+            new.unsafe_loc[:, coords] = result
         return new
 
     def __radd__(self, other):
@@ -205,7 +230,10 @@ and assigning values safely.
         else:
             result = self.loc[:, coords] - other
         new = self.copy()
-        new.safe_loc[:, coords] = result
+        if self._metadata['test_operators']:
+            new.safe_loc[:, coords] = result
+        else:
+            new.unsafe_loc[:, coords] = result
         return new
 
     def __rsub__(self, other):
@@ -216,7 +244,10 @@ and assigning values safely.
         else:
             result = other - self.loc[:, coords]
         new = self.copy()
-        new.safe_loc[:, coords] = result
+        if self._metadata['test_operators']:
+            new.safe_loc[:, coords] = result
+        else:
+            new.unsafe_loc[:, coords] = result
         return new
 
     def __mul__(self, other):
@@ -227,7 +258,10 @@ and assigning values safely.
         else:
             result = self.loc[:, coords] * other
         new = self.copy()
-        new.safe_loc[:, coords] = result
+        if self._metadata['test_operators']:
+            new.safe_loc[:, coords] = result
+        else:
+            new.unsafe_loc[:, coords] = result
         return new
 
     def __rmul__(self, other):
@@ -241,7 +275,10 @@ and assigning values safely.
         else:
             result = self.loc[:, coords] / other
         new = self.copy()
-        new.safe_loc[:, coords] = result
+        if self._metadata['test_operators']:
+            new.safe_loc[:, coords] = result
+        else:
+            new.unsafe_loc[:, coords] = result
         return new
 
     def __rtruediv__(self, other):
@@ -252,13 +289,19 @@ and assigning values safely.
         else:
             result = other / self.loc[:, coords]
         new = self.copy()
-        new.safe_loc[:, coords] = result
+        if self._metadata['test_operators']:
+            new.safe_loc[:, coords] = result
+        else:
+            new.unsafe_loc[:, coords] = result
         return new
 
     def __pow__(self, other):
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new.loc[:, coords] = self.loc[:, coords]**other
+        if self._metadata['test_operators']:
+            new.safe_loc[:, coords] = self.loc[:, coords]**other
+        else:
+            new.unsafe_loc[:, coords] = self.loc[:, coords]**other
         return new
 
     def __pos__(self):
@@ -270,7 +313,10 @@ and assigning values safely.
     def __abs__(self):
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        new.safe_loc[:, coords] = abs(new.loc[:, coords])
+        if self._metadata['test_operators']:
+            new.safe_loc[:, coords] = abs(self.loc[:, coords])
+        else:
+            new.unsafe_loc[:, coords] = abs(self.loc[:, coords])
         return new
 
     def __eq__(self, other):

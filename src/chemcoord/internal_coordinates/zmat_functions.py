@@ -40,3 +40,17 @@ class DummyManipulation(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.zmat._metadata[
             'dummy_manipulation_allowed'] = self.old_value
+
+
+@export
+class TestOperators(object):
+    def __init__(self, zmat, test_operators):
+        self.zmat = zmat
+        self.test_operators = test_operators
+        self.old_value = self.zmat._metadata['test_operators']
+
+    def __enter__(self):
+        self.zmat._metadata['test_operators'] = self.test_operators
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.zmat._metadata['test_operators'] = self.old_value
