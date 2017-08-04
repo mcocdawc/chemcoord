@@ -529,7 +529,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         bond_dict = self.get_bonds(use_lookup=use_lookup)
         i = index_of_atom
         if n_sphere != 0:
-            visited = set([i])
+            visited = set([i]) | exclude
             try:
                 tmp_bond_dict = {j: (bond_dict[j] - visited)
                                  for j in bond_dict[i]}
