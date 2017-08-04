@@ -6,7 +6,7 @@ from chemcoord import export
 
 
 @export
-class dummy_manipulation(object):
+class DummyManipulation(object):
     """Contextmanager that controls the behaviour of
     :meth:`~chemcoord.Zmat.safe_loc` and
     :meth:`~chemcoord.Zmat.safe_iloc`.
@@ -15,13 +15,13 @@ class dummy_manipulation(object):
     :meth:`~chemcoord.Zmat.safe_loc` would lead to an invalid reference.
     Then there are two possible usecases::
 
-        with dummy_manipulation(zmat, True):
+        with DummyManipulation(zmat, True):
             zmat.safe_loc[...] = ...
             # This inserts required dummy atoms and removes them,
             # if they are not needed anymore.
             # Removes only dummy atoms, that were automatically inserted.
 
-        with dummy_manipulation(zmat, False):
+        with DummyManipulation(zmat, False):
             zmat.safe_loc[...] = ...
             # This raises an exception
             # :class:`~chemcoord.exceptions.InvalidReference`.
