@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.give\_centroid
+chemcoord\.Cartesian\.get\_centroid
 ====================================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.give_centroid
+.. automethod:: Cartesian.get_centroid

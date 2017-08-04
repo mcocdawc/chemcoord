@@ -682,7 +682,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             molecule = self._preserve_bonds(molecule)
         return molecule
 
-    def give_centroid(self):
+    def get_centroid(self):
         """Return the average location.
 
         Args:
@@ -1239,8 +1239,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         Returns:
             tuple:
         """
-        m1 = (self - self.give_centroid()).sort_index()
-        m2 = (other - other.give_centroid()).sort_index()
+        m1 = (self - self.get_centroid()).sort_index()
+        m2 = (other - other.get_centroid()).sort_index()
         if indices is not None and ignore_hydrogens:
             message = 'Indices != None and ignore_hydrogens == True is invalid'
             raise IllegalArgumentCombination(message)
