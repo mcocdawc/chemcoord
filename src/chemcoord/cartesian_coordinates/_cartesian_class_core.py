@@ -1101,10 +1101,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         self.index = old_index
         return out
 
-    def get_distance_to(self,
-                    origin=None,
-                    other_atoms=None,
-                    sort=False):
+    def get_distance_to(self, origin=None, other_atoms=None, sort=False):
         """Return a Cartesian with a column for the distance from origin.
         """
         if origin is None:
