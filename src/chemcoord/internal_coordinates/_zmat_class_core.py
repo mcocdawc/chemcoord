@@ -18,6 +18,7 @@ from chemcoord.cartesian_coordinates.xyz_functions import (
     _jit_isclose, _jit_normalize)
 from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
                                   InvalidReference, PhysicalMeaning)
+from chemcoord.utilities import _decorators
 from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
     PandasWrapper
 
@@ -47,6 +48,22 @@ def _jit_calc_single_position(references, zmat_values, row):
             d = np.dot(_jit_get_rotation_matrix(n1, angle), d)
             d = np.dot(_jit_get_rotation_matrix(ba, dihedral), d)
     return (ERR_CODE_OK, vb + d)
+
+
+append_indexer_docstring = _decorators.Appender(
+    """In the case of obtaining elements, the indexing behaves like
+Indexing and Selecting data in
+`Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
+
+For assigning elements it is necessary to make a explicit decision
+between safe and unsafe assignments.
+The differences are explained in the stub page of
+:meth:`~Zmat.safe_loc`.""", join='\n\n')
+
+
+@append_indexer_docstring
+def f(x):
+    pass
 
 
 class ZmatCore(PandasWrapper, GenericCore):
@@ -107,44 +124,49 @@ class ZmatCore(PandasWrapper, GenericCore):
         return selected
 
     @property
+    @append_indexer_docstring
     def loc(self):
         """Label based indexing for obtaining elements.
-
-        In the case of obtaining elements, the indexing behaves like
-        Indexing and Selecting data in
-        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
-
-        For assigning elements it is necessary to make a explicit decision
-        between safe and unsafe assignments.
-        The differences are explained in the stub page of
-        :meth:`~Zmat.safe_loc`.
         """
         return indexers._Loc(self)
 
     @property
+    @append_indexer_docstring
     def unsafe_loc(self):
+        """Label based indexing for obtaining elements
+and assigning values unsafely.
+        """
         return indexers._Unsafe_Loc(self)
 
     @property
+    @append_indexer_docstring
     def safe_loc(self):
+        """Label based indexing for obtaining elements and assigning
+values safely.
+        """
         return indexers._Safe_Loc(self)
 
     @property
+    @append_indexer_docstring
     def iloc(self):
         """Integer position based indexing for obtaining elements.
-
-        In the case of obtaining elements, the indexing behaves like
-        Indexing and Selecting data in
-        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
         """
         return indexers._ILoc(self)
 
     @property
+    @append_indexer_docstring
     def unsafe_iloc(self):
+        """Integer position based indexing for obtaining elements
+and assigning values unsafely.
+        """
         return indexers._Unsafe_ILoc(self)
 
     @property
+    @append_indexer_docstring
     def safe_iloc(self):
+        """Integer position based indexing for obtaining elements
+and assigning values safely.
+        """
         return indexers._Safe_ILoc(self)
 
     def _test_if_can_be_added(self, other):
