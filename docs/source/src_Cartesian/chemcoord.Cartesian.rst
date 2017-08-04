@@ -16,7 +16,7 @@ chemcoord\.Cartesian
          ~Cartesian.restrict_bond_dict
          ~Cartesian.get_fragment
          ~Cartesian.fragmentate
-         ~Cartesian.without
+         ~Cartesian.get_without
          ~Cartesian.add_data
          ~Cartesian.total_mass
          ~Cartesian.connected_to

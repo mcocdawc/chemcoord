@@ -80,7 +80,7 @@ def test_specified_c_table_assert_first_three_nonlinear():
     new.loc[99, 'a'] = 17
 
     c_table = molecule.get_construction_table(
-        fragment_list=[(molecule.without(fragment)[0], new),
+        fragment_list=[(molecule.get_without(fragment)[0], new),
                        (fragment, connection)])
     c_table = molecule.correct_dihedral(c_table)
     zmolecule = molecule.give_zmat(c_table)

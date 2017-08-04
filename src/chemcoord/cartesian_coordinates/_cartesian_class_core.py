@@ -921,11 +921,10 @@ class CartesianCore(PandasWrapper, GenericCore):
         """Get the indices of the atoms in a fragment.
 
         The list_of_indextuples contains all bondings from the
-            molecule to the fragment. ``[(1,3), (2,4)]`` means
-            for example that the fragment is connected over two
-            bonds. The first bond is from atom 1 in the molecule
-            to atom 3 in the fragment. The second bond is from atom
-            2 in the molecule to atom 4 in the fragment.
+        molecule to the fragment. ``[(1,3), (2,4)]`` means for example that the
+        fragment is connected over two bonds. The first bond is from atom 1 in
+        the molecule to atom 3 in the fragment. The second bond is from atom
+        2 in the molecule to atom 4 in the fragment.
 
         Args:
             list_of_indextuples (list):
@@ -947,8 +946,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         else:
             return self.loc[fragment_index, :]
 
-    def without(self, fragments,
-                use_lookup=settings['defaults']['use_lookup']):
+    def get_without(self, fragments,
+                    use_lookup=settings['defaults']['use_lookup']):
         """Return self without the specified fragments.
 
         Args:

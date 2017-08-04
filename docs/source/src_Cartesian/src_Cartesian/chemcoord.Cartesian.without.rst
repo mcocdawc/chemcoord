@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.without
+chemcoord\.Cartesian\.get_without
 =============================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.without
+.. automethod:: Cartesian.get_without

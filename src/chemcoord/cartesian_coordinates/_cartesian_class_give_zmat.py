@@ -215,9 +215,10 @@ class CartesianGiveZmat(CartesianCore):
 
                 3. If ``self`` contains more atoms than the union over all
                 fragments, the rest of the molecule without the fragments
-                is automatically prepended using :meth:`~Cartesian.without`::
+                is automatically prepended using
+                :meth:`~Cartesian.get_without`::
 
-                    self.without(fragments) + fragment_list
+                    self.get_without(fragments) + fragment_list
 
                 4. If fragment_list is ``None`` then fragmentation, etc.
                 is done automatically. The fragments are then sorted by
@@ -257,8 +258,8 @@ class CartesianGiveZmat(CartesianCore):
                         full_index = fragment.index
 
             if not self.index.difference(full_index).empty:
-                missing_part = self.without(self.loc[full_index],
-                                            use_lookup=use_lookup)
+                missing_part = self.get_without(self.loc[full_index],
+                                                use_lookup=use_lookup)
                 fragment_list = missing_part + fragment_list
             return fragment_list
 
