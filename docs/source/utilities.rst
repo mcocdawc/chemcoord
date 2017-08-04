@@ -9,7 +9,7 @@ Algebra Utilities
 .. autosummary::
     :toctree: src_algebra_utilities
 
-    rotation_matrix
+    get_rotation_matrix
     orthonormalize_righthanded
     normalize
     get_kabsch_rotation

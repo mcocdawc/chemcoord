@@ -19,7 +19,7 @@ from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
     PandasWrapper
 from chemcoord.utilities.algebra_utilities import (_jit_cross, _jit_isclose,
                                                    _jit_normalize,
-                                                   _jit_rotation_matrix)
+                                                   _jit_get_rotation_matrix)
 
 
 @jit(nopython=True)
@@ -44,8 +44,8 @@ def _jit_calc_single_position(references, zmat_values, row):
         else:
             n1 = _jit_normalize(N1)
             d = bond * ba
-            d = np.dot(_jit_rotation_matrix(n1, angle), d)
-            d = np.dot(_jit_rotation_matrix(ba, dihedral), d)
+            d = np.dot(_jit_get_rotation_matrix(n1, angle), d)
+            d = np.dot(_jit_get_rotation_matrix(ba, dihedral), d)
     return (ERR_CODE_OK, vb + d)
 
 

@@ -194,7 +194,7 @@ def test_get_inertia():
     assert cc.xyz_functions.allclose(
         dot(eig, (molecule - molecule.get_barycenter())), t_mol)
 
-    rot_mat = cc.utilities.algebra_utilities.rotation_matrix([1, 1, 1], 72)
+    rot_mat = cc.utilities.algebra_utilities.get_rotation_matrix([1, 1, 1], 72)
     molecule2 = dot(rot_mat, molecule)
     B = molecule2.get_inertia()
     assert cc.xyz_functions.allclose(B['transformed_Cartesian'], t_mol)
@@ -243,8 +243,8 @@ def test_align():
     cartesians = cc.xyz_functions.read_molden(
         get_complete_path('total_movement.molden'), start_index=1)
     m1, m2 = cartesians[0], cartesians[-1]
-    rotation_matrix = cc.utilities.algebra_utilities.rotation_matrix
-    m2 = dot(rotation_matrix([1, 1, 1], 0.334), m2) + 5
+    get_rotation_matrix = cc.utilities.algebra_utilities.get_rotation_matrix
+    m2 = dot(get_rotation_matrix([1, 1, 1], 0.334), m2) + 5
     m1, m2_aligned = m1.align(m2)
     dev = abs((m2_aligned - m1).loc[:, ['x', 'y', 'z']]).sum() / len(m1)
     assert np.allclose(dev, [0.73398451, 1.61863496, 0.13181807])
@@ -255,8 +255,8 @@ def test_align_and_make_similar():
         get_complete_path('total_movement.molden'), start_index=1)
     m2 = cartesians[-1]
 
-    rotation_matrix = cc.utilities.algebra_utilities.rotation_matrix
-    m2_shuffled = dot(rotation_matrix([1, 1, 1], 1.2), m2) + 8
+    get_rotation_matrix = cc.utilities.algebra_utilities.get_rotation_matrix
+    m2_shuffled = dot(get_rotation_matrix([1, 1, 1], 1.2), m2) + 8
     np.random.seed(77)
     m2_shuffled.index = np.random.permutation(m2.index)
 

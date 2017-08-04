@@ -45,7 +45,7 @@ def _jit_normalize(vector):
     return normed_vector
 
 
-def rotation_matrix(axis, angle):
+def get_rotation_matrix(axis, angle):
     """Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
@@ -63,11 +63,11 @@ def rotation_matrix(axis, angle):
     if not (np.array([1, 1, 1]).shape) == (3, ):
         raise ValueError('axis.shape has to be 3')
     angle = float(angle)
-    return _jit_rotation_matrix(axis, angle)
+    return _jit_get_rotation_matrix(axis, angle)
 
 
 @jit(nopython=True)
-def _jit_rotation_matrix(axis, angle):
+def _jit_get_rotation_matrix(axis, angle):
     """Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
