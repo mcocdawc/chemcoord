@@ -185,26 +185,6 @@ and assigning values safely.
                        "columns ['bond', 'angle', 'dihedral']")
             raise PhysicalMeaning(message)
 
-    # def _add(self, other):
-    #     coords = ['bond', 'angle', 'dihedral']
-    #     if isinstance(other, ZmatCore):
-    #         self._test_if_can_be_added(other)
-    #         result = self.loc[:, coords] + other.loc[:, coords]
-    #     else:
-    #         result = self.loc[:, coords] + other
-    #     return result
-    #
-    # def unsafe_add(self, other):
-    #     coords = ['bond', 'angle', 'dihedral']
-    #     new = self.copy()
-    #     new.unsafe_loc[:, coords] = self._add(other)
-    #     return new
-    #
-    # def unsafe_radd(self, other):
-    #     coords = ['bond', 'angle', 'dihedral']
-    #     new = self.copy()
-    #     new.unsafe_loc[:, coords] = self._add(other)
-    #     return new
     def __add__(self, other):
         coords = ['bond', 'angle', 'dihedral']
         if isinstance(other, ZmatCore):
