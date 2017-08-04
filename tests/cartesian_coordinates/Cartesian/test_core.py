@@ -250,7 +250,7 @@ def test_align():
     assert np.allclose(dev, [0.73398451, 1.61863496, 0.13181807])
 
 
-def test_align_and_make_similar():
+def test_align_and_reindex_similar():
     cartesians = cc.xyz_functions.read_molden(
         get_complete_path('total_movement.molden'), start_index=1)
     m2 = cartesians[-1]
@@ -262,5 +262,5 @@ def test_align_and_make_similar():
 
     m2, m2_shuffled = m2.align(m2_shuffled, indices=[[42, 41, 153, 152],
                                                      [87, 115, 24, 208]])
-    m2_backindexed = m2.make_similar(m2_shuffled)
+    m2_backindexed = m2.reindex_similar(m2_shuffled)
     assert cc.xyz_functions.allclose(m2, m2_backindexed)
