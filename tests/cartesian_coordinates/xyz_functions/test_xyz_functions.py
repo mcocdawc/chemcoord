@@ -56,8 +56,8 @@ def test_concat_with_zmats():
     zm1 = zm.change_numbering(new_index=range(1, len(zm) + 1))
     zm2 = zm.change_numbering(new_index=zm1.index + len(zm1))
 
-    new = cc.xyz_functions.concat([zm1.give_cartesian(),
-                                   zm2.give_cartesian() + [0, 0, 10]])
+    new = cc.xyz_functions.concat([zm1.get_cartesian(),
+                                   zm2.get_cartesian() + [0, 0, 10]])
 
     c_table = zm2.loc[:, ['b', 'a', 'd']]
     c_table.loc[57, ['b', 'a', 'd']] = [4, 1, 2]
@@ -65,12 +65,12 @@ def test_concat_with_zmats():
     c_table.loc[59, 'd'] = 1
 
     large_c_table = new.get_construction_table(
-        fragment_list=[(zm2.give_cartesian(), c_table)])
+        fragment_list=[(zm2.get_cartesian(), c_table)])
     znew = new.get_zmat(large_c_table)
 
-    cc.xyz_functions.allclose(new, znew.give_cartesian())
+    cc.xyz_functions.allclose(new, znew.get_cartesian())
 
     znew.safe_loc[57, 'bond'] = 20. - 0.89
     assert allclose(
-        zm1.give_cartesian().append(zm2.give_cartesian() + [0, 0, 20]),
-        znew.give_cartesian())
+        zm1.get_cartesian().append(zm2.get_cartesian() + [0, 0, 20]),
+        znew.get_cartesian())

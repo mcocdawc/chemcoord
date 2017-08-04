@@ -15,7 +15,7 @@ chemcoord\.Zmat
       ~Zmat.add_data
       ~Zmat.change_numbering
       ~Zmat.has_same_sumformula
-      ~Zmat.give_cartesian
+      ~Zmat.get_cartesian
       ~Zmat.to_xyz
       ~Zmat.get_total_mass
       ~Zmat.subs

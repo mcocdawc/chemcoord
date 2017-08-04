@@ -51,7 +51,7 @@ def test_assignment_leading_to_linear_reference():
     zmolecule2 = molecule.get_zmat()
     zmolecule2.safe_loc[5, 'dihedral'] = 90
     assert cc.xyz_functions.allclose(
-        zmolecule2.give_cartesian(), zmolecule1.give_cartesian())
+        zmolecule2.get_cartesian(), zmolecule1.get_cartesian())
 
     zmolecule3 = zmolecule.copy()
     with cc.DummyManipulation(zmolecule3, False):

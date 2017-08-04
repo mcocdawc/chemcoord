@@ -86,7 +86,7 @@ class ZmatCore(PandasWrapper, GenericCore):
 
         def fill_missing_keys_with_defaults(_metadata):
             if 'last_valid_cartesian' not in _metadata:
-                _metadata['last_valid_cartesian'] = self.give_cartesian()
+                _metadata['last_valid_cartesian'] = self.get_cartesian()
             if 'has_dummies' not in _metadata:
                 _metadata['has_dummies'] = {}
             if 'dummy_manipulation_allowed' not in _metadata:
@@ -295,7 +295,7 @@ class ZmatCore(PandasWrapper, GenericCore):
                     pass
         if perform_checks:
             try:
-                out._metadata['last_valid_cartesian'] = out.give_cartesian()
+                out._metadata['last_valid_cartesian'] = out.get_cartesian()
             except AttributeError:
                 # Unevaluated symbolic expressions are remaining.
                 pass
@@ -419,7 +419,7 @@ class ZmatCore(PandasWrapper, GenericCore):
                          *zmat._insert_dummy_cart(exception))
 
         try:
-            zmat._metadata['last_valid_cartesian'] = zmat.give_cartesian()
+            zmat._metadata['last_valid_cartesian'] = zmat.get_cartesian()
         except InvalidReference as e:
             zmat._insert_dummy_zmat(e, inplace=True)
 
@@ -431,7 +431,7 @@ class ZmatCore(PandasWrapper, GenericCore):
         to_be_tested = has_dummies.keys()
         c_table = self.loc[to_be_tested, ['b', 'a', 'd']]
         c_table['d'] = [has_dummies[i]['actual_d'] for i in to_be_tested]
-        xyz = self.give_cartesian().loc[:, ['x', 'y', 'z']]
+        xyz = self.get_cartesian().loc[:, ['x', 'y', 'z']]
         BA = (xyz.loc[c_table['a']].values - xyz.loc[c_table['b']].values)
         AD = (xyz.loc[c_table['d']].values - xyz.loc[c_table['a']].values)
 
@@ -454,7 +454,7 @@ class ZmatCore(PandasWrapper, GenericCore):
         c_table['d'] = [has_dummies[k]['actual_d'] for k in to_remove]
         zmat.unsafe_loc[to_remove, 'd'] = c_table['d'].astype('i8')
 
-        zmat_values = zmat.give_cartesian()._calculate_zmat_values(c_table)
+        zmat_values = zmat.get_cartesian()._calculate_zmat_values(c_table)
         zmat.unsafe_loc[to_remove, ['bond', 'angle', 'dihedral']] = zmat_values
         zmat._frame.drop([has_dummies[k]['dummy_d'] for k in to_remove],
                          inplace=True)
@@ -495,7 +495,7 @@ class ZmatCore(PandasWrapper, GenericCore):
                 return (err, row, positions)
         return (ERR_CODE_OK, row, positions)
 
-    def give_cartesian(self):
+    def get_cartesian(self):
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']].values
         zmat_values = zmat.loc[:, ['bond', 'angle', 'dihedral']].values
@@ -524,10 +524,10 @@ class ZmatCore(PandasWrapper, GenericCore):
             return create_cartesian(positions, row + 1)
 
     def to_xyz(self, *args, **kwargs):
-        """Deprecated, use :meth:`~chemcoord.Zmat.give_cartesian`
+        """Deprecated, use :meth:`~chemcoord.Zmat.get_cartesian`
         """
-        message = 'Will be removed in the future. Please use give_cartesian.'
+        message = 'Will be removed in the future. Please use get_cartesian.'
         with warnings.catch_warnings():
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)
-        return self.give_cartesian(*args, **kwargs)
+        return self.get_cartesian(*args, **kwargs)
