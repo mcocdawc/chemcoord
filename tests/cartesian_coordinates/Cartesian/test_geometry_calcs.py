@@ -40,10 +40,10 @@ def test_bond_length():
     assert np.allclose(calculated, expct_res)
 
 
-def test_dihedral_degrees():
+def test_get_dihedral_degrees():
     zmolecule = molecule.give_zmat()
     c_table = zmolecule.loc[:, ['b', 'a', 'd']]
-    assert (molecule.dihedral_degrees(c_table.iloc[3:])
+    assert (molecule.get_dihedral_degrees(c_table.iloc[3:])
             == zmolecule['dihedral'][3:]).all()
 
 

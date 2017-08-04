@@ -42,7 +42,7 @@ chemcoord\.Cartesian
 
          ~Cartesian.get_bond_lengths
          ~Cartesian.get_angle_degrees
-         ~Cartesian.dihedral_degrees
+         ~Cartesian.get_dihedral_degrees
          ~Cartesian.get_barycenter
          ~Cartesian.inertia
          ~Cartesian.get_centroid

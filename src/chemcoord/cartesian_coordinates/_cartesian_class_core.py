@@ -778,7 +778,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         angles = np.degrees(np.arccos(dot_product))
         return angles
 
-    def dihedral_degrees(self, indices, start_row=0):
+    def get_dihedral_degrees(self, indices, start_row=0):
         """Return the dihedrals between given atoms.
 
         Calculates the dihedral angle in degrees between the atoms with

@@ -3,4 +3,4 @@ chemcoord\.Cartesian\.dihedral\_degrees
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.dihedral_degrees
+.. automethod:: Cartesian.get_dihedral_degrees
