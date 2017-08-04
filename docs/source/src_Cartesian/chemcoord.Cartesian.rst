@@ -28,8 +28,8 @@ chemcoord\.Cartesian
     .. autosummary::
          :toctree: src_Cartesian
 
-         ~Cartesian.cutcuboid
-         ~Cartesian.cutsphere
+         ~Cartesian.cut_cuboid
+         ~Cartesian.cut_sphere
          ~Cartesian.basistransform
          ~Cartesian.align
          ~Cartesian.change_numbering

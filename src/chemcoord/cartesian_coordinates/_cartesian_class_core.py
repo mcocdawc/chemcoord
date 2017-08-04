@@ -563,7 +563,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         """Is called after cutting geometric shapes.
 
         If you want to change the rules how bonds are preserved, when
-            applying e.g. :meth:`Cartesian.cutsphere` this is the
+            applying e.g. :meth:`Cartesian.cut_sphere` this is the
             function you have to modify.
         It is recommended to inherit from the Cartesian class to
             tailor it for your project, instead of modifying the
@@ -600,7 +600,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         molecule = self.loc[included_atoms_set, :]
         return molecule
 
-    def cutsphere(
+    def cut_sphere(
             self,
             radius=15.,
             origin=None,
@@ -638,7 +638,7 @@ class CartesianCore(PandasWrapper, GenericCore):
 
         return molecule
 
-    def cutcuboid(
+    def cut_cuboid(
             self,
             a=20,
             b=None,

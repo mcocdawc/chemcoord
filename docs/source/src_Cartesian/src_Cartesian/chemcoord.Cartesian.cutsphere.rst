@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.cutsphere
+chemcoord\.Cartesian\.cut\_sphere
 ===============================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.cutsphere
+.. automethod:: Cartesian.cut_sphere

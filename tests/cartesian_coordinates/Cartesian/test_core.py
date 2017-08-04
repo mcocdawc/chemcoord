@@ -164,25 +164,25 @@ def test_coordination_sphere():
         assert expctd[i] == set(molecule.get_coordination_sphere(7, i).index)
 
 
-def test_cutsphere():
+def test_cut_sphere():
     expected = {6, 7, 8, 9, 11, 12, 13, 15, 16, 19, 20, 53}
-    assert expected == set(molecule.cutsphere(radius=3, origin=7).index)
+    assert expected == set(molecule.cut_sphere(radius=3, origin=7).index)
     assert np.alltrue(
-        molecule == molecule.cutsphere(radius=3, origin=7,
+        molecule == molecule.cut_sphere(radius=3, origin=7,
                                        preserve_bonds=True))
     assert (set(molecule.index) - expected
-            == set(molecule.cutsphere(radius=3, origin=7,
+            == set(molecule.cut_sphere(radius=3, origin=7,
                                       outside_sliced=False).index))
 
 
-def test_cutcuboid():
+def test_cut_cuboid():
     expected = {3, 4, 5, 6, 7, 15, 16, 17, 32, 35, 37, 38, 47, 52, 53, 55, 56}
-    assert expected == set(molecule.cutcuboid(a=2, origin=7).index)
+    assert expected == set(molecule.cut_cuboid(a=2, origin=7).index)
     assert np.alltrue(
-        molecule == molecule.cutcuboid(a=2, origin=7,
+        molecule == molecule.cut_cuboid(a=2, origin=7,
                                        preserve_bonds=True))
     assert (set(molecule.index) - expected
-            == set(molecule.cutcuboid(a=2, origin=7,
+            == set(molecule.cut_cuboid(a=2, origin=7,
                                       outside_sliced=False).index))
 
 

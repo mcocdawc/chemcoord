@@ -41,7 +41,7 @@ Besides all methods are **sideeffect free unless otherwise stated**.
 
 Let's assume you have a ``molecule1`` and you want to cut a sphere around the origin which gives you ``molecule2``::
 
-    molecule2 = molecule1.cutsphere()
+    molecule2 = molecule1.cut_sphere()
 
 If you try this, you will see that:
 

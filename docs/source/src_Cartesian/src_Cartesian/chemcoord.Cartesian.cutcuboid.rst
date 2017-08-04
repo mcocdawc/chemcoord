@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.cutcuboid
+chemcoord\.Cartesian\.cut\_cuboid
 ===============================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.cutcuboid
+.. automethod:: Cartesian.cut_cuboid
