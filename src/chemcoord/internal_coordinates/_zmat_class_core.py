@@ -139,11 +139,15 @@ and assigning values unsafely.
         return indexers._Unsafe_Loc(self)
 
     @property
-    @append_indexer_docstring
     def safe_loc(self):
         """Label based indexing for obtaining elements and assigning
-values safely.
+        values safely.
+
+        In the case of obtaining elements, the indexing behaves like
+        Indexing and Selecting data in
+        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
         """
+        # TODO(Extend docstring)
         return indexers._Safe_Loc(self)
 
     @property
