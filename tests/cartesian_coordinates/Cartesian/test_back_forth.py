@@ -32,7 +32,7 @@ STRUCTURE_PATH = get_structure_path(get_script_path())
 
 def back_and_forth(filepath):
     molecule1 = cc.Cartesian.read_xyz(filepath)
-    zmolecule = molecule1.give_zmat()
+    zmolecule = molecule1.get_zmat()
     molecule2 = zmolecule.give_cartesian()
     assert allclose(molecule1, molecule2, align=False, atol=1e-7)
 
@@ -83,7 +83,7 @@ def test_specified_c_table_assert_first_three_nonlinear():
         fragment_list=[(molecule.get_without(fragment)[0], new),
                        (fragment, connection)])
     c_table = molecule.correct_dihedral(c_table)
-    zmolecule = molecule.give_zmat(c_table)
+    zmolecule = molecule.get_zmat(c_table)
     assert allclose(molecule, zmolecule.give_cartesian(), align=False,
                     atol=1e-6)
 
@@ -92,11 +92,11 @@ def test_issue_18():
     path = os.path.join(STRUCTURE_PATH, 'temp_lig.xyz')
     a = cc.Cartesian.read_xyz(path)
     con_table = a.get_construction_table()
-    amat = a.give_zmat(con_table)
+    amat = a.get_zmat(con_table)
     a_new = amat.give_cartesian()
     # without construction table
     b = cc.Cartesian.read_xyz(path)
-    bmat = a.give_zmat()
+    bmat = a.get_zmat()
     b_new = bmat.give_cartesian()
 
     structures = [a, a_new, b, b_new]

@@ -52,7 +52,7 @@ def test_concat():
 def test_concat_with_zmats():
     path = os.path.join(STRUCTURES, 'MIL53_small.xyz')
     m = cc.Cartesian.read_xyz(path, start_index=1)
-    zm = m.give_zmat()
+    zm = m.get_zmat()
     zm1 = zm.change_numbering(new_index=range(1, len(zm) + 1))
     zm2 = zm.change_numbering(new_index=zm1.index + len(zm1))
 
@@ -66,7 +66,7 @@ def test_concat_with_zmats():
 
     large_c_table = new.get_construction_table(
         fragment_list=[(zm2.give_cartesian(), c_table)])
-    znew = new.give_zmat(large_c_table)
+    znew = new.get_zmat(large_c_table)
 
     cc.xyz_functions.allclose(new, znew.give_cartesian())
 

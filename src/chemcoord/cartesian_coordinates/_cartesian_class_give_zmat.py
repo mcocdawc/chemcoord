@@ -577,7 +577,7 @@ class CartesianGiveZmat(CartesianCore):
                        _metadata={'last_valid_cartesian': self.copy()})
         return zmatrix
 
-    def give_zmat(self, construction_table=None,
+    def get_zmat(self, construction_table=None,
                   use_lookup=settings['defaults']['use_lookup']):
         """Transform to internal coordinates.
 
@@ -613,7 +613,7 @@ class CartesianGiveZmat(CartesianCore):
         If you then pass the buildlist as argument to ``give_zmat``,
         the algorithm directly starts with step 3 (which is much faster).
 
-        If a ``construction_table`` is passed into :meth:`~Cartesian.give_zmat`
+        If a ``construction_table`` is passed into :meth:`~Cartesian.get_zmat`
         the check for pathological linearity is not performed!
         So if a ``construction_table`` is either manually created,
         or obtained from :meth:`~Cartesian.get_construction_table`
@@ -650,10 +650,10 @@ class CartesianGiveZmat(CartesianCore):
         return self._build_zmat(c_table)
 
     def to_zmat(self, *args, **kwargs):
-        """Deprecated, use :meth:`~Cartesian.give_zmat`
+        """Deprecated, use :meth:`~Cartesian.get_zmat`
         """
         message = 'Will be removed in the future. Please use give_zmat.'
         with warnings.catch_warnings():
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)
-        return self.give_zmat(*args, **kwargs)
+        return self.get_zmat(*args, **kwargs)

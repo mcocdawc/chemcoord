@@ -41,7 +41,7 @@ def test_bond_length():
 
 
 def test_get_dihedral_degrees():
-    zmolecule = molecule.give_zmat()
+    zmolecule = molecule.get_zmat()
     c_table = zmolecule.loc[:, ['b', 'a', 'd']]
     assert (molecule.get_dihedral_degrees(c_table.iloc[3:])
             == zmolecule['dihedral'][3:]).all()

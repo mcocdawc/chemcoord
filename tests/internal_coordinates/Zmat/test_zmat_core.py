@@ -36,9 +36,9 @@ def test_addition_with_sympy():
     molecule = cc.Cartesian.read_xyz(
         os.path.join(STRUCTURE_PATH, 'MIL53_small.xyz'), start_index=1)
 
-    zmolecule = molecule.give_zmat()
+    zmolecule = molecule.get_zmat()
 
-    zmolecule = molecule.give_zmat()
+    zmolecule = molecule.get_zmat()
     zmolecule2 = zmolecule.copy()
 
     zmolecule2.unsafe_loc[:, ['bond', 'angle', 'dihedral']] = 0.
