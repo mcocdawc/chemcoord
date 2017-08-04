@@ -17,7 +17,7 @@ from chemcoord.exceptions import (IllegalArgumentCombination,
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 
 
-class CartesianGiveZmat(CartesianCore):
+class CartesianGetZmat(CartesianCore):
     @staticmethod
     def _check_construction_table(construction_table):
         """Checks if a construction table uses valid references.
