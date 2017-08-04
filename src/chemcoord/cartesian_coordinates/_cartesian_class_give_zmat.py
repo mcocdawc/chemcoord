@@ -335,7 +335,7 @@ class CartesianGiveZmat(CartesianCore):
             list: A list of problematic indices.
         """
         c_table = construction_table
-        angles = self.angle_degrees(c_table.iloc[3:, :].values)
+        angles = self.get_angle_degrees(c_table.iloc[3:, :].values)
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
         rename = dict(enumerate(c_table.index[3:]))
         problem_index = [rename[i] for i in problem_index]
@@ -376,7 +376,7 @@ class CartesianGiveZmat(CartesianCore):
                     for new_d in tmp_bond_dict:
                         if new_d in visited:
                             continue
-                        angle = self.angle_degrees([b, a, new_d])[0]
+                        angle = self.get_angle_degrees([b, a, new_d])[0]
                         if 5 < angle < 175:
                             found = True
                             c_table.loc[i, 'd'] = new_d
@@ -392,7 +392,7 @@ class CartesianGiveZmat(CartesianCore):
                     k = 0
                     while not found and k < len(molecule):
                         new_d = molecule.index[k]
-                        angle = self.angle_degrees([b, a, new_d])[0]
+                        angle = self.get_angle_degrees([b, a, new_d])[0]
                         if 5 < angle < 175:
                             found = True
                             c_table.loc[i, 'd'] = new_d

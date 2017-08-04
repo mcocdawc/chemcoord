@@ -41,7 +41,7 @@ chemcoord\.Cartesian
          :toctree: src_Cartesian
 
          ~Cartesian.get_bond_lengths
-         ~Cartesian.angle_degrees
+         ~Cartesian.get_angle_degrees
          ~Cartesian.dihedral_degrees
          ~Cartesian.get_barycenter
          ~Cartesian.inertia

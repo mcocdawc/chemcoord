@@ -3,4 +3,4 @@ chemcoord\.Cartesian\.angle\_degrees
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.angle_degrees
+.. automethod:: Cartesian.get_angle_degrees

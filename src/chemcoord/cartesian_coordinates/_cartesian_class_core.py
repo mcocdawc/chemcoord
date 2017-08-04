@@ -739,7 +739,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             b_pos = self.loc[indices[:, 1], coords].values
         return np.linalg.norm(i_pos - b_pos, axis=1)
 
-    def angle_degrees(self, indices):
+    def get_angle_degrees(self, indices):
         """Return the angles between given atoms.
 
         Calculates the angle in degrees between the atoms with
