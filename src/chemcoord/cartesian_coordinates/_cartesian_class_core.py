@@ -80,10 +80,6 @@ class CartesianCore(PandasWrapper, GenericCore):
         else:
             self._metadata = copy.deepcopy(_metadata)
 
-        # def fill_missing_keys_with_defaults(_metadata):
-        #     pass
-        # fill_missing_keys_with_defaults(self._metadata)
-
     def _return_appropiate_type(self, selected):
         if isinstance(selected, pd.Series):
             frame = pd.DataFrame(selected).T
