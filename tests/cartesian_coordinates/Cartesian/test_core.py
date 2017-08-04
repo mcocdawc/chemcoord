@@ -169,10 +169,10 @@ def test_cut_sphere():
     assert expected == set(molecule.cut_sphere(radius=3, origin=7).index)
     assert np.alltrue(
         molecule == molecule.cut_sphere(radius=3, origin=7,
-                                       preserve_bonds=True))
+                                        preserve_bonds=True))
     assert (set(molecule.index) - expected
             == set(molecule.cut_sphere(radius=3, origin=7,
-                                      outside_sliced=False).index))
+                                       outside_sliced=False).index))
 
 
 def test_cut_cuboid():
@@ -180,19 +180,19 @@ def test_cut_cuboid():
     assert expected == set(molecule.cut_cuboid(a=2, origin=7).index)
     assert np.alltrue(
         molecule == molecule.cut_cuboid(a=2, origin=7,
-                                       preserve_bonds=True))
+                                        preserve_bonds=True))
     assert (set(molecule.index) - expected
             == set(molecule.cut_cuboid(a=2, origin=7,
-                                      outside_sliced=False).index))
+                                       outside_sliced=False).index))
 
 
 def test_inertia():
     A = molecule.inertia()
     eig, t_mol = A['eigenvectors'], A['transformed_Cartesian']
     assert cc.xyz_functions.allclose(
-        (molecule - molecule.barycenter()).__rmatmul__(eig), t_mol)
+        (molecule - molecule.get_barycenter()).__rmatmul__(eig), t_mol)
     assert cc.xyz_functions.allclose(
-        dot(eig, (molecule - molecule.barycenter())), t_mol)
+        dot(eig, (molecule - molecule.get_barycenter())), t_mol)
 
     rot_mat = cc.utilities.algebra_utilities.rotation_matrix([1, 1, 1], 72)
     molecule2 = dot(rot_mat, molecule)

@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.barycenter
+chemcoord\.Cartesian\.get\_barycenter
 ================================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.barycenter
+.. automethod:: Cartesian.get_barycenter

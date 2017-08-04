@@ -693,7 +693,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         """
         return np.mean(self.loc[:, ['x', 'y', 'z']], axis=0)
 
-    def barycenter(self):
+    def get_barycenter(self):
         """Return the mass weighted average location.
 
         Args:
@@ -707,8 +707,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         except KeyError:
             mass = self.add_data('mass')['mass'].values
         pos = self.loc[:, ['x', 'y', 'z']].values
-        barycenter = (pos * mass[:, None]).sum(axis=0) / self.get_total_mass()
-        return barycenter
+        return (pos * mass[:, None]).sum(axis=0) / self.get_total_mass()
 
     def bond_lengths(self, indices):
         """Return the distances between given atoms.
@@ -1042,7 +1041,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             return inertia, eig_v, diag_inertia
 
         molecule = self.add_data('mass')
-        molecule = molecule - molecule.barycenter()
+        molecule = molecule - molecule.get_barycenter()
         inertia, eig_v, diag_inertia = calculate_inertia_tensor(molecule)
         eig_v = algebra_utilities.orthonormalize_righthanded(eig_v)
         molecule = molecule.basistransform(eig_v)
