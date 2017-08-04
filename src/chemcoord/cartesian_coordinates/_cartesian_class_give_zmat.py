@@ -107,7 +107,7 @@ class CartesianGiveZmat(CartesianCore):
 
         if predefined_table is None:
             if start_atom is None:
-                molecule = self.distance_to(self.get_centroid())
+                molecule = self.get_distance_to(self.get_centroid())
                 i = molecule['distance'].idxmin()
             else:
                 i = start_atom
@@ -387,7 +387,7 @@ class CartesianGiveZmat(CartesianCore):
                     tmp_bond_dict = new_tmp_bond_dict
                 if not found:
                     other_atoms = c_table.index[:loc_i].difference({b, a})
-                    molecule = self.distance_to(origin=i, sort=True,
+                    molecule = self.get_distance_to(origin=i, sort=True,
                                                 other_atoms=other_atoms)
                     k = 0
                     while not found and k < len(molecule):

@@ -627,7 +627,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         else:
             origin = self.loc[origin, ['x', 'y', 'z']]
 
-        molecule = self.distance_to(origin)
+        molecule = self.get_distance_to(origin)
         if outside_sliced:
             molecule = molecule[molecule['distance'] < radius]
         else:
@@ -1101,7 +1101,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         self.index = old_index
         return out
 
-    def distance_to(self,
+    def get_distance_to(self,
                     origin=None,
                     other_atoms=None,
                     sort=False):
@@ -1284,7 +1284,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             coords = ['x', 'y', 'z']
             index1 = list(subset1)
             for m1_i in index1:
-                dist_m2_to_m1_i = m2.distance_to(m1.loc[m1_i, coords],
+                dist_m2_to_m1_i = m2.get_distance_to(m1.loc[m1_i, coords],
                                                  subset2, sort=True)
 
                 m2_i = dist_m2_to_m1_i.index[0]
