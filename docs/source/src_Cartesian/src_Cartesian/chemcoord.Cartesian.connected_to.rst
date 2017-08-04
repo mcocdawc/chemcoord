@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.connected\_to
+chemcoord\.Cartesian\.get\_coordination\_sphere
 ===================================
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.connected_to
+.. automethod:: Cartesian.get_coordination_sphere

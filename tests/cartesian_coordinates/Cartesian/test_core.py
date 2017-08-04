@@ -161,7 +161,7 @@ def test_coordination_sphere():
     expctd[6] = set()
 
     for i in expctd:
-        assert expctd[i] == set(molecule.give_coordination_sphere(7, i).index)
+        assert expctd[i] == set(molecule.get_coordination_sphere(7, i).index)
 
 
 def test_cutsphere():

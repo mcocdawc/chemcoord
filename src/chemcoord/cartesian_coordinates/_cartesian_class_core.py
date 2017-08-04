@@ -502,8 +502,9 @@ class CartesianCore(PandasWrapper, GenericCore):
         self._metadata['val_bond_dict'] = val_bond_dict
         return val_bond_dict
 
-    def give_coordination_sphere(
+    def get_coordination_sphere(
             self, index_of_atom, n_sphere=1, give_only_index=False,
+            only_surface=True, exclude=None,
             use_lookup=settings['defaults']['use_lookup']):
         """Return a Cartesian of atoms in the n-th coordination sphere.
 
@@ -514,50 +515,10 @@ class CartesianCore(PandasWrapper, GenericCore):
             give_only_index (bool): If ``True`` a set of indices is
                 returned. Otherwise a new Cartesian instance.
             n_sphere (int): Determines the number of the coordination sphere.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
-
-        Returns:
-            A set of indices or a new Cartesian instance.
-        """
-        bond_dict = self.get_bonds(use_lookup=use_lookup)
-        i = index_of_atom
-        visited = set([i])
-        try:
-            tmp_bond_dict = {j: (bond_dict[j] - visited) for j in bond_dict[i]}
-        except KeyError:
-            tmp_bond_dict = {}
-        n = 0
-        while tmp_bond_dict and (n + 1) < n_sphere:
-            new_tmp_bond_dict = {}
-            for i in tmp_bond_dict:
-                if i in visited:
-                    continue
-                visited.add(i)
-                for j in tmp_bond_dict[i]:
-                    new_tmp_bond_dict[j] = bond_dict[j] - visited
-            tmp_bond_dict = new_tmp_bond_dict
-            n += 1
-        if give_only_index:
-            return set(tmp_bond_dict.keys())
-        else:
-            return self.loc[set(tmp_bond_dict.keys())]
-
-    def connected_to(
-            self, index_of_atom, n_sphere=float('inf'), give_only_index=False,
-            exclude=None, use_lookup=settings['defaults']['use_lookup']):
-        """Return a Cartesian of atoms connected to the specified one.
-
-        Connected means that a path along covalent bonds exists.
-
-        Args:
-            index_of_atom (int):
-            give_only_index (bool): If ``True`` a set of indices is
-                returned. Otherwise a new Cartesian instance.
+            only_surface (bool): Return only the surface of the coordination
+                sphere.
             exclude (set): A set of indices that should be ignored
                 for the path finding.
-            n_sphere (int): Determines a maximum number
-                for the coordination sphere.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
 
@@ -567,26 +528,35 @@ class CartesianCore(PandasWrapper, GenericCore):
         exclude = set() if exclude is None else exclude
         bond_dict = self.get_bonds(use_lookup=use_lookup)
         i = index_of_atom
-        visited = set([i]) | exclude
-        try:
-            tmp_bond_dict = {j: (bond_dict[j] - visited) for j in bond_dict[i]}
-        except KeyError:
-            tmp_bond_dict = {}
-        n = 0
-        while tmp_bond_dict and (n) < n_sphere:
-            new_tmp_bond_dict = {}
-            for i in tmp_bond_dict:
-                if i in visited:
-                    continue
-                visited.add(i)
-                for j in tmp_bond_dict[i]:
-                    new_tmp_bond_dict[j] = bond_dict[j] - visited
-            tmp_bond_dict = new_tmp_bond_dict
-            n += 1
-        if give_only_index:
-            return visited - exclude
+        if n_sphere != 0:
+            visited = set([i])
+            try:
+                tmp_bond_dict = {j: (bond_dict[j] - visited)
+                                 for j in bond_dict[i]}
+            except KeyError:
+                tmp_bond_dict = {}
+            n = 0
+            while tmp_bond_dict and (n + 1) < n_sphere:
+                new_tmp_bond_dict = {}
+                for i in tmp_bond_dict:
+                    if i in visited:
+                        continue
+                    visited.add(i)
+                    for j in tmp_bond_dict[i]:
+                        new_tmp_bond_dict[j] = bond_dict[j] - visited
+                tmp_bond_dict = new_tmp_bond_dict
+                n += 1
+            if only_surface:
+                index_out = set(tmp_bond_dict.keys())
+            else:
+                index_out = visited | set(tmp_bond_dict.keys())
         else:
-            return self.loc[visited - exclude]
+            index_out = {i}
+
+        if give_only_index:
+            return index_out - exclude
+        else:
+            return self.loc[index_out - exclude]
 
     def _preserve_bonds(self, sliced_cartesian,
                         use_lookup=settings['defaults']['use_lookup']):
@@ -619,8 +589,10 @@ class CartesianCore(PandasWrapper, GenericCore):
             index_of_interest = new_atoms.pop()
             included_atoms_set = (
                 included_atoms_set |
-                self.connected_to(
+                self.get_coordination_sphere(
                     index_of_interest,
+                    n_sphere=float('inf'),
+                    only_surface=False,
                     exclude=included_atoms_set,
                     give_only_index=True,
                     use_lookup=use_lookup))
@@ -886,8 +858,9 @@ class CartesianCore(PandasWrapper, GenericCore):
         self.get_bonds(use_lookup=use_lookup)
 
         while pending:
-            index = self.connected_to(pick(pending), use_lookup=True,
-                                      give_only_index=True)
+            index = self.get_coordination_sphere(
+                pick(pending), use_lookup=True, n_sphere=float('inf'),
+                only_surface=False, give_only_index=True)
             pending = pending - index
             if give_only_index:
                 fragments.append(index)
@@ -938,9 +911,9 @@ class CartesianCore(PandasWrapper, GenericCore):
         """
         exclude = [tuple[0] for tuple in list_of_indextuples]
         index_of_atom = list_of_indextuples[0][1]
-        fragment_index = self.connected_to(index_of_atom, exclude=set(exclude),
-                                           give_only_index=True,
-                                           use_lookup=use_lookup)
+        fragment_index = self.get_coordination_sphere(
+            index_of_atom, exclude=set(exclude), n_sphere=float('inf'),
+            only_surface=False, give_only_index=True, use_lookup=use_lookup)
         if give_only_index:
             return fragment_index
         else:
@@ -1218,9 +1191,9 @@ class CartesianCore(PandasWrapper, GenericCore):
                 the set of indices of atoms in this environment.
         """
         def get_chem_env(self, i, n_sphere):
-            env_index = self.connected_to(i, n_sphere=n_sphere,
-                                          give_only_index=True,
-                                          use_lookup=use_lookup)
+            env_index = self.get_coordination_sphere(
+                i, n_sphere=n_sphere, only_surface=False,
+                give_only_index=True, use_lookup=use_lookup)
             env_index.remove(i)
             atoms = self.loc[env_index, 'atom']
             environment = frozenset(collections.Counter(atoms).most_common())
