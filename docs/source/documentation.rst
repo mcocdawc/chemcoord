@@ -10,5 +10,4 @@ Contents:
 
     cartesian_coordinates
     internal_coordinates
-    utilities
     configuration

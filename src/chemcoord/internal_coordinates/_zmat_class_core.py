@@ -13,13 +13,13 @@ from numba import jit
 import chemcoord.constants as constants
 import chemcoord.internal_coordinates._indexers as indexers
 from chemcoord._generic_classes.generic_core import GenericCore
+from chemcoord.cartesian_coordinates.xyz_functions import (
+    _jit_cross, _jit_get_rotation_matrix,
+    _jit_isclose, _jit_normalize)
 from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
                                   InvalidReference, PhysicalMeaning)
 from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
     PandasWrapper
-from chemcoord.utilities.algebra_utilities import (_jit_cross, _jit_isclose,
-                                                   _jit_normalize,
-                                                   _jit_get_rotation_matrix)
 
 
 @jit(nopython=True)
@@ -108,6 +108,17 @@ class ZmatCore(PandasWrapper, GenericCore):
 
     @property
     def loc(self):
+        """Label based indexing for obtaining elements.
+
+        In the case of obtaining elements, the indexing behaves like
+        Indexing and Selecting data in
+        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
+
+        For assigning elements it is necessary to make a explicit decision
+        between safe and unsafe assignments.
+        The differences are explained in the stub page of
+        :meth:`~Zmat.safe_loc`.
+        """
         return indexers._Loc(self)
 
     @property
@@ -120,6 +131,12 @@ class ZmatCore(PandasWrapper, GenericCore):
 
     @property
     def iloc(self):
+        """Integer position based indexing for obtaining elements.
+
+        In the case of obtaining elements, the indexing behaves like
+        Indexing and Selecting data in
+        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
+        """
         return indexers._ILoc(self)
 
     @property

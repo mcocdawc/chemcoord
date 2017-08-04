@@ -20,8 +20,7 @@ from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
 from chemcoord.cartesian_coordinates.xyz_functions import dot
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
-from chemcoord.utilities import algebra_utilities
-from chemcoord.utilities.algebra_utilities import get_kabsch_rotation
+import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 from chemcoord.utilities.set_utilities import pick
 from six.moves import zip  # pylint:disable=redefined-builtin
 
@@ -1039,7 +1038,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         molecule = self.add_data('mass')
         molecule = molecule - molecule.get_barycenter()
         inertia, eig_v, diag_inertia = calculate_inertia_tensor(molecule)
-        eig_v = algebra_utilities.orthonormalize_righthanded(eig_v)
+        eig_v = xyz_functions.orthonormalize_righthanded(eig_v)
         molecule = molecule.basistransform(eig_v)
         return {'transformed_Cartesian': molecule, 'eigenvectors': eig_v,
                 'diag_inertia_tensor': diag_inertia, 'inertia_tensor': inertia}
@@ -1056,7 +1055,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         handed. Besides all involved matrices are transposed
         instead of inverted.
         In some applications this may require the function
-        :func:`algebra_utilities.orthonormalize` as a previous step.
+        :func:`xyz_functions.orthonormalize` as a previous step.
 
         Args:
             old_basis (np.array):
@@ -1071,7 +1070,7 @@ class CartesianCore(PandasWrapper, GenericCore):
 
         is_rotation_matrix = np.isclose(np.linalg.det(new_basis), 1)
         if not is_rotation_matrix and orthonormalize:
-            new_basis = algebra_utilities.orthonormalize_righthanded(new_basis)
+            new_basis = xyz_functions.orthonormalize_righthanded(new_basis)
             is_rotation_matrix = True
 
         if is_rotation_matrix:
@@ -1209,7 +1208,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         The rotation minimises the distances between the
         atom pairs of same label.
         Uses the Kabsch algorithm implemented within
-        :func:`~.algebra_utilities.get_kabsch_rotation`
+        :func:`~.xyz_functions.get_kabsch_rotation`
 
         .. note:: If ``indices is None``, then ``len(self) == len(other)``
             must be true and the elements in each index have to be the same.
@@ -1245,7 +1244,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         else:
             pos1 = m1.loc[:, ['x', 'y', 'z']].values
             pos2 = m2.loc[m1.index, ['x', 'y', 'z']].values
-        m2 = dot(get_kabsch_rotation(pos1, pos2), m2)
+        m2 = dot(xyz_functions.get_kabsch_rotation(pos1, pos2), m2)
         return m1, m2
 
     def reindex_similar(self, other, n_sphere=4):

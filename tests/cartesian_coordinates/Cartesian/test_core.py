@@ -1,18 +1,18 @@
-from __future__ import with_statement
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
 
-import chemcoord as cc
-from chemcoord.xyz_functions import allclose
-import pytest
-from chemcoord.exceptions import UndefinedCoordinateSystem, PhysicalMeaning
-from chemcoord.cartesian_coordinates.xyz_functions import dot
 import itertools
 import os
 import sys
+
 import numpy as np
+import pytest
+
+import chemcoord as cc
+from chemcoord.cartesian_coordinates.xyz_functions import (dot,
+                                                           get_rotation_matrix)
+from chemcoord.exceptions import PhysicalMeaning, UndefinedCoordinateSystem
+from chemcoord.xyz_functions import allclose
 
 
 def get_script_path():
@@ -194,8 +194,8 @@ def test_get_inertia():
     assert cc.xyz_functions.allclose(
         dot(eig, (molecule - molecule.get_barycenter())), t_mol)
 
-    rot_mat = cc.utilities.algebra_utilities.get_rotation_matrix([1, 1, 1], 72)
-    molecule2 = dot(rot_mat, molecule)
+    molecule2 = dot(get_rotation_matrix([1, 1, 1], 72),
+                    molecule)
     B = molecule2.get_inertia()
     assert cc.xyz_functions.allclose(B['transformed_Cartesian'], t_mol)
 
@@ -243,7 +243,6 @@ def test_align():
     cartesians = cc.xyz_functions.read_molden(
         get_complete_path('total_movement.molden'), start_index=1)
     m1, m2 = cartesians[0], cartesians[-1]
-    get_rotation_matrix = cc.utilities.algebra_utilities.get_rotation_matrix
     m2 = dot(get_rotation_matrix([1, 1, 1], 0.334), m2) + 5
     m1, m2_aligned = m1.align(m2)
     dev = abs((m2_aligned - m1).loc[:, ['x', 'y', 'z']]).sum() / len(m1)
@@ -255,8 +254,7 @@ def test_align_and_reindex_similar():
         get_complete_path('total_movement.molden'), start_index=1)
     m2 = cartesians[-1]
 
-    get_rotation_matrix = cc.utilities.algebra_utilities.get_rotation_matrix
-    m2_shuffled = dot(get_rotation_matrix([1, 1, 1], 1.2), m2) + 8
+    m2_shuffled = dot(get_rotation_matrix([1, 1, 1], .2), m2) + 8
     np.random.seed(77)
     m2_shuffled.index = np.random.permutation(m2.index)
 
