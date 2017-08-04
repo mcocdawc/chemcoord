@@ -125,7 +125,7 @@ def orthonormalize_righthanded(basis):
     return np.array([e1, e2, e3]).T
 
 
-def give_kabsch_rotation(Q, P):
+def get_kabsch_rotation(Q, P):
     """Calculate the optimal rotation from ``P`` unto ``Q``.
 
     Using the Kabsch algorithm the optimal rotation matrix

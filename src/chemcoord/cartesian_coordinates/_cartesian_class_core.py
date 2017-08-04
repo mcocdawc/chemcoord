@@ -21,7 +21,7 @@ from chemcoord.cartesian_coordinates.xyz_functions import dot
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
 from chemcoord.utilities import algebra_utilities
-from chemcoord.utilities.algebra_utilities import give_kabsch_rotation
+from chemcoord.utilities.algebra_utilities import get_kabsch_rotation
 from chemcoord.utilities.set_utilities import pick
 from six.moves import zip  # pylint:disable=redefined-builtin
 
@@ -1209,7 +1209,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         The rotation minimises the distances between the
         atom pairs of same label.
         Uses the Kabsch algorithm implemented within
-        :func:`~.algebra_utilities.give_kabsch_rotation`
+        :func:`~.algebra_utilities.get_kabsch_rotation`
 
         .. note:: If ``indices is None``, then ``len(self) == len(other)``
             must be true and the elements in each index have to be the same.
@@ -1245,7 +1245,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         else:
             pos1 = m1.loc[:, ['x', 'y', 'z']].values
             pos2 = m2.loc[m1.index, ['x', 'y', 'z']].values
-        m2 = dot(give_kabsch_rotation(pos1, pos2), m2)
+        m2 = dot(get_kabsch_rotation(pos1, pos2), m2)
         return m1, m2
 
     def make_similar(self, other, follow_bonds=4):
