@@ -735,7 +735,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         except KeyError:
             mass = self.add_data('mass')['mass'].values
         pos = self.loc[:, ['x', 'y', 'z']].values
-        barycenter = (pos * mass[:, None]).sum(axis=0) / self.total_mass()
+        barycenter = (pos * mass[:, None]).sum(axis=0) / self.get_total_mass()
         return barycenter
 
     def bond_lengths(self, indices):

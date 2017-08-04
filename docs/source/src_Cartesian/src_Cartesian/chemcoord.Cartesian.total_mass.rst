@@ -3,4 +3,4 @@ chemcoord\.Cartesian\.total\_mass
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.total_mass
+.. automethod:: Cartesian.get_total_mass

@@ -18,7 +18,7 @@ chemcoord\.Cartesian
          ~Cartesian.fragmentate
          ~Cartesian.get_without
          ~Cartesian.add_data
-         ~Cartesian.total_mass
+         ~Cartesian.get_total_mass
          ~Cartesian.connected_to
          ~Cartesian.partition_chem_env
 

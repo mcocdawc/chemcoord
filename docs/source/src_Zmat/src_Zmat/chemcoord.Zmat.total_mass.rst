@@ -3,4 +3,4 @@ chemcoord\.Zmat\.total\_mass
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Zmat.total_mass
+.. automethod:: Zmat.get_total_mass

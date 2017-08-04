@@ -57,7 +57,7 @@ class GenericCore(object):
         new_frame.index = self.index
         return self.__class__(pd.concat([self._frame, new_frame], axis=1))
 
-    def total_mass(self):
+    def get_total_mass(self):
         """Returns the total mass in g/mol.
 
         Args:
