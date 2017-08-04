@@ -1248,11 +1248,11 @@ class CartesianCore(PandasWrapper, GenericCore):
         m2 = dot(get_kabsch_rotation(pos1, pos2), m2)
         return m1, m2
 
-    def reindex_similar(self, other, follow_bonds=4):
-        """Similarize two Cartesians.
+    def reindex_similar(self, other, n_sphere=4):
+        """Reindex ``other`` to be similarly indexed as ``self``.
 
         Returns a reindexed copy of ``other`` that minimizes the
-        distance for each atom in the same chemical environemt
+        distance for each atom to itself in the same chemical environemt
         from ``self`` to ``other``.
         Read more about the definition of the chemical environment in
         :func:`Cartesian.partition_chem_env`
@@ -1261,12 +1261,13 @@ class CartesianCore(PandasWrapper, GenericCore):
             applying this method.
             This can be done via :meth:`~Cartesian.align`.
 
-        .. note:: It is probably necessary to use the function
-            :func:`Cartesian.change_numbering()` manually on the result.
+        .. note:: It is probably necessary to improve the result using
+            :meth:`~Cartesian.change_numbering()`.
 
         Args:
             other (Cartesian):
-            follow_bonds (int):
+            n_sphere (int): Wrapper around the argument for
+                :meth:`~Cartesian.partition_chem_env`.
 
         Returns:
             Cartesian: Reindexed version of other
@@ -1304,8 +1305,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         molecule1 = self.copy()
         molecule2 = other.copy()
 
-        partition1 = molecule1.partition_chem_env(follow_bonds)
-        partition2 = molecule2.partition_chem_env(follow_bonds)
+        partition1 = molecule1.partition_chem_env(n_sphere)
+        partition2 = molecule2.partition_chem_env(n_sphere)
 
         index_dct = {}
         for key in partition1:
