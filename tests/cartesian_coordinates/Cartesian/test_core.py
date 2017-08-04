@@ -186,8 +186,8 @@ def test_cut_cuboid():
                                        outside_sliced=False).index))
 
 
-def test_inertia():
-    A = molecule.inertia()
+def test_get_inertia():
+    A = molecule.get_inertia()
     eig, t_mol = A['eigenvectors'], A['transformed_Cartesian']
     assert cc.xyz_functions.allclose(
         (molecule - molecule.get_barycenter()).__rmatmul__(eig), t_mol)
@@ -196,7 +196,7 @@ def test_inertia():
 
     rot_mat = cc.utilities.algebra_utilities.rotation_matrix([1, 1, 1], 72)
     molecule2 = dot(rot_mat, molecule)
-    B = molecule2.inertia()
+    B = molecule2.get_inertia()
     assert cc.xyz_functions.allclose(B['transformed_Cartesian'], t_mol)
 
 

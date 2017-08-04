@@ -191,8 +191,8 @@ def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
         raise ValueError(message)
 
     if align:
-        a = a.inertia()['transformed_Cartesian']
-        b = b.inertia()['transformed_Cartesian']
+        a = a.get_inertia()['transformed_Cartesian']
+        b = b.get_inertia()['transformed_Cartesian']
     A, B = a.loc[:, coords], b.loc[a.index, coords]
     out = a._frame.copy()
     out['atom'] = True

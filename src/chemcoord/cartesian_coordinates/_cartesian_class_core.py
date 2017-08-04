@@ -988,7 +988,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
         return i, j, d
 
-    def inertia(self):
+    def get_inertia(self):
         """Calculate the inertia tensor and transforms along
         rotation axes.
 

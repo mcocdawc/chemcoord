@@ -44,7 +44,7 @@ chemcoord\.Cartesian
          ~Cartesian.get_angle_degrees
          ~Cartesian.get_dihedral_degrees
          ~Cartesian.get_barycenter
-         ~Cartesian.inertia
+         ~Cartesian.get_inertia
          ~Cartesian.get_centroid
          ~Cartesian.distance_to
          ~Cartesian.shortest_distance
