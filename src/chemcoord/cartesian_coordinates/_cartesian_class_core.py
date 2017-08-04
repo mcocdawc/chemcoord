@@ -1248,7 +1248,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         m2 = dot(get_kabsch_rotation(pos1, pos2), m2)
         return m1, m2
 
-    def make_similar(self, other, follow_bonds=4):
+    def reindex_similar(self, other, follow_bonds=4):
         """Similarize two Cartesians.
 
         Returns a reindexed copy of ``other`` that minimizes the
@@ -1257,20 +1257,19 @@ class CartesianCore(PandasWrapper, GenericCore):
         Read more about the definition of the chemical environment in
         :func:`Cartesian.partition_chem_env`
 
-        .. warning:: Please check the result with e.g.
-            :func:`Cartesian.get_movement_to()`
-            It is probably necessary to use the function
-            :func:`Cartesian.change_numbering()`.
+        .. note:: It is necessary to align ``self`` and other before
+            applying this method.
+            This can be done via :meth:`~Cartesian.align`.
+
+        .. note:: It is probably necessary to use the function
+            :func:`Cartesian.change_numbering()` manually on the result.
 
         Args:
             other (Cartesian):
-            max_follow_bonds (int):
-            prealign (bool): The method :func:`Cartesian.align()`
-            is applied before reindexing.
+            follow_bonds (int):
 
         Returns:
-            tuple: Aligned copy of ``self`` and aligned + reindexed
-            version of ``other``
+            Cartesian: Reindexed version of other
         """
         def make_subset_similar(m1, subset1, m2, subset2, index_dct):
             """Changes index_dct INPLACE"""
@@ -1278,7 +1277,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             index1 = list(subset1)
             for m1_i in index1:
                 dist_m2_to_m1_i = m2.get_distance_to(m1.loc[m1_i, coords],
-                                                 subset2, sort=True)
+                                                     subset2, sort=True)
 
                 m2_i = dist_m2_to_m1_i.index[0]
                 dist_new = dist_m2_to_m1_i.loc[m2_i, 'distance']

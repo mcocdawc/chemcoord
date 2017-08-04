@@ -32,6 +32,7 @@ chemcoord\.Cartesian
          ~Cartesian.cut_sphere
          ~Cartesian.basistransform
          ~Cartesian.align
+         ~Cartesian.reindex_similar
          ~Cartesian.change_numbering
          ~Cartesian.subs
 
