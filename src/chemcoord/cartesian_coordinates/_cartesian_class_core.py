@@ -21,7 +21,6 @@ from chemcoord.cartesian_coordinates.xyz_functions import dot
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
 import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
-from chemcoord.utilities.set_utilities import pick
 from six.moves import zip  # pylint:disable=redefined-builtin
 
 
@@ -853,7 +852,7 @@ class CartesianCore(PandasWrapper, GenericCore):
 
         while pending:
             index = self.get_coordination_sphere(
-                pick(pending), use_lookup=True, n_sphere=float('inf'),
+                pending.pop(), use_lookup=True, n_sphere=float('inf'),
                 only_surface=False, give_only_index=True)
             pending = pending - index
             if give_only_index:
