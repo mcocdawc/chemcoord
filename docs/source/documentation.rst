@@ -9,6 +9,6 @@ Contents:
     :maxdepth: 1
 
     cartesian_coordinates
-    configuration
     internal_coordinates
     utilities
+    configuration

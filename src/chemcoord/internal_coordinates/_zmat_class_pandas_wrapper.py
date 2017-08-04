@@ -32,7 +32,7 @@ class PandasWrapper(object):
     def index(self):
         """Returns the index.
 
-        Assigning a value to it changes the index.
+        Wrapper around the :meth:`pandas.DataFrame.index` property.
         """
         return self._frame.index
 
@@ -40,16 +40,24 @@ class PandasWrapper(object):
     def columns(self):
         """Returns the columns.
 
-        Assigning a value to it changes the columns.
+        Wrapper around the :meth:`pandas.DataFrame.columns` property.
         """
         return self._frame.columns
 
     @property
     def shape(self):
+        """Returns the shape.
+
+        Wrapper around the :meth:`pandas.DataFrame.shape` property.
+        """
         return self._frame.shape
 
     @property
     def dtypes(self):
+        """Returns the dtypes.
+
+        Wrapper around the :meth:`pandas.DataFrame.dtypes` property.
+        """
         return self._frame.dtypes
 
     def sort_values(self, by, axis=0, ascending=True,

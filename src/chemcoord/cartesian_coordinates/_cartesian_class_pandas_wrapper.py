@@ -38,52 +38,66 @@ class PandasWrapper(object):
         """Label based indexing
 
         The indexing behaves like Indexing and Selecting data in
-        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
+        You can slice with :meth:`~chemcoord.Cartesian.loc`,
+        :meth:`~chemcoord.Cartesian.iloc`
+        and ``Cartesian[...]``.
         The only question is about the return type.
         If the information in the columns is enough to draw a molecule,
         an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
         is returned.
-        If the information in the columns is not enough to draw a molecule
-        a :class:`~pandas.Series` instance is returned for one dimensional
-        slices and a :class:`~pandas.DataFrame` instance in all other cases.
+        If the information in the columns is not enough to draw a molecule,
+        there are two cases to consider:
 
-        In the case of a :class:`~chemcoord.Cartesian` class this means:
+            * A :class:`~pandas.Series` instance is
+              returned for one dimensional slices.
+            * A :class:`~pandas.DataFrame` instance is returned
+              in all other cases.
+
+        This means that:
 
             ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
             :class:`~chemcoord.Cartesian`.
 
             ``molecule.loc[:, ['atom', 'x']]`` returns a
-            :class:`~pandas.DataFrame`.
+            :class:`pandas.DataFrame`.
 
             ``molecule.loc[:, 'atom']`` returns a
-            :class:`~pandas.Series`.
+            :class:`pandas.Series`.
         """
         return indexers._Loc(self)
 
     @property
     def iloc(self):
-        """Row based indexing
+        """Label based indexing
 
-        The indexing behaves like Indexing and Selecting data in Pandas
-        `<http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        The indexing behaves like Indexing and Selecting data in
+        `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
+        You can slice with :meth:`~chemcoord.Cartesian.loc`,
+        :meth:`~chemcoord.Cartesian.iloc`
+        and ``Cartesian[...]``.
         The only question is about the return type.
         If the information in the columns is enough to draw a molecule,
         an instance of the own class (e.g. :class:`~chemcoord.Cartesian`)
         is returned.
-        If the information in the columns is not enough to draw a molecule
-        a :class:`~pandas.Series` instance is returned for one dimensional
-        slices and a :class:`~pandas.DataFrame` instance in all other cases.
+        If the information in the columns is not enough to draw a molecule,
+        there are two cases to consider:
 
-        In the case of a :class:`~chemcoord.Cartesian` class this means:
+            * A :class:`~pandas.Series` instance is
+              returned for one dimensional slices.
+            * A :class:`~pandas.DataFrame` instance is returned
+              in all other cases.
 
-            ``molecule.iloc[:, ['atom', 'x', 'y', 'z']]`` returns a
+        This means that:
+
+            ``molecule.loc[:, ['atom', 'x', 'y', 'z']]`` returns a
             :class:`~chemcoord.Cartesian`.
 
-            ``molecule.iloc[:, ['atom', 'x']]`` returns a
-            :class:`~pandas.DataFrame`.
+            ``molecule.loc[:, ['atom', 'x']]`` returns a
+            :class:`pandas.DataFrame`.
 
-            ``molecule.iloc[:, 'atom']`` returns a
-            :class:`~pandas.Series`.
+            ``molecule.loc[:, 'atom']`` returns a
+            :class:`pandas.Series`.
         """
         return indexers._ILoc(self)
 

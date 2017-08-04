@@ -21,6 +21,18 @@ chemcoord\.Zmat
       ~Zmat.subs
 
 
+   .. rubric:: Selection of data
+
+   .. autosummary::
+      :toctree: src_Zmat
+
+      ~Zmat.loc
+      ~Zmat.safe_loc
+      ~Zmat.unsafe_loc
+      ~Zmat.iloc
+      ~Zmat.safe_iloc
+      ~Zmat.unsafe_iloc
+
    .. rubric:: Pandas DataFrame Wrapper
 
    .. autosummary::
@@ -32,8 +44,6 @@ chemcoord\.Zmat
       Zmat.sort_index
       ~Zmat.insert
       ~Zmat.sort_values
-      ~Zmat.loc
-      ~Zmat.iloc
 
 
    .. rubric:: IO
@@ -54,7 +64,6 @@ chemcoord\.Zmat
       :toctree: src_Zmat
 
       ~Zmat.columns
-      ~Zmat.iloc
       ~Zmat.index
-      ~Zmat.loc
       ~Zmat.shape
+      ~Zmat.dtypes
