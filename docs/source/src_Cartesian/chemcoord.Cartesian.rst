@@ -40,7 +40,7 @@ chemcoord\.Cartesian
     .. autosummary::
          :toctree: src_Cartesian
 
-         ~Cartesian.bond_lengths
+         ~Cartesian.get_bond_lengths
          ~Cartesian.angle_degrees
          ~Cartesian.dihedral_degrees
          ~Cartesian.get_barycenter

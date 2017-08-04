@@ -3,4 +3,4 @@ chemcoord\.Cartesian\.bond\_lengths
 
 .. currentmodule:: chemcoord
 
-.. automethod:: Cartesian.bond_lengths
+.. automethod:: Cartesian.get_bond_lengths

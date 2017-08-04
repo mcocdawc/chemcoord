@@ -31,11 +31,11 @@ molecule = cc.Cartesian.read_xyz(os.path.join(STRUCTURES, 'MIL53_small.xyz'))
 
 
 def test_bond_length():
-    calculated = molecule.bond_lengths([0, 1])[0]
+    calculated = molecule.get_bond_lengths([0, 1])[0]
     expctd_res = 1.3041493563710411
     assert np.allclose(calculated, expctd_res)
 
-    calculated = molecule.bond_lengths([[0, 1], [1, 2]])
+    calculated = molecule.get_bond_lengths([[0, 1], [1, 2]])
     expct_res = np.array([1.30414936, 3.25813467])
     assert np.allclose(calculated, expct_res)
 

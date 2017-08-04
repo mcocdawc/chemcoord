@@ -709,7 +709,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         pos = self.loc[:, ['x', 'y', 'z']].values
         return (pos * mass[:, None]).sum(axis=0) / self.get_total_mass()
 
-    def bond_lengths(self, indices):
+    def get_bond_lengths(self, indices):
         """Return the distances between given atoms.
 
         Calculates the distance between the atoms with
