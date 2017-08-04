@@ -961,7 +961,7 @@ class CartesianCore(PandasWrapper, GenericCore):
                 D[i, j] = np.sqrt(((pos1[i] - pos2[j])**2).sum())
         return D
 
-    def shortest_distance(self, other):
+    def get_shortest_distance(self, other):
         """Calculate the shortest distance between self and other
 
         Args:

@@ -47,7 +47,7 @@ chemcoord\.Cartesian
          ~Cartesian.get_inertia
          ~Cartesian.get_centroid
          ~Cartesian.get_distance_to
-         ~Cartesian.shortest_distance
+         ~Cartesian.get_shortest_distance
 
     .. rubric:: Conversion to internal coordinates
 

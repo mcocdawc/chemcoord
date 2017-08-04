@@ -53,7 +53,7 @@ def test_fragmentate():
     assert np.alltrue(fragments[0] == molecule)
 
 
-def test_shortest_distance():
-    i, j, d = molecule.shortest_distance(molecule + [0, 0, 10])
+def test_get_shortest_distance():
+    i, j, d = molecule.get_shortest_distance(molecule + [0, 0, 10])
     assert (i, j) == (27, 24)
     assert np.allclose(d, 4.2537465795414988)
