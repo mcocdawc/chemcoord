@@ -71,6 +71,8 @@ class ZmatCore(PandasWrapper, GenericCore):
     """
     _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
                                 'd', 'dihedral'})
+    dummy_manipulation_allowed = True
+    test_operators = True
 
     def __init__(self, frame, metadata=None, _metadata=None):
         """How to initialize a Zmat instance.
@@ -106,10 +108,6 @@ class ZmatCore(PandasWrapper, GenericCore):
                 _metadata['last_valid_cartesian'] = self.get_cartesian()
             if 'has_dummies' not in _metadata:
                 _metadata['has_dummies'] = {}
-            if 'dummy_manipulation_allowed' not in _metadata:
-                _metadata['dummy_manipulation_allowed'] = True
-            if 'test_operators' not in _metadata:
-                _metadata['test_operators'] = True
 
         fill_missing_keys_with_defaults(self._metadata)
 
@@ -193,7 +191,7 @@ and assigning values safely.
         else:
             result = self.loc[:, coords] + other
         new = self.copy()
-        if self._metadata['test_operators']:
+        if self.test_operators:
             new.safe_loc[:, coords] = result
         else:
             new.unsafe_loc[:, coords] = result
@@ -210,7 +208,7 @@ and assigning values safely.
         else:
             result = self.loc[:, coords] - other
         new = self.copy()
-        if self._metadata['test_operators']:
+        if self.test_operators:
             new.safe_loc[:, coords] = result
         else:
             new.unsafe_loc[:, coords] = result
@@ -224,7 +222,7 @@ and assigning values safely.
         else:
             result = other - self.loc[:, coords]
         new = self.copy()
-        if self._metadata['test_operators']:
+        if self.test_operators:
             new.safe_loc[:, coords] = result
         else:
             new.unsafe_loc[:, coords] = result
@@ -238,7 +236,7 @@ and assigning values safely.
         else:
             result = self.loc[:, coords] * other
         new = self.copy()
-        if self._metadata['test_operators']:
+        if self.test_operators:
             new.safe_loc[:, coords] = result
         else:
             new.unsafe_loc[:, coords] = result
@@ -255,7 +253,7 @@ and assigning values safely.
         else:
             result = self.loc[:, coords] / other
         new = self.copy()
-        if self._metadata['test_operators']:
+        if self.test_operators:
             new.safe_loc[:, coords] = result
         else:
             new.unsafe_loc[:, coords] = result
@@ -269,7 +267,7 @@ and assigning values safely.
         else:
             result = other / self.loc[:, coords]
         new = self.copy()
-        if self._metadata['test_operators']:
+        if self.test_operators:
             new.safe_loc[:, coords] = result
         else:
             new.unsafe_loc[:, coords] = result
@@ -278,7 +276,7 @@ and assigning values safely.
     def __pow__(self, other):
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        if self._metadata['test_operators']:
+        if self.test_operators:
             new.safe_loc[:, coords] = self.loc[:, coords]**other
         else:
             new.unsafe_loc[:, coords] = self.loc[:, coords]**other
@@ -293,7 +291,7 @@ and assigning values safely.
     def __abs__(self):
         coords = ['bond', 'angle', 'dihedral']
         new = self.copy()
-        if self._metadata['test_operators']:
+        if self.test_operators:
             new.safe_loc[:, coords] = abs(self.loc[:, coords])
         else:
             new.unsafe_loc[:, coords] = abs(self.loc[:, coords])
@@ -463,7 +461,7 @@ and assigning values safely.
                 # Unevaluated symbolic expressions are remaining.
                 pass
             except InvalidReference as e:
-                if out._metadata['dummy_manipulation_allowed']:
+                if out.dummy_manipulation_allowed:
                     out._manipulate_dummies(e, inplace=True)
                 else:
                     raise e

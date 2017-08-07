@@ -27,7 +27,7 @@ class _Unsafe_Loc(_Loc):
 
 class _Safe_Loc(_Loc):
     def __setitem__(self, key, value):
-        if self.molecule._metadata['dummy_manipulation_allowed']:
+        if self.molecule.dummy_manipulation_allowed:
             molecule = self.molecule
         else:
             molecule = self.molecule.copy()
@@ -41,12 +41,12 @@ class _Safe_Loc(_Loc):
         except AttributeError:
             self.molecule = molecule
         except InvalidReference as exception:
-            if molecule._metadata['dummy_manipulation_allowed']:
+            if molecule.dummy_manipulation_allowed:
                 self.molecule._insert_dummy_zmat(exception, inplace=True)
             else:
                 exception.zmat_after_assignment = molecule
                 raise exception
-        if molecule._metadata['dummy_manipulation_allowed']:
+        if molecule.dummy_manipulation_allowed:
             try:
                 self.molecule._remove_dummies(inplace=True)
             except AttributeError:
@@ -72,7 +72,7 @@ class _Unsafe_ILoc(_ILoc):
 
 class _Safe_ILoc(_Unsafe_ILoc):
     def __setitem__(self, key, value):
-        if self.molecule._metadata['dummy_manipulation_allowed']:
+        if self.molecule.dummy_manipulation_allowed:
             molecule = self.molecule
         else:
             molecule = self.molecule.copy()
@@ -86,12 +86,12 @@ class _Safe_ILoc(_Unsafe_ILoc):
         except AttributeError:
             self.molecule = molecule
         except InvalidReference as exception:
-            if molecule._metadata['dummy_manipulation_allowed']:
+            if molecule.dummy_manipulation_allowed:
                 self.molecule._insert_dummy_zmat(exception, inplace=True)
             else:
                 exception.zmat_after_assignment = molecule
                 raise exception
-        if molecule._metadata['dummy_manipulation_allowed']:
+        if molecule.dummy_manipulation_allowed:
             try:
                 self.molecule._remove_dummies(inplace=True)
             except AttributeError:
