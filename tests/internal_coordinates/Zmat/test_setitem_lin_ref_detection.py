@@ -37,7 +37,7 @@ def test_assignment_leading_to_linear_reference():
 
     angle_before_assignment = zmolecule1.loc[4, 'angle']
 
-    with cc.DummyManipulation(zmolecule1, False):
+    with cc.DummyManipulation(False):
         with pytest.raises(InvalidReference):
             zmolecule1.safe_loc[4, 'angle'] = 180
 
@@ -54,7 +54,7 @@ def test_assignment_leading_to_linear_reference():
         zmolecule2.get_cartesian(), zmolecule1.get_cartesian())
 
     zmolecule3 = zmolecule.copy()
-    with cc.DummyManipulation(zmolecule3, False):
+    with cc.DummyManipulation(False):
         try:
             zmolecule3.safe_loc[4, 'angle'] = 180
         except InvalidReference as e:
