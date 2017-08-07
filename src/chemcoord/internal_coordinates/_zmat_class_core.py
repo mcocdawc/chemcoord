@@ -316,6 +316,100 @@ and assigning values safely.
         new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype('i8')
         return new
 
+    def iupacify(self):
+        """Give the IUPAC conform representation.
+
+        Mathematically speaking the angles in a zmatrix are
+        representations of an equivalence class.
+        We will denote an equivalence relation with :math:`\\sim`
+        and use :math:`\\alpha` for an angle and :math:`\\delta` for a dihedral
+        angle. Then the following equations hold true.
+
+        .. math::
+
+           (\\alpha, \\delta) &\sim (-\\alpha, \\delta + \\pi) \\\\
+           \\alpha &\sim \\alpha \\mod 2\\pi \\\\
+           \\delta &\sim \\delta \\mod 2\\pi
+
+        `IUPAC <https://goldbook.iupac.org/html/T/T06406.html>`_ defines
+        a designated representation of these equivalence classes, by asserting:
+
+        .. math::
+
+           0 \\leq &\\alpha \\leq \\pi \\\\
+           -\\pi \\leq &\\delta \\leq \\pi
+
+        Args:
+            None
+
+        Returns:
+            Zmat: Zmatrix with accordingly changed angles and dihedrals.
+        """
+        def convert_d(d):
+            r = d % 360
+            return r - (r // 180) * 360
+
+        new = self.copy()
+
+        new.unsafe_loc[:, 'angle'] = new['angle'] % 360
+        select = new['angle'] > 180
+        new.unsafe_loc[select, 'angle'] = new.loc[select, 'angle'] - 180
+        new.unsafe_loc[select, 'dihedral'] = new.loc[select, 'dihedral'] + 180
+
+        new.unsafe_loc[:, 'dihedral'] = convert_d(new.loc[:, 'dihedral'])
+        return new
+
+    def minimize_dihedrals(self):
+        """Give a representation of the dihedral with minimized absolute value.
+
+        Mathematically speaking the angles in a zmatrix are
+        representations of an equivalence class.
+        We will denote an equivalence relation with :math:`\\sim`
+        and use :math:`\\alpha` for an angle and :math:`\\delta` for a dihedral
+        angle. Then the following equations hold true.
+
+        .. math::
+
+           (\\alpha, \\delta) &\sim (-\\alpha, \\delta + \\pi) \\\\
+           \\alpha &\sim \\alpha \\mod 2\\pi \\\\
+           \\delta &\sim \\delta \\mod 2\\pi
+
+        This function asserts:
+
+        .. math::
+
+           -\\pi \\leq \\delta \\leq \\pi
+
+        The main application of this function is the construction of
+        a transforming movement from ``zmat1`` to ``zmat2``.
+        This is under the assumption that ``zmat1`` and ``zmat2`` are the same
+        molecules (regarding their topology) and have the same
+        construction table (:meth:`~Zmat.get_construction_table`)::
+
+          with cc.TestOperators(False):
+              D = zm2 - zm1
+              zmats1 = [zm1 + D * i / n for i in range(n)]
+              zmats2 = [zm1 + D.minimize_dihedrals() * i / n for i in range(n)]
+
+        The movement described by ``zmats1`` might be too large,
+        because going from :math:`5^\\circ` to :math:`355^\\circ` is
+        :math:`350^\\circ` in this case and not :math:`-10^\\circ` as
+        in ``zmats2`` which is the desired :math:`\\Delta` in most cases.
+
+        Args:
+            None
+
+        Returns:
+            Zmat: Zmatrix with accordingly changed angles and dihedrals.
+        """
+        new = self.copy()
+
+        def convert_d(d):
+            r = d % 360
+            return r - (r // 180) * 360
+        new.unsafe_loc[:, 'dihedral'] = convert_d(new.loc[:, 'dihedral'])
+        return new
+
     def subs(self, symb_expr, value, perform_checks=True):
         """Substitute a symbolic expression in ``['bond', 'angle', 'dihedral']``
 

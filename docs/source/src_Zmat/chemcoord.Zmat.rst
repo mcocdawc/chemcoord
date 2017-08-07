@@ -19,6 +19,8 @@ chemcoord\.Zmat
       ~Zmat.to_xyz
       ~Zmat.get_total_mass
       ~Zmat.subs
+      ~Zmat.iupacify
+      ~Zmat.minimize_dihedrals
 
 
    .. rubric:: Selection of data
