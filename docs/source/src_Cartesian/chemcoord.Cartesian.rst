@@ -74,6 +74,10 @@ chemcoord\.Cartesian
          ~Cartesian.view
          ~Cartesian.to_string
          ~Cartesian.to_latex
+         ~Cartesian.get_pymatgen_molecule
+         ~Cartesian.from_pymatgen_molecule
+         ~Cartesian.get_ase_atoms
+         ~Cartesian.from_ase_atoms
 
 
     .. rubric:: Pandas DataFrame Wrapper

@@ -209,3 +209,61 @@ class CartesianIO(CartesianCore, GenericIO):
                     os.remove(give_filename(i))
 
         Thread(target=open_file, args=(i,)).start()
+
+    def get_pymatgen_molecule(self):
+        """Create a Molecule instance of the pymatgen library
+
+        .. warning:: The `pymatgen library <http://pymatgen.org>`_ is imported
+            locally in this function and will raise
+            an ``ImportError`` exception, if it is not installed.
+
+        Args:
+            None
+
+        Returns:
+            :class:`pymatgen.core.structure.Molecule`:
+        """
+        from pymatgen import Molecule
+        return Molecule(self['atom'].values,
+                        self.loc[:, ['x', 'y', 'z']].values)
+
+    @classmethod
+    def from_pymatgen_molecule(cls, molecule):
+        """Create an instance of the own class from a pymatgen molecule
+
+        Args:
+            molecule (:class:`pymatgen.core.structure.Molecule`):
+
+        Returns:
+            Cartesian:
+        """
+        return cls(atoms=[el.value for el in molecule.species],
+                   coords=molecule.cart_coords)
+
+    def get_ase_atoms(self):
+        """Create an Atoms instance of the ase library
+
+        .. warning:: The `ase library <https://wiki.fysik.dtu.dk/ase/>`_
+            is imported locally in this function and will raise
+            an ``ImportError`` exception, if it is not installed.
+
+        Args:
+            None
+
+        Returns:
+            :class:`ase.atoms.Atoms`:
+        """
+        from ase import Atoms
+        return Atoms(''.join(self['atom']), self.loc[:, ['x', 'y', 'z']])
+
+    @classmethod
+    def from_ase_atoms(cls, atoms):
+        """Create an instance of the own class from an ase molecule
+
+        Args:
+            molecule (:class:`ase.atoms.Atoms`):
+
+        Returns:
+            Cartesian:
+        """
+        return cls(atoms=atoms.get_chemical_symbols(), coords=atoms.positions)

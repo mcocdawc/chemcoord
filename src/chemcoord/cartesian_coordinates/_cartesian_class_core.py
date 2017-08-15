@@ -237,13 +237,6 @@ class CartesianCore(PandasWrapper, GenericCore):
     def __ne__(self, other):
         return self._frame != other._frame
 
-    def _to_ase_Atoms(self):
-        import ase
-        atoms = ''.join(self.loc[:, 'atom'])
-        positions = self.loc[:, ['x', 'y', 'z']]
-        # test
-        return ase.Atoms(atoms, positions)
-
     def copy(self):
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
