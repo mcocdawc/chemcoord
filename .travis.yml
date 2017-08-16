@@ -16,6 +16,8 @@ python:
   - "3.5"
   - "3.6"
 install:
+  - git clone https://github.com/materialsproject/pymatgen.git
+  - cd pymatgen && pip install .
   - pip install codecov
   - pip install pytest-cov
   - pip install .
