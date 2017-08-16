@@ -9,7 +9,11 @@ from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 
 
 class AsymmetricUnitCartesian(Cartesian):
-    """Pew Pew
+    """The main class for manipulating cartesian coordinates while preserving
+    the point group
+
+    This class has all the methods of a :class:`~Cartesian`, with an additional
+    :meth:`~AssymetricUnitCartesian.get_cartesian` method, that returns.
     """
     def get_cartesian(self):
         coords = ['x', 'y', 'z']
