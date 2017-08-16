@@ -20,6 +20,8 @@ def export(func):
 import chemcoord.utilities
 from chemcoord.utilities._print_versions import show_versions
 from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
+from chemcoord.cartesian_coordinates.asymmetric_unit_cartesian_class import \
+    AsymmetricUnitCartesian
 import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 import chemcoord.internal_coordinates.zmat_functions as zmat_functions

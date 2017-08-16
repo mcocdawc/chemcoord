@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 import collections
 import copy
 import itertools
+from functools import partial
 from itertools import product
 
 import numba as nb
@@ -13,6 +14,7 @@ import pandas as pd
 from numba import jit
 from sortedcontainers import SortedSet
 
+import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
@@ -20,7 +22,6 @@ from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import \
 from chemcoord.cartesian_coordinates.xyz_functions import dot
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
-import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 from six.moves import zip  # pylint:disable=redefined-builtin
 
 
@@ -236,6 +237,10 @@ class CartesianCore(PandasWrapper, GenericCore):
 
     def __ne__(self, other):
         return self._frame != other._frame
+
+    def _to_numeric(self):
+        return self.__class__(self._frame.apply(
+            partial(pd.to_numeric, errors='ignore')))
 
     def copy(self):
         molecule = self.__class__(self._frame)

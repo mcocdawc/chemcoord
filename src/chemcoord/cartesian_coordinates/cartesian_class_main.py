@@ -5,9 +5,11 @@ from __future__ import (absolute_import, division, print_function,
 from chemcoord.cartesian_coordinates._cartesian_class_get_zmat import \
     CartesianGetZmat
 from chemcoord.cartesian_coordinates._cartesian_class_io import CartesianIO
+from chemcoord.cartesian_coordinates._cartesian_class_symmetry import \
+    CartesianSymmetry
 
 
-class Cartesian(CartesianIO, CartesianGetZmat):
+class Cartesian(CartesianIO, CartesianGetZmat, CartesianSymmetry):
     """The main class for dealing with cartesian Coordinates.
 
     **Mathematical Operations**:

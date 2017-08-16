@@ -237,8 +237,9 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             Cartesian:
         """
-        return cls(atoms=[el.value for el in molecule.species],
-                   coords=molecule.cart_coords)
+        new = cls(atoms=[el.value for el in molecule.species],
+                  coords=molecule.cart_coords)
+        return new._to_numeric()
 
     def get_ase_atoms(self):
         """Create an Atoms instance of the ase library

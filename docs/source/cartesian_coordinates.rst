@@ -36,3 +36,18 @@ A collection of functions operating on instances of
     ~xyz_functions.read_molden
     ~xyz_functions.view
     ~xyz_functions.dot
+
+Symmetry
+---------
+
+.. currentmodule:: chemcoord
+
+.. autosummary::
+    :toctree: src_PointGroupOperations
+
+    ~PointGroupOperations
+
+.. autosummary::
+    :toctree: src_AsymmetricUnitCartesian
+
+    ~AsymmetricUnitCartesian

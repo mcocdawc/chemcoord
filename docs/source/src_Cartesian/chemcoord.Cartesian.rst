@@ -63,6 +63,18 @@ chemcoord\.Cartesian
          ~Cartesian.correct_absolute_refs
          ~Cartesian.to_zmat
 
+    .. rubric:: Symmetry
+
+    .. autosummary::
+         :toctree: src_Cartesian
+
+         ~Cartesian.get_pointgroup
+         ~Cartesian.get_equivalent_atoms
+         ~Cartesian.symmetrize
+         ~Cartesian.get_asymmetric_unit
+
+
+
     .. rubric:: IO
 
     .. autosummary::
