@@ -237,7 +237,7 @@ class CartesianGetZmat(CartesianCore):
         int_label = constants.int_label
         if fragment_list is None:
             fragments = sorted(self.fragmentate(use_lookup=use_lookup),
-                               key=lambda x: len(x), reverse=True)
+                               key=len, reverse=True)
             # During function execution the bonding situation does not change,
             # so the lookup may be used now.
             use_lookup = True

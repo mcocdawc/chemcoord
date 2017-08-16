@@ -933,7 +933,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             index_of_all_fragments = fragments.index
         missing_part = self.loc[self.index.difference(index_of_all_fragments)]
         missing_part = missing_part.fragmentate(use_lookup=use_lookup)
-        return sorted(missing_part, key=lambda x: len(x), reverse=True)
+        return sorted(missing_part, key=len, reverse=True)
 
     @staticmethod
     @jit(nopython=True)

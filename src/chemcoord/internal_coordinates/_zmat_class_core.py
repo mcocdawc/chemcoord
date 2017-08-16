@@ -61,11 +61,6 @@ The differences are explained in the stub page of
 :meth:`~Zmat.safe_loc`.""", join='\n\n')
 
 
-@append_indexer_docstring
-def f(x):
-    pass
-
-
 class ZmatCore(PandasWrapper, GenericCore):
     """The main class for dealing with internal coordinates.
     """

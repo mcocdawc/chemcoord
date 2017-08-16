@@ -421,7 +421,7 @@ def get_kabsch_rotation(Q, P):
     # http://en.wikipedia.org/wiki/Kabsch_algorithm
     A = np.dot(np.transpose(P), Q)
     # One can't initialize an array over its transposed
-    V, S, W = np.linalg.svd(A)
+    V, S, W = np.linalg.svd(A)  # pylint:disable=unused-variable
     W = W.T
     d = np.linalg.det(np.dot(W, V.T))
     return np.linalg.multi_dot((W, np.diag([1., 1., d]), V.T))

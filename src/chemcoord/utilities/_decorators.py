@@ -1,6 +1,6 @@
 # The following code was taken from the MIT licensed pandas project
 # and modified. http://pandas.pydata.org/
-from pandas.compat import callable, signature
+from pandas.compat import callable, signature  # pylint:disable=redefined-builtin
 from pandas._libs.lib import cache_readonly  # noqa
 import types
 import warnings
@@ -217,7 +217,7 @@ def make_signature(func):
         n_wo_defaults = len(spec.args) - len(spec.defaults)
         defaults = ('',) * n_wo_defaults + spec.defaults
     args = []
-    for i, (var, default) in enumerate(zip(spec.args, defaults)):
+    for (var, default) in zip(spec.args, defaults):
         args.append(var if default == '' else var + '=' + repr(default))
     if spec.varargs:
         args.append('*' + spec.varargs)
