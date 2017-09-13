@@ -9,13 +9,23 @@ from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
 
 
 class AsymmetricUnitCartesian(Cartesian):
-    """The main class for manipulating cartesian coordinates while preserving
-    the point group
+    """Manipulate cartesian coordinates while preserving the point group.
 
-    This class has all the methods of a :class:`~Cartesian`, with an additional
-    :meth:`~AssymetricUnitCartesian.get_cartesian` method, that returns.
+    This class has all the methods of a :class:`~Cartesian`, with
+    one additional :meth:`~AsymmetricUnitCartesian.get_cartesian` method
+    and contains only one member of each symmetry equivalence class.
     """
+
     def get_cartesian(self):
+        """Return a :class:`~Cartesian` where all
+        members of a symmetry equivalence class are inserted back in.
+
+        Args:
+            None
+
+        Returns:
+            Cartesian: A new cartesian instance.
+        """
         coords = ['x', 'y', 'z']
         eq_sets = self._metadata['eq']['eq_sets']
         sym_ops = self._metadata['eq']['sym_ops']
