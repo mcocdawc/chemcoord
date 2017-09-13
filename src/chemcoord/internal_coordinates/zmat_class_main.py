@@ -6,8 +6,18 @@ from chemcoord.internal_coordinates._zmat_class_io import ZmatIO
 from chemcoord.internal_coordinates._zmat_class_gradient import ZmatGradient
 
 
-class Zmat(ZmatIO):
+class Zmat(ZmatIO, ZmatGradient):
     """The main class for dealing with internal Coordinates.
+
+    **Rotational direction:**
+
+    Chemcoord uses the
+    `IUPAC definition <https://goldbook.iupac.org/html/T/T06406.html>`_.
+    Note that this does not include the automatic choosing of the
+    canonical equivalence class representation.
+    An angle of -30° could be represented by 270°.
+    Use :meth:`~Zmat.iupacify` to choose also the
+    IUPAC conform angle representation.
 
     **Mathematical Operations**:
 
