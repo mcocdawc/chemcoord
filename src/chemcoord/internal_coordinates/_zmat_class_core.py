@@ -353,31 +353,31 @@ and assigning values safely.
         return new
 
     def minimize_dihedrals(self):
-        """Give a representation of the dihedral with minimized absolute value.
+        r"""Give a representation of the dihedral with minimized absolute value.
 
         Mathematically speaking the angles in a zmatrix are
         representations of an equivalence class.
-        We will denote an equivalence relation with :math:`\\sim`
-        and use :math:`\\alpha` for an angle and :math:`\\delta` for a dihedral
+        We will denote an equivalence relation with :math:`\sim`
+        and use :math:`\alpha` for an angle and :math:`\delta` for a dihedral
         angle. Then the following equations hold true.
 
         .. math::
 
-           (\\alpha, \\delta) &\sim (-\\alpha, \\delta + \\pi) \\\\
-           \\alpha &\sim \\alpha \\mod 2\\pi \\\\
-           \\delta &\sim \\delta \\mod 2\\pi
+           (\alpha, \delta) &\sim (-\alpha, \delta + \pi) \\
+           \alpha &\sim \alpha \mod 2\pi \\
+           \delta &\sim \delta \mod 2\pi
 
         This function asserts:
 
         .. math::
 
-           -\\pi \\leq \\delta \\leq \\pi
+           -\pi \leq \delta \leq \pi
 
         The main application of this function is the construction of
         a transforming movement from ``zmat1`` to ``zmat2``.
         This is under the assumption that ``zmat1`` and ``zmat2`` are the same
         molecules (regarding their topology) and have the same
-        construction table (:meth:`~Zmat.get_construction_table`)::
+        construction table (:meth:`~Cartesian.get_construction_table`)::
 
           with cc.TestOperators(False):
               D = zm2 - zm1
@@ -385,9 +385,9 @@ and assigning values safely.
               zmats2 = [zm1 + D.minimize_dihedrals() * i / n for i in range(n)]
 
         The movement described by ``zmats1`` might be too large,
-        because going from :math:`5^\\circ` to :math:`355^\\circ` is
-        :math:`350^\\circ` in this case and not :math:`-10^\\circ` as
-        in ``zmats2`` which is the desired :math:`\\Delta` in most cases.
+        because going from :math:`5^\circ` to :math:`355^\circ` is
+        :math:`350^\circ` in this case and not :math:`-10^\circ` as
+        in ``zmats2`` which is the desired :math:`\Delta` in most cases.
 
         Args:
             None
@@ -652,6 +652,17 @@ and assigning values safely.
         return (ERR_CODE_OK, row, positions)
 
     def get_cartesian(self):
+        """Return the molecule in cartesian coordinates.
+
+        Raises an :class:`~exceptions.InvalidReference` exception,
+        if the reference of the i-th atom is undefined.
+
+        Args:
+            None
+
+        Returns:
+            Cartesian: Reindexed version of the zmatrix.
+        """
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']].values
         zmat_values = zmat.loc[:, ['bond', 'angle', 'dihedral']].values

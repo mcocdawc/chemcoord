@@ -11,3 +11,4 @@ Contents:
     cartesian_coordinates
     internal_coordinates
     configuration
+    exceptions

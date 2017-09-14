@@ -20,6 +20,17 @@ class UndefinedCoordinateSystem(PhysicalMeaning): # noqa
 
 ERR_CODE_InvalidReference = 202
 class InvalidReference(UndefinedCoordinateSystem): # noqa
+    """Raised when the i-th atom uses an invalid reference.
+
+    May carry several attributes:
+
+    * ``i``: Index of the atom with an invalid refernce.
+    * ``b``, ``a``, and ``d``: Indices of reference atoms.
+    * ``already_built_cartesian``: The cartesian of all atoms up to (i-1)
+    * ``zmat_after_assignment``: Attached information if
+      it was raised from the safe assignment methods
+      (:meth:`Zmat.safe_loc` and :meth:`Zmat.unsafe_loc`).
+    """
     def __init__(self, message=None, i=None, b=None, a=None, d=None,
                  already_built_cartesian=None,
                  zmat_after_assignment=None):
