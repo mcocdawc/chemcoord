@@ -50,6 +50,42 @@ def _jit_calc_single_position(references, zmat_values, row):
     return (ERR_CODE_OK, vb + d)
 
 
+@jit(nopython=True)
+def _jit_S(bond, angle, dihedral):
+    d = np.empty(3)
+    d[0] = bond * np.sin(angle) * np.cos(dihedral)
+    d[1] = -bond * np.sin(angle) * np.sin(dihedral)
+    d[2] = -bond * np.cos(angle)
+    return d
+
+@jit(nopython=True)
+def _jit_calc_single_position_SN_NeRF(references, zmat_values, row):
+    bond, angle, dihedral = zmat_values[row]
+    vb, va, vd = references[0], references[1], references[2]
+    zeros = np.zeros(3, dtype=nb.f8)
+
+    BA = va - vb
+    AD = vd - va
+    if _jit_isclose(BA, zeros).all():
+        return (ERR_CODE_InvalidReference, zeros)
+    ba = _jit_normalize(BA)
+    if _jit_isclose(angle, np.pi):
+        d = bond * -ba
+    elif _jit_isclose(angle, 0.):
+        d = bond * ba
+    else:
+        B = np.empty((3, 3), dtype=nb.f8)
+        B[:, 2] = -ba
+        N1 = _jit_cross(AD, BA)
+        if _jit_isclose(N1, zeros).all():
+            return (ERR_CODE_InvalidReference, zeros)
+        else:
+            B[:, 1] = _jit_normalize(N1)
+            B[:, 0] = _jit_cross(B[:, 1], B[:, 2])
+        d = np.dot(B, _jit_S(bond, angle, dihedral))
+    return (ERR_CODE_OK, d + vb)
+
+
 append_indexer_docstring = _decorators.Appender(
     """In the case of obtaining elements, the indexing behaves like
 Indexing and Selecting data in
@@ -632,7 +668,7 @@ and assigning values safely.
 
     @staticmethod
     @jit(nopython=True)
-    def _jit_calc_positions(c_table, zmat_values):
+    def _jit_calc_positions(c_table, zmat_values, SN_NeRF=False):
 
         n_atoms = c_table.shape[0]
         positions = np.empty((n_atoms, 3), dtype=nb.types.f8)
@@ -644,14 +680,18 @@ and assigning values safely.
                     ref_pos[k] = constants._jit_absolute_refs(j)
                 else:
                     ref_pos[k] = positions[j]
-            err, pos = _jit_calc_single_position(ref_pos, zmat_values, row)
+            if not SN_NeRF:
+                err, pos = _jit_calc_single_position(ref_pos, zmat_values, row)
+            else:
+                err, pos = _jit_calc_single_position_SN_NeRF(ref_pos,
+                                                            zmat_values, row)
             if err == ERR_CODE_OK:
                 positions[row] = pos
             else:
                 return (err, row, positions)
         return (ERR_CODE_OK, row, positions)
 
-    def get_cartesian(self):
+    def get_cartesian(self, SN_NeRF=False):
         """Return the molecule in cartesian coordinates.
 
         Raises an :class:`~exceptions.InvalidReference` exception,
@@ -678,7 +718,8 @@ and assigning values safely.
             cartesian = Cartesian(xyz_frame)
             return cartesian
 
-        err, row, positions = self._jit_calc_positions(c_table, zmat_values)
+        err, row, positions = self._jit_calc_positions(c_table, zmat_values,
+                                                       SN_NeRF=SN_NeRF)
 
         if err == ERR_CODE_InvalidReference:
             rename = dict(enumerate(self.index))
