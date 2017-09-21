@@ -388,7 +388,7 @@ class CartesianCore(PandasWrapper, GenericCore):
                   modified_properties=None,
                   use_lookup=False,
                   set_lookup=True,
-                  atomic_radius_data=settings['defaults']['atomic_radius_data']
+                  atomic_radius_data=None
                   ):
         """Return a dictionary representing the bonds.
 
@@ -434,6 +434,9 @@ class CartesianCore(PandasWrapper, GenericCore):
             dict: Dictionary mapping from an atom index to the set of
             indices of atoms bonded to.
         """
+        if atomic_radius_data is None:
+            atomic_radius_data = settings['defaults']['atomic_radius_data']
+
         def complete_calculation():
             old_index = self.index
             self.index = range(len(self))
@@ -497,7 +500,7 @@ class CartesianCore(PandasWrapper, GenericCore):
     def get_coordination_sphere(
             self, index_of_atom, n_sphere=1, give_only_index=False,
             only_surface=True, exclude=None,
-            use_lookup=settings['defaults']['use_lookup']):
+            use_lookup=None):
         """Return a Cartesian of atoms in the n-th coordination sphere.
 
         Connected means that a path along covalent bonds exists.
@@ -512,11 +515,14 @@ class CartesianCore(PandasWrapper, GenericCore):
             exclude (set): A set of indices that should be ignored
                 for the path finding.
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
         exclude = set() if exclude is None else exclude
         bond_dict = self.get_bonds(use_lookup=use_lookup)
         i = index_of_atom
@@ -551,7 +557,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             return self.loc[index_out - exclude]
 
     def _preserve_bonds(self, sliced_cartesian,
-                        use_lookup=settings['defaults']['use_lookup']):
+                        use_lookup=None):
         """Is called after cutting geometric shapes.
 
         If you want to change the rules how bonds are preserved, when
@@ -564,11 +570,15 @@ class CartesianCore(PandasWrapper, GenericCore):
         Args:
             sliced_frame (Cartesian):
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             Cartesian:
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
+
         included_atoms_set = set(sliced_cartesian.index)
         assert included_atoms_set.issubset(set(self.index)), \
             'The sliced Cartesian has to be a subset of the bigger frame'
@@ -832,7 +842,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         return dihedrals
 
     def fragmentate(self, give_only_index=False,
-                    use_lookup=settings['defaults']['use_lookup']):
+                    use_lookup=None):
         """Get the indices of non bonded parts in the molecule.
 
         Args:
@@ -840,10 +850,16 @@ class CartesianCore(PandasWrapper, GenericCore):
                 Otherwise a new Cartesian instance.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`.
+            use_lookup (bool): Use a lookup variable for
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             list: A list of sets of indices or new Cartesian instances.
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
+
         fragments = []
         pending = set(self.index)
         self.get_bonds(use_lookup=use_lookup)
@@ -881,7 +897,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         return {j: bond_dict[j] & set(self.index) for j in self.index}
 
     def get_fragment(self, list_of_indextuples, give_only_index=False,
-                     use_lookup=settings['defaults']['use_lookup']):
+                     use_lookup=None):
         """Get the indices of the atoms in a fragment.
 
         The list_of_indextuples contains all bondings from the
@@ -895,11 +911,15 @@ class CartesianCore(PandasWrapper, GenericCore):
             give_only_index (bool): If ``True`` a set of indices
                 is returned. Otherwise a new Cartesian instance.
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
+
         exclude = [tuple[0] for tuple in list_of_indextuples]
         index_of_atom = list_of_indextuples[0][1]
         fragment_index = self.get_coordination_sphere(
@@ -911,18 +931,22 @@ class CartesianCore(PandasWrapper, GenericCore):
             return self.loc[fragment_index, :]
 
     def get_without(self, fragments,
-                    use_lookup=settings['defaults']['use_lookup']):
+                    use_lookup=None):
         """Return self without the specified fragments.
 
         Args:
             fragments: Either a list of :class:`~chemcoord.Cartesian` or a
                 :class:`~chemcoord.Cartesian`.
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             list: List containing :class:`~chemcoord.Cartesian`.
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
+
         if pd.api.types.is_list_like(fragments):
             for fragment in fragments:
                 try:
@@ -1134,7 +1158,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             return output
 
     def partition_chem_env(self, n_sphere=4,
-                           use_lookup=settings['defaults']['use_lookup']):
+                           use_lookup=None):
         """This function partitions the molecule into subsets of the
         same chemical environment.
 
@@ -1168,7 +1192,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         Args:
             n_sphere (int):
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             dict: The output will look like this::
@@ -1178,6 +1203,9 @@ class CartesianCore(PandasWrapper, GenericCore):
                 A dictionary mapping from a chemical environment to
                 the set of indices of atoms in this environment.
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
+
         def get_chem_env(self, i, n_sphere):
             env_index = self.get_coordination_sphere(
                 i, n_sphere=n_sphere, only_surface=False,

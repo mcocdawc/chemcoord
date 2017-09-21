@@ -164,7 +164,7 @@ class CartesianIO(CartesianCore, GenericIO):
             molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
 
-    def view(self, viewer=settings['defaults']['viewer'], use_curr_dir=False):
+    def view(self, viewer=None, use_curr_dir=False):
         """View your molecule.
 
         .. note:: This function writes a temporary file and opens it with
@@ -173,8 +173,9 @@ class CartesianIO(CartesianCore, GenericIO):
             in order to see the changes.
 
         Args:
-            viewer (str): The external viewer to use. The default is
-                specified in cc.settings.settings['viewer']
+            viewer (str): The external viewer to use. If it is None,
+                the default as specified in cc.settings['defaults']['viewer']
+                is used.
             use_curr_dir (bool): If True, the temporary file is written to
                 the current diretory. Otherwise it gets written to the
                 OS dependendent temporary directory.
@@ -182,6 +183,8 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             None:
         """
+        if viewer is None:
+            viewer = settings['defaults']['viewer']
         if use_curr_dir:
             TEMP_DIR = os.path.curdir
         else:

@@ -42,8 +42,7 @@ class CartesianGetZmat(CartesianCore):
                     raise UndefinedCoordinateSystem(give_message(i=i))
 
     def _get_frag_constr_table(self, start_atom=None, predefined_table=None,
-                               use_lookup=settings['defaults']['use_lookup'],
-                               bond_dict=None):
+                               use_lookup=None, bond_dict=None):
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
@@ -62,11 +61,15 @@ class CartesianGetZmat(CartesianCore):
             predefined_table (pd.DataFrame): An uncomplete construction table
                 may be provided. The rest is created automatically.
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             pd.DataFrame: Construction table
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
+
         int_label = constants.int_label
 
         def modify_priority(bond_dict, user_defined):
@@ -183,7 +186,7 @@ class CartesianGetZmat(CartesianCore):
         return output
 
     def get_construction_table(self, fragment_list=None,
-                               use_lookup=settings['defaults']['use_lookup'],
+                               use_lookup=None,
                                perform_checks=True):
         """Create a construction table for a Zmatrix.
 
@@ -226,7 +229,8 @@ class CartesianGetZmat(CartesianCore):
                 as reference for the other ones.
 
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
             perform_checks (bool): The checks for invalid references are
                 performed using :meth:`~chemcoord.Cartesian.correct_dihedral`
                 and :meth:`~chemcoord.Cartesian.correct_absolute_refs`.
@@ -234,6 +238,9 @@ class CartesianGetZmat(CartesianCore):
         Returns:
             :class:`pandas.DataFrame`: Construction table
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
+
         int_label = constants.int_label
         if fragment_list is None:
             fragments = sorted(self.fragmentate(use_lookup=use_lookup),
@@ -342,7 +349,7 @@ class CartesianGetZmat(CartesianCore):
         return problem_index
 
     def correct_dihedral(self, construction_table,
-                         use_lookup=settings['defaults']['use_lookup']):
+                         use_lookup=None):
         """Reindexe the dihedral defining atom if linear reference is used.
 
         Uses :meth:`~Cartesian.check_dihedral` to obtain the problematic
@@ -351,11 +358,14 @@ class CartesianGetZmat(CartesianCore):
         Args:
             construction_table (pd.DataFrame):
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             pd.DataFrame: Appropiately renamed construction table.
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
 
         problem_index = self.check_dihedral(construction_table)
         bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
@@ -388,7 +398,7 @@ class CartesianGetZmat(CartesianCore):
                 if not found:
                     other_atoms = c_table.index[:loc_i].difference({b, a})
                     molecule = self.get_distance_to(origin=i, sort=True,
-                                                other_atoms=other_atoms)
+                                                    other_atoms=other_atoms)
                     k = 0
                     while not found and k < len(molecule):
                         new_d = molecule.index[k]
@@ -578,7 +588,7 @@ class CartesianGetZmat(CartesianCore):
         return zmatrix
 
     def get_zmat(self, construction_table=None,
-                  use_lookup=settings['defaults']['use_lookup']):
+                 use_lookup=None):
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
@@ -632,11 +642,15 @@ class CartesianGetZmat(CartesianCore):
         Args:
             construction_table (pandas.DataFrame):
             use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`.
+                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
+                specified in ``settings['defaults']['use_lookup']``
 
         Returns:
             Zmat: A new instance of :class:`~Zmat`.
         """
+        if use_lookup is None:
+            use_lookup = settings['defaults']['use_lookup']
+
         self.get_bonds(use_lookup=use_lookup)
         use_lookup = True
         # During function execution the connectivity situation won't change
