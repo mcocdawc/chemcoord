@@ -16,74 +16,12 @@ from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.cartesian_coordinates.xyz_functions import (
     _jit_cross, _jit_get_rotation_matrix,
     _jit_isclose, _jit_normalize)
+import chemcoord.internal_coordinates._zmat_transformation as transformation
 from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
                                   InvalidReference, PhysicalMeaning)
 from chemcoord.utilities import _decorators
 from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
     PandasWrapper
-
-
-@jit(nopython=True)
-def _jit_calc_single_position(references, zmat_values, row):
-    bond, angle, dihedral = zmat_values[row]
-    vb, va, vd = references[0], references[1], references[2]
-    zeros = np.zeros(3, dtype=nb.types.f8)
-
-    BA = va - vb
-    if _jit_isclose(BA, zeros).all():
-        return (ERR_CODE_InvalidReference, zeros)
-    ba = _jit_normalize(BA)
-    if _jit_isclose(angle, np.pi):
-        d = bond * -ba
-    elif _jit_isclose(angle, 0.):
-        d = bond * ba
-    else:
-        AD = vd - va
-        N1 = _jit_cross(BA, AD)
-        if _jit_isclose(N1, zeros).all():
-            return (ERR_CODE_InvalidReference, zeros)
-        else:
-            n1 = _jit_normalize(N1)
-            d = bond * ba
-            d = np.dot(_jit_get_rotation_matrix(n1, angle), d)
-            d = np.dot(_jit_get_rotation_matrix(ba, dihedral), d)
-    return (ERR_CODE_OK, vb + d)
-
-
-@jit(nopython=True)
-def _jit_S(bond, angle, dihedral):
-    d = np.empty(3)
-    d[0] = bond * np.sin(angle) * np.cos(dihedral)
-    d[1] = -bond * np.sin(angle) * np.sin(dihedral)
-    d[2] = -bond * np.cos(angle)
-    return d
-
-@jit(nopython=True)
-def _jit_calc_single_position_SN_NeRF(references, zmat_values, row):
-    bond, angle, dihedral = zmat_values[row]
-    vb, va, vd = references[0], references[1], references[2]
-    zeros = np.zeros(3, dtype=nb.f8)
-
-    BA = va - vb
-    AD = vd - va
-    if _jit_isclose(BA, zeros).all():
-        return (ERR_CODE_InvalidReference, zeros)
-    ba = _jit_normalize(BA)
-    if _jit_isclose(angle, np.pi):
-        d = bond * -ba
-    elif _jit_isclose(angle, 0.):
-        d = bond * ba
-    else:
-        B = np.empty((3, 3), dtype=nb.f8)
-        B[:, 2] = -ba
-        N1 = _jit_cross(AD, BA)
-        if _jit_isclose(N1, zeros).all():
-            return (ERR_CODE_InvalidReference, zeros)
-        else:
-            B[:, 1] = _jit_normalize(N1)
-            B[:, 0] = _jit_cross(B[:, 1], B[:, 2])
-        d = np.dot(B, _jit_S(bond, angle, dihedral))
-    return (ERR_CODE_OK, d + vb)
 
 
 append_indexer_docstring = _decorators.Appender(
@@ -666,32 +604,7 @@ and assigning values safely.
             zmat = zmat._insert_dummy_zmat(exception, inplace=False)
             return zmat._remove_dummies(inplace=False)
 
-    @staticmethod
-    @jit(nopython=True)
-    def _jit_calc_positions(c_table, zmat_values, SN_NeRF=False):
-
-        n_atoms = c_table.shape[0]
-        positions = np.empty((n_atoms, 3), dtype=nb.types.f8)
-        for row in range(n_atoms):
-            ref_pos = np.empty((3, 3))
-            for k in range(3):
-                j = c_table[row, k]
-                if j < constants.keys_below_are_abs_refs:
-                    ref_pos[k] = constants._jit_absolute_refs(j)
-                else:
-                    ref_pos[k] = positions[j]
-            if not SN_NeRF:
-                err, pos = _jit_calc_single_position(ref_pos, zmat_values, row)
-            else:
-                err, pos = _jit_calc_single_position_SN_NeRF(ref_pos,
-                                                            zmat_values, row)
-            if err == ERR_CODE_OK:
-                positions[row] = pos
-            else:
-                return (err, row, positions)
-        return (ERR_CODE_OK, row, positions)
-
-    def get_cartesian(self, SN_NeRF=False):
+    def get_cartesian(self):
         """Return the molecule in cartesian coordinates.
 
         Raises an :class:`~exceptions.InvalidReference` exception,
@@ -703,11 +616,6 @@ and assigning values safely.
         Returns:
             Cartesian: Reindexed version of the zmatrix.
         """
-        zmat = self.change_numbering()
-        c_table = zmat.loc[:, ['b', 'a', 'd']].values
-        zmat_values = zmat.loc[:, ['bond', 'angle', 'dihedral']].values
-        zmat_values[:, [1, 2]] = np.radians(zmat_values[:, [1, 2]])
-
         def create_cartesian(positions, row):
             xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
                                      index=self.index[:row], dtype='f8')
@@ -718,8 +626,13 @@ and assigning values safely.
             cartesian = Cartesian(xyz_frame)
             return cartesian
 
-        err, row, positions = self._jit_calc_positions(c_table, zmat_values,
-                                                       SN_NeRF=SN_NeRF)
+        zmat = self.change_numbering()
+        c_table = zmat.loc[:, ['b', 'a', 'd']].values.T
+        C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
+        C[[1, 2], :] = np.radians(C[[1, 2], :])
+
+        err, row, positions = transformation.get_X(C, c_table)
+        positions = positions.T
 
         if err == ERR_CODE_InvalidReference:
             rename = dict(enumerate(self.index))
