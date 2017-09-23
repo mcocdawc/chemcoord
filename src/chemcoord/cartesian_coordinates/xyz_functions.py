@@ -11,6 +11,7 @@ from threading import Thread
 
 import numpy as np
 import math as m
+import numba as nb
 from numba import jit
 import pandas as pd
 
@@ -299,7 +300,7 @@ def _jit_allclose(a, b, atol=1e-5, rtol=1e-8):
     return True
 
 
-@jit(nopython=True)
+@jit(nb.f8[:](nb.f8[:], nb.f8[:]), nopython=True)
 def _jit_cross(A, B):
     C = np.empty_like(A)
     C[0] = A[1] * B[2] - A[2] * B[1]
