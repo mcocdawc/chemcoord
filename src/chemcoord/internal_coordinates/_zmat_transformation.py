@@ -213,7 +213,7 @@ def get_new_grad_X(X, grad_X, C, c_table, j, l):
         for m_2 in range(3):
             for m_1 in range(3):
                 for k in range(3):
-                    if k > constants.keys_below_are_abs_refs:
+                    if c_table[k, j] > constants.keys_below_are_abs_refs:
                         new_grad_X += (S[m_2]
                                        * grad_B[:, m_2, k, m_1]
                                        * grad_X[m_1, c_table[k, j], l, :])
