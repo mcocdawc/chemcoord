@@ -34,7 +34,7 @@ class CartesianCore(PandasWrapper, GenericCore):
     __array_priority__ = 15.0
 
     # overwrites existing method
-    def __init__(self, frame=None, atoms=None, coords=None,
+    def __init__(self, frame=None, atoms=None, coords=None, index=None,
                  metadata=None, _metadata=None):
         """How to initialize a Cartesian instance.
 
@@ -59,7 +59,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             message = 'Either frame or atoms and coords have to be not None'
             raise IllegalArgumentCombination(message)
         elif atoms is not None and coords is not None:
-            frame = pd.DataFrame(index=range(len(atoms)),
+            frame = pd.DataFrame(index=index,
                                  columns=['atom', 'x', 'y', 'z'])
             frame['atom'] = atoms
             frame.loc[:, ['x', 'y', 'z']] = coords

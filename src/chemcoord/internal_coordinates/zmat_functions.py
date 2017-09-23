@@ -2,8 +2,9 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals, with_statement)
 
+import numpy as np
+
 from chemcoord import export
-from chemcoord.internal_coordinates.zmat_class_main import Zmat
 
 
 @export
@@ -57,3 +58,12 @@ class TestOperators(object):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.cls.test_operators = self.old_value
+
+
+def apply_tensor(grad_X, zmat_dist):
+    C_dist = zmat_dist.loc[:, ['bond', 'angle', 'dihedral']].values.T
+    C_dist[[1, 2], :] = np.radians(C_dist[[1, 2], :])
+    cart_dist = np.tensordot(grad_X, C_dist, axes=([3, 2], [0, 1])).T
+    from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
+    return Cartesian(atoms=zmat_dist['atom'],
+                     coords=cart_dist, index=zmat_dist.index)

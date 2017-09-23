@@ -55,7 +55,7 @@ def get_S(C, j):
 
 @jit(nopython=True)
 def get_grad_S(C, j):
-    grad_S = np.empty((3, 3))
+    grad_S = np.empty((3, 3), dtype=nb.f8)
     r, alpha, delta = C[:, j]
 
     # Derive for r
@@ -71,7 +71,7 @@ def get_grad_S(C, j):
     # Derive for delta
     grad_S[0, 2] = -r * sin(alpha) * sin(delta)
     grad_S[1, 2] = -r * sin(alpha) * cos(delta)
-    grad_S[2, 2] = 0
+    grad_S[2, 2] = 0.
     return grad_S
 
 
@@ -222,7 +222,7 @@ def get_new_grad_X(X, grad_X, C, c_table, j, l):
 @jit(nopython=True)
 def get_grad_X(C, c_table):
     n_atoms = C.shape[1]
-    grad_X = np.empty((3, n_atoms, n_atoms, 3))
+    grad_X = np.zeros((3, n_atoms, n_atoms, 3))
     X = get_X(C, c_table)[2]
     for j in range(n_atoms):
         for l in range(j + 1, n_atoms):

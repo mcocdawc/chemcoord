@@ -4,19 +4,20 @@ from __future__ import (absolute_import, division, print_function,
 
 import copy
 import warnings
+from functools import partial
 
 import numpy as np
 import pandas as pd
 
 import chemcoord.internal_coordinates._indexers as indexers
-from chemcoord._generic_classes.generic_core import GenericCore
 import chemcoord.internal_coordinates._zmat_transformation as transformation
+from chemcoord.internal_coordinates.zmat_functions import apply_tensor
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
                                   InvalidReference, PhysicalMeaning)
-from chemcoord.utilities import _decorators
 from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
     PandasWrapper
-
+from chemcoord.utilities import _decorators
 
 append_indexer_docstring = _decorators.Appender(
     """In the case of obtaining elements, the indexing behaves like
@@ -638,7 +639,7 @@ and assigning values safely.
         elif err == ERR_CODE_OK:
             return create_cartesian(positions, row + 1)
 
-    def get_grad_X(self):
+    def get_grad_X(self, as_function=True):
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']].values.T
         C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
@@ -646,8 +647,10 @@ and assigning values safely.
 
         grad_X = transformation.get_grad_X(C, c_table)
 
-        return grad_X
-
+        if as_function:
+            return partial(apply_tensor, grad_X)
+        else:
+            return grad_X
 
     def to_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Zmat.get_cartesian`
