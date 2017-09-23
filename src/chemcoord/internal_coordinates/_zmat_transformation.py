@@ -16,7 +16,7 @@ from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
 @generated_jit(nopython=True)
-def get_ref_pos(X, indices):
+def get_ref_pos(X, indices):  # pylint:disable=unused-argument
     if isinstance(indices, nb.types.Array):
         def f(X, indices):
             ref_pos = np.empty((3, len(indices)))
@@ -197,7 +197,7 @@ def get_X(C, c_table):
             return (err, j, X)
         X[:, j] = (np.dot(B, get_S(C, j))
                    + get_ref_pos(X, c_table[0, j]))
-    return (ERR_CODE_OK, j, X)
+    return (ERR_CODE_OK, j, X)  # pylint:disable=undefined-loop-variable
 
 
 @jit(nopython=True)
@@ -205,7 +205,6 @@ def get_new_grad_X(X, grad_X, C, c_table, j, l):
     if j < constants.keys_below_are_abs_refs:
         new_grad_X = np.zeros((3, 3))
     else:
-        n_atoms = X.shape[1]
         grad_B = get_grad_B(X, c_table, j)
         S = get_S(C, j)
         new_grad_X = grad_X[:, c_table[0, j], l, :].copy()

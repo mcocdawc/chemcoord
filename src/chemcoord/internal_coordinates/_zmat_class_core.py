@@ -638,6 +638,17 @@ and assigning values safely.
         elif err == ERR_CODE_OK:
             return create_cartesian(positions, row + 1)
 
+    def get_grad_X(self):
+        zmat = self.change_numbering()
+        c_table = zmat.loc[:, ['b', 'a', 'd']].values.T
+        C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
+        C[[1, 2], :] = np.radians(C[[1, 2], :])
+
+        grad_X = transformation.get_grad_X(C, c_table)
+
+        return grad_X
+
+
     def to_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Zmat.get_cartesian`
         """
