@@ -11,7 +11,6 @@ import pandas as pd
 
 import chemcoord.internal_coordinates._indexers as indexers
 import chemcoord.internal_coordinates._zmat_transformation as transformation
-from chemcoord.internal_coordinates.zmat_functions import apply_tensor
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
                                   InvalidReference, PhysicalMeaning)
@@ -647,6 +646,7 @@ and assigning values safely.
 
         grad_X = transformation.get_grad_X(C, c_table)
 
+        from chemcoord.internal_coordinates.zmat_functions import apply_tensor
         if as_function:
             return partial(apply_tensor, grad_X)
         else:
