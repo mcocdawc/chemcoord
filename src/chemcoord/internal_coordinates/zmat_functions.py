@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 import numpy as np
 
 from chemcoord import export
+from chemcoord.internal_coordinates.zmat_class_main import Zmat
 
 
 @export
