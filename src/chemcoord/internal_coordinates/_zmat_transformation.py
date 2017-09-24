@@ -6,13 +6,11 @@ from __future__ import (absolute_import, division, print_function,
 import numba as nb
 import numpy as np
 from numpy import sin, cos
-from numpy import tensordot as tdot
 from numba import jit, generated_jit
 
 import chemcoord.constants as constants
 from chemcoord.cartesian_coordinates.xyz_functions import (
-    _jit_cross, _jit_get_rotation_matrix,
-    _jit_isclose, _jit_normalize)
+    _jit_cross, _jit_isclose, _jit_normalize)
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
