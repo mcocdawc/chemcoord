@@ -61,7 +61,8 @@ class TestOperators(object):
 
 
 def apply_tensor(grad_X, zmat_dist):
-    C_dist = zmat_dist.loc[:, ['bond', 'angle', 'dihedral']].values.T
+    columns = ['bond', 'angle', 'dihedral']
+    C_dist = zmat_dist.loc[:, columns].values.astype('f8').T
     C_dist[[1, 2], :] = np.radians(C_dist[[1, 2], :])
     cart_dist = np.tensordot(grad_X, C_dist, axes=([3, 2], [0, 1])).T
     from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian

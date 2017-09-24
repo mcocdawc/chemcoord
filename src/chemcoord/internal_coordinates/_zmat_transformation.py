@@ -6,6 +6,7 @@ from __future__ import (absolute_import, division, print_function,
 import numba as nb
 import numpy as np
 from numpy import sin, cos
+from numpy import tensordot as tdot
 from numba import jit, generated_jit
 
 import chemcoord.constants as constants
@@ -201,7 +202,7 @@ def get_X(C, c_table):
 
 
 @jit(nopython=True)
-def get_new_grad_X(X, grad_X, C, c_table, j, l):
+def chain_grad(X, grad_X, C, c_table, j, l):
     if j < constants.keys_below_are_abs_refs:
         new_grad_X = np.zeros((3, 3))
     else:
@@ -220,18 +221,13 @@ def get_new_grad_X(X, grad_X, C, c_table, j, l):
 
 
 @jit(nopython=True)
-def get_grad_X(C, c_table):
+def get_grad_X(C, c_table, chain=True):
     n_atoms = C.shape[1]
     grad_X = np.zeros((3, n_atoms, n_atoms, 3))
     X = get_X(C, c_table)[2]
     for j in range(n_atoms):
-        for l in range(j + 1, n_atoms):
-            grad_X[:, j, l, :] = 0.
-
-    for j in range(n_atoms):
-        grad_X[:, j, j, :] = get_grad_S(C, j)
-
-    for j in range(n_atoms):
-        for l in range(j):
-            grad_X[:, j, l, :] = get_new_grad_X(X, grad_X, C, c_table, j, l)
+        grad_X[:, j, j, :] = np.dot(get_B(X, c_table, j)[1], get_grad_S(C, j))
+        if chain:
+            for l in range(j):
+                grad_X[:, j, l, :] = chain_grad(X, grad_X, C, c_table, j, l)
     return grad_X
