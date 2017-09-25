@@ -638,13 +638,13 @@ and assigning values safely.
         elif err == ERR_CODE_OK:
             return create_cartesian(positions, row + 1)
 
-    def get_grad_X(self, as_function=True):
+    def get_grad_X(self, as_function=True, chain=True):
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']].values.T
         C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.astype('f8').T
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
-        grad_X = transformation.get_grad_X(C, c_table)
+        grad_X = transformation.get_grad_X(C, c_table, chain=chain)
 
         from chemcoord.internal_coordinates.zmat_functions import apply_tensor
         if as_function:
