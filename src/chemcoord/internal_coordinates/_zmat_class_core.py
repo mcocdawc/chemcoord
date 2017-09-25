@@ -641,7 +641,9 @@ and assigning values safely.
     def get_grad_X(self, as_function=True, chain=True):
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']].values.T
-        C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.astype('f8').T
+        C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
+        if C.dtype == np.dtype('i8'):
+            C = C.astype('f8')
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
         grad_X = transformation.get_grad_X(C, c_table, chain=chain)
