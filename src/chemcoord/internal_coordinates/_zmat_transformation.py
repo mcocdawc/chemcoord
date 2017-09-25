@@ -456,13 +456,128 @@ def get_grad_B(X, c_table, j):
             + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
             + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2))
         / (norm_AD_cross_BA**3 * norm_BA**3))
-    grad_B[1, 0, 1, 0] = ((x_a - x_b) * ((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) + ((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * ((y_b - y_d) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) + (z_b - z_d) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))) * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2) + ((-x_a + x_b) * (y_a - y_d) - (x_a - x_b) * (y_b - y_d) + (x_a - x_d) * (y_a - y_b)) * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2))/(norm_AD_cross_BA**3 * norm_BA**3)
-    grad_B[1, 0, 1, 1] = ((y_a - y_b) * ((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) + ((x_a - x_b) * (x_b - x_d) + (z_a - z_b) * (z_b - z_d)) * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) - ((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * ((x_b - x_d) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_b - z_d) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2))/(norm_AD_cross_BA**3 * norm_BA**3)
-    grad_B[1, 0, 1, 2] = ((z_a - z_b) * ((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) - ((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * ((x_b - x_d) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) + (y_b - y_d) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2) + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b) - (y_b - y_d) * (z_a - z_b)) * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2))/(norm_AD_cross_BA**3 * norm_BA**3)
-    grad_B[1, 0, 2, 0] = ((-x_a + x_b) * (y_a - y_b) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) + ((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * ((y_a - y_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) + (z_a - z_b) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))))/(norm_AD_cross_BA**3 * norm_BA)
-    grad_B[1, 0, 2, 1] = (-((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))**2 + ((x_a - x_b)**2 + (z_a - z_b)**2) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2))/(norm_AD_cross_BA**3 * norm_BA)
-    grad_B[1, 0, 2, 2] = (-(y_a - y_b) * (z_a - z_b) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) - ((x_a - x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * ((x_a - x_b) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) + (y_a - y_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))))/(norm_AD_cross_BA**3 * norm_BA)
-    grad_B[1, 1, 0, 0] = ((z_a - z_d) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) - ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) * ((y_a - y_d) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) + (z_a - z_d) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))))/norm_AD_cross_BA**3
+    grad_B[1, 0, 1, 0] = (
+        ((x_a - x_b)
+         * ((x_a - x_b)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            - (z_a - z_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2)
+         + ((x_a - x_b)
+            * ((x_a - x_b) * (y_a - y_d)
+               - (x_a - x_d) * (y_a - y_b))
+            - (z_a - z_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * ((y_b - y_d)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            + (z_b - z_d)
+            * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)))
+         * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2)
+         + ((-x_a + x_b) * (y_a - y_d)
+            - (x_a - x_b) * (y_b - y_d)
+            + (x_a - x_d) * (y_a - y_b))
+         * ((x_a - x_b)**2 + (y_a - y_b)**2
+            + (z_a - z_b)**2)
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2))
+        / (norm_AD_cross_BA**3 * norm_BA**3))
+    grad_B[1, 0, 1, 1] = (
+        ((y_a - y_b)
+         * ((x_a - x_b)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            - (z_a - z_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2)
+         + ((x_a - x_b) * (x_b - x_d) + (z_a - z_b) * (z_b - z_d))
+         * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2)
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2)
+         - ((x_a - x_b)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            - (z_a - z_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * ((x_b - x_d)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            - (z_b - z_d)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2))
+        / (norm_AD_cross_BA**3 * norm_BA**3))
+    grad_B[1, 0, 1, 2] = (
+        ((z_a - z_b)
+         * ((x_a - x_b)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            - (z_a - z_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2)
+         - ((x_a - x_b)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            - (z_a - z_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * ((x_b - x_d)
+            * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))
+            + (y_b - y_d)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2)
+         + ((y_a - y_b) * (z_a - z_d)
+            - (y_a - y_d) * (z_a - z_b)
+            - (y_b - y_d) * (z_a - z_b))
+         * ((x_a - x_b)**2 + (y_a - y_b)**2 + (z_a - z_b)**2)
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2))
+        / (norm_AD_cross_BA**3 * norm_BA**3))
+    grad_B[1, 0, 2, 0] = (
+        ((-x_a + x_b) * (y_a - y_b)
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2)
+         + ((x_a - x_b)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            - (z_a - z_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * ((y_a - y_b)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            + (z_a - z_b)
+            * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))))
+        / (norm_AD_cross_BA**3 * norm_BA))
+    grad_B[1, 0, 2, 1] = (
+        (-((x_a - x_b)
+           * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+           - (z_a - z_b)
+           * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))**2
+         + ((x_a - x_b)**2 + (z_a - z_b)**2)
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2))
+        / (norm_AD_cross_BA**3 * norm_BA))
+    grad_B[1, 0, 2, 2] = (
+        (-(y_a - y_b) * (z_a - z_b)
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2)
+         - ((x_a - x_b)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            - (z_a - z_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))
+         * ((x_a - x_b)
+            * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))
+            + (y_a - y_b)
+            * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))))
+        / (norm_AD_cross_BA**3 * norm_BA))
+    grad_B[1, 1, 0, 0] = (
+        ((z_a - z_d)
+         * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
+            + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
+            + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2)
+         - ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) * ((y_a - y_d) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) + (z_a - z_d) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))))/norm_AD_cross_BA**3)
     grad_B[1, 1, 0, 1] = ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) * ((x_a - x_d) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) - (z_a - z_d) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b)))/norm_AD_cross_BA**3
     grad_B[1, 1, 0, 2] = ((-x_a + x_d) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) * ((x_a - x_d) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) + (y_a - y_d) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))))/norm_AD_cross_BA**3
     grad_B[1, 1, 1, 0] = ((-z_b + z_d) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) * ((y_b - y_d) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) + (z_b - z_d) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))))/norm_AD_cross_BA**3
@@ -471,12 +586,12 @@ def get_grad_B(X, c_table, j):
     grad_B[1, 1, 2, 0] = ((-z_a + z_b) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) * ((y_a - y_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) + (z_a - z_b) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))))/norm_AD_cross_BA**3
     grad_B[1, 1, 2, 1] = ((-x_a + x_b) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) + (z_a - z_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))/norm_AD_cross_BA**3
     grad_B[1, 1, 2, 2] = ((x_a - x_b) * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2 + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2 + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2) - ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) * ((x_a - x_b) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) + (y_a - y_b) * ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))))/norm_AD_cross_BA**3
-    grad_B[1, 2, 0, 0] = (-x_a + x_b) * (y_a - y_b)/norm_BA**3
-    grad_B[1, 2, 0, 1] = ((x_a - x_b)**2 + (z_a - z_b)**2)/norm_BA**3
-    grad_B[1, 2, 0, 2] = (-y_a + y_b) * (z_a - z_b)/norm_BA**3
-    grad_B[1, 2, 1, 0] = (x_a - x_b) * (y_a - y_b)/norm_BA**3
-    grad_B[1, 2, 1, 1] = (-(x_a - x_b)**2 - (z_a - z_b)**2)/norm_BA**3
-    grad_B[1, 2, 1, 2] = (y_a - y_b) * (z_a - z_b)/norm_BA**3
+    grad_B[1, 2, 0, 0] = (-x_a + x_b) * (y_a - y_b) / norm_BA**3
+    grad_B[1, 2, 0, 1] = ((x_a - x_b)**2 + (z_a - z_b)**2) / norm_BA**3
+    grad_B[1, 2, 0, 2] = (-y_a + y_b) * (z_a - z_b) / norm_BA**3
+    grad_B[1, 2, 1, 0] = (x_a - x_b) * (y_a - y_b) / norm_BA**3
+    grad_B[1, 2, 1, 1] = (-(x_a - x_b)**2 - (z_a - z_b)**2) / norm_BA**3
+    grad_B[1, 2, 1, 2] = (y_a - y_b) * (z_a - z_b) / norm_BA**3
     grad_B[1, 2, 2, 0] = 0.
     grad_B[1, 2, 2, 1] = 0.
     grad_B[1, 2, 2, 2] = 0.
