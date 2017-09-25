@@ -577,7 +577,12 @@ def get_grad_B(X, c_table, j):
          * (((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))**2
             + ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))**2
             + ((y_a - y_b) * (z_a - z_d) - (y_a - y_d) * (z_a - z_b))**2)
-         - ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b)) * ((y_a - y_d) * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b)) + (z_a - z_d) * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))))/norm_AD_cross_BA**3)
+         - ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))
+         * ((y_a - y_d)
+            * ((x_a - x_b) * (y_a - y_d) - (x_a - x_d) * (y_a - y_b))
+            + (z_a - z_d)
+            * ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))))
+        / norm_AD_cross_BA**3)
     grad_B[1, 1, 0, 1] = (
         ((x_a - x_b) * (z_a - z_d) - (x_a - x_d) * (z_a - z_b))
         * ((x_a - x_d)
