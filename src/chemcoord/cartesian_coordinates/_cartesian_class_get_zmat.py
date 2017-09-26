@@ -497,29 +497,27 @@ class CartesianGetZmat(CartesianCore):
         return c_table
 
     def _calculate_zmat_values(self, construction_table):
-        if isinstance(construction_table, pd.DataFrame):
-            order = construction_table.index
-            c_table = construction_table.replace(
-                to_replace=order, value=range(len(order)))
-            c_table = c_table.values.T
-            if len(c_table) == 1:
-                c_table = c_table[:, None]
-        else:
-            c_table = np.array(construction_table, dtype='i8')
-            if len(c_table) == 1:
-                c_table = c_table[:, None]
-            order = c_table[:, 0]
-            c_table = c_table[:, 1:].T
+        c_table = construction_table
+        if not isinstance(c_table, pd.DataFrame):
+            if isinstance(c_table, pd.Series):
+                c_table = pd.DataFrame(c_table).T
+            else:
+                c_table = np.array(c_table, dtype='i8')
+                if len(c_table.shape) == 1:
+                    c_table = c_table[None, :]
+                c_table = pd.DataFrame(
+                    data=c_table[:, 1:], index=c_table[:, 0],
+                    columns=['b', 'a', 'd'])
 
-        X = self.loc[order, ['x', 'y', 'z']].values.astype('f8').T
-        return X, c_table
-
+        new_index = c_table.index | self.index.difference(c_table.index)
+        X = self.loc[new_index, ['x', 'y', 'z']].values.astype('f8').T
+        c_table = c_table.replace(dict(zip(new_index, range(len(self)))))
+        c_table = c_table.values.T
 
         err, C = get_C(X, c_table)
         if err == ERR_CODE_OK:
             C[[1, 2], :] = np.rad2deg(C[[1, 2], :])
             return C.T
-
 
     def _build_zmat(self, construction_table):
         """Create the Zmatrix from a construction table.
