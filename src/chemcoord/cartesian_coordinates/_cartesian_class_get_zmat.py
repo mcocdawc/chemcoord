@@ -509,7 +509,7 @@ class CartesianGetZmat(CartesianCore):
                     data=c_table[:, 1:], index=c_table[:, 0],
                     columns=['b', 'a', 'd'])
 
-        new_index = c_table.index | self.index.difference(c_table.index)
+        new_index = c_table.index.append(self.index.difference(c_table.index))
         X = self.loc[new_index, ['x', 'y', 'z']].values.astype('f8').T
         c_table = c_table.replace(dict(zip(new_index, range(len(self)))))
         c_table = c_table.values.T
