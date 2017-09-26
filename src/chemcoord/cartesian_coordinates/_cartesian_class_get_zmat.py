@@ -13,9 +13,9 @@ import chemcoord.constants as constants
 from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (IllegalArgumentCombination,
-                                  UndefinedCoordinateSystem)
+                                  UndefinedCoordinateSystem, ERR_CODE_OK)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
-
+from chemcoord.cartesian_coordinates._cart_transformation import get_C
 
 class CartesianGetZmat(CartesianCore):
     @staticmethod
@@ -496,67 +496,30 @@ class CartesianGetZmat(CartesianCore):
                     c_table.iloc[row, row:] = next(order_of_refs)[row:3]
         return c_table
 
-    def _get_bond_vectors(self, construction_table):
-        c_table = construction_table
-        pos = np.empty((len(c_table), 3, 4))
-
-        if isinstance(c_table, pd.DataFrame):
-            pos[:, :, 0] = self._get_positions(c_table.index)
-            pos[:, :, 1] = self._get_positions(c_table['b'])
-            pos[:, :, 2] = self._get_positions(c_table['a'])
-            pos[:, :, 3] = self._get_positions(c_table['d'])
-        else:
-            c_table = np.array(c_table)
-            if len(c_table.shape) == 1:
-                c_table = c_table[None, :]
-            for col in range(4):
-                pos[:, :, col] = self._get_positions(c_table[:, col])
-
-        IB = pos[:, :, 1] - pos[:, :, 0]
-        BA = pos[:, :, 2] - pos[:, :, 1]
-        AD = pos[:, :, 3] - pos[:, :, 2]
-        return IB, BA, AD
-
     def _calculate_zmat_values(self, construction_table):
-        IB, BA, AD = self._get_bond_vectors(construction_table)
-        values = np.empty_like(IB, dtype='float64')
+        if isinstance(construction_table, pd.DataFrame):
+            order = construction_table.index
+            c_table = construction_table.replace(
+                to_replace=order, value=range(len(order)))
+            c_table = c_table.values.T
+            if len(c_table) == 1:
+                c_table = c_table[:, None]
+        else:
+            c_table = np.array(construction_table, dtype='i8')
+            if len(c_table) == 1:
+                c_table = c_table[:, None]
+            order = c_table[:, 0]
+            c_table = c_table[:, 1:].T
 
-        def get_bond_length(IB):
-            return np.linalg.norm(IB, axis=1)
+        X = self.loc[order, ['x', 'y', 'z']].values.astype('f8').T
+        return X, c_table
 
-        def get_angle(IB, BA):
-            ba = BA / np.linalg.norm(BA, axis=1)[:, None]
-            bi = -1 * IB / np.linalg.norm(IB, axis=1)[:, None]
-            dot_product = np.sum(bi * ba, axis=1)
-            dot_product[dot_product > 1] = 1
-            dot_product[dot_product < -1] = -1
-            return np.nan_to_num(np.degrees(np.arccos(dot_product)))
 
-        def get_dihedral(IB, BA, AD):
-            N1 = np.cross(IB, BA, axis=1)
-            N2 = np.cross(BA, AD, axis=1)
-            n1, n2 = [v / np.linalg.norm(v, axis=1)[:, None] for v in (N1, N2)]
-            dot_product = np.sum(n1 * n2, axis=1)
-            dot_product[dot_product > 1] = 1
-            dot_product[dot_product < -1] = -1
-            dihedrals = np.degrees(np.arccos(dot_product))
-            # the next lines are to test the direction of rotation.
-            # is a dihedral really 90 or 270 degrees?
-            # Equivalent to direction of rotation of dihedral
-            where_to_modify = np.sum(BA * np.cross(n1, n2, axis=1), axis=1) > 0
-            where_to_modify = np.nonzero(where_to_modify)[0]
-            sign = np.full_like(dihedrals, 1)
-            to_add = np.full_like(dihedrals, 0)
-            sign[where_to_modify] = -1
-            to_add[where_to_modify] = 360
-            return np.nan_to_num(to_add + sign * dihedrals)
+        err, C = get_C(X, c_table)
+        if err == ERR_CODE_OK:
+            C[[1, 2], :] = np.rad2deg(C[[1, 2], :])
+            return C.T
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            values[:, 0] = get_bond_length(IB)
-            values[:, 1] = get_angle(IB, BA)
-            values[:, 2] = get_dihedral(IB, BA, AD)
-        return values
 
     def _build_zmat(self, construction_table):
         """Create the Zmatrix from a construction table.
