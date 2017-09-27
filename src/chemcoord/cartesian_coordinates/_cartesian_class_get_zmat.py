@@ -243,6 +243,8 @@ class CartesianGetZmat(CartesianCore):
 
         int_label = constants.int_label
         if fragment_list is None:
+            self.get_bonds(use_lookup=use_lookup)
+            self._give_val_sorted_bond_dict(use_lookup=use_lookup)
             fragments = sorted(self.fragmentate(use_lookup=use_lookup),
                                key=len, reverse=True)
             # During function execution the bonding situation does not change,
@@ -613,6 +615,7 @@ class CartesianGetZmat(CartesianCore):
             use_lookup = settings['defaults']['use_lookup']
 
         self.get_bonds(use_lookup=use_lookup)
+        self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         use_lookup = True
         # During function execution the connectivity situation won't change
         # So use_look=True will be used
