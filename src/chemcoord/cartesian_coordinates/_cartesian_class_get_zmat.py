@@ -645,12 +645,12 @@ class CartesianGetZmat(CartesianCore):
         if as_function:
             from chemcoord.cartesian_coordinates.xyz_functions import (
                     apply_grad_tensor)
-            f = partial(apply_grad_tensor,
-                        construction_table=construction_table, grad_C=grad_C)
+
+            def f(cart_dist):
+                return apply_grad_tensor(grad_C, construction_table, cart_dist)
             return f
         else:
             return grad_C
-
 
     def to_zmat(self, *args, **kwargs):
         """Deprecated, use :meth:`~Cartesian.get_zmat`
