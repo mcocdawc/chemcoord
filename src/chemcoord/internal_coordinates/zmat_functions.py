@@ -62,7 +62,7 @@ class TestOperators(object):
         self.cls.test_operators = self.old_value
 
 
-def apply_tensor(grad_X, zmat_dist):
+def apply_grad_tensor(grad_X, zmat_dist):
     columns = ['bond', 'angle', 'dihedral']
     C_dist = zmat_dist.loc[:, columns].values.T
     try:

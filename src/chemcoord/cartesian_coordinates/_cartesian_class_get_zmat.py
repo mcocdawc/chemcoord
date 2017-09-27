@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 import warnings
 from collections import OrderedDict
 from itertools import permutations
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,8 @@ from chemcoord.configuration import settings
 from chemcoord.exceptions import (IllegalArgumentCombination,
                                   UndefinedCoordinateSystem, ERR_CODE_OK)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
-from chemcoord.cartesian_coordinates._cart_transformation import get_C
+import chemcoord.cartesian_coordinates._cart_transformation as transformation
+
 
 class CartesianGetZmat(CartesianCore):
     @staticmethod
@@ -516,7 +518,7 @@ class CartesianGetZmat(CartesianCore):
         c_table = c_table.replace(dict(zip(new_index, range(len(self)))))
         c_table = c_table.values.T
 
-        err, C = get_C(X, c_table)
+        err, C = transformation.get_C(X, c_table)
         if err == ERR_CODE_OK:
             C[[1, 2], :] = np.rad2deg(C[[1, 2], :])
             return C.T
@@ -626,6 +628,29 @@ class CartesianGetZmat(CartesianCore):
         else:
             c_table = construction_table
         return self._build_zmat(c_table)
+
+    def get_grad_zmat(self, construction_table, as_function=True):
+        if (construction_table.index != self.index).any():
+            message = "construction_table and self must use the same index"
+            raise ValueError(message)
+        c_table = construction_table.loc[:, ['b', 'a', 'd']].copy()
+        c_table = c_table.replace(
+                to_replace=c_table.index, value=range(len(c_table))).values.T
+        X = self.loc[:, ['x', 'y', 'z']].values.T
+        if X.dtype == np.dtype('i8'):
+            X = X.astype('f8')
+
+        grad_C = transformation.get_grad_C(X, c_table)
+
+        if as_function:
+            from chemcoord.cartesian_coordinates.xyz_functions import (
+                    apply_grad_tensor)
+            f = partial(apply_grad_tensor,
+                        construction_table=construction_table, grad_C=grad_C)
+            return f
+        else:
+            return grad_C
+
 
     def to_zmat(self, *args, **kwargs):
         """Deprecated, use :meth:`~Cartesian.get_zmat`

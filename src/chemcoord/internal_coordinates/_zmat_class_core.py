@@ -648,9 +648,10 @@ and assigning values safely.
 
         grad_X = transformation.get_grad_X(C, c_table, chain=chain)
 
-        from chemcoord.internal_coordinates.zmat_functions import apply_tensor
         if as_function:
-            return partial(apply_tensor, grad_X)
+            from chemcoord.internal_coordinates.zmat_functions import (
+                    apply_grad_tensor)
+            return partial(apply_grad_tensor, grad_X)
         else:
             return grad_X
 

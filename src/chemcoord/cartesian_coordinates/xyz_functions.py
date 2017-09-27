@@ -426,3 +426,25 @@ def get_kabsch_rotation(Q, P):
     W = W.T
     d = np.linalg.det(np.dot(W, V.T))
     return np.linalg.multi_dot((W, np.diag([1., 1., d]), V.T))
+
+
+def apply_grad_tensor(grad_C, construction_table, cart_dist):
+    if (construction_table.index != cart_dist.index).any():
+        message = "construction_table and cart_dist must use the same index"
+        raise ValueError(message)
+    X_dist = cart_dist.loc[:, ['x', 'y', 'z']].values.T
+    C_dist = np.tensordot(grad_C, X_dist, axes=([3, 2], [0, 1])).T
+    if C_dist.dtype == np.dtype('i8'):
+        C_dist = C_dist.astype('f8')
+    C_dist[:, [1, 2]] = np.rad2deg(C_dist[:, [1, 2]])
+
+    from chemcoord.internal_coordinates.zmat_class_main import Zmat
+    cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
+    dtypes = ['O', 'i8', 'f8', 'i8', 'f8', 'i8', 'f8']
+    new = pd.DataFrame(data=np.zeros((len(cart_dist), 7)),
+                       index=cart_dist.index, columns=cols)
+    new = new.astype(dict(zip(cols, dtypes)))
+    new.loc[:, ['b', 'a', 'd']] = construction_table
+    new.loc[:, 'atom'] = cart_dist.loc[:, 'atom']
+    new.loc[:, ['bond', 'angle', 'dihedral']] = C_dist
+    return Zmat(new, _metadata={'last_valid_cartesian': cart_dist})
