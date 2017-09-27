@@ -2,15 +2,15 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals, with_statement)
 
-
 import numba as nb
 import numpy as np
-from numpy import arccos, sqrt, arctan2
-from numba import jit, generated_jit
+from numba import generated_jit, jit
+from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
-from chemcoord.cartesian_coordinates.xyz_functions import (
-    _jit_cross, _jit_isclose, _jit_normalize)
+from chemcoord.cartesian_coordinates.xyz_functions import (_jit_cross,
+                                                           _jit_isclose,
+                                                           _jit_normalize)
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
@@ -929,15 +929,93 @@ def get_S_inv(v):
     return np.array([r, alpha, delta])
 
 
+@jit(nb.f8[:, :](nb.f8[:]), nopython=True)
+def get_grad_S_inv(v):
+    x, y, z = v
+    grad_S_inv = np.zeros((3, 3))
+
+    r = np.linalg.norm(v)
+    if _jit_isclose(r, 0):
+        pass
+    elif _jit_isclose(x**2 + y**2, 0):
+        grad_S_inv[0, 0] = 0.
+        grad_S_inv[0, 1] = 0.
+        grad_S_inv[0, 2] = 1
+        grad_S_inv[1, 0] = -1 / z
+        grad_S_inv[1, 1] = -1 / z
+        grad_S_inv[1, 2] = 0.
+        grad_S_inv[2, 0] = 0.
+        grad_S_inv[2, 1] = 0.
+        grad_S_inv[2, 2] = 0.
+    else:
+        grad_S_inv[0, 0] = x / r
+        grad_S_inv[0, 1] = y / r
+        grad_S_inv[0, 2] = z / r
+        grad_S_inv[1, 0] = -x * z / (sqrt(x**2 + y**2) * r**2)
+        grad_S_inv[1, 1] = -y * z / (sqrt(x**2 + y**2) * r**2)
+        grad_S_inv[1, 2] = sqrt(x**2 + y**2) / r**2
+        grad_S_inv[2, 0] = y / (x**2 + y**2)
+        grad_S_inv[2, 1] = -x / (x**2 + y**2)
+        grad_S_inv[2, 2] = 0.
+    return grad_S_inv
+
+
+@jit(nopython=True)
+def get_T(X, c_table, j):
+    err, B = get_B(X, c_table, j)
+    if err == ERR_CODE_OK:
+        v_b = get_ref_pos(X, c_table[0, j])
+        result = np.dot(B.T, X[:, j] - v_b)
+    else:
+        result = np.empty(3)
+    return err, result
+
+
 @jit(nopython=True)
 def get_C(X, c_table):
     C = np.empty((3, c_table.shape[1]))
 
     for j in range(C.shape[1]):
-        err, B = get_B(X, c_table, j)
+        err, v = get_T(X, c_table, j)
         if err == ERR_CODE_OK:
-            v_b = get_ref_pos(X, c_table[0, j])
-            C[:, j] = get_S_inv(np.dot(B.T, X[:, j] - v_b))
+            C[:, j] = get_S_inv(v)
         else:
             return (err, C)
     return (ERR_CODE_OK, C)
+
+
+@jit(nopython=True)
+def get_grad_C(X, c_table):
+    n_atoms = X.shape[1]
+    grad_C = np.zeros((3, n_atoms, n_atoms, 3))
+
+    for j in range(X.shape[1]):
+        IB = (X[:, j] - get_ref_pos(X, c_table[0, j])).reshape((3, 1, 1))
+        grad_S_inv = get_grad_S_inv(get_T(X, c_table, j)[1])
+        err, B = get_B(X, c_table, j)
+        grad_B = get_grad_B(X, c_table, j)
+
+        # Derive for j
+        grad_C[:, j, j, :] = np.dot(grad_S_inv, B.T)
+
+        # Derive for b(j)
+        if c_table[0, j] > constants.keys_below_are_abs_refs:
+            A = np.sum(grad_B[:, :, 0, :] * IB, axis=0)
+            grad_C[:, j, c_table[0, j], :] = np.dot(grad_S_inv, A - B.T)
+        else:
+            grad_C[:, j, c_table[0, j], :] = 0.
+
+        # Derive for a(j)
+        if c_table[1, j] > constants.keys_below_are_abs_refs:
+            A = np.sum(grad_B[:, :, 1, :] * IB, axis=0)
+            grad_C[:, j, c_table[1, j], :] = np.dot(grad_S_inv, A)
+        else:
+            grad_C[:, j, c_table[1, j], :] = 0.
+
+        # Derive for d(j)
+        if c_table[2, j] > constants.keys_below_are_abs_refs:
+            A = np.sum(grad_B[:, :, 2, :] * IB, axis=0)
+            grad_C[:, j, c_table[2, j], :] = np.dot(grad_S_inv, A)
+        else:
+            grad_C[:, j, c_table[2, j], :] = 0.
+    return grad_C
