@@ -2,6 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals, with_statement)
 
+import math as m
 import os
 import subprocess
 import tempfile
@@ -9,11 +10,11 @@ import warnings
 from io import open  # pylint:disable=redefined-builtin
 from threading import Thread
 
-import numpy as np
-import math as m
 import numba as nb
-from numba import jit
+import numpy as np
 import pandas as pd
+import sympy
+from numba import jit
 
 from chemcoord.configuration import settings
 
@@ -436,7 +437,10 @@ def apply_grad_tensor(grad_C, construction_table, cart_dist):
     C_dist = np.tensordot(grad_C, X_dist, axes=([3, 2], [0, 1])).T
     if C_dist.dtype == np.dtype('i8'):
         C_dist = C_dist.astype('f8')
-    C_dist[:, [1, 2]] = np.rad2deg(C_dist[:, [1, 2]])
+    try:
+        C_dist[:, [1, 2]] = np.rad2deg(C_dist[:, [1, 2]])
+    except AttributeError:
+        C_dist[:, [1, 2]] = sympy.deg(C_dist[:, [1, 2]])
 
     from chemcoord.internal_coordinates.zmat_class_main import Zmat
     cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
