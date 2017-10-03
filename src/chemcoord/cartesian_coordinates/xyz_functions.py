@@ -2,6 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals, with_statement)
 
+import math as m
 import os
 import subprocess
 import tempfile
@@ -9,13 +10,12 @@ import warnings
 from io import open  # pylint:disable=redefined-builtin
 from threading import Thread
 
-import numpy as np
-import math as m
 import numba as nb
-from numba import jit
+import numpy as np
 import pandas as pd
-
+import sympy
 from chemcoord.configuration import settings
+from numba import jit
 
 
 def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
@@ -436,14 +436,18 @@ def apply_grad_tensor(grad_C, construction_table, cart_dist):
     C_dist = np.tensordot(grad_C, X_dist, axes=([3, 2], [0, 1])).T
     if C_dist.dtype == np.dtype('i8'):
         C_dist = C_dist.astype('f8')
-    C_dist[:, [1, 2]] = np.rad2deg(C_dist[:, [1, 2]])
+    else:
+        try:
+            C_dist = C_dist.astype('f8')
+            C_dist[:, [1, 2]] = np.radians(C_dist[:, [1, 2]])
+        except (SystemError, TypeError, AttributeError):
+            C_dist[:, [1, 2]] = sympy.rad(C_dist[:, [1, 2]])
 
     from chemcoord.internal_coordinates.zmat_class_main import Zmat
     cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
     dtypes = ['O', 'i8', 'f8', 'i8', 'f8', 'i8', 'f8']
-    # new = pd.DataFrame(data=np.zeros((len(cart_dist), 7)),
-    #                    index=cart_dist.index, columns=cols, dtypes='f8')
-    new = pd.DataFrame(index=cart_dist.index, columns=cols, dtypes='f8')
+    new = pd.DataFrame(data=np.zeros((len(construction_table), 7)),
+                       index=cart_dist.index, columns=cols, dtype='f8')
     new = new.astype(dict(zip(cols, dtypes)))
     new.loc[:, ['b', 'a', 'd']] = construction_table
     new.loc[:, 'atom'] = cart_dist.loc[:, 'atom']
