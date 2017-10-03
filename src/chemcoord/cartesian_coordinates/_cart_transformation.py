@@ -1020,4 +1020,4 @@ def get_grad_C(X, c_table):
             grad_C[:, j, c_table[2, j], :] = np.dot(grad_S_inv, A)
         else:
             grad_C[:, j, c_table[2, j], :] = 0.
-    return (ERR_CODE_OK, j, grad_C)
+    return (ERR_CODE_OK, j, grad_C)  # pylint:disable=undefined-loop-variable
