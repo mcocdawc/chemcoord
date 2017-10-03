@@ -1,0 +1,63 @@
+import chemcoord as cc
+import numpy as np
+from numpy.linalg import matrix_power
+import pandas as pd
+import scipy as sp
+from scipy.misc import factorial as fac
+from collections import defaultdict
+import numba as nb
+from functools import partial
+import itertools
+from numba import jit
+import numba as nb
+import os
+
+UNIT = np.eye(3)
+
+
+def get_script_path():
+    return os.path.dirname(os.path.realpath(__file__))
+
+
+def get_structure_path(script_path):
+    test_path = os.path.join(script_path)
+    while True:
+        structure_path = os.path.join(test_path, 'structures')
+        if os.path.exists(structure_path):
+            return structure_path
+        else:
+            test_path = os.path.join(test_path, '..')
+
+
+STRUCTURES = get_structure_path(get_script_path())
+
+molecule = cc.Cartesian.read_xyz(os.path.join(STRUCTURES, 'MIL53_small.xyz'),
+                                 start_index=1)
+molecule -= molecule.get_barycenter()
+
+
+def test_asymmetric_unit():
+    a = molecule.get_asymmetric_unit()
+    a.loc[8, 'x'] = 10
+    a.loc[8, 'y'] = 10
+    eq = molecule.get_equivalent_atoms()
+    new = a.get_cartesian()
+    comparison = np.isclose((new - molecule).loc[:, ['x', 'y', 'z']], 0.)
+    new = new[~comparison.all(axis=1)]
+    assert set(new.index) == eq['eq_sets'][8]
+    assert np.isclose(abs(new.loc[:, ['x', 'y']]), 10).all
+
+
+def test_point_group_detection():
+    np.random.seed(77)
+    dist_molecule = molecule.copy()
+    assert 'C2v' == dist_molecule.get_pointgroup(tolerance=0.1).sch_symbol
+    dist_molecule += np.random.randn(len(dist_molecule), 3) / 25
+    assert 'C1' == dist_molecule.get_pointgroup(tolerance=0.1).sch_symbol
+    eq = dist_molecule.symmetrize(max_n=25, tolerance=0.3, epsilon=1e-5)
+    assert 'C2v' == eq['sym_mol'].get_pointgroup(tolerance=0.1).sch_symbol
+    a, b = molecule.align(dist_molecule)
+    a, c = molecule.align(eq['sym_mol'])
+    d1 = (a - b).get_distance_to()
+    d2 = (a - c).get_distance_to()
+    assert d1['distance'].sum() > d2['distance'].sum()
