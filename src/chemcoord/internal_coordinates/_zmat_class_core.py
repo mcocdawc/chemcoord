@@ -6,11 +6,11 @@ import copy
 import warnings
 from functools import partial
 
-import numpy as np
-import pandas as pd
-
+import chemcoord.constants as constants
 import chemcoord.internal_coordinates._indexers as indexers
 import chemcoord.internal_coordinates._zmat_transformation as transformation
+import numpy as np
+import pandas as pd
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
                                   InvalidReference, PhysicalMeaning)
@@ -430,8 +430,7 @@ and assigning values safely.
                     raise e
         return out
 
-    def change_numbering(self, new_index=None, inplace=False,
-                         exclude_upper_triangle=True):
+    def change_numbering(self, new_index=None):
         """Change numbering to a new index.
 
         Changes the numbering of index and all dependent numbering
@@ -442,34 +441,42 @@ and assigning values safely.
         Args:
             new_index (list): If None the new_index is taken from 1 to the
                 number of atoms.
-            exclude_upper_triangle (bool): Exclude the upper triangle from
-                being replaced with the new index
 
         Returns:
             Zmat: Reindexed version of the zmatrix.
         """
-        cols = ['b', 'a', 'd']
-        out = self if inplace else self.copy()
-
         if (new_index is None):
             new_index = range(len(self))
         elif len(new_index) != len(self):
             raise ValueError('len(new_index) has to be the same as len(self)')
 
-        if exclude_upper_triangle:
-            previous = [out.iloc[i, [1, 3, 5][i:]]
-                        if i < 2 else out.iloc[i, 5]
-                        for i in range(min(len(self), 3))]
-            out.unsafe_loc[:, cols] = out.loc[:, cols].replace(
-                out.index, new_index)
-            for i in range(min(len(self), 3)):
-                out.unsafe_iloc[i, [1, 3, 5][i:]] = previous[i]
-        else:
-            out.unsafe_loc[:, cols] = out.loc[:, cols].replace(
-                out.index, new_index)
+        c_table = self.loc[:, ['b', 'a', 'd']]
+        # Strange bug in pandas where .replace is transitive for object columns
+        # and non-transitive for all other types.
+        # (Remember that string columns are just object columns)
+        # Example:
+        # A = {1: 2, 2: 3}
+        # Transtitive [1].replace(A) gives [3]
+        # Non-Transtitive [1].replace(A) gives [2]
+        # https://github.com/pandas-dev/pandas/issues/5338
+        # https://github.com/pandas-dev/pandas/issues/16051
+        # https://github.com/pandas-dev/pandas/issues/5541
+        # For this reason convert to int and replace then.
+
+        c_table = c_table.replace(constants.int_label)
+        try:
+            c_table = c_table.astype('i8')
+        except ValueError:
+            raise ValueError('Due to a bug in pandas it is necessary to have '
+                             'integer columns')
+        c_table = c_table.replace(self.index, new_index)
+        c_table = c_table.replace(
+            {v: k for k, v in constants.int_label.items()})
+
+        out = self.copy()
+        out.unsafe_loc[:, ['b', 'a', 'd']] = c_table
         out._frame.index = new_index
-        if not inplace:
-            return out
+        return out
 
     def _insert_dummy_cart(self, exception, last_valid_cartesian=None):
         """Insert dummy atom into the already built cartesian of exception
@@ -620,9 +627,12 @@ and assigning values safely.
             cartesian = Cartesian(xyz_frame)
             return cartesian
 
-        zmat = self.change_numbering()
-        c_table = zmat.loc[:, ['b', 'a', 'd']].values.T
-        C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
+        c_table = self.loc[:, ['b', 'a', 'd']]
+        c_table = c_table.replace(constants.int_label)
+        c_table = c_table.replace({k: v for v, k in enumerate(c_table.index)})
+        c_table = c_table.values.astype('i8').T
+
+        C = self.loc[:, ['bond', 'angle', 'dihedral']].values.T
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
         err, row, positions = transformation.get_X(C, c_table)
@@ -640,7 +650,8 @@ and assigning values safely.
 
     def get_grad_cartesian(self, as_function=True, chain=True):
         zmat = self.change_numbering()
-        c_table = zmat.loc[:, ['b', 'a', 'd']].values.T
+        c_table = zmat.loc[:, ['b', 'a', 'd']]
+        c_table = c_table.replace(constants.int_label).values.T
         C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
         if C.dtype == np.dtype('i8'):
             C = C.astype('f8')
