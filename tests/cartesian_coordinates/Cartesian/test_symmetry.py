@@ -1,18 +1,7 @@
-import chemcoord as cc
-import numpy as np
-from numpy.linalg import matrix_power
-import pandas as pd
-import scipy as sp
-from scipy.misc import factorial as fac
-from collections import defaultdict
-import numba as nb
-from functools import partial
-import itertools
-from numba import jit
-import numba as nb
 import os
 
-UNIT = np.eye(3)
+import chemcoord as cc
+import numpy as np
 
 
 def get_script_path():
@@ -48,7 +37,7 @@ def test_asymmetric_unit():
     assert np.isclose(abs(new.loc[:, ['x', 'y']]), 10).all
 
 
-def test_point_group_detection():
+def test_point_group_detection_and_symmetrizing():
     np.random.seed(77)
     dist_molecule = molecule.copy()
     assert 'C2v' == dist_molecule.get_pointgroup(tolerance=0.1).sch_symbol
