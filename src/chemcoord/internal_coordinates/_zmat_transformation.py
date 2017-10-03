@@ -6,11 +6,10 @@ from __future__ import (absolute_import, division, print_function,
 import numba as nb
 import numpy as np
 from numpy import sin, cos
-from numba import jit, generated_jit
+from numba import jit
 
 import chemcoord.constants as constants
-from chemcoord.cartesian_coordinates.xyz_functions import (
-    _jit_cross, _jit_isclose, _jit_normalize)
+from chemcoord.cartesian_coordinates.xyz_functions import _jit_isclose
 from chemcoord.cartesian_coordinates._cart_transformation import (
     get_B, get_grad_B, get_ref_pos)
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference

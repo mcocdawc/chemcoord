@@ -5,7 +5,6 @@ from __future__ import (absolute_import, division, print_function,
 import warnings
 from collections import OrderedDict
 from itertools import permutations
-from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -14,7 +13,8 @@ import chemcoord.constants as constants
 from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (IllegalArgumentCombination,
-                                  UndefinedCoordinateSystem, ERR_CODE_OK)
+                                  UndefinedCoordinateSystem,
+                                  ERR_CODE_OK, ERR_CODE_InvalidReference)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 import chemcoord.cartesian_coordinates._cart_transformation as transformation
 
@@ -640,13 +640,20 @@ class CartesianGetZmat(CartesianCore):
         if X.dtype == np.dtype('i8'):
             X = X.astype('f8')
 
-        grad_C = transformation.get_grad_C(X, c_table)
+        err, row, grad_C = transformation.get_grad_C(X, c_table)
+        if err == ERR_CODE_InvalidReference:
+            rename = dict(enumerate(self.index))
+            i = rename[row]
+            b, a, d = construction_table.loc[i, ['b', 'a', 'd']]
+            raise InvalidReference(i=i, b=b, a=a, d=d)
 
         if as_function:
             from chemcoord.cartesian_coordinates.xyz_functions import (
                     apply_grad_tensor)
 
             def f(cart_dist):
+                # Can not be written using functools.partial due to
+                # argument order.
                 return apply_grad_tensor(grad_C, construction_table, cart_dist)
             return f
         else:
