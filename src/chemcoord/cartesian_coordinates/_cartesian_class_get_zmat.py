@@ -14,7 +14,7 @@ from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (IllegalArgumentCombination,
                                   UndefinedCoordinateSystem,
-                                  InvalidReference, ERR_CODE_InvalidReference
+                                  InvalidReference, ERR_CODE_InvalidReference,
                                   ERR_CODE_OK)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 import chemcoord.cartesian_coordinates._cart_transformation as transformation
