@@ -441,8 +441,9 @@ def apply_grad_tensor(grad_C, construction_table, cart_dist):
     from chemcoord.internal_coordinates.zmat_class_main import Zmat
     cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
     dtypes = ['O', 'i8', 'f8', 'i8', 'f8', 'i8', 'f8']
-    new = pd.DataFrame(data=np.zeros((len(cart_dist), 7)),
-                       index=cart_dist.index, columns=cols)
+    # new = pd.DataFrame(data=np.zeros((len(cart_dist), 7)),
+    #                    index=cart_dist.index, columns=cols, dtypes='f8')
+    new = pd.DataFrame(index=cart_dist.index, columns=cols, dtypes='f8')
     new = new.astype(dict(zip(cols, dtypes)))
     new.loc[:, ['b', 'a', 'd']] = construction_table
     new.loc[:, 'atom'] = cart_dist.loc[:, 'atom']

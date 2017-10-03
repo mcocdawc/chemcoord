@@ -638,7 +638,7 @@ and assigning values safely.
         elif err == ERR_CODE_OK:
             return create_cartesian(positions, row + 1)
 
-    def get_grad_X(self, as_function=True, chain=True):
+    def get_grad_cartesian(self, as_function=True, chain=True):
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']].values.T
         C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
