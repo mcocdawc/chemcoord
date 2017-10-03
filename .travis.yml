@@ -21,6 +21,7 @@ install:
   - pip install codecov
   - pip install pytest-cov
   - pip install .
+  - pip install -e .
 
 script:
   - pytest --cov=./src/chemcoord tests
