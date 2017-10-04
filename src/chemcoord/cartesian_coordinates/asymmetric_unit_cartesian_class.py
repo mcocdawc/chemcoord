@@ -30,7 +30,7 @@ class AsymmetricUnitCartesian(Cartesian):
         eq_sets = self._metadata['eq']['eq_sets']
         sym_ops = self._metadata['eq']['sym_ops']
         frame = pd.DataFrame(index=[i for v in eq_sets.values() for i in v],
-                             columns=['atom', 'x', 'y', 'z'])
+                             columns=['atom', 'x', 'y', 'z'], dtype='f8')
         frame['atom'] = pd.Series(
             {i: self.loc[k, 'atom'] for k, v in eq_sets.items() for i in v})
         frame.loc[self.index, coords] = self.loc[:, coords]

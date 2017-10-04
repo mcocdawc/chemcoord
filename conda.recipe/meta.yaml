@@ -12,7 +12,7 @@ requirements:
     - numpy
     - scipy
     - pandas >=0.20
-    - numba >=0.30
+    - numba >=0.35
     - sortedcontainers
     - sympy
     - six
@@ -23,7 +23,7 @@ requirements:
     - numpy
     - scipy
     - pandas >=0.20
-    - numba >=0.30
+    - numba >=0.35
     - sortedcontainers
     - sympy
     - six

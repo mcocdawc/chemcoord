@@ -5,7 +5,6 @@ from __future__ import (absolute_import, division, print_function,
 import warnings
 from collections import OrderedDict
 from itertools import permutations
-from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -14,7 +13,9 @@ import chemcoord.constants as constants
 from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (IllegalArgumentCombination,
-                                  UndefinedCoordinateSystem, ERR_CODE_OK)
+                                  UndefinedCoordinateSystem,
+                                  InvalidReference, ERR_CODE_InvalidReference,
+                                  ERR_CODE_OK)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 import chemcoord.cartesian_coordinates._cart_transformation as transformation
 
@@ -72,8 +73,6 @@ class CartesianGetZmat(CartesianCore):
         if use_lookup is None:
             use_lookup = settings['defaults']['use_lookup']
 
-        int_label = constants.int_label
-
         def modify_priority(bond_dict, user_defined):
             def move_to_start(dct, key):
                 "Due to PY27 compatibility"
@@ -118,9 +117,9 @@ class CartesianGetZmat(CartesianCore):
                 i = start_atom
             order_of_def = [i]
             user_defined = []
-            construction_table = {i: {'b': int_label['origin'],
-                                      'a': int_label['e_z'],
-                                      'd': int_label['e_x']}}
+            construction_table = {i: {'b': 'origin',
+                                      'a': 'e_z',
+                                      'd': 'e_x'}}
         else:
             i = construction_table.index[0]
             order_of_def = list(construction_table.index)
@@ -146,12 +145,12 @@ class CartesianGetZmat(CartesianCore):
                     if b in order_of_def[:3]:
                         if len(order_of_def) == 1:
                             construction_table[i] = {'b': b,
-                                                     'a': int_label['e_z'],
-                                                     'd': int_label['e_x']}
+                                                     'a': 'e_z',
+                                                     'd': 'e_x'}
                         elif len(order_of_def) == 2:
                             a = (bond_dict[b] & set(order_of_def))[0]
                             construction_table[i] = {'b': b, 'a': a,
-                                                     'd': int_label['e_x']}
+                                                     'd': 'e_x'}
                         else:
                             try:
                                 a = parent[b]
@@ -183,7 +182,6 @@ class CartesianGetZmat(CartesianCore):
             work_bond_dict = new_work_bond_dict
             modify_priority(work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient='index')
-        output = output.fillna(0).astype('int64')
         output = output.loc[order_of_def, ['b', 'a', 'd']]
         return output
 
@@ -243,7 +241,6 @@ class CartesianGetZmat(CartesianCore):
         if use_lookup is None:
             use_lookup = settings['defaults']['use_lookup']
 
-        int_label = constants.int_label
         if fragment_list is None:
             self.get_bonds(use_lookup=use_lookup)
             self._give_val_sorted_bond_dict(use_lookup=use_lookup)
@@ -299,13 +296,13 @@ class CartesianGetZmat(CartesianCore):
                 constr_table = fragment._get_frag_constr_table(
                     start_atom=i, use_lookup=use_lookup)
                 if len(full_table) == 1:
-                    a, d = int_label['e_z'], int_label['e_x']
+                    a, d = 'e_z', 'e_x'
                 elif len(full_table) == 2:
                     if b == full_table.index[0]:
                         a = full_table.index[1]
                     else:
                         a = full_table.index[0]
-                    d = int_label['e_x']
+                    d = 'e_x'
                 else:
                     if b in full_table.index[:2]:
                         if b == full_table.index[0]:
@@ -506,12 +503,15 @@ class CartesianGetZmat(CartesianCore):
             if isinstance(c_table, pd.Series):
                 c_table = pd.DataFrame(c_table).T
             else:
-                c_table = np.array(c_table, dtype='i8')
+                print(c_table)
+                c_table = np.array(c_table)
                 if len(c_table.shape) == 1:
                     c_table = c_table[None, :]
                 c_table = pd.DataFrame(
                     data=c_table[:, 1:], index=c_table[:, 0],
                     columns=['b', 'a', 'd'])
+        c_table = c_table.replace(constants.int_label).astype('i8')
+        c_table.index = c_table.index.astype('i8')
 
         new_index = c_table.index.append(self.index.difference(c_table.index))
         X = self.loc[new_index, ['x', 'y', 'z']].values.astype('f8').T
@@ -633,20 +633,28 @@ class CartesianGetZmat(CartesianCore):
         if (construction_table.index != self.index).any():
             message = "construction_table and self must use the same index"
             raise ValueError(message)
-        c_table = construction_table.loc[:, ['b', 'a', 'd']].copy()
-        c_table = c_table.replace(
-                to_replace=c_table.index, value=range(len(c_table))).values.T
+        c_table = construction_table.loc[:, ['b', 'a', 'd']]
+        c_table = c_table.replace(constants.int_label)
+        c_table = c_table.replace({k: v for v, k in enumerate(c_table.index)})
+        c_table = c_table.values.T
         X = self.loc[:, ['x', 'y', 'z']].values.T
         if X.dtype == np.dtype('i8'):
             X = X.astype('f8')
 
-        grad_C = transformation.get_grad_C(X, c_table)
+        err, row, grad_C = transformation.get_grad_C(X, c_table)
+        if err == ERR_CODE_InvalidReference:
+            rename = dict(enumerate(self.index))
+            i = rename[row]
+            b, a, d = construction_table.loc[i, ['b', 'a', 'd']]
+            raise InvalidReference(i=i, b=b, a=a, d=d)
 
         if as_function:
             from chemcoord.cartesian_coordinates.xyz_functions import (
                     apply_grad_tensor)
 
             def f(cart_dist):
+                # Can not be written using functools.partial due to
+                # argument order.
                 return apply_grad_tensor(grad_C, construction_table, cart_dist)
             return f
         else:

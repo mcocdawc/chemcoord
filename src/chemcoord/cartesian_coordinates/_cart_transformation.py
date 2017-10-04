@@ -993,6 +993,8 @@ def get_grad_C(X, c_table):
         IB = (X[:, j] - get_ref_pos(X, c_table[0, j])).reshape((3, 1, 1))
         grad_S_inv = get_grad_S_inv(get_T(X, c_table, j)[1])
         err, B = get_B(X, c_table, j)
+        if err == ERR_CODE_InvalidReference:
+            return (err, j, grad_C)
         grad_B = get_grad_B(X, c_table, j)
 
         # Derive for j
@@ -1018,4 +1020,4 @@ def get_grad_C(X, c_table):
             grad_C[:, j, c_table[2, j], :] = np.dot(grad_S_inv, A)
         else:
             grad_C[:, j, c_table[2, j], :] = 0.
-    return grad_C
+    return (ERR_CODE_OK, j, grad_C)  # pylint:disable=undefined-loop-variable

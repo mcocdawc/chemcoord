@@ -60,7 +60,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             raise IllegalArgumentCombination(message)
         elif atoms is not None and coords is not None:
             frame = pd.DataFrame(index=index,
-                                 columns=['atom', 'x', 'y', 'z'])
+                                 columns=['atom', 'x', 'y', 'z'], dtype='f8')
             frame['atom'] = atoms
             frame.loc[:, ['x', 'y', 'z']] = coords
         elif not isinstance(frame, pd.DataFrame):
