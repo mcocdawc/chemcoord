@@ -176,6 +176,7 @@ X,,0.0,,,,,,,,,,,,,,,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0.0,,nan,0.8
 
 
 elements = pd.read_csv(atom_properties, index_col=0)
+elements = elements.astype({'atomic_number': np.dtype('i8')})
 
 
 def replace_data(path, data):

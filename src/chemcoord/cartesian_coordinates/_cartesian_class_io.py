@@ -8,12 +8,16 @@ import tempfile
 import warnings
 from io import open  # pylint:disable=redefined-builtin
 from threading import Thread
+import json
+from collections import defaultdict
 
 import pandas as pd
+import numpy as np
 
 from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
+from chemcoord import constants
 
 
 class CartesianIO(CartesianCore, GenericIO):
@@ -212,6 +216,75 @@ class CartesianIO(CartesianCore, GenericIO):
                     os.remove(give_filename(i))
 
         Thread(target=open_file, args=(i,)).start()
+
+    def to_cjson(self, buf=None, **kwargs):
+        cjson_dict = {'chemical json': 0}
+
+        cjson_dict['atoms'] = {}
+
+        atomic_number = constants.elements['atomic_number'].to_dict()
+        cjson_dict['atoms'] = {'elements': {}}
+        cjson_dict['atoms']['elements']['number']= [
+            int(atomic_number[x]) for x in self['atom']]
+
+        cjson_dict['atoms']['coords'] = {}
+        coords = self.loc[:, ['x', 'y', 'z']].values.reshape(len(self) * 3)
+        cjson_dict['atoms']['coords']['3d'] = [float(x) for x in coords]
+
+        bonds = []
+        bond_dict = self.get_bonds()
+        for i in bond_dict:
+            for b in bond_dict[i]:
+                bonds += [int(i), int(b)]
+                bond_dict[b].remove(i)
+
+        cjson_dict['bonds'] = {'connections': {}}
+        cjson_dict['bonds']['connections']['index'] = bonds
+
+        output = json.dumps(cjson_dict, **kwargs)
+
+        if buf is not None:
+            with open(buf, mode='w') as f:
+                f.write(output)
+        else:
+            return output
+
+    @classmethod
+    def from_cjson(cls, filepath):
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+        assert data['chemical json'] == 0
+
+        n_atoms = len(data['atoms']['coords']['3d'])
+        metadata = {}
+        _metadata = {}
+
+        coords = np.array(
+            data['atoms']['coords']['3d']).reshape((n_atoms // 3, 3))
+
+        atomic_number = constants.elements['atomic_number']
+        elements = [dict(zip(atomic_number, atomic_number.index))[x]
+                    for x in data['atoms']['elements']['number']]
+
+        try:
+            connections = data['bonds']['connections']['index']
+        except KeyError:
+            pass
+        else:
+            bond_dict = defaultdict(set)
+            for i, b in zip(connections[::2], connections[1::2]):
+                bond_dict[i].add(b)
+                bond_dict[b].add(i)
+            _metadata['bond_dict'] = dict(bond_dict)
+
+        try:
+            metadata.update(data['properties'])
+        except KeyError:
+            pass
+
+        out = cls(atoms=elements, coords=coords, _metadata=_metadata,
+                  metadata=metadata)
+        return out
 
     def get_pymatgen_molecule(self):
         """Create a Molecule instance of the pymatgen library
