@@ -10,7 +10,6 @@ from io import open  # pylint:disable=redefined-builtin
 from threading import Thread
 import json
 from collections import defaultdict
-from pathlib import Path
 
 import pandas as pd
 import numpy as np
