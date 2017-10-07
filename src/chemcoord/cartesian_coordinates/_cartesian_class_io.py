@@ -10,6 +10,7 @@ from io import open  # pylint:disable=redefined-builtin
 from threading import Thread
 import json
 from collections import defaultdict
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -139,7 +140,7 @@ class CartesianIO(CartesianCore, GenericIO):
         return self.to_xyz(*args, **kwargs)
 
     @classmethod
-    def read_xyz(cls, inputfile, start_index=0, get_bonds=True,
+    def read_xyz(cls, buf, start_index=0, get_bonds=True,
                  nrows=None, engine=None):
         """Read a file of coordinate information.
 
@@ -156,7 +157,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             Cartesian:
         """
-        frame = pd.read_table(inputfile, skiprows=2, comment='#',
+        frame = pd.read_table(buf, skiprows=2, comment='#',
                               nrows=nrows,
                               delim_whitespace=True,
                               names=['atom', 'x', 'y', 'z'], engine=engine)
@@ -218,13 +219,29 @@ class CartesianIO(CartesianCore, GenericIO):
         Thread(target=open_file, args=(i,)).start()
 
     def to_cjson(self, buf=None, **kwargs):
+        """Write a cjson file or return dictionary.
+
+        The cjson format is specified
+        `here <https://github.com/OpenChemistry/chemicaljson>`_.
+
+        Args:
+            buf (str): If it is a filepath, the data is written to
+                filepath. If it is None, a dictionary with the cjson
+                information is returned.
+            kwargs: The keyword arguments are passed into the
+                ``dump`` function of the
+                `json library <https://docs.python.org/3/library/json.html>`_.
+
+        Returns:
+            dict:
+        """
         cjson_dict = {'chemical json': 0}
 
         cjson_dict['atoms'] = {}
 
         atomic_number = constants.elements['atomic_number'].to_dict()
         cjson_dict['atoms'] = {'elements': {}}
-        cjson_dict['atoms']['elements']['number']= [
+        cjson_dict['atoms']['elements']['number'] = [
             int(atomic_number[x]) for x in self['atom']]
 
         cjson_dict['atoms']['coords'] = {}
@@ -241,19 +258,33 @@ class CartesianIO(CartesianCore, GenericIO):
         cjson_dict['bonds'] = {'connections': {}}
         cjson_dict['bonds']['connections']['index'] = bonds
 
-        output = json.dumps(cjson_dict, **kwargs)
-
         if buf is not None:
             with open(buf, mode='w') as f:
-                f.write(output)
+                f.write(json.dumps(cjson_dict, **kwargs))
         else:
-            return output
+            return cjson_dict
 
     @classmethod
-    def from_cjson(cls, filepath):
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-        assert data['chemical json'] == 0
+    def read_cjson(cls, buf):
+        """Read a cjson file or a dictionary.
+
+        The cjson format is specified
+        `here <https://github.com/OpenChemistry/chemicaljson>`_.
+
+        Args:
+            buf (str, dict): If it is a filepath, the data is read from
+                filepath. If it is a dictionary, the dictionary is interpreted
+                as cjson.
+
+        Returns:
+            Cartesian:
+        """
+        if isinstance(file, dict):
+            data = file.copy()
+        else:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+            assert data['chemical json'] == 0
 
         n_atoms = len(data['atoms']['coords']['3d'])
         metadata = {}

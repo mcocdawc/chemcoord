@@ -80,9 +80,11 @@ chemcoord\.Cartesian
     .. autosummary::
          :toctree: src_Cartesian
 
-         ~Cartesian.write_xyz
          ~Cartesian.to_xyz
+         ~Cartesian.write_xyz
          ~Cartesian.read_xyz
+         ~Cartesian.to_cjson
+         ~Cartesian.read_cjson
          ~Cartesian.view
          ~Cartesian.to_string
          ~Cartesian.to_latex
