@@ -414,13 +414,13 @@ and assigning values safely.
                 out.unsafe_loc[:, col] = out.loc[:, col].map(
                     give_subs_function(symb_expr, value))
                 try:
-                    out.unsafe_loc[:, col] = out.loc[:, col].astype('float')
-                except TypeError:
+                    out.unsafe_loc[:, col] = out.loc[:, col].astype('f8')
+                except (SystemError, TypeError):
                     pass
         if perform_checks:
             try:
                 out._metadata['last_valid_cartesian'] = out.get_cartesian()
-            except AttributeError:
+            except (AttributeError, TypeError):
                 # Unevaluated symbolic expressions are remaining.
                 pass
             except InvalidReference as e:
