@@ -401,9 +401,10 @@ class CartesianCore(PandasWrapper, GenericCore):
         depending on ``use_lookup``. Greatly increases performance if
         True, but could introduce bugs in certain situations.
 
-        Just imagine a situation where the ``Cartesian`` is
-        changed manually. If you apply lateron a method e.g. ``to_zmat()``
-        that makes use of ``get_bonds()`` the dictionary of the bonds
+        Just imagine a situation where the :class:`~Cartesian` is
+        changed manually. If you apply lateron a method e.g.
+        :meth:`~get_zmat()` that makes use of :meth:`~get_bonds()`
+        the dictionary of the bonds
         may not represent the actual situation anymore.
 
         You have two possibilities to cope with this problem.
