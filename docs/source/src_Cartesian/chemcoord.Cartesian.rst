@@ -19,6 +19,7 @@ chemcoord\.Cartesian
          ~Cartesian.get_without
          ~Cartesian.add_data
          ~Cartesian.get_total_mass
+         ~Cartesian.get_electron_number
          ~Cartesian.get_coordination_sphere
          ~Cartesian.partition_chem_env
 

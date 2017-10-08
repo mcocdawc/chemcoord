@@ -18,6 +18,7 @@ chemcoord\.Zmat
       ~Zmat.get_cartesian
       ~Zmat.to_xyz
       ~Zmat.get_total_mass
+      ~Zmat.get_electron_number
       ~Zmat.subs
       ~Zmat.iupacify
       ~Zmat.minimize_dihedrals

@@ -90,3 +90,15 @@ class GenericCore(object):
             if not same_atoms:
                 break
         return same_atoms
+
+    def get_electron_number(self, charge=0):
+        """Return the number of electrons.
+
+        Args:
+            charge (int): Charge of the molecule.
+
+        Returns:
+            int:
+        """
+        atomic_number = constants.elements['atomic_number'].to_dict()
+        return sum([atomic_number[atom] for atom in self['atom']]) - charge
