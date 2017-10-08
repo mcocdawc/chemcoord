@@ -661,7 +661,7 @@ and assigning values safely.
 
         if as_function:
             from chemcoord.internal_coordinates.zmat_functions import (
-                    apply_grad_tensor)
+                apply_grad_tensor)
             return partial(apply_grad_tensor, grad_X)
         else:
             return grad_X

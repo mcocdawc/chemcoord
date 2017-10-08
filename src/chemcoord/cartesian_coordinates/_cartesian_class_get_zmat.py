@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 import warnings
 from collections import OrderedDict
 from itertools import permutations
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -651,12 +652,7 @@ class CartesianGetZmat(CartesianCore):
         if as_function:
             from chemcoord.cartesian_coordinates.xyz_functions import (
                     apply_grad_tensor)
-
-            def f(cart_dist):
-                # Can not be written using functools.partial due to
-                # argument order.
-                return apply_grad_tensor(grad_C, construction_table, cart_dist)
-            return f
+            return partial(apply_grad_tensor, grad_C, construction_table)
         else:
             return grad_C
 
