@@ -196,6 +196,11 @@ class CartesianGetZmat(CartesianCore):
         It contains the whole information about which reference atoms
         are used by each atom in the Zmatrix.
 
+        The absolute references in cartesian space are one of the following
+        magic strings::
+
+            ['origin', 'e_x', 'e_y', 'e_z']
+
         This method creates a so called "chemical" construction table,
         which makes use of the connectivity table in this molecule.
 
