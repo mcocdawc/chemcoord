@@ -84,7 +84,7 @@ The project's website with documentation is: http://chemcoord.readthedocs.org/
 
 
 ## Installation guide
-A working python installation is required (2.7 and 3.x are possible) .
+A working python installation is required (2.7 and >=3.5 are possible).
 
 It is highly recommended to use this module in combination with
   [Ipython](http://ipython.org/) and [jupyter](http://jupyter.org/).
