@@ -55,7 +55,7 @@
 
 ## Website
 
-The project's website is: http://chemcoord.readthedocs.org/
+The project's website with documentation is: http://chemcoord.readthedocs.org/
 
 
 ## Features
@@ -84,19 +84,18 @@ The project's website is: http://chemcoord.readthedocs.org/
 
 
 ## Installation guide
-A working python (2.7 and 3.x are possible)
-You can use for example the [anaconda3 installer](https://www.continuum.io/downloads/)
+A working python installation is required (2.7 and 3.x are possible) .
 
-The advantage of the anaconda3 installer is that you get a lot of additional
-modules and programs,
-that make it really easy to work with python.
-For example [Ipython](http://ipython.org/) and the [jupyter notebooks](http://jupyter.org/)
-I highly recommend to use those.
+It is highly recommended to use this module in combination with
+  [Ipython](http://ipython.org/) and [jupyter](http://jupyter.org/).
+They come shipped by default with the
+  [anaconda3 installer](https://www.continuum.io/downloads/)
 
 ### Unix
 
 
-For the packaged versions just type in your terminal:
+For the packaged versions, the following commands have to be executed in the
+  terminal:
 ```
 conda install chemcoord
 ```
