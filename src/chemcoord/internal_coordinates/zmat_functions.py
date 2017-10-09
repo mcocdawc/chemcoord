@@ -62,7 +62,19 @@ class TestOperators(object):
         self.cls.test_operators = self.old_value
 
 
-def apply_grad_tensor(grad_X, zmat_dist):
+def apply_grad_cartesian_tensor(grad_X, zmat_dist):
+    """Apply the gradient for transformation to cartesian space onto zmat_dist.
+
+    Args:
+        grad_X (:class:`numpy.ndarray`): A ``(3, n, n, 3)`` array.
+            The mathematical details of the index layout is explained in
+            :meth:`~chemcoord.Cartesian.get_grad_zmat()`.
+        zmat_dist (:class:`~chemcoord.Zmat`):
+            Distortions in Zmatrix space.
+
+    Returns:
+        :class:`~chemcoord.Cartesian`: Distortions in cartesian space.
+    """
     columns = ['bond', 'angle', 'dihedral']
     C_dist = zmat_dist.loc[:, columns].values.T
     try:

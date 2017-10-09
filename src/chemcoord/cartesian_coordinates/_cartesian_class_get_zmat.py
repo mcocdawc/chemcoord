@@ -707,7 +707,7 @@ class CartesianGetZmat(CartesianCore):
 
         Returns:
             (func, np.array): Depending on ``as_function`` return a tensor or
-            :func:`xyz_functions.apply_grad_zmat_tensor`
+            :func:`~chemcoord.xyz_functions.apply_grad_zmat_tensor`
             with partially replaced arguments.
         """
         if (construction_table.index != self.index).any():

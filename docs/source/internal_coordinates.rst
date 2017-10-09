@@ -22,9 +22,20 @@ zmat_functions
 A collection of functions operating on instances of :class:`~chemcoord.Zmat`.
 
 
-.. currentmodule:: chemcoord
+.. currentmodule:: chemcoord.zmat_functions
+
+.. rubric:: Functions
+
+.. autosummary::
+    :toctree: src_zmat_functions
+
+    ~apply_grad_cartesian_tensor
+
+
+.. rubric:: Contextmanagers
 
 .. autosummary::
     :toctree: src_zmat_functions
 
     ~DummyManipulation
+    ~TestOperators

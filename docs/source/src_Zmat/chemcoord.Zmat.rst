@@ -16,6 +16,7 @@ chemcoord\.Zmat
       ~Zmat.change_numbering
       ~Zmat.has_same_sumformula
       ~Zmat.get_cartesian
+      ~Zmat.get_grad_cartesian
       ~Zmat.to_xyz
       ~Zmat.get_total_mass
       ~Zmat.get_electron_number

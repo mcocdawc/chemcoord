@@ -649,6 +649,87 @@ and assigning values safely.
             return create_cartesian(positions, row + 1)
 
     def get_grad_cartesian(self, as_function=True, chain=True):
+        r"""Return the gradient for the transformation to a Cartesian.
+
+        If ``as_function`` is True, a function is returned that can be directly
+        applied onto instances of :class:`~Zmat`, which contain the
+        applied distortions in Zmatrix space.
+        In this case the user does not have to worry about indexing and
+        correct application of the tensor product.
+        Basically this is the function
+        :func:`zmat_functions.apply_grad_cartesian_tensor`
+        with partially replaced arguments.
+
+        If ``as_function`` is False, a ``(3, n, n, 3)`` tensor is returned,
+        which contains the values of the derivatives.
+
+        Since a ``n * 3`` matrix is deriven after a ``n * 3``
+        matrix, it is important to specify the used rules for indexing the
+        resulting tensor.
+
+        The rule is very simple: The indices of the numerator are used first
+        then the indices of the denominator get swapped and appended:
+
+        .. math::
+            \left(
+                \frac{\partial \mathbf{Y}}{\partial \mathbf{X}}
+            \right)_{i, j, k, l}
+            =
+            \frac{\partial \mathbf{Y}_{i, j}}{\partial \mathbf{X}_{l, k}}
+
+        Applying this rule to an example function:
+
+        .. math::
+            f \colon \mathbb{R}^3 \rightarrow \mathbb{R}
+
+        Gives as derivative the known row-vector gradient:
+
+        .. math::
+                (\nabla f)_{1, i}
+            =
+                \frac{\partial f}{\partial x_i} \qquad i \in \{1, 2, 3\}
+
+        .. note::
+            The row wise alignment of the zmat files makes sense for these
+            CSV like files.
+            But it is mathematically advantageous and
+            sometimes (depending on the memory layout) numerically better
+            to use a column wise alignment of the coordinates.
+            In this function the resulting tensor assumes a ``3 * n`` array
+            for the coordinates.
+
+        If
+
+        .. math::
+
+            \mathbf{C}_{i, j} &\qquad 1 \leq i \leq 3, \quad 1 \leq j \leq n \\
+            \mathbf{X}_{i, j} &\qquad 1 \leq i \leq 3, \quad 1 \leq j \leq n
+
+        denote the positions in Zmatrix and cartesian space,
+
+        The complete tensor may be written as:
+
+        .. math::
+
+            \left(
+                \frac{\partial \mathbf{X}}{\partial \mathbf{C}}
+            \right)_{i, j, k, l}
+            =
+            \frac{\partial \mathbf{X}_{i, j}}{\partial \mathbf{C}_{l, k}}
+
+        Args:
+            construction_table (pandas.DataFrame):
+            as_function (bool): Return a tensor or
+                :func:`xyz_functions.apply_grad_zmat_tensor`
+                with partially replaced arguments.
+            chain (bool):
+
+        Returns:
+            (func, :class:`numpy.ndarray`): Depending on ``as_function``
+            return a tensor or
+            :func:`~chemcoord.zmat_functions.apply_grad_cartesian_tensor`
+            with partially replaced arguments.
+        """
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']]
         c_table = c_table.replace(constants.int_label).values.T
@@ -661,8 +742,8 @@ and assigning values safely.
 
         if as_function:
             from chemcoord.internal_coordinates.zmat_functions import (
-                apply_grad_tensor)
-            return partial(apply_grad_tensor, grad_X)
+                apply_grad_cartesian_tensor)
+            return partial(apply_grad_cartesian_tensor, grad_X)
         else:
             return grad_X
 
