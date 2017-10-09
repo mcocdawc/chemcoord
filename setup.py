@@ -26,8 +26,14 @@ CLASSIFIERS = [
     'Environment :: Console',
     'Intended Audience :: Science/Research',
     'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
+    'Operating System :: Unix',
+    'Operating System :: POSIX',
+    'Operating System :: Microsoft :: Windows',
     'Natural Language :: English',
     'Programming Language :: Python',
+    'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
     'Topic :: Scientific/Engineering :: Chemistry',
     'Topic :: Scientific/Engineering :: Physics']
 
@@ -53,7 +59,7 @@ def setup_package():
         classifiers=CLASSIFIERS,
         packages=find_packages('src'),
         package_dir={'': 'src'},
-        install_requires=INSTALL_REQUIRES
+        install_requires=INSTALL_REQUIRES,
     )
 
 
