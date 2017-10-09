@@ -60,14 +60,23 @@ The project's website is: http://chemcoord.readthedocs.org/
 
 ## Features
 
-* [You can use it as a python module](https://xkcd.com/353/)
-* It reliably converts from Cartesian space (xyz-files) to internal coordinates (zmat-files)
-  **without** introducing dummy atoms. Even in the case of linearity.
-* The created zmatrix is not only a transformation to internal coordinates, it is a "chemical" zmatrix.
-  By chemical I mean, that e.g. distances are along bonds or dihedrals are defined as you draw them in chemical textbooks.
+* It reliably converts from Cartesian space (xyz-files) to
+  non reduntant internal coordinates (zmat-files).
+  Dummy atoms are inserted and removed automatically on the fly if necessary.
+* The created zmatrix is not only a structure expressed in internal coordinates,
+  it is a "chemical" zmatrix.
+  By chemical I mean, that e.g. distances are along bonds
+  or dihedrals are defined as you draw them in chemical textbooks.
+* Performance intensive functions/methods are implemented
+  with Fortran/C like speed using [numba](http://numba.pydata.org/).
+* You can express structures with symbolic algebra using
+  [sympy](http://www.sympy.org/en/index.html).
 * It derived from my own work and I heavily use it during the day.
-  So all functions are tested and tailored around the workflow in theoretical chemistry.
-* The classes are safe to inherit from and you can easily costumize it for the needs of your project.
+  So all functions are tested and tailored around the workflow in
+  theoretical chemistry.
+* The classes are safe to inherit from and you can easily costumize
+  it for the needs of your project.
+* [It as a python module ;)](https://xkcd.com/353/)
 
 
 ## Installation guide
@@ -82,14 +91,23 @@ I highly recommend to use those.
 ### Unix
 
 
-Just type in your terminal:
+For the packaged versions just type in your terminal:
+```
+conda install chemcoord
+```
+or
 ```
 pip install chemcoord
 ```
-This should also resolve all dependencies automatically.
+For the up to date development version (experimental):
+```
+git clone https://github.com/mcocdawc/chemcoord.git
+cd chemcoord
+pip install .
+```
 
 ### Windows
 
-I tested neither installation nor running the module on windows.
-As far as I know it should work as well if you use the ``pip`` manager.
-If you get it installed and running, please report it on the Github page.
+Neither installation nor running the module are tested on windows.
+To the best of my knowledge it should work there as well.
+Just use the same steps as for UNIX.
