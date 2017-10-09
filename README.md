@@ -79,16 +79,16 @@ The project's website is: http://chemcoord.readthedocs.org/
 * It derived from my own work and I heavily use it during the day.
   So all functions are tested and tailored around the work flow in
   theoretical chemistry.
-* The classes are safe to inherit from and can easily be customized
-  it for the needs of your project.
+* The classes are safe to inherit from and can easily be customized.
 * [It as a python module ;)](https://xkcd.com/353/)
 
 
 ## Installation guide
-You need a working python (both 2 and 3 are possible) installation together with some standard modules.
+A working python (2.7 and 3.x are possible)
 You can use for example the [anaconda3 installer](https://www.continuum.io/downloads/)
 
-The advantage of the anaconda3 installer is that you get a lot of additional modules and programs,
+The advantage of the anaconda3 installer is that you get a lot of additional
+modules and programs,
 that make it really easy to work with python.
 For example [Ipython](http://ipython.org/) and the [jupyter notebooks](http://jupyter.org/)
 I highly recommend to use those.
