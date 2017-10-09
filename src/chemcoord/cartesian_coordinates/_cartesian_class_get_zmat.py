@@ -504,7 +504,6 @@ class CartesianGetZmat(CartesianCore):
             if isinstance(c_table, pd.Series):
                 c_table = pd.DataFrame(c_table).T
             else:
-                print(c_table)
                 c_table = np.array(c_table)
                 if len(c_table.shape) == 1:
                     c_table = c_table[None, :]
