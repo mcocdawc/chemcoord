@@ -12,20 +12,20 @@ Unix
 
 
 For the packaged versions, the following commands have to be executed in the
-terminal:
-```
-conda install chemcoord
-```
-or
-```
-pip install chemcoord
-```
-For the up to date development version (experimental):
-```
-git clone https://github.com/mcocdawc/chemcoord.git
-cd chemcoord
-pip install .
-```
+terminal::
+
+  conda install chemcoord
+
+or::
+
+  pip install chemcoord
+
+
+For the up to date development version (experimental)::
+
+  git clone https://github.com/mcocdawc/chemcoord.git
+  cd chemcoord
+  pip install .
 
 Windows
 +++++++
