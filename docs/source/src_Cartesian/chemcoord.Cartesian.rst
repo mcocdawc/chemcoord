@@ -57,6 +57,7 @@ chemcoord\.Cartesian
          :toctree: src_Cartesian
 
          ~Cartesian.get_zmat
+         ~Cartesian.get_grad_zmat
          ~Cartesian.get_construction_table
          ~Cartesian.check_dihedral
          ~Cartesian.correct_dihedral

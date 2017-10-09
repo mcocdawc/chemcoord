@@ -428,7 +428,21 @@ def get_kabsch_rotation(Q, P):
     return np.linalg.multi_dot((W, np.diag([1., 1., d]), V.T))
 
 
-def apply_grad_tensor(grad_C, construction_table, cart_dist):
+def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
+    """Apply the gradient for transformation to Zmatrix space onto cart_dist.
+
+    Args:
+        grad_C (:class:`numpy.ndarray`): A ``(3, n, n, 3)`` array.
+            The mathematical details of the index layout is explained in
+            :meth:`~chemcoord.Cartesian.get_grad_zmat()`.
+        construction_table (pandas.DataFrame): Explained in
+            :meth:`~chemcoord.Cartesian.get_construction_table()`.
+        cart_dist (:class:`~chemcoord.Cartesian`):
+            Distortions in cartesian space.
+
+    Returns:
+        :class:`Zmat`: Distortions in Zmatrix space.
+    """
     if (construction_table.index != cart_dist.index).any():
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)

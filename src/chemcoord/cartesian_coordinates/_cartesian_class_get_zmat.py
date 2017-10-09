@@ -4,21 +4,21 @@ from __future__ import (absolute_import, division, print_function,
 
 import warnings
 from collections import OrderedDict
-from itertools import permutations
 from functools import partial
+from itertools import permutations
 
 import numpy as np
 import pandas as pd
 
+import chemcoord.cartesian_coordinates._cart_transformation as transformation
+import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
 from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
-from chemcoord.exceptions import (IllegalArgumentCombination,
-                                  UndefinedCoordinateSystem,
-                                  InvalidReference, ERR_CODE_InvalidReference,
-                                  ERR_CODE_OK)
+from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
+                                  IllegalArgumentCombination, InvalidReference,
+                                  UndefinedCoordinateSystem)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
-import chemcoord.cartesian_coordinates._cart_transformation as transformation
 
 
 class CartesianGetZmat(CartesianCore):
@@ -631,6 +631,85 @@ class CartesianGetZmat(CartesianCore):
         return self._build_zmat(c_table)
 
     def get_grad_zmat(self, construction_table, as_function=True):
+        r"""Return the gradient for the transformation to a Zmatrix.
+
+        If ``as_function`` is True, a function is returned that can be directly
+        applied onto instances of :class:`~Cartesian`, which contain the
+        applied distortions in cartesian space.
+        In this case the user does not have to worry about indexing and
+        correct application of the tensor product.
+        Basically this is the function
+        :func:`xyz_functions.apply_grad_zmat_tensor` with partially replaced
+        arguments.
+
+        If ``as_function`` is False, a ``(3, n, n, 3)`` tensor is returned,
+        which contains the values of the derivatives.
+
+        Since a ``n * 3`` matrix is deriven after a ``n * 3``
+        matrix, it is important to specify the used rules for indexing the
+        resulting tensor.
+
+        The rule is very simple: The indices of the numerator are used first
+        then the indices of the denominator get swapped and appended:
+
+        .. math::
+            \left(
+                \frac{\partial \mathbf{Y}}{\partial \mathbf{X}}
+            \right)_{i, j, k, l}
+            =
+            \frac{\partial \mathbf{Y}_{i, j}}{\partial \mathbf{X}_{l, k}}
+
+        Applying this rule to an example function:
+
+        .. math::
+            f \colon \mathbb{R}^3 \rightarrow \mathbb{R}
+
+        Gives as derivative the known row-vector gradient:
+
+        .. math::
+                (\nabla f)_{1, i}
+            =
+                \frac{\partial f}{\partial x_i} \qquad i \in \{1, 2, 3\}
+
+        .. note::
+            The row wise alignment of the XYZ files makes sense for these
+            CSV like files.
+            But it is mathematically advantageous and
+            sometimes (depending on the memory layout) numerically better
+            to use a column wise alignment of the coordinates.
+            In this function the resulting tensor assumes a ``3 * n`` array
+            for the coordinates.
+
+        If
+
+        .. math::
+
+            \mathbf{X}_{i, j} &\qquad 1 \leq i \leq 3, \quad 1 \leq j \leq n \\
+            \mathbf{C}_{i, j} &\qquad 1 \leq i \leq 3, \quad 1 \leq j \leq n
+
+        denote the positions in cartesian and Zmatrix space,
+
+        The complete tensor may be written as:
+
+        .. math::
+
+            \left(
+                \frac{\partial \mathbf{C}}{\partial \mathbf{X}}
+            \right)_{i, j, k, l}
+            =
+            \frac{\partial \mathbf{C}_{i, j}}{\partial \mathbf{X}_{l, k}}
+
+        Args:
+            construction_table (pandas.DataFrame):
+            as_function (bool): Return a tensor or
+                :func:`xyz_functions.apply_grad_zmat_tensor`
+                with partially replaced arguments.
+
+        Returns:
+            (func, np.array): Depending on ``as_function`` return a tensor or
+            :func:`xyz_functions.apply_grad_zmat_tensor`
+            with partially replaced arguments.
+        """
         if (construction_table.index != self.index).any():
             message = "construction_table and self must use the same index"
             raise ValueError(message)
@@ -650,9 +729,8 @@ class CartesianGetZmat(CartesianCore):
             raise InvalidReference(i=i, b=b, a=a, d=d)
 
         if as_function:
-            from chemcoord.cartesian_coordinates.xyz_functions import (
-                    apply_grad_tensor)
-            return partial(apply_grad_tensor, grad_C, construction_table)
+            return partial(xyz_functions.apply_grad_zmat_tensor,
+                           grad_C, construction_table)
         else:
             return grad_C
 
