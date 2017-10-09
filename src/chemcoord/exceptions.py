@@ -10,6 +10,7 @@ ERR_CODE_PhysicalMeaning = 200
 class PhysicalMeaning(Exception):
     """Raised when data is corrupted in a way, that it can not carry
     any information of physical meaning.
+
     """
     def __init__(self, message=''):
         self.message = message
@@ -24,6 +25,7 @@ ERR_CODE_UndefinedCoordinateSystem = 201
 class UndefinedCoordinateSystem(PhysicalMeaning):
     """Raised when there is no possibility to obtain a defined coordinate
     system for the chosen construction table.
+
     """
     pass
 
@@ -69,5 +71,6 @@ class InvalidReference(UndefinedCoordinateSystem):
 
 class IllegalArgumentCombination(ValueError):
     """Raised if the combination of correctly typed arguments is invalid.
+
     """
     pass
