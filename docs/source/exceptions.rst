@@ -8,5 +8,4 @@ Exceptions
 
     ~exceptions.InvalidReference
     ~exceptions.UndefinedCoordinateSystem
-    ~exceptions.PhysicalMeaning
     ~exceptions.IllegalArgumentCombination

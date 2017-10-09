@@ -4,22 +4,34 @@
 ERR_CODE_OK = 0
 
 
-ERR_CODE_PhysicalMeaning = 200
-class PhysicalMeaning(Exception):  # noqa
-    def __init__(self, message=''):
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
+# ERR_CODE_PhysicalMeaning = 200
+#
+#
+# class PhysicalMeaning(Exception):
+#     """Raised when there is no possibility to obtain a defined coordinate
+#     system for the chosen construction table.
+#     """
+#     def __init__(self, message=''):
+#         self.message = message
+#
+#     def __str__(self):
+#         return repr(self.message)
 
 
 ERR_CODE_UndefinedCoordinateSystem = 201
-class UndefinedCoordinateSystem(PhysicalMeaning): # noqa
+
+
+class UndefinedCoordinateSystem(Exception):
+    """Raised when there is no possibility to obtain a defined coordinate
+    system for the chosen construction table.
+    """
     pass
 
 
 ERR_CODE_InvalidReference = 202
-class InvalidReference(UndefinedCoordinateSystem): # noqa
+
+
+class InvalidReference(UndefinedCoordinateSystem):
     """Raised when the i-th atom uses an invalid reference.
 
     May carry several attributes:
@@ -56,4 +68,6 @@ class InvalidReference(UndefinedCoordinateSystem): # noqa
 
 
 class IllegalArgumentCombination(ValueError):
+    """Raised if the combination of correctly typed arguments is invalid.
+    """
     pass
