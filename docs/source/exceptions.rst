@@ -9,3 +9,4 @@ Exceptions
     ~exceptions.InvalidReference
     ~exceptions.UndefinedCoordinateSystem
     ~exceptions.IllegalArgumentCombination
+    ~exceptions.PhysicalMeaning

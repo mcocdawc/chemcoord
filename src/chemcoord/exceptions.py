@@ -4,24 +4,24 @@
 ERR_CODE_OK = 0
 
 
-# ERR_CODE_PhysicalMeaning = 200
-#
-#
-# class PhysicalMeaning(Exception):
-#     """Raised when there is no possibility to obtain a defined coordinate
-#     system for the chosen construction table.
-#     """
-#     def __init__(self, message=''):
-#         self.message = message
-#
-#     def __str__(self):
-#         return repr(self.message)
+ERR_CODE_PhysicalMeaning = 200
+
+
+class PhysicalMeaning(Exception):
+    """Raised when data is corrupted in a way, that it can not carry
+    any information of physical meaning.
+    """
+    def __init__(self, message=''):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
 
 
 ERR_CODE_UndefinedCoordinateSystem = 201
 
 
-class UndefinedCoordinateSystem(Exception):
+class UndefinedCoordinateSystem(PhysicalMeaning):
     """Raised when there is no possibility to obtain a defined coordinate
     system for the chosen construction table.
     """
