@@ -58,8 +58,6 @@ nohup.out
 *gz
 
 # ignore molecule files from the Tutorial
-Tutorial/*molden
-Tutorial/*xyz
 .ipynb_checkpoints
 
 
