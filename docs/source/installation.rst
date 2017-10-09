@@ -14,7 +14,7 @@ Unix
 For the packaged versions, the following commands have to be executed in the
 terminal::
 
-  conda install chemcoord
+  conda install -c mcocdawc chemcoord
 
 or::
 
