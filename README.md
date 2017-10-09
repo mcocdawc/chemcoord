@@ -65,7 +65,7 @@ The project's website is: http://chemcoord.readthedocs.org/
   Dummy atoms are inserted and removed automatically on the fly if necessary.
 * The created Zmatrix is not only a structure expressed in internal coordinates,
   it is a "chemical" Zmatrix.
-  "Chemical Zmatrix means, that e.g. distances are along bonds
+  "Chemical" Zmatrix means, that e.g. distances are along bonds
   or dihedrals are defined as they are drawn in chemical textbooks
   (Newman projections).
 * Analytical gradients for the transformations between the different
