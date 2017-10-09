@@ -6,17 +6,3 @@ chemcoord.zmat_functions.TestOperators
 .. autoclass:: TestOperators
 
    
-   .. automethod:: __init__
-
-   
-   .. rubric:: Methods
-
-   .. autosummary::
-   
-      ~TestOperators.__init__
-   
-   
-
-   
-   
-   

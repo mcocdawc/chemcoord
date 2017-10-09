@@ -48,6 +48,16 @@ class DummyManipulation(object):
 
 @export
 class TestOperators(object):
+    """Switch the validity testing of zmatrices resulting from operators.
+
+    The following examples is done with ``+``
+    it is assumed, that adding ``zmat_1`` and ``zmat_2``
+    leads to a zmatrix with an invalid reference::
+
+        with TestOperators(True):
+            zmat_1 + zmat_2
+            # Raises InvalidReference Exception
+    """
     def __init__(self, test_operators, cls=None):
         if cls is None:
             cls = Zmat
