@@ -3,16 +3,16 @@ Installation guide
 A working python installation is required (2.7 and >=3.5 are possible).
 
 It is highly recommended to use this module in combination with
-  [Ipython](http://ipython.org/) and [jupyter](http://jupyter.org/).
+`Ipython <http://ipython.org/>`_ and `jupyter <http://jupyter.org/>`_.
 They come shipped by default with the
-  [anaconda3 installer](https://www.continuum.io/downloads/)
+`anaconda3 installer <https://www.continuum.io/downloads/>`_.
 
 Unix
 ++++
 
 
 For the packaged versions, the following commands have to be executed in the
-  terminal:
+terminal:
 ```
 conda install chemcoord
 ```

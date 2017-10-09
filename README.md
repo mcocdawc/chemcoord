@@ -60,8 +60,8 @@ The project's website with documentation is: http://chemcoord.readthedocs.org/
 
 ## Features
 
-* It reliably converts from Cartesian space (xyz-files) to
-  non reduntant internal coordinates (zmat-files).
+* Molecules are reliably transformed between cartesian space and
+  non redundant internal coordinates (Zmatrices).
   Dummy atoms are inserted and removed automatically on the fly if necessary.
 * The created Zmatrix is not only a structure expressed in internal coordinates,
   it is a "chemical" Zmatrix.
