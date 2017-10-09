@@ -1,10 +1,3 @@
-.. ChemCoord documentation master file, created by
-   sphinx-quickstart on Tue Jan 12 23:12:55 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-
-
 Welcome to ChemCoord's documentation!
 =====================================
 
@@ -12,14 +5,27 @@ Welcome to ChemCoord's documentation!
 Features
 ++++++++
 
-* `You can use it as a python module. <https://xkcd.com/353/>`_
-* It reliably converts from Cartesian space (xyz-files) to internal coordinates (zmat-files)
-  **without** introducing dummy atoms. Even in the case of linearity.
-* The created zmatrix is not only a transformation to internal coordinates, it is a "chemical" zmatrix. 
-  By chemical I mean, that e.g. distances are along bonds or dihedrals are defined as you draw them in chemical textbooks.
+* It reliably converts from Cartesian space (xyz-files) to
+  non reduntant internal coordinates (zmat-files).
+  Dummy atoms are inserted and removed automatically on the fly if necessary.
+* The created Zmatrix is not only a structure expressed in internal coordinates,
+  it is a "chemical" Zmatrix.
+  "Chemical" Zmatrix means, that e.g. distances are along bonds
+  or dihedrals are defined as they are drawn in chemical textbooks
+  (Newman projections).
+* Analytical gradients for the transformations between the different
+  coordinate systems are implemented.
+* Performance intensive functions/methods are implemented
+  with Fortran/C like speed using [numba](http://numba.pydata.org/).
+* Geometries may be defined with symbolic expressions using
+  [sympy](http://www.sympy.org/en/index.html).
+* Built on top of [pandas](http://pandas.pydata.org/) with very similar syntax.
+  This allows for example distinct label or row based indexing.
 * It derived from my own work and I heavily use it during the day.
-  So all functions are tested and tailored around the workflow in theoretical chemistry.
-* The classes are safe to inherit from and you can easily costumize it for the needs of your project.
+  So all functions are tested and tailored around the work flow in
+  theoretical chemistry.
+* The classes are safe to inherit from and can easily be customized.
+* [It as a python module ;)](https://xkcd.com/353/)
 
 Contents
 +++++++++
@@ -28,11 +34,8 @@ Contents
     :maxdepth: 2
 
     installation.rst
-    remarks.rst 
     tutorial.rst
     documentation.rst
     references.rst
     bugs.rst
     license.rst
-
-
