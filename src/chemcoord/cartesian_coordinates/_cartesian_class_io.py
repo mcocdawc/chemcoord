@@ -278,10 +278,10 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             Cartesian:
         """
-        if isinstance(file, dict):
-            data = file.copy()
+        if isinstance(buf, dict):
+            data = buf.copy()
         else:
-            with open(filepath, 'r') as f:
+            with open(buf, 'r') as f:
                 data = json.load(f)
             assert data['chemical json'] == 0
 
