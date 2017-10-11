@@ -648,7 +648,8 @@ and assigning values safely.
         elif err == ERR_CODE_OK:
             return create_cartesian(positions, row + 1)
 
-    def get_grad_cartesian(self, as_function=True, chain=True):
+    def get_grad_cartesian(self, as_function=True, chain=True,
+                           drop_auto_dummies=False):
         r"""Return the gradient for the transformation to a Cartesian.
 
         If ``as_function`` is True, a function is returned that can be directly
@@ -739,6 +740,19 @@ and assigning values safely.
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
         grad_X = transformation.get_grad_X(C, c_table, chain=chain)
+
+        if drop_auto_dummies:
+            def drop_dummies(grad_X, zmolecule):
+                rename = dict(zip(zmolecule.index, range(len(zmolecule))))
+                dummies = [rename[v['dummy_d']] for v in
+                           self._metadata['has_dummies'].values()]
+                excluded = np.full(grad_X.shape[1], True)
+                excluded[dummies] = False
+                coord_rows = np.full(3, True)
+                selection = np.ix_(coord_rows, excluded, excluded, coord_rows)
+                return grad_X[selection]
+
+            grad_X = drop_dummies(grad_X, self)
 
         if as_function:
             from chemcoord.internal_coordinates.zmat_functions import (
