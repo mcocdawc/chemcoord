@@ -248,7 +248,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         molecule._metadata = copy.deepcopy(self._metadata)
         return molecule
 
-    def subs(self, variable, value):
+    def subs(self, *args):
         """Substitute a symbolic expression in ``['x', 'y', 'z']``
 
         This is a wrapper around the substitution mechanism of
@@ -273,10 +273,10 @@ class CartesianCore(PandasWrapper, GenericCore):
         cols = ['x', 'y', 'z']
         out = self.copy()
 
-        def give_subs_function(variable, value):
+        def give_subs_function(*args):
             def subs_function(x):
                 try:
-                    x = x.subs(variable, value)
+                    x = x.subs(*args)
                     try:
                         x = float(x)
                     except TypeError:
@@ -289,7 +289,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         for col in cols:
             if out.loc[:, col].dtype is np.dtype('O'):
                 out.loc[:, col] = out.loc[:, col].map(
-                    give_subs_function(variable, value))
+                    give_subs_function(*args))
                 try:
                     out.loc[:, col] = out.loc[:, col].astype('float')
                 except TypeError:

@@ -371,7 +371,7 @@ and assigning values safely.
         new.unsafe_loc[:, 'dihedral'] = convert_d(new.loc[:, 'dihedral'])
         return new
 
-    def subs(self, symb_expr, value, perform_checks=True):
+    def subs(self, *args, perform_checks=True):
         """Substitute a symbolic expression in ``['bond', 'angle', 'dihedral']``
 
         This is a wrapper around the substitution mechanism of
@@ -396,10 +396,10 @@ and assigning values safely.
         cols = ['bond', 'angle', 'dihedral']
         out = self.copy()
 
-        def give_subs_function(symb_expr, value):
+        def give_subs_function(*args):
             def subs_function(x):
                 try:
-                    x = x.subs(symb_expr, value)
+                    x = x.subs(*args)
                     try:
                         x = float(x)
                     except TypeError:
@@ -412,7 +412,7 @@ and assigning values safely.
         for col in cols:
             if out.loc[:, col].dtype is np.dtype('O'):
                 out.unsafe_loc[:, col] = out.loc[:, col].map(
-                    give_subs_function(symb_expr, value))
+                    give_subs_function(*args))
                 try:
                     out.unsafe_loc[:, col] = out.loc[:, col].astype('f8')
                 except (SystemError, TypeError):
