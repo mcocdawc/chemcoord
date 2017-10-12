@@ -371,7 +371,10 @@ and assigning values safely.
         new.unsafe_loc[:, 'dihedral'] = convert_d(new.loc[:, 'dihedral'])
         return new
 
-    def subs(self, *args, perform_checks=True):
+    # python 3.x is so much butter than 2.7
+    # https://www.python.org/dev/peps/pep-3102/
+    # def subs(self, *args, perform_checks=True):
+    def subs(self, *args, **kwargs):
         """Substitute a symbolic expression in ``['bond', 'angle', 'dihedral']``
 
         This is a wrapper around the substitution mechanism of
@@ -393,8 +396,10 @@ and assigning values safely.
             If all resulting sympy expressions in a column are numbers,
             the column is recasted to 64bit float.
         """
+        perform_checks = kwargs.pop('perform_checks', True)
         cols = ['bond', 'angle', 'dihedral']
         out = self.copy()
+
 
         def give_subs_function(*args):
             def subs_function(x):
