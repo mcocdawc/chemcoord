@@ -654,7 +654,7 @@ and assigning values safely.
             return create_cartesian(positions, row + 1)
 
     def get_grad_cartesian(self, as_function=True, chain=True,
-                           drop_auto_dummies=False):
+                           drop_auto_dummies=True):
         r"""Return the gradient for the transformation to a Cartesian.
 
         If ``as_function`` is True, a function is returned that can be directly
@@ -729,6 +729,10 @@ and assigning values safely.
                 :func:`xyz_functions.apply_grad_zmat_tensor`
                 with partially replaced arguments.
             chain (bool):
+            drop_auto_dummies (bool): Drop automatically created
+                dummies from the gradient.
+                This means, that only changes in regularly placed atoms are
+                considered for the gradient.
 
         Returns:
             (func, :class:`numpy.ndarray`): Depending on ``as_function``
