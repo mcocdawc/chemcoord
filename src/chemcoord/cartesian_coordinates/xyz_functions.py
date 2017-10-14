@@ -285,12 +285,12 @@ def dot(A, B):
     return result
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def _jit_isclose(a, b, atol=1e-5, rtol=1e-8):
     return np.abs(a - b) <= (atol + rtol * np.abs(b))
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def _jit_allclose(a, b, atol=1e-5, rtol=1e-8):
     n, m = a.shape
     for i in range(n):
@@ -316,7 +316,7 @@ def normalize(vector):
     return normed_vector
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def _jit_normalize(vector):
     """Normalizes a vector
     """
@@ -345,7 +345,7 @@ def get_rotation_matrix(axis, angle):
     return _jit_get_rotation_matrix(axis, angle)
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def _jit_get_rotation_matrix(axis, angle):
     """Returns the rotation matrix.
 

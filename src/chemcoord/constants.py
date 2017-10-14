@@ -34,7 +34,7 @@ latex_repr = {'origin': '$\\vec{0}$',
               'e_z': '$\\vec{e_z}$', }
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def _jit_absolute_refs(j):
     # Because dicts are not supported in numba :(
     if j == -sys.maxsize - 1:

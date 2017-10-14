@@ -297,7 +297,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         return out
 
     @staticmethod
-    @jit(nopython=True)
+    @jit(nopython=True, cache=True)
     def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
@@ -961,7 +961,7 @@ class CartesianCore(PandasWrapper, GenericCore):
         return sorted(missing_part, key=len, reverse=True)
 
     @staticmethod
-    @jit(nopython=True)
+    @jit(nopython=True, cache=True)
     def _jit_pairwise_distances(pos1, pos2):
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.

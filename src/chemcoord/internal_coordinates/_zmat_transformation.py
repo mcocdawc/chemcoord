@@ -15,7 +15,7 @@ from chemcoord.cartesian_coordinates._cart_transformation import (
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def get_S(C, j):
     S = np.zeros(3)
     r, alpha, delta = C[:, j]
@@ -30,7 +30,7 @@ def get_S(C, j):
     return S
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def get_grad_S(C, j):
     grad_S = np.empty((3, 3), dtype=nb.f8)
     r, alpha, delta = C[:, j]
@@ -52,7 +52,7 @@ def get_grad_S(C, j):
     return grad_S
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def get_X(C, c_table):
     X = np.empty_like(C)
     n_atoms = X.shape[1]
@@ -65,7 +65,7 @@ def get_X(C, c_table):
     return (ERR_CODE_OK, j, X)  # pylint:disable=undefined-loop-variable
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def chain_grad(X, grad_X, C, c_table, j, l):
     if j < constants.keys_below_are_abs_refs:
         new_grad_X = np.zeros((3, 3))
@@ -84,7 +84,7 @@ def chain_grad(X, grad_X, C, c_table, j, l):
     return new_grad_X
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def get_grad_X(C, c_table, chain=True):
     n_atoms = C.shape[1]
     grad_X = np.zeros((3, n_atoms, n_atoms, 3))
