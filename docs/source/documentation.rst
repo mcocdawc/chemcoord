@@ -6,7 +6,7 @@ Documentation
 Contents:
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 3
 
     cartesian_coordinates
     internal_coordinates
