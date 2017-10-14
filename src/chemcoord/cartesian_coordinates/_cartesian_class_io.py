@@ -168,55 +168,6 @@ class CartesianIO(CartesianCore, GenericIO):
             molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
 
-    def view(self, viewer=None, use_curr_dir=False):
-        """View your molecule.
-
-        .. note:: This function writes a temporary file and opens it with
-            an external viewer.
-            If you modify your molecule afterwards you have to recall view
-            in order to see the changes.
-
-        Args:
-            viewer (str): The external viewer to use. If it is None,
-                the default as specified in cc.settings['defaults']['viewer']
-                is used.
-            use_curr_dir (bool): If True, the temporary file is written to
-                the current diretory. Otherwise it gets written to the
-                OS dependendent temporary directory.
-
-        Returns:
-            None:
-        """
-        if viewer is None:
-            viewer = settings['defaults']['viewer']
-        if use_curr_dir:
-            TEMP_DIR = os.path.curdir
-        else:
-            TEMP_DIR = tempfile.gettempdir()
-
-        def give_filename(i):
-            filename = 'ChemCoord_' + str(i) + '.xyz'
-            return os.path.join(TEMP_DIR, filename)
-
-        i = 1
-        while os.path.exists(give_filename(i)):
-            i = i + 1
-        self.to_xyz(give_filename(i))
-
-        def open_file(i):
-            """Open file and close after being finished."""
-            try:
-                subprocess.check_call([viewer, give_filename(i)])
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                raise
-            finally:
-                if use_curr_dir:
-                    pass
-                else:
-                    os.remove(give_filename(i))
-
-        Thread(target=open_file, args=(i,)).start()
-
     def to_cjson(self, buf=None, **kwargs):
         """Write a cjson file or return dictionary.
 
@@ -315,6 +266,55 @@ class CartesianIO(CartesianCore, GenericIO):
         out = cls(atoms=elements, coords=coords, _metadata=_metadata,
                   metadata=metadata)
         return out
+
+    def view(self, viewer=None, use_curr_dir=False):
+        """View your molecule.
+
+        .. note:: This function writes a temporary file and opens it with
+            an external viewer.
+            If you modify your molecule afterwards you have to recall view
+            in order to see the changes.
+
+        Args:
+            viewer (str): The external viewer to use. If it is None,
+                the default as specified in cc.settings['defaults']['viewer']
+                is used.
+            use_curr_dir (bool): If True, the temporary file is written to
+                the current diretory. Otherwise it gets written to the
+                OS dependendent temporary directory.
+
+        Returns:
+            None:
+        """
+        if viewer is None:
+            viewer = settings['defaults']['viewer']
+        if use_curr_dir:
+            TEMP_DIR = os.path.curdir
+        else:
+            TEMP_DIR = tempfile.gettempdir()
+
+        def give_filename(i):
+            filename = 'ChemCoord_' + str(i) + '.xyz'
+            return os.path.join(TEMP_DIR, filename)
+
+        i = 1
+        while os.path.exists(give_filename(i)):
+            i = i + 1
+        self.to_xyz(give_filename(i))
+
+        def open_file(i):
+            """Open file and close after being finished."""
+            try:
+                subprocess.check_call([viewer, give_filename(i)])
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                raise
+            finally:
+                if use_curr_dir:
+                    pass
+                else:
+                    os.remove(give_filename(i))
+
+        Thread(target=open_file, args=(i,)).start()
 
     def get_pymatgen_molecule(self):
         """Create a Molecule instance of the pymatgen library
