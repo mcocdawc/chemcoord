@@ -152,24 +152,34 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
         found = False
         while not found:
             line = f.readline()
-            if line.strip() == '[N_GEO]':
+            if '[N_GEO]' in line:
                 found = True
                 number_of_molecules = int(f.readline().strip())
+
+        energies = []
+        found = False
+        while not found:
+            line = f.readline()
+            if 'energy' in line:
+                found = True
+                for _ in range(number_of_molecules):
+                    energies.append(float(f.readline().strip()))
 
         found = False
         while not found:
             line = f.readline()
-            if line.strip() == '[GEOMETRIES] (XYZ)':
+            if '[GEOMETRIES] (XYZ)' in line:
                 found = True
                 current_line = f.tell()
                 number_of_atoms = int(f.readline().strip())
                 f.seek(current_line)
 
         cartesians = []
-        for _ in range(number_of_molecules):
+        for energy in energies:
             cartesians.append(Cartesian.read_xyz(
                 f, start_index=start_index, get_bonds=get_bonds,
-                nrows=number_of_atoms, engine='python'))
+                nrows=number_of_atoms, engine='python',
+                metadata={'energy': energy}))
     return cartesians
 
 
