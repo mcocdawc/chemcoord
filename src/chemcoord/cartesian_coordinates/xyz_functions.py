@@ -176,10 +176,11 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
 
         cartesians = []
         for energy in energies:
-            cartesians.append(Cartesian.read_xyz(
+            cartesian = Cartesian.read_xyz(
                 f, start_index=start_index, get_bonds=get_bonds,
-                nrows=number_of_atoms, engine='python',
-                metadata={'energy': energy}))
+                nrows=number_of_atoms, engine='python')
+            cartesian.metadata['energy'] = energy
+            cartesians.append(cartesian)
     return cartesians
 
 
