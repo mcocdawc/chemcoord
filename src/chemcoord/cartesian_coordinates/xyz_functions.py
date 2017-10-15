@@ -107,7 +107,8 @@ def to_molden(cartesian_list, buf=None, sort_index=True,
                    + '[GEOMETRIES] (XYZ)\n').format
 
     values = len(cartesian_list) * '1\n'
-    energy = '\n'.join([m.metadata.get('energy', 1) for m in cartesian_list])
+    energy = '\n'.join(
+        [str(m.metadata.get('energy', 1)) for m in cartesian_list])
 
     header = give_header(energy=energy, max_force=values, rms_force=values)
 
