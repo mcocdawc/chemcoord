@@ -5,6 +5,7 @@
 
 * to_cjson had undefined variables
 * get_grad_cartesian supports now drop_auto_dummies as keyword argument
+* get_cartesian correctly passes on metadata from Zmat
 
 
 ## Enhancement

@@ -629,7 +629,7 @@ and assigning values safely.
             xyz_frame.loc[:, ['x', 'y', 'z']] = positions[:row]
             from chemcoord.cartesian_coordinates.cartesian_class_main \
                 import Cartesian
-            cartesian = Cartesian(xyz_frame)
+            cartesian = Cartesian(xyz_frame, metadata=self.metadata)
             return cartesian
 
         c_table = self.loc[:, ['b', 'a', 'd']]
