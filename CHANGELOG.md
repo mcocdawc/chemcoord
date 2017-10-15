@@ -11,4 +11,4 @@
 ## Enhancement
 
 * The jitted numba functions are now cached instead of recompiled.
-* to_molden now writes also energies
+* to_molden writes energies, read_molden reads energies
