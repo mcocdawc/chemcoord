@@ -273,26 +273,23 @@ class CartesianCore(PandasWrapper, GenericCore):
         cols = ['x', 'y', 'z']
         out = self.copy()
 
-        def give_subs_function(*args):
+        def get_subs_f(*args):
             def subs_function(x):
-                try:
+                if hasattr(x, 'subs'):
                     x = x.subs(*args)
                     try:
                         x = float(x)
                     except TypeError:
                         pass
-                except AttributeError:
-                    pass
                 return x
             return subs_function
 
         for col in cols:
             if out.loc[:, col].dtype is np.dtype('O'):
-                out.loc[:, col] = out.loc[:, col].map(
-                    give_subs_function(*args))
+                out.loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
-                    out.loc[:, col] = out.loc[:, col].astype('float')
-                except TypeError:
+                    out.loc[:, col] = out.loc[:, col].astype('f8')
+                except (SystemError, TypeError):
                     pass
         return out
 
