@@ -1,6 +1,11 @@
 
 # Changelog
 
+## Performance
+
+* The jitted numba functions are now cached instead of recompiled.
+* subs method improved for both Cartesian and Zmat
+
 ## Bugfixes
 
 * to_cjson had undefined variables
@@ -10,5 +15,4 @@
 
 ## Enhancement
 
-* The jitted numba functions are now cached instead of recompiled.
 * to_molden writes energies, read_molden reads energies
