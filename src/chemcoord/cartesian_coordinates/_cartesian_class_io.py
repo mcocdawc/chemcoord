@@ -10,6 +10,8 @@ from io import open  # pylint:disable=redefined-builtin
 from threading import Thread
 import json
 from collections import defaultdict
+import re
+from functools import partial
 
 import pandas as pd
 import numpy as np
@@ -160,6 +162,9 @@ class CartesianIO(CartesianCore, GenericIO):
                               nrows=nrows,
                               delim_whitespace=True,
                               names=['atom', 'x', 'y', 'z'], engine=engine)
+
+        remove_digits = partial(re.sub, pattern=r'[0-9]+', repl='')
+        frame['atom'] = frame['atom'].apply(remove_digits)
 
         molecule = cls(frame)
         molecule.index = range(start_index, start_index + len(molecule))
