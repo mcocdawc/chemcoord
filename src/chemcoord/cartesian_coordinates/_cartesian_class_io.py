@@ -163,7 +163,7 @@ class CartesianIO(CartesianCore, GenericIO):
                               delim_whitespace=True,
                               names=['atom', 'x', 'y', 'z'], engine=engine)
 
-        remove_digits = partial(re.sub, pattern=r'[0-9]+', repl='')
+        remove_digits = partial(re.sub, r'[0-9]+', '')
         frame['atom'] = frame['atom'].apply(remove_digits)
 
         molecule = cls(frame)
