@@ -42,3 +42,7 @@ Contents
     references.rst
     bugs.rst
     license.rst
+
+
+The changelog can be found
+`here <https://github.com/mcocdawc/chemcoord/blob/master/CHANGELOG.md>`_.

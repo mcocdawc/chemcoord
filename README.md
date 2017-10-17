@@ -115,3 +115,8 @@ pip install .
 Neither installation nor running the module are tested on windows.
 To the best of my knowledge it should work there as well.
 Just use the same steps as for UNIX.
+
+### Changelog
+
+the changelog can be found
+[here](https://github.com/mcocdawc/chemcoord/blob/master/changelog.md).

@@ -9,7 +9,8 @@
 ## Bugfixes
 
 * to_cjson had undefined variables
-* get_grad_cartesian supports now drop_auto_dummies as keyword argument
+* get_grad_cartesian drops automatically inserted dummies.
+  (Old behaviour may be retained using a keyword.)
 * get_cartesian correctly passes on metadata from Zmat
 * read_xyz no longer disturbed by numbers at the element symbols
 
