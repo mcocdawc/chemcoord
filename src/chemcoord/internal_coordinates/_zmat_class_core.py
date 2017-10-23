@@ -383,6 +383,14 @@ and assigning values safely.
         ``['bond', 'angle', 'dihedral']`` of ``self`` will be substituted
         with value.
 
+        .. note:: This function is not side-effect free.
+            If all symbolic expressions are evaluated and are concrete numbers
+            and ``perform_checks`` is True, a check for the transformation
+            to cartesian coordinates is performed.
+            If no :class:`~chemcoord.exceptions.InvalidReference`
+            exceptions are raised, the resulting cartesian is written to
+            ``self._metadata['last_valid_cartesian']``.
+
         Args:
             symb_expr (sympy expression):
             value :
@@ -420,7 +428,7 @@ and assigning values safely.
                     pass
         if perform_checks:
             try:
-                out._metadata['last_valid_cartesian'] = out.get_cartesian()
+                new_cartesian = out.get_cartesian()
             except (AttributeError, TypeError):
                 # Unevaluated symbolic expressions are remaining.
                 pass
@@ -429,6 +437,9 @@ and assigning values safely.
                     out._manipulate_dummies(e, inplace=True)
                 else:
                     raise e
+            else:
+                out._metadata['last_valid_cartesian'] = new_cartesian
+                self._metadata['last_valid_cartesian'] = new_cartesian
         return out
 
     def change_numbering(self, new_index=None):
