@@ -45,4 +45,4 @@ Contents
 
 
 The changelog can be found
-`here <https://github.com/mcocdawc/chemcoord/blob/v2.0.2/CHANGELOG.md>`_.
+`here <https://github.com/mcocdawc/chemcoord/blob/master/CHANGELOG.md>`_.
