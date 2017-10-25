@@ -12,7 +12,6 @@ group: edge
 
 language: python
 python:
-  - "2.7"
   - "3.5"
   - "3.6"
 install:
