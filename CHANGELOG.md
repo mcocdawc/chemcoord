@@ -6,6 +6,8 @@
 
 ## Performance
 
+## Code quality
+* Removed unused code
 
 ## Bugfixes
 
