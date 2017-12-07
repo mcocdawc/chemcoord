@@ -118,7 +118,7 @@ Just use the same steps as for UNIX.
 
 ### Changelog
 
-the changelog can be found
+The changelog can be found
 [here](https://github.com/mcocdawc/chemcoord/blob/master/changelog.md).
 
 
