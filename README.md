@@ -140,4 +140,4 @@ month = {November},
 
 The master thesis including the derivation of implemented equations
 and the mathematical background can be found
-[here](https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf)
+[here](https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf).
