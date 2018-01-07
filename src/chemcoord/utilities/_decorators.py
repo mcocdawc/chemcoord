@@ -5,6 +5,7 @@ from textwrap import dedent
 # # module http://matplotlib.org/users/license.html
 #
 
+
 class Substitution(object):
     """
     A decorator to take a function's docstring and perform string
@@ -94,3 +95,10 @@ class Appender(object):
         docitems = [func.__doc__, self.addendum]
         func.__doc__ = dedent(self.join.join(docitems))
         return func
+
+
+def indent(text, indents=1):
+    if not text or not isinstance(text, str):
+        return ''
+    jointext = ''.join(['\n'] + ['    '] * indents)
+    return jointext.join(text.split('\n'))
