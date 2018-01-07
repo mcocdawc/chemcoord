@@ -482,7 +482,7 @@ class CartesianCore(PandasWrapper, GenericCore):
                                self.add_data('valency')['valency']))
             val_bond_dict = {key:
                              SortedSet([i for i in bond_dict[key]],
-                                       key=lambda x: -valency[x], load=20)
+                                       key=lambda x: -valency[x])
                              for key in bond_dict}
             return val_bond_dict
         if use_lookup:
