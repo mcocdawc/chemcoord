@@ -6,3 +6,4 @@ sortedcontainers
 sympy
 six
 pymatgen
+scipy>=1.0
