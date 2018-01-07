@@ -45,7 +45,7 @@ Contents
 
 
 The changelog can be found
-`here <https://github.com/mcocdawc/chemcoord/blob/v2.0.3/CHANGELOG.md>`_.
+`here <https://github.com/mcocdawc/chemcoord/blob/v2.0.4/CHANGELOG.md>`_.
 
 Citation and mathematical background
 ++++++++++++++++++++++++++++++++++++
