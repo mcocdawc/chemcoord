@@ -2,7 +2,7 @@
 
 set -e
 
-for py_version in 2.7 3.6
+for py_version in 3.6
 do
   echo $py_version
   package_path=$(conda-build --python $py_version \
