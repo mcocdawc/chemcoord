@@ -119,7 +119,7 @@ Just use the same steps as for UNIX.
 ### Changelog
 
 The changelog can be found
-[here](https://github.com/mcocdawc/chemcoord/blob/v2.0.4/CHANGELOG.md).
+[here](https://github.com/mcocdawc/chemcoord/blob/master/CHANGELOG.md).
 
 
 
@@ -140,4 +140,4 @@ month = {November},
 
 The master thesis including the derivation of implemented equations
 and the mathematical background can be found
-[here](https://github.com/mcocdawc/chemcoord/blob/v2.0.4/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf).
+[here](https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf).
