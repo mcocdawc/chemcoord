@@ -35,6 +35,7 @@ class CartesianIO(CartesianCore, GenericIO):
     The ``view`` method uses external viewers to display a temporarily
     written xyz-file.
     """
+
     def __repr__(self):
         return self._frame.__repr__()
 
