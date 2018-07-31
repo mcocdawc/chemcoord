@@ -279,7 +279,7 @@ class CartesianGetZmat(CartesianCore):
 
         fragments = prepend_missing_parts_of_molecule(fragments)
 
-        if pd.api.types.is_list_like(fragments[0]):
+        if isinstance(fragments[0], tuple):
             fragment, references = fragments[0]
             full_table = fragment._get_frag_constr_table(
                 use_lookup=use_lookup, predefined_table=references)
