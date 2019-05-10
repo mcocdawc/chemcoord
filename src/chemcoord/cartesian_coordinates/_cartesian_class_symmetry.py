@@ -2,14 +2,13 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals, with_statement)
 
-from pymatgen.symmetry.analyzer import PointGroupAnalyzer, iterative_symmetrize
-
 from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.cartesian_coordinates.point_group import PointGroupOperations
 
 
 class CartesianSymmetry(CartesianCore):
     def _get_point_group_analyzer(self, tolerance=0.3):
+        from pymatgen.symmetry.analyzer import PointGroupAnalyzer
         return PointGroupAnalyzer(self.get_pymatgen_molecule(),
                                   tolerance=tolerance)
 
@@ -106,6 +105,8 @@ class CartesianSymmetry(CartesianCore):
             ``operations[i][j]`` gives the symmetry operation
             that maps atom ``i`` unto ``j``.
         """
+        from pymatgen.symmetry.analyzer import iterative_symmetrize
+
         mg_mol = self.get_pymatgen_molecule()
         eq = iterative_symmetrize(mg_mol, max_n=max_n, tolerance=tolerance,
                                   epsilon=epsilon)
