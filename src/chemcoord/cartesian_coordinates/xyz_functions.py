@@ -245,6 +245,8 @@ def concat(cartesians, ignore_index=False, keys=None):
     ``verify_integrity`` which is set to true in case of this library.
 
     Args:
+        cartesians (sequence): A sequence of :class:`~chemcoord.Cartesian`
+            to be concatenated.
         ignore_index (sequence, bool, int): If it is a boolean, it
             behaves like in the description of
             :meth:`pandas.DataFrame.append`.
