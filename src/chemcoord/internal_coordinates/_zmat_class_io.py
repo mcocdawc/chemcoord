@@ -130,7 +130,9 @@ class ZmatIO(ZmatCore, GenericIO):
         elif zmat_frame.iloc[0, 1] in constants.int_label.keys():
             zmat_frame = zmat_frame.replace(
                 {col: constants.int_label for col in ['b', 'a', 'd']})
-        zmat_frame = cls._cast_correct_types(zmat_frame)
+
+        zmat_frame = cls._cast_correct_types(zmat_frame).replace(
+            {col: constants.string_repr for col in ['b', 'a', 'd']})
         try:
             Zmat = cls(zmat_frame)
         except InvalidReference:
