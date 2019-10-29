@@ -165,7 +165,8 @@ class CartesianIO(CartesianCore, GenericIO):
                               names=['atom', 'x', 'y', 'z'], engine=engine)
 
         remove_digits = partial(re.sub, r'[0-9]+', '')
-        frame['atom'] = frame['atom'].apply(remove_digits)
+        frame['atom'] = frame['atom'].apply(
+            lambda x: remove_digits(x).capitalize())
 
         molecule = cls(frame)
         molecule.index = range(start_index, start_index + len(molecule))
