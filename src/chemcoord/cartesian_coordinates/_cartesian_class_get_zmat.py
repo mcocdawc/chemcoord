@@ -45,6 +45,8 @@ class CartesianGetZmat(CartesianCore):
                 if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
 
+
+
     def _get_frag_constr_table(self, start_atom=None, predefined_table=None,
                                use_lookup=None, bond_dict=None):
         """Create a construction table for a Zmatrix.
@@ -74,43 +76,21 @@ class CartesianGetZmat(CartesianCore):
         if use_lookup is None:
             use_lookup = settings['defaults']['use_lookup']
 
-        def modify_priority(bond_dict, user_defined):
-            def move_to_start(dct, key):
-                "Due to PY27 compatibility"
-                keys = dct.keys()
-                if key in keys and key != keys[0]:
-                    root = dct._OrderedDict__root
-                    first = root[1]
-                    link = dct._OrderedDict__map[key]
-                    link_prev, link_next, _ = link
-                    link_prev[1] = link_next
-                    link_next[0] = link_prev
-                    link[0] = root
-                    link[1] = first
-                    root[1] = first[0] = link
-                else:
-                    raise KeyError
-
-            for j in reversed(user_defined):
-                try:
-                    try:
-                        bond_dict.move_to_end(j, last=False)
-                    except AttributeError:
-                        # No move_to_end method in python 2.x
-                        move_to_start(bond_dict, j)
-                except KeyError:
-                    pass
-
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination('Either start_atom or '
                                              'predefined_table has to be None')
         if bond_dict is None:
             bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+
         if predefined_table is not None:
             self._check_construction_table(predefined_table)
             construction_table = predefined_table.copy()
 
-        if predefined_table is None:
+            i = construction_table.index[0]
+            order_of_def = list(construction_table.index)
+            user_defined = list(construction_table.index)
+            construction_table = construction_table.to_dict(orient='index')
+        else:
             if start_atom is None:
                 molecule = self.get_distance_to(self.get_centroid())
                 i = molecule['distance'].idxmin()
@@ -121,18 +101,13 @@ class CartesianGetZmat(CartesianCore):
             construction_table = {i: {'b': 'origin',
                                       'a': 'e_z',
                                       'd': 'e_x'}}
-        else:
-            i = construction_table.index[0]
-            order_of_def = list(construction_table.index)
-            user_defined = list(construction_table.index)
-            construction_table = construction_table.to_dict(orient='index')
 
         visited = {i}
         if len(self) > 1:
             parent = {j: i for j in bond_dict[i]}
             work_bond_dict = OrderedDict(
                 [(j, bond_dict[j] - visited) for j in bond_dict[i]])
-            modify_priority(work_bond_dict, user_defined)
+            _modify_priority(work_bond_dict, user_defined)
         else:
             parent, work_bond_dict = {}, {}
 
@@ -181,7 +156,7 @@ class CartesianGetZmat(CartesianCore):
                     parent[j] = i
 
             work_bond_dict = new_work_bond_dict
-            modify_priority(work_bond_dict, user_defined)
+            _modify_priority(work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient='index')
         output = output.loc[order_of_def, ['b', 'a', 'd']]
         return output
@@ -746,3 +721,31 @@ class CartesianGetZmat(CartesianCore):
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)
         return self.get_zmat(*args, **kwargs)
+
+
+def _modify_priority(bond_dict, user_defined):
+    def move_to_start(dct, key):
+        "Due to PY27 compatibility"
+        keys = dct.keys()
+        if key in keys and key != keys[0]:
+            root = dct._OrderedDict__root
+            first = root[1]
+            link = dct._OrderedDict__map[key]
+            link_prev, link_next, _ = link
+            link_prev[1] = link_next
+            link_next[0] = link_prev
+            link[0] = root
+            link[1] = first
+            root[1] = first[0] = link
+        else:
+            raise KeyError
+
+    for j in reversed(user_defined):
+        try:
+            try:
+                bond_dict.move_to_end(j, last=False)
+            except AttributeError:
+                # No move_to_end method in python 2.x
+                move_to_start(bond_dict, j)
+        except KeyError:
+            pass
