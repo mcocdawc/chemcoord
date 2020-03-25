@@ -173,7 +173,7 @@ class PandasWrapper(object):
 
     def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
                    kind='quicksort', na_position='last',
-                   sort_remaining=True, by=None):
+                   sort_remaining=True):
         """Sort object by labels (along an axis)
 
         Wrapper around the :meth:`pandas.DataFrame.sort_index` method.
@@ -182,12 +182,12 @@ class PandasWrapper(object):
             self._frame.sort_index(
                 axis=axis, level=level, ascending=ascending, inplace=inplace,
                 kind=kind, na_position=na_position,
-                sort_remaining=sort_remaining, by=by)
+                sort_remaining=sort_remaining)
         else:
             new = self.__class__(self._frame.sort_index(
                 axis=axis, level=level, ascending=ascending,
                 inplace=inplace, kind=kind, na_position=na_position,
-                sort_remaining=sort_remaining, by=by))
+                sort_remaining=sort_remaining))
             new.metadata = self.metadata.copy()
             new._metadata = copy.deepcopy(self._metadata)
             return new
