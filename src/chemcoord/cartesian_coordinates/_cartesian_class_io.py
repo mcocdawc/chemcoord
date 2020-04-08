@@ -174,6 +174,33 @@ class CartesianIO(CartesianCore, GenericIO):
             molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
 
+    @classmethod
+    def read_string(cls, xyz_string, start_index=0, get_bonds=True,
+                    nrows=None, engine=None):
+        """Read a string of coordinate information.
+
+        Reads xyz-strings.
+
+        Args:
+            xyz_string (str):
+            start_index (int):
+            get_bonds (bool):
+            nrows (int): Number of rows of file to read.
+                Note that the first two rows are implicitly excluded.
+            engine (str): Wrapper for argument of :func:`pandas.read_csv`.
+
+        Returns:
+            Cartesian:
+        """
+        import sys
+        if sys.version_info[0] < 3:  # I read the import depends on the sys version
+            from StringIO import StringIO
+        else:
+            from io import StringIO
+        buf = StringIO(xyz_string)
+        molecule = cls.read_xyz(buf, start_index=start_index, get_bonds=get_bonds, nrows=nrows, engine=engine)
+        return molecule
+
     def to_cjson(self, buf=None, **kwargs):
         """Write a cjson file or return dictionary.
 

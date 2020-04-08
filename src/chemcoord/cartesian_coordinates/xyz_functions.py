@@ -467,6 +467,8 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     if C_dist.dtype == np.dtype('i8'):
         C_dist = C_dist.astype('f8')
     try:
+        C_dist = C_dist.float()  # Don't fully get why but otherwise I get error in test (probably version dependent, see below)
+        # "TypeError: loop of ufunc does not support argument 0 of type Zero which has no callable rad2deg method"
         C_dist[:, [1, 2]] = np.rad2deg(C_dist[:, [1, 2]])
     except AttributeError:
         C_dist[:, [1, 2]] = sympy.deg(C_dist[:, [1, 2]])
