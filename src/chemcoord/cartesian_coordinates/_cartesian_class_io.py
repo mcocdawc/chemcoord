@@ -93,7 +93,8 @@ class CartesianIO(CartesianCore, GenericIO):
         """Write xyz-file
 
         Args:
-            buf (str): StringIO-like, optional buffer to write to
+            buf (str, path object or file-like object):
+                File path or object, if None is provided the result is returned as a string.
             sort_index (bool): If sort_index is true, the
                 :class:`~chemcoord.Cartesian`
                 is sorted by the index before writing.
@@ -149,7 +150,13 @@ class CartesianIO(CartesianCore, GenericIO):
         Reads xyz-files.
 
         Args:
-            inputfile (str):
+            buf (str, path object or file-like object):
+                This is passed on to :func:`pandas.read_table` and has the same constraints.
+                Any valid string path is acceptable. The string could be a URL.
+                Valid URL schemes include http, ftp, s3, and file.
+                For file URLs, a host is expected. A local file could be: file://localhost/path/to/table.csv.
+                If you want to pass in a path object, pandas accepts any os.PathLike.
+                By file-like object, we refer to objects with a read() method, such as a file handler (e.g. via builtin open function) or StringIO.
             start_index (int):
             get_bonds (bool):
             nrows (int): Number of rows of file to read.
@@ -172,33 +179,6 @@ class CartesianIO(CartesianCore, GenericIO):
 
         if get_bonds:
             molecule.get_bonds(use_lookup=False, set_lookup=True)
-        return molecule
-
-    @classmethod
-    def read_string(cls, xyz_string, start_index=0, get_bonds=True,
-                    nrows=None, engine=None):
-        """Read a string of coordinate information.
-
-        Reads xyz-strings.
-
-        Args:
-            xyz_string (str):
-            start_index (int):
-            get_bonds (bool):
-            nrows (int): Number of rows of file to read.
-                Note that the first two rows are implicitly excluded.
-            engine (str): Wrapper for argument of :func:`pandas.read_csv`.
-
-        Returns:
-            Cartesian:
-        """
-        import sys
-        if sys.version_info[0] < 3:  # I read the import depends on the sys version
-            from StringIO import StringIO
-        else:
-            from io import StringIO
-        buf = StringIO(xyz_string)
-        molecule = cls.read_xyz(buf, start_index=start_index, get_bonds=get_bonds, nrows=nrows, engine=engine)
         return molecule
 
     def to_cjson(self, buf=None, **kwargs):
