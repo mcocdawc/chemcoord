@@ -31,6 +31,7 @@ class _Safe_Loc(_Loc):
             molecule = self.molecule
         else:
             molecule = self.molecule.copy()
+
         if isinstance(key, tuple):
             molecule._frame.loc[key[0], key[1]] = value
         else:
@@ -38,7 +39,10 @@ class _Safe_Loc(_Loc):
 
         try:
             molecule.get_cartesian()
-        except AttributeError:
+        # Sympy objects
+        # catches AttributeError as well, because this was
+        # the raised exception before https://github.com/numpy/numpy/issues/13666
+        except (AttributeError, TypeError):
             self.molecule = molecule
         except InvalidReference as exception:
             if molecule.dummy_manipulation_allowed:
@@ -46,10 +50,14 @@ class _Safe_Loc(_Loc):
             else:
                 exception.zmat_after_assignment = molecule
                 raise exception
+
         if molecule.dummy_manipulation_allowed:
             try:
                 self.molecule._remove_dummies(inplace=True)
-            except AttributeError:
+            # Sympy objects
+            # catches AttributeError, because this was
+            # the raised exception before https://github.com/numpy/numpy/issues/13666
+            except (AttributeError, TypeError):
                 pass
 
 
