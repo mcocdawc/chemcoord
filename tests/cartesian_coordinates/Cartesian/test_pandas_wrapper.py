@@ -49,15 +49,16 @@ def test_to_string():
 
 
 def test_to_xyz():
-    expected = """6
+    base = """6
 Created by chemcoord http://chemcoord.readthedocs.io/
-O 0.000000 0.000000  0.000000
-H 0.758602 0.000000  0.504284
-H 0.260455 0.000000 -0.872893
-O 3.000000 0.500000  0.000000
-H 3.758602 0.500000  0.504284
-H 3.260455 0.500000 -0.872893"""
-    assert molecule.to_xyz() == expected
+{}O 0.000000 0.000000  0.000000
+{}H 0.758602 0.000000  0.504284
+{}H 0.260455 0.000000 -0.872893
+{}O 3.000000 0.500000  0.000000
+{}H 3.758602 0.500000  0.504284
+{}H 3.260455 0.500000 -0.872893"""
+    expected = [base.format(*6*[i]) for i in [""," "]]  # accepts both initial whitespace or not
+    assert molecule.to_xyz() in expected
 
     with pytest.warns(DeprecationWarning):
-        assert molecule.write_xyz() == expected
+        assert molecule.write_xyz() in expected

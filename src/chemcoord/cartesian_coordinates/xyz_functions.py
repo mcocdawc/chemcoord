@@ -468,7 +468,10 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
         C_dist = C_dist.astype('f8')
     try:
         C_dist[:, [1, 2]] = np.rad2deg(C_dist[:, [1, 2]])
-    except AttributeError:
+    # Unevaluated symbolic expressions are remaining.
+    # catches AttributeError as well, because this was
+    # the raised exception before https://github.com/numpy/numpy/issues/13666
+    except (AttributeError, TypeError):
         C_dist[:, [1, 2]] = sympy.deg(C_dist[:, [1, 2]])
 
     from chemcoord.internal_coordinates.zmat_class_main import Zmat

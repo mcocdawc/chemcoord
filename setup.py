@@ -15,7 +15,7 @@ LICENSE = 'LGPLv3'
 AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
 URL = 'https://github.com/mcocdawc/chemcoord'
-INSTALL_REQUIRES = ['numpy', 'scipy', 'pandas>=0.20', 'numba>=0.35',
+INSTALL_REQUIRES = ['numpy>=1.14', 'scipy', 'pandas>=1.0', 'numba>=0.35',
                     'sortedcontainers', 'sympy', 'six', 'pymatgen']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
             'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
