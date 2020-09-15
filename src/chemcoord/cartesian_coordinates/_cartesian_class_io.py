@@ -161,7 +161,7 @@ class CartesianIO(CartesianCore, GenericIO):
         """
         frame = pd.read_table(buf, skiprows=2, comment='#',
                               nrows=nrows,
-                              delim_whitespace=True,
+                              sep='\s+',
                               names=['atom', 'x', 'y', 'z'], engine=engine)
 
         remove_digits = partial(re.sub, r'[0-9]+', '')
