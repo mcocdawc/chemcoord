@@ -18,7 +18,7 @@ from chemcoord.configuration import settings
 from numba import jit
 
 
-def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
+def view(molecule, viewer=None, use_curr_dir=False):
     """View your molecule or list of molecules.
 
     .. note:: This function writes a temporary file and opens it with
@@ -37,9 +37,10 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     Returns:
         None:
     """
-    try:
+    viewer = settings['defaults']['viewer']
+    if hasattr(molecule, 'view'):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
-    except AttributeError:
+    else:
         if pd.api.types.is_list_like(molecule):
             cartesian_list = molecule
         else:
