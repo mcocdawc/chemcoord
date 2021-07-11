@@ -32,7 +32,7 @@ jobs:
       - checkout
       - run:
           name: Install chemcoord
-          command: pip3 install .
+          command: pip3 install --editable .
       - run:
           name: Install pytest
           command: pip3 install pytest pytest-cov
