@@ -21,14 +21,14 @@ shared: &shared
 workflows:
   sample:
     jobs:
-      - py35
+      - py36
       - py38
 
 jobs:
   py35:
     <<: *shared
     docker:
-      - image: cimg/python:3.5
+      - image: cimg/python:3.6
 
   py38:
     <<: *shared
