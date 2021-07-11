@@ -2,8 +2,18 @@ chemcoord: A python module for coordinates of molecules
 =======================================================
 
 
-.. image:: https://img.shields.io/pypi/v/chemcoord.svg
-    :target: https://pypi.python.org/pypi/chemcoord
+.. list-table:: Repository
+   :widths: 25 25
+   :header-rows: 0
+
+   * - PyPy
+     - .. image:: https://img.shields.io/pypi/v/chemcoord.svg
+            :target: https://pypi.python.org/pypi/chemcoord
+   * - PyPy
+     - .. image:: https://img.shields.io/pypi/v/chemcoord.svg
+            :target: https://pypi.python.org/pypi/chemcoord
+
+
 
 .. image:: https://img.shields.io/pypi/v/chemcoord.svg
     :target: https://pypi.python.org/pypi/chemcoord
