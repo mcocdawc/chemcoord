@@ -1,6 +1,6 @@
 Installation guide
 ==================
-A working python installation is required (2.7 and >=3.5 are possible).
+A working python 3 installation is required (versions >=3.7 are possible).
 
 It is highly recommended to use this module in combination with
 `Ipython <http://ipython.org/>`_ and `jupyter <http://jupyter.org/>`_.

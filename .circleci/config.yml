@@ -13,10 +13,6 @@ shared: &shared
       - run:
           name: Running tests
           command: python3 -m pytest --cov=./src/chemcoord
-      - run:
-          name: Upload coverage reports to Codecov
-          command: |
-            bash <(curl -s https://codecov.io/bash)
 
 workflows:
   sample:
@@ -35,6 +31,11 @@ jobs:
     <<: *shared
     docker:
       - image: cimg/python:3.8
+    steps:
+      - run:
+          name: Upload coverage reports to Codecov
+          command: |
+            bash <(curl -s https://codecov.io/bash)
 
   py39:
     <<: *shared
