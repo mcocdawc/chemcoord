@@ -32,13 +32,13 @@ jobs:
       - checkout
       - run:
           name: Install chemcoord
-          command: pip install .
+          command: pip3 install .
       - run:
           name: Install pytest
-          command: pip install pytest pytest-cov
+          command: pip3 install pytest pytest-cov
       - run:
           name: Running tests
-          command: pytest --cov=./src/chemcoord tests
+          command: python3 -m pytest --cov=./src/chemcoord
       - run:
           name: Upload coverage reports to Codecov
           command: |
