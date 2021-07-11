@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals, with_statement)
-
 import math as m
 import os
 import subprocess
@@ -18,7 +15,7 @@ from chemcoord.configuration import settings
 from numba import jit
 
 
-def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
+def view(molecule, viewer=None, use_curr_dir=False):
     """View your molecule or list of molecules.
 
     .. note:: This function writes a temporary file and opens it with
@@ -37,9 +34,10 @@ def view(molecule, viewer=settings['defaults']['viewer'], use_curr_dir=False):
     Returns:
         None:
     """
-    try:
+    viewer = settings['defaults']['viewer']
+    if hasattr(molecule, 'view'):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
-    except AttributeError:
+    else:
         if pd.api.types.is_list_like(molecule):
             cartesian_list = molecule
         else:
@@ -245,6 +243,8 @@ def concat(cartesians, ignore_index=False, keys=None):
     ``verify_integrity`` which is set to true in case of this library.
 
     Args:
+        cartesians (sequence): A sequence of :class:`~chemcoord.Cartesian`
+            to be concatenated.
         ignore_index (sequence, bool, int): If it is a boolean, it
             behaves like in the description of
             :meth:`pandas.DataFrame.append`.
@@ -466,7 +466,10 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
         C_dist = C_dist.astype('f8')
     try:
         C_dist[:, [1, 2]] = np.rad2deg(C_dist[:, [1, 2]])
-    except AttributeError:
+    # Unevaluated symbolic expressions are remaining.
+    # catches AttributeError as well, because this was
+    # the raised exception before https://github.com/numpy/numpy/issues/13666
+    except (AttributeError, TypeError):
         C_dist[:, [1, 2]] = sympy.deg(C_dist[:, [1, 2]])
 
     from chemcoord.internal_coordinates.zmat_class_main import Zmat

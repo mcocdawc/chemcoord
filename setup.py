@@ -15,8 +15,8 @@ LICENSE = 'LGPLv3'
 AUTHOR = 'Oskar Weser'
 EMAIL = 'oskar.weser@gmail.com'
 URL = 'https://github.com/mcocdawc/chemcoord'
-INSTALL_REQUIRES = ['numpy', 'scipy', 'pandas>=0.20', 'numba>=0.35',
-                    'sortedcontainers', 'sympy', 'six', 'pymatgen', 'attr']
+INSTALL_REQUIRES = ['numpy>=1.14', 'scipy', 'pandas>=1.0', 'numba>=0.35',
+                    'sortedcontainers', 'sympy', 'six', 'pymatgen']
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
             'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
             'coordinate system']
@@ -31,16 +31,16 @@ CLASSIFIERS = [
     'Operating System :: Microsoft :: Windows',
     'Natural Language :: English',
     'Programming Language :: Python',
-    'Programming Language :: Python :: 2.7',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
     'Topic :: Scientific/Engineering :: Chemistry',
     'Topic :: Scientific/Engineering :: Physics']
 
 
 def readme():
     '''Return the contents of the README.md file.'''
-    with open('README.md') as freadme:
+    with open('README.rst') as freadme:
         return freadme.read()
 
 

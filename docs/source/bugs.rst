@@ -12,3 +12,5 @@ Previous Contribution
 * Main Work: Oskar Weser
 
 * Python2 compatibility: Keld Lundgaard
+
+* Maintenance (Change in pandas API): Niccolo Ricardi

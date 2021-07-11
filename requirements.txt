@@ -6,3 +6,4 @@ sympy
 six
 pymatgen
 scipy>=1.0
+pytest

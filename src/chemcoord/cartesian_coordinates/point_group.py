@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals, with_statement)
-
 from chemcoord import export
-from pymatgen.symmetry.analyzer import generate_full_symmops
-
 
 @export
 class PointGroupOperations(list):
@@ -20,6 +15,7 @@ class PointGroupOperations(list):
             operations.
     """
     def __init__(self, sch_symbol, operations, tolerance=0.1):
+        from pymatgen.symmetry.analyzer import generate_full_symmops
         self.sch_symbol = sch_symbol
         super(PointGroupOperations, self).__init__(
             [op.rotation_matrix

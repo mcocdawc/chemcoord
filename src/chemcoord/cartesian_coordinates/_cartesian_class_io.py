@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals, with_statement)
-
 import os
 import subprocess
 import tempfile
@@ -93,7 +90,8 @@ class CartesianIO(CartesianCore, GenericIO):
         """Write xyz-file
 
         Args:
-            buf (str): StringIO-like, optional buffer to write to
+            buf (str, path object or file-like object):
+                File path or object, if None is provided the result is returned as a string.
             sort_index (bool): If sort_index is true, the
                 :class:`~chemcoord.Cartesian`
                 is sorted by the index before writing.
@@ -149,7 +147,13 @@ class CartesianIO(CartesianCore, GenericIO):
         Reads xyz-files.
 
         Args:
-            inputfile (str):
+            buf (str, path object or file-like object):
+                This is passed on to :func:`pandas.read_table` and has the same constraints.
+                Any valid string path is acceptable. The string could be a URL.
+                Valid URL schemes include http, ftp, s3, and file.
+                For file URLs, a host is expected. A local file could be: file://localhost/path/to/table.csv.
+                If you want to pass in a path object, pandas accepts any os.PathLike.
+                By file-like object, we refer to objects with a read() method, such as a file handler (e.g. via builtin open function) or StringIO.
             start_index (int):
             get_bonds (bool):
             nrows (int): Number of rows of file to read.
@@ -161,11 +165,12 @@ class CartesianIO(CartesianCore, GenericIO):
         """
         frame = pd.read_table(buf, skiprows=2, comment='#',
                               nrows=nrows,
-                              delim_whitespace=True,
+                              sep=r'\s+',
                               names=['atom', 'x', 'y', 'z'], engine=engine)
 
         remove_digits = partial(re.sub, r'[0-9]+', '')
-        frame['atom'] = frame['atom'].apply(remove_digits)
+        frame['atom'] = frame['atom'].apply(
+            lambda x: remove_digits(x).capitalize())
 
         molecule = cls(frame)
         molecule.index = range(start_index, start_index + len(molecule))
@@ -335,7 +340,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             :class:`pymatgen.core.structure.Molecule`:
         """
-        from pymatgen import Molecule
+        from pymatgen.core import Molecule
         return Molecule(self['atom'].values,
                         self.loc[:, ['x', 'y', 'z']].values)
 
