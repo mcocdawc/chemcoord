@@ -36,4 +36,7 @@ jobs:
           command: pip install .
       - run:
           name: Install pytest
-          command: pip install pytest
+          command: pip install pytest pytest-cov
+      - run:
+          name: Running tests
+          command: pytest --cov=./src/chemcoord tests
