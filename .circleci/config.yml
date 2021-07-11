@@ -31,10 +31,10 @@ jobs:
     docker:
       - image: cimg/python:3.7
 
-  py38:
-    <<: *shared
-    docker:
-      - image: cimg/python:3.8
+#   py38:
+#     <<: *shared
+#     docker:
+#       - image: cimg/python:3.8
 
   py39:
     <<: *shared
