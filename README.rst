@@ -5,6 +5,15 @@ chemcoord: A python module for coordinates of molecules
 .. image:: https://img.shields.io/pypi/v/chemcoord.svg
     :target: https://pypi.python.org/pypi/chemcoord
 
+.. image:: https://img.shields.io/pypi/v/chemcoord.svg
+    :target: https://pypi.python.org/pypi/chemcoord
+
+.. image:: https://img.shields.io/pypi/v/chemcoord.svg
+    :target: https://pypi.python.org/pypi/chemcoord
+
+.. image:: https://img.shields.io/pypi/v/chemcoord.svg
+    :target: https://pypi.python.org/pypi/chemcoord
+
 Website
 -------
 
