@@ -2,27 +2,26 @@ chemcoord: A python module for coordinates of molecules
 =======================================================
 
 
-.. list-table:: Repository
+.. list-table::
    :widths: 25 25
    :header-rows: 0
 
-   * - PyPy
+   * - Latest Release
      - .. image:: https://img.shields.io/pypi/v/chemcoord.svg
             :target: https://pypi.python.org/pypi/chemcoord
-   * - PyPy
-     - .. image:: https://img.shields.io/pypi/v/chemcoord.svg
+   * - Package Status
+     - .. image:: https://img.shields.io/pypi/status/chemcoord.svg
             :target: https://pypi.python.org/pypi/chemcoord
+   * - License
+     - .. image:: https://img.shields.io/pypi/l/chemcoord.svg
+            :target: https://www.gnu.org/licenses/lgpl-3.0.en.html
+   * - Build Status
+     - .. image:: https://travis-ci.org/mcocdawc/chemcoord.svg?branch=master
+            :target: https://travis-ci.org/mcocdawc/chemcoord
+   * - Coverage
+     - .. image:: https://codecov.io/gh/mcocdawc/chemcoord/branch/master/graph/badge.svg
+            :target: https://codecov.io/gh/mcocdawc/chemcoord
 
-
-
-.. image:: https://img.shields.io/pypi/v/chemcoord.svg
-    :target: https://pypi.python.org/pypi/chemcoord
-
-.. image:: https://img.shields.io/pypi/v/chemcoord.svg
-    :target: https://pypi.python.org/pypi/chemcoord
-
-.. image:: https://img.shields.io/pypi/v/chemcoord.svg
-    :target: https://pypi.python.org/pypi/chemcoord
 
 Website
 -------
