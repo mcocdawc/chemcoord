@@ -25,7 +25,7 @@ workflows:
       - py38
 
 jobs:
-  py35:
+  py36:
     <<: *shared
     docker:
       - image: cimg/python:3.6
