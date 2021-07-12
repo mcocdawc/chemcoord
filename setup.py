@@ -3,10 +3,7 @@
 """Setup file for the chemcoord package.
 """
 
-from __future__ import with_statement
-from __future__ import absolute_import
 from setuptools import setup, find_packages
-from io import open  # pylint:disable=redefined-builtin
 import version
 
 MAIN_PACKAGE = 'chemcoord'
@@ -20,7 +17,6 @@ INSTALL_REQUIRES = ['numpy>=1.14', 'scipy', 'pandas>=1.0', 'numba>=0.35',
 KEYWORDS = ['chemcoord', 'transformation', 'cartesian', 'internal',
             'chemistry', 'zmatrix', 'xyz', 'zmat', 'coordinates',
             'coordinate system']
-
 CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
     'Environment :: Console',

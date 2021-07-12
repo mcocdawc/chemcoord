@@ -4,7 +4,6 @@ import os
 import subprocess
 import tempfile
 import warnings
-from io import open  # pylint:disable=redefined-builtin
 from threading import Thread
 
 import numba as nb
