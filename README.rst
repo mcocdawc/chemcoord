@@ -12,6 +12,10 @@ chemcoord: A python module for coordinates of molecules
    * - Package Status
      - .. image:: https://img.shields.io/pypi/status/chemcoord.svg
             :target: https://pypi.python.org/pypi/chemcoord
+   * - Documentation
+     - .. image:: https://readthedocs.org/projects/chemcoord/badge/?&style=plastic
+            :target: https://chemcoord.readthedocs.io/
+            :alt: Documentation Status
    * - License
      - .. image:: https://img.shields.io/pypi/l/chemcoord.svg
             :target: https://www.gnu.org/licenses/lgpl-3.0.en.html
