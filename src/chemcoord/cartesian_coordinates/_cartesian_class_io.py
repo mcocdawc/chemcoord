@@ -103,11 +103,18 @@ class CartesianIO(CartesianCore, GenericIO):
             formatted : string (or unicode, depending on data and options)
         """
         if sort_index:
-            molecule_string = self.sort_index().to_string(
-                header=header, index=index, float_format=float_format)
+            molecule_string = (
+                self
+                    .loc[:, ['atom', 'x', 'y', 'z']]
+                    .sort_index()
+                    .to_string(header=header, index=index, float_format=float_format)
+            )
         else:
-            molecule_string = self.to_string(header=header, index=index,
-                                             float_format=float_format)
+            molecule_string = (
+                self
+                    .loc[:, ['atom', 'x', 'y', 'z']]
+                    .to_string(header=header, index=index, float_format=float_format)
+            )
 
         # NOTE the following might be removed in the future
         # introduced because of formatting bug in pandas

@@ -69,6 +69,36 @@ class TestOperators(object):
         self.cls.test_operators = self.old_value
 
 
+@export
+class PureInternalMovement(object):
+    """Remove the translational and rotational degrees of freedom.
+
+    When doing assignments to the z-matrix::
+
+        with PureInternalMovement(True):
+            zmat_1.loc[1, 'bond'] = value
+
+    the translational and rotational degrees of freedom are automatically projected oout.
+
+    For infinitesimal movements this would be done with the Eckhard conditions,
+    but in this case we allow large non-infinitesimal movements.
+    For the details read [6]_.
+
+    """
+    def __init__(self, pure_internal_mov, cls=None):
+        if cls is None:
+            cls = Zmat
+        self.cls = cls
+        self.pure_internal_mov = pure_internal_mov
+        self.old_value = self.cls.pure_internal_mov
+
+    def __enter__(self):
+        self.cls.pure_internal_mov = self.pure_internal_mov
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.cls.pure_internal_mov = self.old_value
+
+
 def apply_grad_cartesian_tensor(grad_X, zmat_dist):
     """Apply the gradient for transformation to cartesian space onto zmat_dist.
 

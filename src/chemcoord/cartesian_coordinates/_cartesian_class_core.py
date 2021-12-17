@@ -1215,7 +1215,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             chemical_environments[get_chem_env(self, i, n_sphere)].add(i)
         return dict(chemical_environments)
 
-    def align(self, other, indices=None, ignore_hydrogens=False):
+    def align(self, other, indices=None, mass_weight=False):
         """Align two Cartesians.
 
 
@@ -1245,26 +1245,30 @@ class CartesianCore(PandasWrapper, GenericCore):
                 If ``indices`` is given in this form, the rotation matrix
                 minimises the distance between ``i1`` and ``j1``,
                 ``i2`` and ``j2`` and so on.
-            ignore_hydrogens (bool):
+            mass_weight (bool): Do a mass weighting to find the best rotation
 
         Returns:
             tuple:
         """
-        m1 = (self - self.get_centroid()).sort_index()
-        m2 = (other - other.get_centroid()).sort_index()
-        if indices is not None and ignore_hydrogens:
-            message = 'Indices != None and ignore_hydrogens == True is invalid'
-            raise IllegalArgumentCombination(message)
-        elif ignore_hydrogens:
-            m1 = m1[m1['atom'] != 'H']
-            m2 = m2[m2['atom'] != 'H']
-        elif indices is not None:
+        if mass_weight:
+            m1 = (self - self.get_barycenter()).sort_index()
+            m2 = (other - other.get_barycenter()).sort_index()
+        else:
+            m1 = (self - self.get_centroid()).sort_index()
+            m2 = (other - other.get_centroid()).sort_index()
+
+        if indices is not None:
             pos1 = m1.loc[indices[0], ['x', 'y', 'z']].values
             pos2 = m2.loc[indices[1], ['x', 'y', 'z']].values
         else:
             pos1 = m1.loc[:, ['x', 'y', 'z']].values
             pos2 = m2.loc[m1.index, ['x', 'y', 'z']].values
-        m2 = dot(xyz_functions.get_kabsch_rotation(pos1, pos2), m2)
+
+        if mass_weight:
+            mass = m1.add_data('mass').loc[:, 'mass'].values
+        else:
+            mass = None
+        m2 = xyz_functions.get_kabsch_rotation(pos1, pos2, mass) @ m2
         return m1, m2
 
     def reindex_similar(self, other, n_sphere=4):

@@ -33,6 +33,7 @@ class ZmatCore(PandasWrapper, GenericCore):
                                 'd', 'dihedral'})
     dummy_manipulation_allowed = True
     test_operators = True
+    pure_internal_mov = False
 
     def __init__(self, frame, metadata=None, _metadata=None):
         """How to initialize a Zmat instance.

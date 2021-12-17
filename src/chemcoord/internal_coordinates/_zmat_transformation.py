@@ -91,3 +91,15 @@ def get_grad_X(C, c_table, chain=True):
             for l in range(j):
                 grad_X[:, j, l, :] = chain_grad(X, grad_X, C, c_table, j, l)
     return grad_X
+
+
+@jit(nopython=True)
+def clean_barycenter(D_X, mass):
+    n_atoms = D_X.shape[1]
+    cleaned = np.empty((3, n_atoms, n_atoms, 3))
+    M = mass.sum()
+    for i in range(n_atoms):
+        for j in range(3):
+            v = (-(D_X[:, :, i, j] * mass).sum(axis=1) / M).reshape(3, 1)
+            cleaned[:, :, i, j] = D_X[:, :, i, j] + v
+    return cleaned
