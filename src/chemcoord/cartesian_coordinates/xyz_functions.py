@@ -439,7 +439,7 @@ def get_kabsch_rotation(Q, P, weights=None):
     if weights is None:
         A = P.T @ Q
     else:
-        A = np.diag(weights) @ P.T @ Q
+        A = P.T @ np.diag(weights) @ Q
     # One can't initialize an array over its transposed
     V, S, W = np.linalg.svd(A)  # pylint:disable=unused-variable
     W = W.T
