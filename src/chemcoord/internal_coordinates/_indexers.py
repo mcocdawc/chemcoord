@@ -32,7 +32,12 @@ class _Unsafe_base():
 
 class _SafeBase():
     def __setitem__(self, key, value):
-        self.molecule._metadata['last_valid_cartesian'] = self.molecule.get_cartesian()
+        try:
+            self.molecule._metadata['last_valid_cartesian'] = self.molecule.get_cartesian()
+        except TypeError:
+            # We are here because of Sympy
+            pass
+
         if self.molecule.dummy_manipulation_allowed:
             molecule = self.molecule
         else:
@@ -46,6 +51,7 @@ class _SafeBase():
 
         try:
             molecule.get_cartesian()
+            print('Hello')
         # Sympy objects
         # catches AttributeError as well, because this was
         # the raised exception before https://github.com/numpy/numpy/issues/13666

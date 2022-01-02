@@ -54,3 +54,20 @@ def test_write_and_read():
 
     z_water_str = water_1.get_zmat().to_zmat(upper_triangle=False)
     cc.Zmat.read_zmat(StringIO(z_water_str)).get_cartesian()
+
+
+def test_pure_internal_move():
+    ref = cc.Cartesian.read_xyz(join(STRUCTURE_PATH, 'water.xyz'))
+    zm = ref.get_zmat()
+
+    def set_angle(zm, a):
+        zm = zm.copy()
+        zm.safe_loc[2, 'angle'] = a
+        return zm.get_cartesian()
+
+    with cc.zmat_functions.PureInternalMovement(True):
+        structures = [set_angle(zm, 106 + a) for a in range(-30, 40, 10)]
+
+    for m in structures:
+        assert cc.xyz_functions.allclose(m, ref.align(m, mass_weight=True)[1])
+
