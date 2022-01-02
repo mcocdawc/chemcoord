@@ -266,7 +266,12 @@ def test_align_and_reindex_similar():
     np.random.seed(77)
     m2_shuffled.index = np.random.permutation(m2.index)
 
-    m2, m2_shuffled = m2.align(m2_shuffled, indices=[[42, 41, 153, 152],
-                                                     [87, 115, 24, 208]])
+    m2 = (m2 - m2.get_centroid()).sort_index()
+    m2_shuffled = (m2_shuffled - m2_shuffled.get_centroid()).sort_index()
+
+    R = m2.loc[[42, 41, 153, 152], :].reset_index().get_align_transf(m2_shuffled.loc[[87, 115, 24, 208], :].reset_index())
+
+    m2_shuffled = R @ m2_shuffled
+
     m2_backindexed = m2.reindex_similar(m2_shuffled)
     assert cc.xyz_functions.allclose(m2, m2_backindexed)
