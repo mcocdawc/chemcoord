@@ -51,7 +51,6 @@ class _SafeBase():
 
         try:
             molecule.get_cartesian()
-            print('Hello')
         # Sympy objects
         # catches AttributeError as well, because this was
         # the raised exception before https://github.com/numpy/numpy/issues/13666
