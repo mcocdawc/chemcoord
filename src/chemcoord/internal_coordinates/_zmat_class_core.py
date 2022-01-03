@@ -659,7 +659,7 @@ and assigning values safely.
             return create_cartesian(positions, row + 1)
 
     def get_grad_cartesian(self, as_function=True, chain=True,
-                           drop_auto_dummies=True):
+                           drop_auto_dummies=True, pure_internal=None):
         r"""Return the gradient for the transformation to a Cartesian.
 
         If ``as_function`` is True, a function is returned that can be directly
@@ -738,6 +738,11 @@ and assigning values safely.
                 dummies from the gradient.
                 This means, that only changes in regularly placed atoms are
                 considered for the gradient.
+            pure_internal (bool): Clean the gradient using
+                Eckart conditions to have only pure internal
+                movements. (Compare 10.1063/1.2902290)
+                Uses by default the information from
+                `:class:zmat_functions.PureInternalMovement`.
 
         Returns:
             (func, :class:`numpy.ndarray`): Depending on ``as_function``
@@ -753,7 +758,14 @@ and assigning values safely.
             C = C.astype('f8')
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
+
         grad_X = transformation.get_grad_X(C, c_table, chain=chain)
+
+        if pure_internal or (pure_internal is None and self.pure_internal_mov):
+            masses = zmat.add_data('mass').loc[:, 'mass'].values
+            X = zmat.get_cartesian().loc[:, ['x', 'y', 'z']].values.T
+            theta = zmat.get_cartesian().get_inertia()['inertia_tensor']
+            grad_X = transformation.pure_internal_grad(X, grad_X, masses, theta)
 
         if drop_auto_dummies:
             def drop_dummies(grad_X, zmolecule):
