@@ -12,7 +12,7 @@ shared: &shared
           command: pip3 install pytest pytest-cov
       - run:
           name: Running tests
-          command: python3 -m pytest --cov=./src/chemcoord
+          command: python3 -m pytest --cov=./src/chemcoord tests/cartesian_coordinates/Cartesian/test_symmetry.py
       - run:
           name: Upload coverage reports to Codecov
           command: |
@@ -21,16 +21,17 @@ shared: &shared
 workflows:
   sample:
     jobs:
-      - py37
+      - py38
       - py39
 
 jobs:
-  py37:
+  py38:
     <<: *shared
     docker:
-      - image: cimg/python:3.7
+      - image: cimg/python:3.8
 
   py39:
     <<: *shared
     docker:
       - image: cimg/python:3.9
+

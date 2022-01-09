@@ -39,3 +39,4 @@ A collection of functions operating on instances of :class:`~chemcoord.Zmat`.
 
     ~DummyManipulation
     ~TestOperators
+    ~PureInternalMovement

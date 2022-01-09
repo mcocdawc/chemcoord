@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import numba as nb
 import numpy as np
-from numpy import sin, cos
+from numpy import sin, cos, cross
+from numpy.linalg import inv
 from numba import jit
 
 import chemcoord.constants as constants
@@ -90,4 +91,51 @@ def get_grad_X(C, c_table, chain=True):
         if chain:
             for l in range(j):
                 grad_X[:, j, l, :] = chain_grad(X, grad_X, C, c_table, j, l)
+    return grad_X
+
+
+@jit(nopython=True, cache=True)
+def to_barycenter(X, masses):
+    M = masses.sum()
+    v = (X * masses).sum(axis=1).reshape((3, 1)) / M
+    return X - v
+
+
+@jit(nopython=True, cache=True)
+def remove_translation(grad_X, masses):
+    M = masses.sum()
+    clean_grad_X = np.empty_like(grad_X)
+    n_atoms = grad_X.shape[1]
+    for j in range(3):
+        for i in range(n_atoms):
+            clean_grad_X[:, :, i, j] = to_barycenter(grad_X[:, :, i, j], masses)
+
+    return clean_grad_X
+
+
+@jit(nopython=True, cache=True)
+def pure_internal_grad(X, grad_X, masses, theta):
+    """Return a gradient for the transformation to X
+    that only contains internal degrees of freedom
+
+    Args:
+        X (np.ndarray): The cartesian coordinates
+        grad_x (np.ndarray): The gradient for the transformation
+            to cartesian coordinates. grad_X[:, i, j, :] = d X_i / d C_j
+        masses (np.ndarray): The masses of the i-th atom.
+        theta (np.ndarray): The inertia tensor.
+
+    Returns:
+        np.ndarray: A ``(3, n_atoms, n_atoms, 3)`` tensor that contains
+        the cleaned gradient.
+    """
+    n_atoms = grad_X.shape[1]
+    X = to_barycenter(X, masses)
+    grad_X = remove_translation(grad_X, masses)
+    inv_theta = inv(theta)
+    for j in range(3):
+        for i in range(n_atoms):
+            L = (cross(X.T, grad_X[:, :, i, j].T).T * masses).sum(axis=1)
+
+            grad_X[:, :, i, j] = grad_X[:, :, i, j] + cross(-inv_theta @ L, X.T).T
     return grad_X

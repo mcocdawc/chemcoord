@@ -1215,10 +1215,8 @@ class CartesianCore(PandasWrapper, GenericCore):
             chemical_environments[get_chem_env(self, i, n_sphere)].add(i)
         return dict(chemical_environments)
 
-    def align(self, other, indices=None, ignore_hydrogens=False):
+    def align(self, other, mass_weight=False):
         """Align two Cartesians.
-
-
 
         Minimize the RMSD (root mean squared deviation) between
         ``self`` and ``other``.
@@ -1230,42 +1228,64 @@ class CartesianCore(PandasWrapper, GenericCore):
         Uses the Kabsch algorithm implemented within
         :func:`~.xyz_functions.get_kabsch_rotation`
 
-        .. note:: If ``indices is None``, then ``len(self) == len(other)``
-            must be true and the elements in each index have to be the same.
-
-
         Args:
             other (Cartesian):
-            indices (sequence): It is possible to specify a subset of indices
-                that is used for the determination of
-                the best rotation matrix::
-
-                    [[i1, i2,...], [j1, j2,...]]
-
-                If ``indices`` is given in this form, the rotation matrix
-                minimises the distance between ``i1`` and ``j1``,
-                ``i2`` and ``j2`` and so on.
-            ignore_hydrogens (bool):
+            mass_weight (bool): Do a mass weighting to find the best rotation
 
         Returns:
             tuple:
         """
-        m1 = (self - self.get_centroid()).sort_index()
-        m2 = (other - other.get_centroid()).sort_index()
-        if indices is not None and ignore_hydrogens:
-            message = 'Indices != None and ignore_hydrogens == True is invalid'
-            raise IllegalArgumentCombination(message)
-        elif ignore_hydrogens:
-            m1 = m1[m1['atom'] != 'H']
-            m2 = m2[m2['atom'] != 'H']
-        elif indices is not None:
-            pos1 = m1.loc[indices[0], ['x', 'y', 'z']].values
-            pos2 = m2.loc[indices[1], ['x', 'y', 'z']].values
+        if mass_weight:
+            m1 = (self - self.get_barycenter()).sort_index()
+            m2 = (other - other.get_barycenter()).sort_index()
         else:
-            pos1 = m1.loc[:, ['x', 'y', 'z']].values
-            pos2 = m2.loc[m1.index, ['x', 'y', 'z']].values
-        m2 = dot(xyz_functions.get_kabsch_rotation(pos1, pos2), m2)
+            m1 = (self - self.get_centroid()).sort_index()
+            m2 = (other - other.get_centroid()).sort_index()
+
+        m2 = m1.get_align_transf(m2, mass_weight, centered=True) @ m2
         return m1, m2
+
+
+    def get_align_transf(self, other, mass_weight=False, centered=False):
+        """Return the rotation matrix that aligns other onto self.
+
+        Minimize the RMSD (root mean squared deviation) between
+        ``self`` and ``other``.
+        The rotation minimises the distances between the
+        atom pairs of same label.
+        Uses the Kabsch algorithm implemented within
+        :func:`~.xyz_functions.get_kabsch_rotation`.
+        If ``mass_weight`` is ``True`` the atoms are weighted by their mass.
+        The atoms are moved first to the centroid/barycenter (depending on ``mass_weight``)
+        if centered is ``False``.
+
+        Args:
+            other (Cartesian):
+            mass_weight (bool): Do a mass weighting to find the best rotation
+            centered (bool): Assume ``self`` and ``other`` to be centered
+
+        Returns:
+            tuple:
+        """
+        if not centered:
+            if mass_weight:
+                m1 = (self - self.get_barycenter()).sort_index()
+                m2 = (other - other.get_barycenter()).sort_index()
+            else:
+                m1 = (self - self.get_centroid()).sort_index()
+                m2 = (other - other.get_centroid()).sort_index()
+        else:
+            m1 = self
+            m2 = other
+
+        pos1 = m1.loc[:, ['x', 'y', 'z']].values
+        pos2 = m2.loc[m1.index, ['x', 'y', 'z']].values
+        mass = m1.add_data('mass').loc[:, 'mass'].values if mass_weight else None
+
+        return xyz_functions.get_kabsch_rotation(pos1, pos2, mass)
+
+
+
 
     def reindex_similar(self, other, n_sphere=4):
         """Reindex ``other`` to be similarly indexed as ``self``.

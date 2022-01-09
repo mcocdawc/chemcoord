@@ -99,14 +99,12 @@ class ZmatIO(ZmatCore, GenericIO):
         """
         cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
         if implicit_index:
-            zmat_frame = pd.read_table(inputfile, comment='#',
-                                       delim_whitespace=True,
-                                       names=cols)
+            zmat_frame = pd.read_csv(inputfile, comment='#',
+                                     sep=r'\s+', names=cols)
             zmat_frame.index = range(1, len(zmat_frame) + 1)
         else:
-            zmat_frame = pd.read_table(inputfile, comment='#',
-                                       delim_whitespace=True,
-                                       names=['temp_index'] + cols)
+            zmat_frame = pd.read_csv(inputfile, comment='#',
+                                     sep=r'\s+', names=['temp_index'] + cols)
             zmat_frame.set_index('temp_index', drop=True, inplace=True)
             zmat_frame.index.name = None
         if pd.isnull(zmat_frame.iloc[0, 1]):

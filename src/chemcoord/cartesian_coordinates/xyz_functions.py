@@ -417,7 +417,7 @@ def orthonormalize_righthanded(basis):
     return np.array([e1, e2, e3]).T
 
 
-def get_kabsch_rotation(Q, P):
+def get_kabsch_rotation(Q, P, weights=None):
     """Calculate the optimal rotation from ``P`` unto ``Q``.
 
     Using the Kabsch algorithm the optimal rotation matrix
@@ -431,14 +431,20 @@ def get_kabsch_rotation(Q, P):
     Returns:
         :class:`~numpy.array`: Rotation matrix
     """
-    # Naming of variables follows the wikipedia article:
-    # http://en.wikipedia.org/wiki/Kabsch_algorithm
-    A = np.dot(np.transpose(P), Q)
+    # The general problem with weights is decribed in
+    # https://en.wikipedia.org/wiki/Wahba%27s_problem
+    # The problem with equal weights is described
+    # https://en.wikipedia.org/wiki/Kabsch_algorithm
+    # Naming of variables follows wikipedia article about the Kabsch algorithm
+    if weights is None:
+        A = P.T @ Q
+    else:
+        A = P.T @ np.diag(weights) @ Q
     # One can't initialize an array over its transposed
     V, S, W = np.linalg.svd(A)  # pylint:disable=unused-variable
     W = W.T
-    d = np.linalg.det(np.dot(W, V.T))
-    return np.linalg.multi_dot((W, np.diag([1., 1., d]), V.T))
+    d = np.linalg.det(W @ V.T)
+    return W @ np.diag([1., 1., d]) @ V.T
 
 
 def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):

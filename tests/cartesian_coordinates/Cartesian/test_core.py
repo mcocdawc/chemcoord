@@ -245,6 +245,17 @@ def test_align():
     dev = abs((m2_aligned - m1).loc[:, ['x', 'y', 'z']]).sum() / len(m1)
     assert np.allclose(dev, [0.73398451, 1.61863496, 0.13181807])
 
+    assert cc.xyz_functions.allclose(m1.align(m2_aligned)[1], m2_aligned)
+
+
+def test_mass_align():
+    cartesians = cc.xyz_functions.read_molden(
+        get_complete_path('total_movement.molden'), start_index=1)
+    m1, m2 = cartesians[0], cartesians[-1]
+    m2 = dot(get_rotation_matrix([1, 1, 1], 0.334), m2) + 5
+    m1, m2_aligned = m1.align(m2, mass_weight=True)
+    assert cc.xyz_functions.allclose(m1.align(m2_aligned, mass_weight=True)[1], m2_aligned)
+
 
 def test_align_and_reindex_similar():
     cartesians = cc.xyz_functions.read_molden(
@@ -255,7 +266,12 @@ def test_align_and_reindex_similar():
     np.random.seed(77)
     m2_shuffled.index = np.random.permutation(m2.index)
 
-    m2, m2_shuffled = m2.align(m2_shuffled, indices=[[42, 41, 153, 152],
-                                                     [87, 115, 24, 208]])
+    m2 = (m2 - m2.get_centroid()).sort_index()
+    m2_shuffled = (m2_shuffled - m2_shuffled.get_centroid()).sort_index()
+
+    R = m2.loc[[42, 41, 153, 152], :].reset_index().get_align_transf(m2_shuffled.loc[[87, 115, 24, 208], :].reset_index())
+
+    m2_shuffled = R @ m2_shuffled
+
     m2_backindexed = m2.reindex_similar(m2_shuffled)
     assert cc.xyz_functions.allclose(m2, m2_backindexed)

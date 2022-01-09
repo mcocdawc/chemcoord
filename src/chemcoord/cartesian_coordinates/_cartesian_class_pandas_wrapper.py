@@ -238,6 +238,13 @@ class PandasWrapper(object):
             return self.__class__(new, _metadata=self._metadata,
                                   metadata=self.metadata)
 
+
+    def reset_index(self):
+        """Resets the index to 0...n
+        """
+        return self.__class__(self._frame.reset_index(drop=True))
+
+
     def append(self, other, ignore_index=False):
         """Append rows of `other` to the end of this frame, returning a new object.
 
