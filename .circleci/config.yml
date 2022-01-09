@@ -4,8 +4,6 @@ version: 2.1
 shared: &shared
     steps:
       - checkout
-# This is necessary because of ABI change
-# https://stackoverflow.com/questions/66060487/valueerror-numpy-ndarray-size-changed-may-indicate-binary-incompatibility-exp
       - run:
           name: Install chemcoord
           command: pip3 install --editable .
@@ -23,16 +21,17 @@ shared: &shared
 workflows:
   sample:
     jobs:
-      - py37
       - py38
+      - py39
 
 jobs:
-  py37:
-    <<: *shared
-    docker:
-      - image: cimg/python:3.7
-
   py38:
     <<: *shared
     docker:
       - image: cimg/python:3.8
+
+  py39:
+    <<: *shared
+    docker:
+      - image: cimg/python:3.9
+
