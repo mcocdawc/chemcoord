@@ -109,7 +109,7 @@ Citation and mathematical background
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If chemcoord is used in a project that leads to a scientific
-publication, please acknowledge this fact by citing `this preprint <chemrxiv.org/engage/chemrxiv/article-details/615c0ae97d3da5630aed6dc0>`__.
+publication, please acknowledge this fact by citing `this preprint <https://chemrxiv.org/engage/chemrxiv/article-details/615c0ae97d3da5630aed6dc0>`__.
 
 My (Oskar Weser) master thesis including the derivation of implemented equations and
 the mathematical background can be found
