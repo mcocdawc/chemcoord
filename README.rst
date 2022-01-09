@@ -109,19 +109,8 @@ Citation and mathematical background
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If chemcoord is used in a project that leads to a scientific
-publication, please acknowledge this fact by citing Oskar Weser (2017)
-using this ready-made BibTeX entry:
+publication, please acknowledge this fact by citing `this preprint <https://https://chemrxiv.org/engage/chemrxiv/article-details/615c0ae97d3da5630aed6dc0>`__.
 
-::
-
-   @mastersthesis{OWeser2017,
-   author = {Oskar Weser},
-   title = {An efficient and general library for the definition and use of internal coordinates in large molecular systems},
-   school = {Georg August Universität Göttingen},
-   year = {2017},
-   month = {November},
-   }
-
-The master thesis including the derivation of implemented equations and
+My (Oskar Weser) master thesis including the derivation of implemented equations and
 the mathematical background can be found
 `here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf>`__.
