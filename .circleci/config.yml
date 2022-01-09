@@ -4,6 +4,11 @@ version: 2.1
 shared: &shared
     steps:
       - checkout
+# This is necessary because of ABI change
+# https://stackoverflow.com/questions/66060487/valueerror-numpy-ndarray-size-changed-may-indicate-binary-incompatibility-exp
+      - run:
+          name: Install numpy
+          command: pip3 install numpy=1.20
       - run:
           name: Install chemcoord
           command: pip3 install --editable .
