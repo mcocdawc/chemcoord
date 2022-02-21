@@ -57,8 +57,7 @@ def get_X(C, c_table):
         err, B = get_B(X, c_table, j)
         if err == ERR_CODE_InvalidReference:
             return (err, j, X)
-        X[:, j] = (np.dot(B, get_S(C, j))
-                   + get_ref_pos(X, c_table[0, j]))
+        X[:, j] = B @ get_S(C, j) + get_ref_pos(X, c_table[0, j])
     return (ERR_CODE_OK, j, X)  # pylint:disable=undefined-loop-variable
 
 
@@ -71,13 +70,10 @@ def chain_grad(X, grad_X, C, c_table, j, l):
         S = get_S(C, j)
         new_grad_X = grad_X[:, c_table[0, j], l, :].copy()
 
-        for m_2 in range(3):
-            for m_1 in range(3):
-                for k in range(3):
-                    if c_table[k, j] > constants.keys_below_are_abs_refs:
-                        new_grad_X += (S[m_2]
-                                       * grad_B[:, m_2, k, m_1]
-                                       * grad_X[m_1, c_table[k, j], l, :])
+        for k in range(3):
+            for i in range(3):
+                if c_table[k, j] > constants.keys_below_are_abs_refs:
+                    new_grad_X[i, k] += grad_B[i, :, k, :] @ grad_X[:, c_table[k, j], l, k] @ S
     return new_grad_X
 
 
@@ -87,7 +83,7 @@ def get_grad_X(C, c_table, chain=True):
     grad_X = np.zeros((3, n_atoms, n_atoms, 3))
     X = get_X(C, c_table)[2]
     for j in range(n_atoms):
-        grad_X[:, j, j, :] = np.dot(get_B(X, c_table, j)[1], get_grad_S(C, j))
+        grad_X[:, j, j, :] = get_B(X, c_table, j)[1] @ get_grad_S(C, j)
         if chain:
             for l in range(j):
                 grad_X[:, j, l, :] = chain_grad(X, grad_X, C, c_table, j, l)
