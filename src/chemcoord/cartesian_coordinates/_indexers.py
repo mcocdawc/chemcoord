@@ -12,7 +12,7 @@ class _Loc(_generic_Indexer):
         if isinstance(key, tuple):
             selected = self.molecule._frame.loc[key[0], key[1]]
         else:
-            selected = self.molecule._frame.loc[key]
+            selected = self.molecule._frame.loc[list(key)]
         try:
             return self.molecule._return_appropiate_type(selected)
         except AttributeError:
@@ -22,7 +22,7 @@ class _Loc(_generic_Indexer):
         if isinstance(key, tuple):
             self.molecule._frame.loc[key[0], key[1]] = value
         else:
-            self.molecule._frame.loc[key] = value
+            self.molecule._frame.loc[list(key)] = value
 
 
 class _ILoc(_generic_Indexer):
@@ -31,7 +31,7 @@ class _ILoc(_generic_Indexer):
         if isinstance(key, tuple):
             selected = self.molecule._frame.iloc[key[0], key[1]]
         else:
-            selected = self.molecule._frame.iloc[key]
+            selected = self.molecule._frame.iloc[list(key)]
         try:
             return self.molecule._return_appropiate_type(selected)
         except AttributeError:
@@ -41,4 +41,4 @@ class _ILoc(_generic_Indexer):
         if isinstance(key, tuple):
             self.molecule._frame.iloc[key[0], key[1]] = value
         else:
-            self.molecule._frame.iloc[key] = value
+            self.molecule._frame.iloc[list(key)] = value
