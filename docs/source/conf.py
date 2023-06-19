@@ -17,19 +17,6 @@ from __future__ import absolute_import
 import sys
 import os
 
-#  from unittest.mock import MagicMock
-#
-#
-#  class Mock(MagicMock):
-#      @classmethod
-#      def __getattr__(cls, name):
-#              return MagicMock()
-#
-#
-#  MOCK_MODULES = ['numba']
-#  sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-
-
 # on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # if on_rtd:
 #    html_theme = 'default'
