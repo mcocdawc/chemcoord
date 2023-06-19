@@ -55,7 +55,6 @@ Features
 -  It derived from my own work and I heavily use it during the day. So
    all functions are tested and tailored around the work flow in
    theoretical chemistry.
--  The classes are safe to inherit from and can easily be customized.
 -  `It as a python module ;) <https://xkcd.com/353/>`__
 
 Installation guide
@@ -71,14 +70,8 @@ installer <https://www.continuum.io/downloads/>`__
 Unix
 ~~~~
 
-For the packaged versions, the following commands have to be executed in
+For the packaged version, the following commands have to be executed in
 the terminal:
-
-::
-
-   conda install -c mcocdawc chemcoord
-
-or
 
 ::
 
@@ -99,11 +92,6 @@ Neither installation nor running the module are tested on windows. To
 the best of my knowledge it should work there as well. Just use the same
 steps as for UNIX.
 
-Changelog
-~~~~~~~~~
-
-The changelog can be found
-`here <https://github.com/mcocdawc/chemcoord/blob/master/CHANGELOG.md>`__.
 
 Citation and mathematical background
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,3 +118,15 @@ publication, please acknowledge it by citing.
 My (Oskar Weser) master thesis including a more detailed derivation of implemented equations and
 the mathematical background can be found
 `here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf>`__.
+
+
+
+Acknowledgement
+~~~~~~~~~~~~~~~
+
+
+- .. image:: https://github.com/zulip/zulip/blob/main/static/images/logo/zulip-icon-circle.svg
+    :target: https://zulip.com/
+
+Zulip is an open-source modern team chat app designed to keep both live and asynchronous conversations organized,
+that supports the development of chemcoord.
