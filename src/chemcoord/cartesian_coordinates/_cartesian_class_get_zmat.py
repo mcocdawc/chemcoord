@@ -6,6 +6,7 @@ from itertools import permutations
 
 import numpy as np
 import pandas as pd
+from numba.core.errors import NumbaPerformanceWarning
 
 import chemcoord.cartesian_coordinates._cart_transformation as transformation
 import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
@@ -697,7 +698,12 @@ class CartesianGetZmat(CartesianCore):
         if X.dtype == np.dtype('i8'):
             X = X.astype('f8')
 
-        err, row, grad_C = transformation.get_grad_C(X, c_table)
+        with warnings.catch_warnings():
+            # There were some performance warnings about non-contiguos arrays.
+            # Unfortunately we cannot do anything about it, on a conceptional level.
+            warnings.simplefilter("ignore", category=NumbaPerformanceWarning)
+            err, row, grad_C = transformation.get_grad_C(X, c_table)
+
         if err == ERR_CODE_InvalidReference:
             rename = dict(enumerate(self.index))
             i = rename[row]
