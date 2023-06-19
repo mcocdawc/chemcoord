@@ -66,5 +66,5 @@ def test_concat_with_zmats():
 
     znew.safe_loc[57, 'bond'] = 20. - 0.89
     assert allclose(
-        zm1.get_cartesian().append(zm2.get_cartesian() + [0, 0, 20]),
+        cc.xyz_functions.concat([zm1.get_cartesian(), zm2.get_cartesian() + [0, 0, 20]]),
         znew.get_cartesian())
