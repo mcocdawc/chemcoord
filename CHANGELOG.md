@@ -1,15 +1,17 @@
+# Changelog for 2.0.6
 
-# Changelog
+## Accounting for changed pandas API
 
-## Documentation
+pandas removed indexing with sets, which chemcoord relies on.
+We now cast sets explicitly to lists before indexing, so it is still possible
+to use sets for indexing of chemcoord objects.
 
-## Performance
-
-## Code quality
-
-## Bugfixes
-* Solves a bug that appeared because of changes in an underlying library.
-([Issue 53](https://github.com/mcocdawc/chemcoord/issues/54))
+The `append` method of `Cartesian` was removed, because it was removed
+from pandas DataFrames.
 
 
-## Enhancement
+## Accounting for changed numba API
+
+The warning about `generated_jit` was switched off for the moment.
+See https://github.com/mcocdawc/chemcoord/issues/76
+
