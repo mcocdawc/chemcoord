@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import warnings
+
 import numba as nb
+from numba.core.errors import NumbaDeprecationWarning
+from numba import jit, generated_jit
 import numpy as np
-from numba import generated_jit, jit
 from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
@@ -11,27 +14,31 @@ from chemcoord.cartesian_coordinates.xyz_functions import (_jit_cross,
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
-@generated_jit(nopython=True)
-def get_ref_pos(X, indices):  # pylint:disable=unused-argument
-    if isinstance(indices, nb.types.Array):
-        def f(X, indices):
-            ref_pos = np.empty((3, len(indices)))
-            for col, i in enumerate(indices):
+with warnings.catch_warnings():
+    # This has to be fixed in the near-future
+    # https://github.com/mcocdawc/chemcoord/issues/76
+    warnings.simplefilter("ignore", category=NumbaDeprecationWarning)
+    @generated_jit(nopython=True)
+    def get_ref_pos(X, indices):  # pylint:disable=unused-argument
+        if isinstance(indices, nb.types.Array):
+            def f(X, indices):
+                ref_pos = np.empty((3, len(indices)))
+                for col, i in enumerate(indices):
+                    if i < constants.keys_below_are_abs_refs:
+                        ref_pos[:, col] = constants._jit_absolute_refs(i)
+                    else:
+                        ref_pos[:, col] = X[:, i]
+                return ref_pos
+            return f
+        elif isinstance(indices, nb.types.Integer):
+            def f(X, indices):
+                i = indices
                 if i < constants.keys_below_are_abs_refs:
-                    ref_pos[:, col] = constants._jit_absolute_refs(i)
+                    ref_pos = constants._jit_absolute_refs(i)
                 else:
-                    ref_pos[:, col] = X[:, i]
-            return ref_pos
-        return f
-    elif isinstance(indices, nb.types.Integer):
-        def f(X, indices):
-            i = indices
-            if i < constants.keys_below_are_abs_refs:
-                ref_pos = constants._jit_absolute_refs(i)
-            else:
-                ref_pos = X[:, i]
-            return ref_pos
-        return f
+                    ref_pos = X[:, i]
+                return ref_pos
+            return f
 
 
 @jit(nopython=True, cache=True)
