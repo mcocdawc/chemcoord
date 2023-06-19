@@ -125,8 +125,10 @@ Acknowledgement
 ~~~~~~~~~~~~~~~
 
 
-- .. image:: https://github.com/zulip/zulip/blob/main/static/images/logo/zulip-icon-circle.svg
-    :target: https://zulip.com/
+.. image:: https://github.com/zulip/zulip/blob/main/static/images/logo/zulip-icon-circle.svg
+   :width: 80
+   :align: left
+   :target: https://zulip.com/
 
 Zulip is an open-source modern team chat app designed to keep both live and asynchronous conversations organized,
-that supports the development of chemcoord.
+that supports the development of chemcoord with a free plan.
