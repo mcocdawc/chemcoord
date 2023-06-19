@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import chemcoord.constants as constants
 import pandas as pd
-import numpy as np
 
 
 class GenericCore(object):
@@ -44,12 +43,12 @@ class GenericCore(object):
         atoms = self['atom']
         data = constants.elements
         if pd.api.types.is_list_like(new_cols):
-            new_cols = np.unique(new_cols)
+            new_cols = set(new_cols)
         elif new_cols is None:
-            new_cols = np.unique(data.columns)
+            new_cols = set(data.columns)
         else:
             new_cols = [new_cols]
-        new_frame = data.loc[atoms, np.setdiff1d(new_cols, self.columns)]
+        new_frame = data.loc[atoms, list(set(new_cols) - set(self.columns))]
         new_frame.index = self.index
         return self.__class__(pd.concat([self._frame, new_frame], axis=1))
 
@@ -79,7 +78,7 @@ class GenericCore(object):
             bool:
         """
         same_atoms = True
-        for atom in np.unique(self['atom']):
+        for atom in set(self['atom']):
             own_atom_number = len(self[self['atom'] == atom])
             other_atom_number = len(other[other['atom'] == atom])
             same_atoms = (own_atom_number == other_atom_number)
