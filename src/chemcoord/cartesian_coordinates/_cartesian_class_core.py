@@ -594,7 +594,7 @@ class CartesianCore(PandasWrapper, GenericCore):
                     give_only_index=True,
                     use_lookup=use_lookup))
             new_atoms = new_atoms - included_atoms_set
-        molecule = self.loc[list(included_atoms_set), :]
+        molecule = self.loc[included_atoms_set, :]
         return molecule
 
     def cut_sphere(
@@ -1206,7 +1206,7 @@ class CartesianCore(PandasWrapper, GenericCore):
                 i, n_sphere=n_sphere, only_surface=False,
                 give_only_index=True, use_lookup=use_lookup)
             env_index.remove(i)
-            atoms = self.loc[list(env_index), 'atom']
+            atoms = self.loc[env_index, 'atom']
             environment = frozenset(collections.Counter(atoms).most_common())
             return (self.loc[i, 'atom'], environment)
 
@@ -1317,7 +1317,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             index1 = list(subset1)
             for m1_i in index1:
                 dist_m2_to_m1_i = m2.get_distance_to(m1.loc[m1_i, coords],
-                                                     list(subset2), sort=True)
+                                                     subset2, sort=True)
 
                 m2_i = dist_m2_to_m1_i.index[0]
                 dist_new = dist_m2_to_m1_i.loc[m2_i, 'distance']
