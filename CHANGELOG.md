@@ -15,3 +15,4 @@ from pandas DataFrames.
 The warning about `generated_jit` was switched off for the moment.
 See https://github.com/mcocdawc/chemcoord/issues/76
 
+
