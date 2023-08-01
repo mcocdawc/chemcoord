@@ -31,7 +31,7 @@ class ZmatIO(ZmatCore, GenericIO):
         return out
 
     def _repr_html_(self):
-        out = self._sympy_formatter()._abs_ref_formatter(format_as='latex')
+        out = self._sympy_formatter()._abs_ref_formatter(format_as='string')
 
         def insert_before_substring(insert_txt, substr, txt):
             """Under the assumption that substr only appears once.
