@@ -123,6 +123,13 @@ def test_overloaded_operators():
                        (molecule2 - molecule2).loc[:, ['x', 'y', 'z']])
 
 
+def test_indexing():
+    assert (molecule.x == molecule.loc[:, 'x']).all()
+    assert (molecule.y == molecule.loc[:, 'y']).all()
+    assert (molecule.z == molecule.loc[:, 'z']).all()
+    assert ((molecule.x - molecule.loc[:, 'x']) == 0).all()
+
+
 def test_get_bonds():
     assert bond_dict == molecule.get_bonds()
     molecule._metadata['bond_dict'][56].add(4)
