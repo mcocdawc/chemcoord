@@ -437,7 +437,7 @@ and assigning values safely.
             if out.loc[:, col].dtype is np.dtype('O'):
                 out.unsafe_loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
-                    out.unsafe_loc[:, col] = out.loc[:, col].astype('f8')
+                    out._frame[col] = out.loc[:, col].astype('f8')
                 except (SystemError, TypeError):
                     pass
         if perform_checks:
