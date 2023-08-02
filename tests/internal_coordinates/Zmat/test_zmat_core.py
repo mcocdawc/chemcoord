@@ -43,6 +43,13 @@ def test_addition_with_sympy():
     zmolecule = zmolecule + zmolecule2
     zmolecule.subs(x, 3)
 
+def test_indexing():
+    molecule = cc.Cartesian.read_xyz(
+        join(STRUCTURE_PATH, 'MIL53_small.xyz'), start_index=1).get_zmat()
+    assert (molecule.b == molecule.loc[:, 'b']).all()
+    assert (molecule.a == molecule.loc[:, 'a']).all()
+    assert (molecule.atom == molecule.loc[:, 'atom']).all()
+    assert ((molecule.bond - molecule.loc[:, 'bond']) == 0).all()
 
 def test_write_and_read():
     # Created because of https://github.com/mcocdawc/chemcoord/issues/58

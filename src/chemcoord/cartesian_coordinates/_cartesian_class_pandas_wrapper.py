@@ -115,6 +115,23 @@ class PandasWrapper(object):
         else:
             self._frame[key] = value
 
+    def __getattr__(self, name: str):
+        """
+        After regular attribute access, try looking up the name
+        This allows simpler access to columns for interactive use.
+        """
+        # Note: obj.x will always call obj.__getattribute__('x') prior to
+        # calling obj.__getattr__('x').
+
+        if name.startswith('__'):
+            # See here, why we do this
+            # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
+            raise AttributeError()
+        if (name in self._frame.columns):
+            return self[name]
+        return object.__getattribute__(self, name)
+
+
     @property
     def index(self):
         """Returns the index.
