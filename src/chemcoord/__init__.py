@@ -1,7 +1,7 @@
 import os
 
-import pkg_resources  # part of setuptools
-__version__ = pkg_resources.get_distribution("chemcoord").version
+from importlib.metadata import version
+__version__ = version("chemcoord")
 _git_branch = "master"
 
 
