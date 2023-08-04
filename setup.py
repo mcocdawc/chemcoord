@@ -33,7 +33,7 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.9',
     'Topic :: Scientific/Engineering :: Chemistry',
     'Topic :: Scientific/Engineering :: Physics']
-VERSION = '2.0.5'
+VERSION = '2.1.0'
 
 
 def readme():
