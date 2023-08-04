@@ -235,12 +235,12 @@ class CartesianGetZmat(CartesianCore):
             for fragment in fragment_list:
                 if pd.api.types.is_list_like(fragment):
                     try:
-                        full_index = full_index.union(fragment[0].index)
+                        full_index = set(full_index).union(fragment[0].index)
                     except NameError:
                         full_index = fragment[0].index
                 else:
                     try:
-                        full_index = full_index.union(fragment.index)
+                        full_index = set(full_index).union(fragment.index)
                     except NameError:
                         full_index = fragment.index
 

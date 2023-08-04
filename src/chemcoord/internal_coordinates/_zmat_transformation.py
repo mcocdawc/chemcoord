@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
+
+
 import numba as nb
 import numpy as np
 from numpy import sin, cos, cross
@@ -63,17 +67,51 @@ def get_X(C, c_table):
 
 @jit(nopython=True, cache=True)
 def chain_grad(X, grad_X, C, c_table, j, l):
+    """Chain the gradients.
+
+    Args:
+        X (:class:`numpy.ndarray`): A ``3 * n`` numpy array.
+            ``X[i, j]`` is the i-th cartesian coordinate of the
+            j-th atom.
+
+        grad_X (:class:`numpy.ndarray`): A ``3, n, n, 3`` numpy array.
+            ``grad_X[i, j, l, k]`` is the derivative of the
+            i-th cartesian coordinate of the j-th atom
+            after the k-th Z-matrix coordinate of the l-th atom.
+
+        C (:class:`numpy.ndarray`): A ``3 * n`` numpy array.
+            ``C[k, l]`` is the k-th Z-matrix coordinate of the
+            l-th atom.
+
+        c_table (:class:`numpy.ndarray`): A ``3 * n`` numpy array.
+            ``c_table[i, j]`` is the i-th reference atom of the
+            j-th atom. They are given in the order ``'b', 'a', 'd'``.
+
+        j (int): The index of the atom in cartesian coordinates, whose
+            position we are deriving.
+
+        l (int): The index of the atom in Z-matrix coordinates,
+            after which we are deriving.
+            Note that ``l < j``.
+    Returns:
+        Zmat: A new zmat instance.
+    """
     if j < constants.keys_below_are_abs_refs:
         new_grad_X = np.zeros((3, 3))
     else:
         grad_B = get_grad_B(X, c_table, j)
         S = get_S(C, j)
-        new_grad_X = grad_X[:, c_table[0, j], l, :].copy()
+        new_grad_X = np.zeros((3, 3))
 
+        assert l < j
         for k in range(3):
-            for i in range(3):
-                if c_table[k, j] > constants.keys_below_are_abs_refs:
-                    new_grad_X[i, k] += grad_B[i, :, k, :] @ grad_X[:, c_table[k, j], l, k] @ S
+            change_of_B = np.zeros((3, 3))
+            for m2 in range(3):
+                if c_table[m2, j] > constants.keys_below_are_abs_refs:
+                    for m1 in range(3):
+                        change_of_B += (grad_B[:, :, m2, m1] * grad_X[m1, c_table[m2, j], l, k])
+
+            new_grad_X[:, k] = change_of_B @ S + grad_X[:, c_table[0, j], l, k]
     return new_grad_X
 
 
