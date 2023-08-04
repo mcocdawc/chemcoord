@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals, with_statement)
+
+
 import numba as nb
 import numpy as np
 from numpy import sin, cos, cross
@@ -68,12 +72,16 @@ def chain_grad(X, grad_X, C, c_table, j, l):
     else:
         grad_B = get_grad_B(X, c_table, j)
         S = get_S(C, j)
-        new_grad_X = grad_X[:, c_table[0, j], l, :].copy()
+        new_grad_X = np.zeros((3, 3))
 
         for k in range(3):
-            for i in range(3):
-                if c_table[k, j] > constants.keys_below_are_abs_refs:
-                    new_grad_X[i, k] += grad_B[i, :, k, :] @ grad_X[:, c_table[k, j], l, k] @ S
+            change_of_B = np.zeros((3, 3))
+            for m2 in range(3):
+                if c_table[m2, j] > constants.keys_below_are_abs_refs:
+                    for m1 in range(3):
+                        change_of_B += (grad_B[:, :, m2, m1] * grad_X[m1, c_table[m2, j], l, k])
+
+            new_grad_X[:, k] += change_of_B @ S + grad_X[:, c_table[0, j], l, k]
     return new_grad_X
 
 
