@@ -15,6 +15,11 @@ from pandas DataFrames.
 The warning about `generated_jit` was switched off for the moment.
 See https://github.com/mcocdawc/chemcoord/issues/76
 
+## Accounting for changed sympy + pandas interplay
+
+The conversion to the correct column types did not always work correctly
+when using `.subs` for subsituting sympy variables.
+This is fixed now.
 
 ## Allow indexing via attribute access
 
