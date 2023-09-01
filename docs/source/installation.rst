@@ -18,7 +18,7 @@ For the packaged version from `PyPi <https://pypi.org/project/chemcoord/>`__, th
    pip install chemcoord
 
 
-For the packaged version from `conda-forge <https://anaconda.org/conda-forge/chemcoord`__, the following commands have to be executed::
+For the packaged version from `conda-forge <https://anaconda.org/conda-forge/chemcoord>`__, the following commands have to be executed::
 
    conda install -c conda-forge chemcoord
 
