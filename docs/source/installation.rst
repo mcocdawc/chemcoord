@@ -11,21 +11,22 @@ Unix
 ++++
 
 
-For the packaged versions, the following commands have to be executed in the
-terminal::
+There are packaged versions on PyPi and conda-forge.
 
-  conda install -c mcocdawc chemcoord
+For the packaged version from `PyPi <https://pypi.org/project/chemcoord/>`__, the following commands have to be executed::
 
-or::
+   pip install chemcoord
 
-  pip install chemcoord
 
+For the packaged version from `conda-forge <https://anaconda.org/conda-forge/chemcoord`__, the following commands have to be executed::
+
+   conda install -c conda-forge chemcoord
 
 For the up to date development version (experimental)::
 
-  git clone https://github.com/mcocdawc/chemcoord.git
-  cd chemcoord
-  pip install .
+   git clone https://github.com/mcocdawc/chemcoord.git
+   cd chemcoord
+   pip install .
 
 Windows
 +++++++

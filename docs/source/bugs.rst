@@ -14,3 +14,7 @@ Previous Contribution
 * Python2 compatibility: Keld Lundgaard
 
 * Maintenance (Change in pandas API): Niccolo Ricardi
+
+* Maintenance (Change in pandas API): `Mayank Goel <https://github.com/Mayank447>`__
+
+* Packaging for `conda-forge <https://anaconda.org/conda-forge/chemcoord>`__: `Geoffrey R. Hutchison <https://github.com/ghutchis>`__
