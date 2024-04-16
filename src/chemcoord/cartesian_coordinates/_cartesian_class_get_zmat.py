@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import warnings
 from collections import OrderedDict
+
 from functools import partial
 from itertools import permutations
 
@@ -511,20 +512,22 @@ class CartesianGetZmat(CartesianCore):
             Zmat: A new instance of :class:`Zmat`.
         """
         c_table = construction_table
-        default_cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
-        optional_cols = list(set(self.columns) - {'atom', 'x', 'y', 'z'})
+        dtypes = [('atom', str),
+                        ('b', str), ('bond', float),
+                        ('a', str), ('angle', float),
+                        ('d', str), ('dihedral', float)]
 
-        zmat_frame = pd.DataFrame(columns=default_cols + optional_cols,
-                                  dtype='float', index=c_table.index)
-
-        zmat_frame.loc[:, optional_cols] = self.loc[c_table.index,
-                                                    optional_cols]
+        zmat_frame = pd.DataFrame(np.empty(len(c_table), dtype=dtypes),
+                                  index=c_table.index)
 
         zmat_frame.loc[:, 'atom'] = self.loc[c_table.index, 'atom']
         zmat_frame.loc[:, ['b', 'a', 'd']] = c_table
 
         zmat_values = self._calculate_zmat_values(c_table)
         zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = zmat_values
+
+        zmat_frame = zmat_frame.join(
+            self._frame.loc[:, list(set(self.columns) - {'atom', 'x', 'y', 'z'})])
 
         zmatrix = Zmat(zmat_frame, metadata=self.metadata,
                        _metadata={'last_valid_cartesian': self.copy()})
