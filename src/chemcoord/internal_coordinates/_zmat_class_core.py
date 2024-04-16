@@ -152,8 +152,8 @@ and assigning values safely.
 
     def _test_if_can_be_added(self, other):
         cols = ['atom', 'b', 'a', 'd']
-        if not (np.alltrue(self.loc[:, cols] == other.loc[:, cols])
-                and np.alltrue(self.index == other.index)):
+        if not ((self.loc[:, cols] == other.loc[:, cols]).all(axis=None)
+                and (self.index == other.index).all()):
             message = ("You can add only those zmatrices that have the same "
                        "index, use the same construction table, have the same "
                        "ordering... The only allowed difference is in the "
