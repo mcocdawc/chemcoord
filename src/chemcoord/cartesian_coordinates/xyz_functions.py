@@ -466,6 +466,15 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     if (construction_table.index != cart_dist.index).any():
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
+    from chemcoord.internal_coordinates.zmat_class_main import Zmat
+    dtypes = [('atom', str),
+                    ('b', str), ('bond', float),
+                    ('a', str), ('angle', float),
+                    ('d', str), ('dihedral', float)]
+
+    new = pd.DataFrame(np.empty(len(construction_table), dtype=dtypes),
+                              index=cart_dist.index)
+
     X_dist = cart_dist.loc[:, ['x', 'y', 'z']].values.T
     C_dist = np.tensordot(grad_C, X_dist, axes=([3, 2], [0, 1])).T
     if C_dist.dtype == np.dtype('i8'):
@@ -477,15 +486,7 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     # the raised exception before https://github.com/numpy/numpy/issues/13666
     except (AttributeError, TypeError):
         C_dist[:, [1, 2]] = sympy.deg(C_dist[:, [1, 2]])
-
-    from chemcoord.internal_coordinates.zmat_class_main import Zmat
-    dtypes = [('atom', str),
-                    ('b', str), ('bond', float),
-                    ('a', str), ('angle', float),
-                    ('d', str), ('dihedral', float)]
-
-    new = pd.DataFrame(np.empty(len(construction_table), dtype=dtypes),
-                              index=cart_dist.index)
+        new = new.astype({k: 'O' for k in ['bond', 'angle', 'dihedral']})
 
     new.loc[:, ['b', 'a', 'd']] = construction_table
     new.loc[:, 'atom'] = cart_dist.loc[:, 'atom']

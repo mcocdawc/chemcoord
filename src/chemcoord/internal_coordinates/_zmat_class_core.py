@@ -768,7 +768,7 @@ and assigning values safely.
         """
         zmat = self.change_numbering()
         c_table = zmat.loc[:, ['b', 'a', 'd']]
-        c_table = c_table.replace(constants.int_label).values.T
+        c_table = c_table.replace(constants.int_label).astype('i8').values.T
         C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
         if C.dtype == np.dtype('i8'):
             C = C.astype('f8')
