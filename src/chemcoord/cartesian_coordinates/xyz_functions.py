@@ -208,8 +208,9 @@ def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
         a = a.get_inertia()['transformed_Cartesian']
         b = b.get_inertia()['transformed_Cartesian']
     A, B = a.loc[:, coords], b.loc[a.index, coords]
-    out = a._frame.copy()
-    out['atom'] = True
+
+    out = pd.DataFrame(index=a.index, columns=['atom'] + coords, dtype=bool)
+    out.loc[:, 'atom'] = True
     out.loc[:, coords] = np.isclose(A, B, rtol=rtol, atol=atol)
     return out
 
