@@ -696,7 +696,7 @@ class CartesianGetZmat(CartesianCore):
         c_table = construction_table.loc[:, ['b', 'a', 'd']]
         c_table = c_table.replace(constants.int_label)
         c_table = c_table.replace({k: v for v, k in enumerate(c_table.index)})
-        c_table = c_table.values.T
+        c_table = c_table.astype('i8').values.T
         X = self.loc[:, ['x', 'y', 'z']].values.T
         if X.dtype == np.dtype('i8'):
             X = X.astype('f8')

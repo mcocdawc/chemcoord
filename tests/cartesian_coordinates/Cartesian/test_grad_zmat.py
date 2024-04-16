@@ -11,6 +11,9 @@ from chemcoord.exceptions import UndefinedCoordinateSystem
 from chemcoord.xyz_functions import allclose
 
 
+import pandas as pd
+pd.set_option("future.no_silent_downcasting", True)
+
 def get_script_path():
     return os.path.dirname(os.path.realpath(__file__))
 

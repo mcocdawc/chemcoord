@@ -479,11 +479,14 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
         C_dist[:, [1, 2]] = sympy.deg(C_dist[:, [1, 2]])
 
     from chemcoord.internal_coordinates.zmat_class_main import Zmat
-    cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
-    dtypes = ['O', 'i8', 'f8', 'i8', 'f8', 'i8', 'f8']
-    new = pd.DataFrame(data=np.zeros((len(construction_table), 7)),
-                       index=cart_dist.index, columns=cols, dtype='f8')
-    new = new.astype(dict(zip(cols, dtypes)))
+    dtypes = [('atom', str),
+                    ('b', str), ('bond', float),
+                    ('a', str), ('angle', float),
+                    ('d', str), ('dihedral', float)]
+
+    new = pd.DataFrame(np.empty(len(construction_table), dtype=dtypes),
+                              index=cart_dist.index)
+
     new.loc[:, ['b', 'a', 'd']] = construction_table
     new.loc[:, 'atom'] = cart_dist.loc[:, 'atom']
     new.loc[:, ['bond', 'angle', 'dihedral']] = C_dist
