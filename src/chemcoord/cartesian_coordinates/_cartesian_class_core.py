@@ -95,7 +95,7 @@ class CartesianCore(PandasWrapper, GenericCore):
 
     def _test_if_can_be_added(self, other):
         if not (set(self.index) == set(other.index)
-                and np.alltrue(self['atom'] == other.loc[self.index, 'atom'])):
+                and (self['atom'] == other.loc[self.index, 'atom']).all(axis=None)):
             message = ("You can add only Cartesians which are indexed in the "
                        "same way and use the same atoms.")
             raise PhysicalMeaning(message)

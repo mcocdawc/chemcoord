@@ -200,7 +200,7 @@ def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
     """
     coords = ['x', 'y', 'z']
     if not (set(a.index) == set(b.index)
-            and np.alltrue(a.loc[:, 'atom'] == b.loc[a.index, 'atom'])):
+            and (a.loc[:, 'atom'] == b.loc[a.index, 'atom']).all(axis=None)):
         message = 'Can only compare molecules with the same atoms and labels'
         raise ValueError(message)
 
@@ -231,7 +231,7 @@ def allclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
     Returns:
         bool:
     """
-    return np.alltrue(isclose(a, b, align=align, rtol=rtol, atol=atol))
+    return isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None)
 
 
 def concat(cartesians, ignore_index=False, keys=None):
