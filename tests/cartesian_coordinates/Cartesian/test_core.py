@@ -151,6 +151,43 @@ def test_assignment():
     molecule = molecule.subs(x, 1)
     assert molecule.x.dtypes == np.dtype('f8')
 
+    molecule.loc[1, ['x', 'y']] = x
+    assert molecule.x.dtypes == np.dtype('O')
+    assert molecule.y.dtypes == np.dtype('O')
+    molecule = molecule.subs(x, 1)
+    assert molecule.x.dtypes == np.dtype('f8')
+    assert molecule.y.dtypes == np.dtype('f8')
+
+    with pytest.raises(TypeError):
+        molecule.loc[1] = x
+    with pytest.raises(TypeError):
+        molecule.loc[[1, 2]] = x
+
+    molecule = cc.Cartesian.read_xyz(get_complete_path('MIL53_small.xyz'),
+                                     start_index=1)
+    x = sympy.symbols('x', real=True)
+
+    molecule.iloc[:, 1] = 3
+    assert (molecule.x == 3).all()
+
+    molecule.iloc[1, 1] = x
+    assert molecule.x.dtypes == np.dtype('O')
+    assert molecule.y.dtypes == np.dtype('f8')
+    molecule = molecule.subs(x, 1)
+    assert molecule.x.dtypes == np.dtype('f8')
+
+    molecule.iloc[1, [1, 2]] = x
+    assert molecule.x.dtypes == np.dtype('O')
+    assert molecule.y.dtypes == np.dtype('O')
+    molecule = molecule.subs(x, 1)
+    assert molecule.x.dtypes == np.dtype('f8')
+    assert molecule.y.dtypes == np.dtype('f8')
+
+    with pytest.raises(TypeError):
+        molecule.iloc[1] = x
+    with pytest.raises(TypeError):
+        molecule.iloc[[1, 2]] = x
+
 
 def test_get_bonds():
     assert bond_dict == molecule.get_bonds()

@@ -38,7 +38,7 @@ class _Loc(_generic_Indexer):
             # The `except FutureWarning:` has likely to become `except TypeError:`
             #  then in the future.
             if isinstance(key, tuple):
-                if type(key[1]) is not str and is_iterable(key[1]):
+                if type(key[1]) is not str and _is_iterable(key[1]):
                     self.molecule._frame = df.astype({k: 'O' for k in key[1]})
                 else:
                     self.molecule._frame = df.astype({key[1]: 'O'})
@@ -79,9 +79,9 @@ class _ILoc(_generic_Indexer):
             #  then in the future.
             if isinstance(key, tuple):
                 if type(key[1]) is not str and _is_iterable(key[1]):
-                    self.molecule._frame = df.astype({k: 'O' for k in key[1]})
+                    self.molecule._frame = df.astype({df.columns[k]: 'O' for k in key[1]})
                 else:
-                    self.molecule._frame = df.astype({key[1]: 'O'})
+                    self.molecule._frame = df.astype({df.columns[key[1]]: 'O'})
                 self.molecule._frame.iloc[_set_caster(key[0]), _set_caster(key[1])] = value
             else:
                 raise TypeError("Assignment not supported.")
