@@ -14,6 +14,7 @@ from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
 from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
     PandasWrapper
 from chemcoord.utilities import _decorators
+from chemcoord.utilities._temporary_deprecation_workarounds import replace_without_warn
 
 append_indexer_docstring = _decorators.Appender(
     """In the case of obtaining elements, the indexing behaves like
@@ -489,7 +490,7 @@ and assigning values safely.
         # https://github.com/pandas-dev/pandas/issues/5541
         # For this reason convert to int and replace then.
 
-        c_table = c_table.replace(constants.int_label)
+        c_table = replace_without_warn(c_table, constants.int_label)
         try:
             c_table = c_table.astype('i8')
         except ValueError:
@@ -654,9 +655,11 @@ and assigning values safely.
             return cartesian
 
         c_table = self.loc[:, ['b', 'a', 'd']]
-        c_table = c_table.replace(constants.int_label)
-        c_table = c_table.replace({k: v for v, k in enumerate(c_table.index)})
-        c_table = c_table.values.astype('i8').T
+        c_table = (replace_without_warn(c_table, constants.int_label)
+                    .astype('i8')
+                    .replace({k: v for v, k in enumerate(c_table.index)})
+                    .values
+                    .T)
 
         C = self.loc[:, ['bond', 'angle', 'dihedral']].values.T
         C[[1, 2], :] = np.radians(C[[1, 2], :])
@@ -767,8 +770,13 @@ and assigning values safely.
             with partially replaced arguments.
         """
         zmat = self.change_numbering()
-        c_table = zmat.loc[:, ['b', 'a', 'd']]
-        c_table = c_table.replace(constants.int_label).astype('i8').values.T
+
+        c_table = (replace_without_warn(zmat.loc[:, ['b', 'a', 'd']],
+                                        constants.int_label)
+                    .astype('i8')
+                    .values
+                    .T)
+
         C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
         if C.dtype == np.dtype('i8'):
             C = C.astype('f8')

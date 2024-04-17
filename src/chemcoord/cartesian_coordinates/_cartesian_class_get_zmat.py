@@ -18,6 +18,7 @@ from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
                                   IllegalArgumentCombination, InvalidReference,
                                   UndefinedCoordinateSystem)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
+from chemcoord.utilities._temporary_deprecation_workarounds import replace_without_warn
 
 
 class CartesianGetZmat(CartesianCore):
@@ -489,7 +490,8 @@ class CartesianGetZmat(CartesianCore):
                 c_table = pd.DataFrame(
                     data=c_table[:, 1:], index=c_table[:, 0],
                     columns=['b', 'a', 'd'])
-        c_table = c_table.replace(constants.int_label).astype('i8')
+
+        c_table = replace_without_warn(c_table, constants.int_label).astype('i8')
         c_table.index = c_table.index.astype('i8')
 
         new_index = c_table.index.append(self.index.difference(c_table.index))
@@ -694,9 +696,13 @@ class CartesianGetZmat(CartesianCore):
             message = "construction_table and self must use the same index"
             raise ValueError(message)
         c_table = construction_table.loc[:, ['b', 'a', 'd']]
-        c_table = c_table.replace(constants.int_label)
-        c_table = c_table.replace({k: v for v, k in enumerate(c_table.index)})
-        c_table = c_table.astype('i8').values.T
+
+
+        c_table = (replace_without_warn(c_table, constants.int_label)
+                        .astype('i8')
+                        .replace({k: v for v, k in enumerate(c_table.index)})
+                        .values
+                        .T)
         X = self.loc[:, ['x', 'y', 'z']].values.T
         if X.dtype == np.dtype('i8'):
             X = X.astype('f8')
