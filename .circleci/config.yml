@@ -23,6 +23,7 @@ workflows:
     jobs:
       - py38
       - py39
+      - py310
 
 jobs:
   py38:
@@ -34,4 +35,9 @@ jobs:
     <<: *shared
     docker:
       - image: cimg/python:3.9
+
+  py310:
+    <<: *shared
+    docker:
+      - image: cimg/python:3.10
 
