@@ -3,6 +3,12 @@ import pytest
 import numpy as np
 import os
 import sys
+import pandas as pd
+try:
+    pd.set_option("future.no_silent_downcasting", True)
+except:
+    # Yes I want a bare except
+    pass
 
 
 def get_script_path():
