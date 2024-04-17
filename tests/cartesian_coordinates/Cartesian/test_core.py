@@ -171,9 +171,8 @@ def test_coordination_sphere():
 def test_cut_sphere():
     expected = {6, 7, 8, 9, 11, 12, 13, 15, 16, 19, 20, 53}
     assert expected == set(molecule.cut_sphere(radius=3, origin=7).index)
-    assert np.alltrue(
-        molecule == molecule.cut_sphere(radius=3, origin=7,
-                                        preserve_bonds=True))
+    assert (molecule == molecule.cut_sphere(radius=3, origin=7,
+                                            preserve_bonds=True)).all(axis=None)
     assert (set(molecule.index) - expected
             == set(molecule.cut_sphere(radius=3, origin=7,
                                        outside_sliced=False).index))
@@ -182,9 +181,8 @@ def test_cut_sphere():
 def test_cut_cuboid():
     expected = {3, 4, 5, 6, 7, 15, 16, 17, 32, 35, 37, 38, 47, 52, 53, 55, 56}
     assert expected == set(molecule.cut_cuboid(a=2, origin=7).index)
-    assert np.alltrue(
-        molecule == molecule.cut_cuboid(a=2, origin=7,
-                                        preserve_bonds=True))
+    assert (molecule == molecule.cut_cuboid(a=2, origin=7,
+                                        preserve_bonds=True)).all(axis=None)
     assert (set(molecule.index) - expected
             == set(molecule.cut_cuboid(a=2, origin=7,
                                        outside_sliced=False).index))
@@ -240,7 +238,7 @@ def test_change_numbering():
     molecule2 = molecule.copy()
     molecule2.index = reversed(molecule.index)
     dct = dict(zip(molecule.index, reversed(molecule.index)))
-    assert np.alltrue(molecule2.index == molecule.change_numbering(dct).index)
+    assert (molecule2.index == molecule.change_numbering(dct).index).all()
 
 
 def test_align():
