@@ -20,7 +20,7 @@ class CartesianSymmetry(CartesianCore):
         try:
             sym_mol = self.from_pymatgen_molecule(eq['sym_mol'])
             sym_mol.index = self.index
-            eq['sym_mol'] = sym_mol._to_numeric()
+            eq['sym_mol'] = sym_mol
         except KeyError:
             pass
 

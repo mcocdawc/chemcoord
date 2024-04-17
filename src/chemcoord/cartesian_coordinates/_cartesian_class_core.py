@@ -56,8 +56,8 @@ class CartesianCore(PandasWrapper, GenericCore):
             message = 'Either frame or atoms and coords have to be not None'
             raise IllegalArgumentCombination(message)
         elif atoms is not None and coords is not None:
-            frame = pd.DataFrame(index=index,
-                                 columns=['atom', 'x', 'y', 'z'], dtype='f8')
+            dtypes = [('atom', str), ('x', float), ('y', float), ('z', float)]
+            frame = pd.DataFrame(np.empty(len(atoms), dtype=dtypes), index=index)
             frame['atom'] = atoms
             frame.loc[:, ['x', 'y', 'z']] = coords
         elif not isinstance(frame, pd.DataFrame):
@@ -234,10 +234,6 @@ class CartesianCore(PandasWrapper, GenericCore):
 
     def __ne__(self, other):
         return self._frame != other._frame
-
-    def _to_numeric(self):
-        return self.__class__(self._frame.apply(
-            partial(pd.to_numeric, errors='ignore')))
 
     def copy(self):
         molecule = self.__class__(self._frame)
