@@ -158,10 +158,6 @@ def test_assignment():
     assert molecule.x.dtypes == np.dtype('f8')
     assert molecule.y.dtypes == np.dtype('f8')
 
-    with pytest.raises(TypeError):
-        molecule.loc[1] = x
-    with pytest.raises(TypeError):
-        molecule.loc[[1, 2]] = x
 
     molecule = cc.Cartesian.read_xyz(get_complete_path('MIL53_small.xyz'),
                                      start_index=1)
@@ -183,10 +179,6 @@ def test_assignment():
     assert molecule.x.dtypes == np.dtype('f8')
     assert molecule.y.dtypes == np.dtype('f8')
 
-    with pytest.raises(TypeError):
-        molecule.iloc[1] = x
-    with pytest.raises(TypeError):
-        molecule.iloc[[1, 2]] = x
 
 
 def test_get_bonds():

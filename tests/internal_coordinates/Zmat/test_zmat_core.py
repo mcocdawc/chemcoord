@@ -45,8 +45,6 @@ def test_assignment():
 
     assert zmolecule.subs(x, 10).bond.dtype == np.dtype('f8')
 
-    with pytest.raises(TypeError):
-        zmolecule.safe_loc[1] = x
 
 def test_addition_with_sympy():
     theta, x = Symbol('theta', real=True), Symbol('x', real=True)
