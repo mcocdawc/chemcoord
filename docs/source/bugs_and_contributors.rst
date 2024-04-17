@@ -11,6 +11,8 @@ Previous Contribution
 
 * Main Work: Oskar Weser
 
+* Scientific supervision: `Ricardo Mata <https://www.uni-goettingen.de/en/123801.html>`__
+
 * Python2 compatibility: Keld Lundgaard
 
 * Maintenance (Change in pandas API): Niccolo Ricardi

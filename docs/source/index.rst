@@ -40,7 +40,7 @@ Contents
     tutorial.rst
     documentation.rst
     references.rst
-    bugs.rst
+    bugs_and_contributors.rst
     license.rst
 
 
@@ -50,17 +50,38 @@ The changelog can be found
 Citation and mathematical background
 ++++++++++++++++++++++++++++++++++++
 
-If chemcoord is used in a project that leads to a scientific publication,
-please acknowledge this fact by citing Oskar Weser (2017) using this ready-made BibTeX entry::
+
+The theory behind chemcoord is described in `this paper <https://onlinelibrary.wiley.com/doi/full/10.1002/jcc.27029>`__.
+If this package is used in a project that leads to a scientific
+publication, please acknowledge it by citing.
+
+::
+
+    @article{https://doi.org/10.1002/jcc.27029,
+        author = {Weser, Oskar and Hein-Janke, Björn and Mata, Ricardo A.},
+        title = {Automated handling of complex chemical structures in Z-matrix coordinates—The chemcoord library},
+        journal = {Journal of Computational Chemistry},
+        volume = {44},
+        number = {5},
+        pages = {710-726},
+        keywords = {analytical gradients, geometry optimization, non-linear constraints, transition state search, Z-matrix},
+        doi = {10.1002/jcc.27029},
+        year = {2023}
+    }
+
+
+My (Oskar Weser) master thesis including a more detailed derivation of implemented equations and
+the mathematical background can be found
+`here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf>`__.
+It also has a ready-made BibTeX entry:
+
+::
 
   @mastersthesis{OWeser2017,
-  author = {Oskar Weser},
-  title = {An efficient and general library for the definition and use of internal coordinates in large molecular systems},
-  school = {Georg August Universität Göttingen},
-  year = {2017},
-  month = {November},
+      author = {Oskar Weser},
+      title = {An efficient and general library for the definition and use of internal coordinates in large molecular systems},
+      school = {Georg August Universität Göttingen},
+      year = {2017},
+      month = {November},
   }
 
-The master thesis including the derivation of implemented equations
-and the mathematical background can be found
-`here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf>`_.
