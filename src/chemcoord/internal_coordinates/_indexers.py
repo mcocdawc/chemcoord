@@ -42,7 +42,7 @@ class _Unsafe_base():
             #  (as of version 2.2.), but to be futureproof make an explicit cast.
             # The `except FutureWarning:` has likely to become `except TypeError:` then.
             if isinstance(key, tuple):
-                if type(key[1]) is not str and is_iterable(key[1]):
+                if type(key[1]) is not str and _is_iterable(key[1]):
                     self.molecule._frame = self.molecule._frame.astype({k: 'O' for k in key[1]})
                 else:
                     self.molecule._frame = self.molecule._frame.astype({key[1]: 'O'})
@@ -117,7 +117,7 @@ class _Safe_ILoc(_ILoc, _SafeBase):
 
 
 
-def is_iterable(x):
+def _is_iterable(x):
     try:
         # check if iterable
         iter(x)
