@@ -292,27 +292,27 @@ and assigning values safely.
         return new
 
     def iupacify(self):
-        """Give the IUPAC conform representation.
+        r"""Give the IUPAC conform representation.
 
         Mathematically speaking the angles in a zmatrix are
         representations of an equivalence class.
-        We will denote an equivalence relation with :math:`\\sim`
-        and use :math:`\\alpha` for an angle and :math:`\\delta` for a dihedral
+        We will denote an equivalence relation with :math:`\sim`
+        and use :math:`\alpha` for an angle and :math:`\delta` for a dihedral
         angle. Then the following equations hold true.
 
         .. math::
 
-           (\\alpha, \\delta) &\sim (-\\alpha, \\delta + \\pi) \\\\
-           \\alpha &\sim \\alpha \\mod 2\\pi \\\\
-           \\delta &\sim \\delta \\mod 2\\pi
+           (\alpha, \delta) &\sim (-\alpha, \delta + \pi) \\
+           \alpha &\sim \alpha \mod 2\pi \\
+           \delta &\sim \delta \mod 2\pi
 
         `IUPAC <https://goldbook.iupac.org/html/T/T06406.html>`_ defines
         a designated representation of these equivalence classes, by asserting:
 
         .. math::
 
-           0 \\leq &\\alpha \\leq \\pi \\\\
-           -\\pi \\leq &\\delta \\leq \\pi
+           0 \leq &\alpha \leq \pi \\
+           -\pi \leq &\delta \leq \pi
 
         Args:
             None
@@ -437,7 +437,7 @@ and assigning values safely.
             if out.loc[:, col].dtype is np.dtype('O'):
                 out.unsafe_loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
-                    out._frame[col] = out.loc[:, col].astype('f8')
+                    out._frame = out._frame.astype({col: 'f8'})
                 except (SystemError, TypeError):
                     pass
         if perform_checks:

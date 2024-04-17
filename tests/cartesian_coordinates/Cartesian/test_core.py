@@ -5,6 +5,8 @@ import sys
 import numpy as np
 import pytest
 
+import sympy
+
 import chemcoord as cc
 from chemcoord.cartesian_coordinates.xyz_functions import (dot,
                                                            get_rotation_matrix)
@@ -134,6 +136,20 @@ def test_indexing():
     assert (molecule.y == molecule.loc[:, 'y']).all()
     assert (molecule.z == molecule.loc[:, 'z']).all()
     assert ((molecule.x - molecule.loc[:, 'x']) == 0).all()
+
+def test_assignment():
+    molecule = cc.Cartesian.read_xyz(get_complete_path('MIL53_small.xyz'),
+                                     start_index=1)
+    x = sympy.symbols('x', real=True)
+
+    molecule.loc[:, 'x'] = 3
+    assert (molecule.x == 3).all()
+
+    molecule.loc[1, 'x'] = x
+    assert molecule.x.dtypes == np.dtype('O')
+    assert molecule.y.dtypes == np.dtype('f8')
+    molecule = molecule.subs(x, 1)
+    assert molecule.x.dtypes == np.dtype('f8')
 
 
 def test_get_bonds():

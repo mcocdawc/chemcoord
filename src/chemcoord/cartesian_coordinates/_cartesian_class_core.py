@@ -281,7 +281,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             if out.loc[:, col].dtype is np.dtype('O'):
                 out.loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
-                    out.loc[:, col] = out.loc[:, col].astype('f8')
+                    out._frame = out._frame.astype({col: 'f8'})
                 except (SystemError, TypeError):
                     pass
         return out
