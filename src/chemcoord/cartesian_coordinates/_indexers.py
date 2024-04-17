@@ -2,6 +2,8 @@
 
 import warnings
 
+from chemcoord.utilities._temporary_deprecation_workarounds import is_iterable
+
 class _generic_Indexer(object):
     def __init__(self, molecule):
         self.molecule = molecule
@@ -38,7 +40,7 @@ class _Loc(_generic_Indexer):
             # The `except FutureWarning:` has likely to become `except TypeError:`
             #  then in the future.
             if isinstance(key, tuple):
-                if type(key[1]) is not str and _is_iterable(key[1]):
+                if type(key[1]) is not str and is_iterable(key[1]):
                     self.molecule._frame = df.astype({k: 'O' for k in key[1]})
                 else:
                     self.molecule._frame = df.astype({key[1]: 'O'})
@@ -78,7 +80,7 @@ class _ILoc(_generic_Indexer):
             # The `except FutureWarning:` has likely to become `except TypeError:`
             #  then in the future.
             if isinstance(key, tuple):
-                if type(key[1]) is not str and _is_iterable(key[1]):
+                if type(key[1]) is not str and is_iterable(key[1]):
                     self.molecule._frame = df.astype({df.columns[k]: 'O' for k in key[1]})
                 else:
                     self.molecule._frame = df.astype({df.columns[key[1]]: 'O'})
@@ -97,12 +99,3 @@ def _set_caster(x):
         return list(x)
     else:
         return x
-
-
-def _is_iterable(x):
-    try:
-        # check if iterable
-        iter(x)
-        return True
-    except TypeError:
-        return False
