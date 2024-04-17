@@ -43,6 +43,7 @@ class ZmatIO(ZmatCore, GenericIO):
 
     def _remove_upper_triangle(self):
         out = self.copy()
+        out._frame = out._frame.astype({k: str for k in ['b', 'bond', 'a', 'angle', 'd', 'dihedral']})
         for i in range(min(len(self), 3)):
             out.unsafe_iloc[i, (2 * i + 1):] = ''
         return out

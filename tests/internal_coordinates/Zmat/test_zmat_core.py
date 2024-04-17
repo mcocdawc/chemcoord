@@ -6,6 +6,9 @@ import pytest
 
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
+import pandas as pd
+
+pd.set_option('future.no_silent_downcasting', True)
 
 
 def get_script_path():
