@@ -6,6 +6,8 @@ import itertools
 import numpy as np
 import os
 import sys
+import pandas as pd
+pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():
@@ -39,7 +41,7 @@ def test_concat():
         molecule2.index = molecule.index
         assert allclose(molecule, molecule2)
 
-    key_joined = cc.xyz_functions.concat(cartesians, keys=['a', 'b'])
+    key_joined = cc.xyz_functions.concat(cartesians, keys=['a', 'b', 'c', 'd', 'e'])
     assert allclose(key_joined.loc['a'], (key_joined.loc['b'] - 10))
 
 
