@@ -12,7 +12,7 @@ shared: &shared
           command: pip3 install pytest pytest-cov
       - run:
           name: Running tests
-          command: python3 -m pytest --cov=./src/chemcoord tests/
+          command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
       - run:
           name: Upload coverage reports to Codecov
           command: |
