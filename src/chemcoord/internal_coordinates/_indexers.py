@@ -64,12 +64,9 @@ class _SafeBase():
             molecule = self.molecule
         else:
             molecule = self.molecule.copy()
-        indexer = getattr(molecule._frame, self.indexer)
 
-        if isinstance(key, tuple):
-            indexer[key[0], key[1]] = value
-        else:
-            indexer[key] = value
+        indexer = getattr(molecule, f'unsafe_{self.indexer}')
+        indexer[key] = value
 
         try:
             molecule.get_cartesian()
