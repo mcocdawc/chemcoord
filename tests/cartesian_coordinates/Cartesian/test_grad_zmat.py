@@ -9,7 +9,13 @@ import pytest
 import sympy
 from chemcoord.exceptions import UndefinedCoordinateSystem
 from chemcoord.xyz_functions import allclose
+import pandas as pd
 
+try:
+    pd.set_option("future.no_silent_downcasting", True)
+except:
+    # Yes I want a bare except
+    pass
 
 def get_script_path():
     return os.path.dirname(os.path.realpath(__file__))
@@ -50,5 +56,4 @@ def test_grad_zmat():
         (zmat_dist.loc[:, ['bond', 'angle', 'dihedral']] != 0.).any(axis=1)]
 
     assert moved_atoms[0] == 13
-    assert np.alltrue(
-        moved_atoms[1:] == c_table.index[(c_table == 13).any(axis=1)])
+    assert (moved_atoms[1:] == c_table.index[(c_table == 13).any(axis=1)]).all()

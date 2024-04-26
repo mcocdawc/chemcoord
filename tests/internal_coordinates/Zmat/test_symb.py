@@ -2,6 +2,13 @@ import os
 
 import chemcoord as cc
 import sympy
+import pandas as pd
+
+try:
+    pd.set_option("future.no_silent_downcasting", True)
+except:
+    # Yes I want a bare except
+    pass
 
 
 def get_script_path():

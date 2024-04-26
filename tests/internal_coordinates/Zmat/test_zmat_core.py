@@ -3,9 +3,17 @@ from os.path import join
 from io import StringIO
 from sympy import Symbol
 import pytest
+import numpy as np
 
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
+import pandas as pd
+
+try:
+    pd.set_option("future.no_silent_downcasting", True)
+except:
+    # Yes I want a bare except
+    pass
 
 
 def get_script_path():
@@ -23,6 +31,19 @@ def get_structure_path(script_path):
 
 
 STRUCTURE_PATH = get_structure_path(get_script_path())
+
+
+def test_assignment():
+    theta, x = Symbol('theta', real=True), Symbol('x', real=True)
+
+    molecule = cc.Cartesian.read_xyz(
+        join(STRUCTURE_PATH, 'MIL53_small.xyz'), start_index=1)
+    zmolecule = molecule.get_zmat()
+
+    zmolecule.safe_loc[:, 'bond'] = x
+    assert zmolecule.bond.dtype == np.dtype('O')
+
+    assert zmolecule.subs(x, 10).bond.dtype == np.dtype('f8')
 
 
 def test_addition_with_sympy():

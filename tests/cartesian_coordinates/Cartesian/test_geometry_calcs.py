@@ -3,6 +3,12 @@ import pytest
 import numpy as np
 import os
 import sys
+import pandas as pd
+try:
+    pd.set_option("future.no_silent_downcasting", True)
+except:
+    # Yes I want a bare except
+    pass
 
 
 def get_script_path():
@@ -44,7 +50,7 @@ def test_get_dihedral_degrees():
 def test_fragmentate():
     fragments = molecule.fragmentate()
     assert len(fragments) == 1
-    assert np.alltrue(fragments[0] == molecule)
+    assert (fragments[0] == molecule).all(axis=None)
 
 
 def test_get_shortest_distance():

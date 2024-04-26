@@ -12,7 +12,7 @@ shared: &shared
           command: pip3 install pytest pytest-cov
       - run:
           name: Running tests
-          command: python3 -m pytest --cov=./src/chemcoord tests/
+          command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
       - run:
           name: Upload coverage reports to Codecov
           command: |
@@ -21,10 +21,18 @@ shared: &shared
 workflows:
   sample:
     jobs:
+      - py37
       - py38
       - py39
+      - py310
+      - py311
 
 jobs:
+  py37:
+    <<: *shared
+    docker:
+      - image: cimg/python:3.7
+
   py38:
     <<: *shared
     docker:
@@ -35,3 +43,12 @@ jobs:
     docker:
       - image: cimg/python:3.9
 
+  py310:
+    <<: *shared
+    docker:
+      - image: cimg/python:3.10
+
+  py311:
+    <<: *shared
+    docker:
+      - image: cimg/python:3.11

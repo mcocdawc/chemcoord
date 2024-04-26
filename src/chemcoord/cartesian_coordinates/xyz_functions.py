@@ -200,7 +200,7 @@ def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
     """
     coords = ['x', 'y', 'z']
     if not (set(a.index) == set(b.index)
-            and np.alltrue(a.loc[:, 'atom'] == b.loc[a.index, 'atom'])):
+            and (a.loc[:, 'atom'] == b.loc[a.index, 'atom']).all(axis=None)):
         message = 'Can only compare molecules with the same atoms and labels'
         raise ValueError(message)
 
@@ -208,8 +208,9 @@ def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
         a = a.get_inertia()['transformed_Cartesian']
         b = b.get_inertia()['transformed_Cartesian']
     A, B = a.loc[:, coords], b.loc[a.index, coords]
-    out = a._frame.copy()
-    out['atom'] = True
+
+    out = pd.DataFrame(index=a.index, columns=['atom'] + coords, dtype=bool)
+    out.loc[:, 'atom'] = True
     out.loc[:, coords] = np.isclose(A, B, rtol=rtol, atol=atol)
     return out
 
@@ -231,7 +232,7 @@ def allclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
     Returns:
         bool:
     """
-    return np.alltrue(isclose(a, b, align=align, rtol=rtol, atol=atol))
+    return isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None)
 
 
 def concat(cartesians, ignore_index=False, keys=None):
@@ -465,6 +466,15 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     if (construction_table.index != cart_dist.index).any():
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
+    from chemcoord.internal_coordinates.zmat_class_main import Zmat
+    dtypes = [('atom', str),
+                    ('b', str), ('bond', float),
+                    ('a', str), ('angle', float),
+                    ('d', str), ('dihedral', float)]
+
+    new = pd.DataFrame(np.empty(len(construction_table), dtype=dtypes),
+                              index=cart_dist.index)
+
     X_dist = cart_dist.loc[:, ['x', 'y', 'z']].values.T
     C_dist = np.tensordot(grad_C, X_dist, axes=([3, 2], [0, 1])).T
     if C_dist.dtype == np.dtype('i8'):
@@ -476,13 +486,8 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     # the raised exception before https://github.com/numpy/numpy/issues/13666
     except (AttributeError, TypeError):
         C_dist[:, [1, 2]] = sympy.deg(C_dist[:, [1, 2]])
+        new = new.astype({k: 'O' for k in ['bond', 'angle', 'dihedral']})
 
-    from chemcoord.internal_coordinates.zmat_class_main import Zmat
-    cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
-    dtypes = ['O', 'i8', 'f8', 'i8', 'f8', 'i8', 'f8']
-    new = pd.DataFrame(data=np.zeros((len(construction_table), 7)),
-                       index=cart_dist.index, columns=cols, dtype='f8')
-    new = new.astype(dict(zip(cols, dtypes)))
     new.loc[:, ['b', 'a', 'd']] = construction_table
     new.loc[:, 'atom'] = cart_dist.loc[:, 'atom']
     new.loc[:, ['bond', 'angle', 'dihedral']] = C_dist

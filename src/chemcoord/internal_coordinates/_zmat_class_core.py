@@ -14,6 +14,7 @@ from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
 from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
     PandasWrapper
 from chemcoord.utilities import _decorators
+from chemcoord.utilities._temporary_deprecation_workarounds import replace_without_warn
 
 append_indexer_docstring = _decorators.Appender(
     """In the case of obtaining elements, the indexing behaves like
@@ -152,8 +153,8 @@ and assigning values safely.
 
     def _test_if_can_be_added(self, other):
         cols = ['atom', 'b', 'a', 'd']
-        if not (np.alltrue(self.loc[:, cols] == other.loc[:, cols])
-                and np.alltrue(self.index == other.index)):
+        if not ((self.loc[:, cols] == other.loc[:, cols]).all(axis=None)
+                and (self.index == other.index).all()):
             message = ("You can add only those zmatrices that have the same "
                        "index, use the same construction table, have the same "
                        "ordering... The only allowed difference is in the "
@@ -292,27 +293,27 @@ and assigning values safely.
         return new
 
     def iupacify(self):
-        """Give the IUPAC conform representation.
+        r"""Give the IUPAC conform representation.
 
         Mathematically speaking the angles in a zmatrix are
         representations of an equivalence class.
-        We will denote an equivalence relation with :math:`\\sim`
-        and use :math:`\\alpha` for an angle and :math:`\\delta` for a dihedral
+        We will denote an equivalence relation with :math:`\sim`
+        and use :math:`\alpha` for an angle and :math:`\delta` for a dihedral
         angle. Then the following equations hold true.
 
         .. math::
 
-           (\\alpha, \\delta) &\sim (-\\alpha, \\delta + \\pi) \\\\
-           \\alpha &\sim \\alpha \\mod 2\\pi \\\\
-           \\delta &\sim \\delta \\mod 2\\pi
+           (\alpha, \delta) &\sim (-\alpha, \delta + \pi) \\
+           \alpha &\sim \alpha \mod 2\pi \\
+           \delta &\sim \delta \mod 2\pi
 
         `IUPAC <https://goldbook.iupac.org/html/T/T06406.html>`_ defines
         a designated representation of these equivalence classes, by asserting:
 
         .. math::
 
-           0 \\leq &\\alpha \\leq \\pi \\\\
-           -\\pi \\leq &\\delta \\leq \\pi
+           0 \leq &\alpha \leq \pi \\
+           -\pi \leq &\delta \leq \pi
 
         Args:
             None
@@ -437,7 +438,7 @@ and assigning values safely.
             if out.loc[:, col].dtype is np.dtype('O'):
                 out.unsafe_loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
-                    out._frame[col] = out.loc[:, col].astype('f8')
+                    out._frame = out._frame.astype({col: 'f8'})
                 except (SystemError, TypeError):
                     pass
         if perform_checks:
@@ -489,7 +490,7 @@ and assigning values safely.
         # https://github.com/pandas-dev/pandas/issues/5541
         # For this reason convert to int and replace then.
 
-        c_table = c_table.replace(constants.int_label)
+        c_table = replace_without_warn(c_table, constants.int_label)
         try:
             c_table = c_table.astype('i8')
         except ValueError:
@@ -654,9 +655,11 @@ and assigning values safely.
             return cartesian
 
         c_table = self.loc[:, ['b', 'a', 'd']]
-        c_table = c_table.replace(constants.int_label)
-        c_table = c_table.replace({k: v for v, k in enumerate(c_table.index)})
-        c_table = c_table.values.astype('i8').T
+        c_table = (replace_without_warn(c_table, constants.int_label)
+                    .astype('i8')
+                    .replace({k: v for v, k in enumerate(c_table.index)})
+                    .values
+                    .T)
 
         C = self.loc[:, ['bond', 'angle', 'dihedral']].values.T
         C[[1, 2], :] = np.radians(C[[1, 2], :])
@@ -767,8 +770,13 @@ and assigning values safely.
             with partially replaced arguments.
         """
         zmat = self.change_numbering()
-        c_table = zmat.loc[:, ['b', 'a', 'd']]
-        c_table = c_table.replace(constants.int_label).values.T
+
+        c_table = (replace_without_warn(zmat.loc[:, ['b', 'a', 'd']],
+                                        constants.int_label)
+                    .astype('i8')
+                    .values
+                    .T)
+
         C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
         if C.dtype == np.dtype('i8'):
             C = C.astype('f8')

@@ -56,8 +56,8 @@ class CartesianCore(PandasWrapper, GenericCore):
             message = 'Either frame or atoms and coords have to be not None'
             raise IllegalArgumentCombination(message)
         elif atoms is not None and coords is not None:
-            frame = pd.DataFrame(index=index,
-                                 columns=['atom', 'x', 'y', 'z'], dtype='f8')
+            dtypes = [('atom', str), ('x', float), ('y', float), ('z', float)]
+            frame = pd.DataFrame(np.empty(len(atoms), dtype=dtypes), index=index)
             frame['atom'] = atoms
             frame.loc[:, ['x', 'y', 'z']] = coords
         elif not isinstance(frame, pd.DataFrame):
@@ -95,7 +95,7 @@ class CartesianCore(PandasWrapper, GenericCore):
 
     def _test_if_can_be_added(self, other):
         if not (set(self.index) == set(other.index)
-                and np.alltrue(self['atom'] == other.loc[self.index, 'atom'])):
+                and (self['atom'] == other.loc[self.index, 'atom']).all(axis=None)):
             message = ("You can add only Cartesians which are indexed in the "
                        "same way and use the same atoms.")
             raise PhysicalMeaning(message)
@@ -235,10 +235,6 @@ class CartesianCore(PandasWrapper, GenericCore):
     def __ne__(self, other):
         return self._frame != other._frame
 
-    def _to_numeric(self):
-        return self.__class__(self._frame.apply(
-            partial(pd.to_numeric, errors='ignore')))
-
     def copy(self):
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
@@ -285,7 +281,7 @@ class CartesianCore(PandasWrapper, GenericCore):
             if out.loc[:, col].dtype is np.dtype('O'):
                 out.loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
-                    out.loc[:, col] = out.loc[:, col].astype('f8')
+                    out._frame = out._frame.astype({col: 'f8'})
                 except (SystemError, TypeError):
                     pass
         return out

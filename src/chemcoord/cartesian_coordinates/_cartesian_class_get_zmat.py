@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import warnings
 from collections import OrderedDict
+
 from functools import partial
 from itertools import permutations
 
@@ -17,6 +18,7 @@ from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
                                   IllegalArgumentCombination, InvalidReference,
                                   UndefinedCoordinateSystem)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
+from chemcoord.utilities._temporary_deprecation_workarounds import replace_without_warn
 
 
 class CartesianGetZmat(CartesianCore):
@@ -488,7 +490,8 @@ class CartesianGetZmat(CartesianCore):
                 c_table = pd.DataFrame(
                     data=c_table[:, 1:], index=c_table[:, 0],
                     columns=['b', 'a', 'd'])
-        c_table = c_table.replace(constants.int_label).astype('i8')
+
+        c_table = replace_without_warn(c_table, constants.int_label).astype('i8')
         c_table.index = c_table.index.astype('i8')
 
         new_index = c_table.index.append(self.index.difference(c_table.index))
@@ -511,20 +514,22 @@ class CartesianGetZmat(CartesianCore):
             Zmat: A new instance of :class:`Zmat`.
         """
         c_table = construction_table
-        default_cols = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
-        optional_cols = list(set(self.columns) - {'atom', 'x', 'y', 'z'})
+        dtypes = [('atom', str),
+                        ('b', str), ('bond', float),
+                        ('a', str), ('angle', float),
+                        ('d', str), ('dihedral', float)]
 
-        zmat_frame = pd.DataFrame(columns=default_cols + optional_cols,
-                                  dtype='float', index=c_table.index)
-
-        zmat_frame.loc[:, optional_cols] = self.loc[c_table.index,
-                                                    optional_cols]
+        zmat_frame = pd.DataFrame(np.empty(len(c_table), dtype=dtypes),
+                                  index=c_table.index)
 
         zmat_frame.loc[:, 'atom'] = self.loc[c_table.index, 'atom']
         zmat_frame.loc[:, ['b', 'a', 'd']] = c_table
 
         zmat_values = self._calculate_zmat_values(c_table)
         zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = zmat_values
+
+        zmat_frame = zmat_frame.join(
+            self._frame.loc[:, list(set(self.columns) - {'atom', 'x', 'y', 'z'})])
 
         zmatrix = Zmat(zmat_frame, metadata=self.metadata,
                        _metadata={'last_valid_cartesian': self.copy()})
@@ -691,9 +696,13 @@ class CartesianGetZmat(CartesianCore):
             message = "construction_table and self must use the same index"
             raise ValueError(message)
         c_table = construction_table.loc[:, ['b', 'a', 'd']]
-        c_table = c_table.replace(constants.int_label)
-        c_table = c_table.replace({k: v for v, k in enumerate(c_table.index)})
-        c_table = c_table.values.T
+
+
+        c_table = (replace_without_warn(c_table, constants.int_label)
+                        .astype('i8')
+                        .replace({k: v for v, k in enumerate(c_table.index)})
+                        .values
+                        .T)
         X = self.loc[:, ['x', 'y', 'z']].values.T
         if X.dtype == np.dtype('i8'):
             X = X.astype('f8')

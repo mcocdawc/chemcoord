@@ -5,12 +5,20 @@ import sys
 import numpy as np
 import pytest
 
+import sympy
+
 import chemcoord as cc
 from chemcoord.cartesian_coordinates.xyz_functions import (dot,
                                                            get_rotation_matrix)
 from chemcoord.exceptions import PhysicalMeaning, UndefinedCoordinateSystem
 from chemcoord.xyz_functions import allclose
 
+import pandas as pd
+try:
+    pd.set_option("future.no_silent_downcasting", True)
+except:
+    # Yes I want a bare except
+    pass
 
 def get_script_path():
     return os.path.dirname(os.path.realpath(__file__))
@@ -129,6 +137,49 @@ def test_indexing():
     assert (molecule.z == molecule.loc[:, 'z']).all()
     assert ((molecule.x - molecule.loc[:, 'x']) == 0).all()
 
+def test_assignment():
+    molecule = cc.Cartesian.read_xyz(get_complete_path('MIL53_small.xyz'),
+                                     start_index=1)
+    x = sympy.symbols('x', real=True)
+
+    molecule.loc[:, 'x'] = 3
+    assert (molecule.x == 3).all()
+
+    molecule.loc[1, 'x'] = x
+    assert molecule.x.dtypes == np.dtype('O')
+    assert molecule.y.dtypes == np.dtype('f8')
+    molecule = molecule.subs(x, 1)
+    assert molecule.x.dtypes == np.dtype('f8')
+
+    molecule.loc[1, ['x', 'y']] = x
+    assert molecule.x.dtypes == np.dtype('O')
+    assert molecule.y.dtypes == np.dtype('O')
+    molecule = molecule.subs(x, 1)
+    assert molecule.x.dtypes == np.dtype('f8')
+    assert molecule.y.dtypes == np.dtype('f8')
+
+
+    molecule = cc.Cartesian.read_xyz(get_complete_path('MIL53_small.xyz'),
+                                     start_index=1)
+    x = sympy.symbols('x', real=True)
+
+    molecule.iloc[:, 1] = 3
+    assert (molecule.x == 3).all()
+
+    molecule.iloc[1, 1] = x
+    assert molecule.x.dtypes == np.dtype('O')
+    assert molecule.y.dtypes == np.dtype('f8')
+    molecule = molecule.subs(x, 1)
+    assert molecule.x.dtypes == np.dtype('f8')
+
+    molecule.iloc[1, [1, 2]] = x
+    assert molecule.x.dtypes == np.dtype('O')
+    assert molecule.y.dtypes == np.dtype('O')
+    molecule = molecule.subs(x, 1)
+    assert molecule.x.dtypes == np.dtype('f8')
+    assert molecule.y.dtypes == np.dtype('f8')
+
+
 
 def test_get_bonds():
     assert bond_dict == molecule.get_bonds()
@@ -171,9 +222,8 @@ def test_coordination_sphere():
 def test_cut_sphere():
     expected = {6, 7, 8, 9, 11, 12, 13, 15, 16, 19, 20, 53}
     assert expected == set(molecule.cut_sphere(radius=3, origin=7).index)
-    assert np.alltrue(
-        molecule == molecule.cut_sphere(radius=3, origin=7,
-                                        preserve_bonds=True))
+    assert (molecule == molecule.cut_sphere(radius=3, origin=7,
+                                            preserve_bonds=True)).all(axis=None)
     assert (set(molecule.index) - expected
             == set(molecule.cut_sphere(radius=3, origin=7,
                                        outside_sliced=False).index))
@@ -182,9 +232,8 @@ def test_cut_sphere():
 def test_cut_cuboid():
     expected = {3, 4, 5, 6, 7, 15, 16, 17, 32, 35, 37, 38, 47, 52, 53, 55, 56}
     assert expected == set(molecule.cut_cuboid(a=2, origin=7).index)
-    assert np.alltrue(
-        molecule == molecule.cut_cuboid(a=2, origin=7,
-                                        preserve_bonds=True))
+    assert (molecule == molecule.cut_cuboid(a=2, origin=7,
+                                        preserve_bonds=True)).all(axis=None)
     assert (set(molecule.index) - expected
             == set(molecule.cut_cuboid(a=2, origin=7,
                                        outside_sliced=False).index))
@@ -240,7 +289,7 @@ def test_change_numbering():
     molecule2 = molecule.copy()
     molecule2.index = reversed(molecule.index)
     dct = dict(zip(molecule.index, reversed(molecule.index)))
-    assert np.alltrue(molecule2.index == molecule.change_numbering(dct).index)
+    assert (molecule2.index == molecule.change_numbering(dct).index).all()
 
 
 def test_align():
