@@ -125,7 +125,7 @@ publication, please acknowledge it by citing.
 
 My (Oskar Weser) master thesis including a more detailed derivation of implemented equations and
 the mathematical background can be found
-`here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf>`__.
+`here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/_static/master_thesis_oskar_weser_chemcoord.pdf>`__.
 
 
 
