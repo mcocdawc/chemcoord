@@ -1,6 +1,8 @@
 Welcome to ChemCoord's documentation!
 =====================================
 
+The code can be found `here <https://github.com/mcocdawc/chemcoord>`_.
+
 
 Features
 ++++++++
