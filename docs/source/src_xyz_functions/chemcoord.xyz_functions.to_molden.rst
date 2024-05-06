@@ -1,5 +1,5 @@
-chemcoord\.xyz\_functions\.to\_molden
-=====================================
+﻿chemcoord.xyz\_functions.to\_molden
+===================================
 
 .. currentmodule:: chemcoord.xyz_functions
 

@@ -1,6 +1,6 @@
-chemcoord\.Zmat\.safe\_iloc
-===========================
+﻿chemcoord.Zmat.safe\_iloc
+=========================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Zmat.safe_iloc
+.. autoproperty:: Zmat.safe_iloc

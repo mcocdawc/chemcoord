@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_inertia
-==================================
+﻿chemcoord.Cartesian.get\_inertia
+================================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.fragmentate
-=================================
+﻿chemcoord.Cartesian.fragmentate
+===============================
 
 .. currentmodule:: chemcoord
 

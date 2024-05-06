@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.has\_same\_sumformula
-======================================
+﻿chemcoord.Zmat.has\_same\_sumformula
+====================================
 
 .. currentmodule:: chemcoord
 

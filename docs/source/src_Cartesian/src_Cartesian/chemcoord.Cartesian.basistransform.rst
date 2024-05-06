@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.basistransform
-====================================
+﻿chemcoord.Cartesian.basistransform
+==================================
 
 .. currentmodule:: chemcoord
 

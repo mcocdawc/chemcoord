@@ -1,5 +1,5 @@
-chemcoord.configuration.read_configuration_file
-===============================================
+﻿chemcoord.configuration.read\_configuration\_file
+=================================================
 
 .. currentmodule:: chemcoord.configuration
 

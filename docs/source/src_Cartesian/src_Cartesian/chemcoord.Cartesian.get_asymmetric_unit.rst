@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_asymmetric\_unit
-===========================================
+﻿chemcoord.Cartesian.get\_asymmetric\_unit
+=========================================
 
 .. currentmodule:: chemcoord
 

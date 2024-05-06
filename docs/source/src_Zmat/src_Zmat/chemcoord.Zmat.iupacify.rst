@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.iupacify
-=========================
+﻿chemcoord.Zmat.iupacify
+=======================
 
 .. currentmodule:: chemcoord
 

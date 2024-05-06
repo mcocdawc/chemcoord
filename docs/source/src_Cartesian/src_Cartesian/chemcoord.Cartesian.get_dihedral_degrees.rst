@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_dihedral\_degrees
-============================================
+﻿chemcoord.Cartesian.get\_dihedral\_degrees
+==========================================
 
 .. currentmodule:: chemcoord
 

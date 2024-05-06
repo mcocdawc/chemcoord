@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_barycenter
-=====================================
+﻿chemcoord.Cartesian.get\_barycenter
+===================================
 
 .. currentmodule:: chemcoord
 

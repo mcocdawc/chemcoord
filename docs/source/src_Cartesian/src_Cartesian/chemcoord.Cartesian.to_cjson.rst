@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.to\_cjson
-===============================
+﻿chemcoord.Cartesian.to\_cjson
+=============================
 
 .. currentmodule:: chemcoord
 

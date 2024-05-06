@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_equivalent\_atoms
-============================================
+﻿chemcoord.Cartesian.get\_equivalent\_atoms
+==========================================
 
 .. currentmodule:: chemcoord
 

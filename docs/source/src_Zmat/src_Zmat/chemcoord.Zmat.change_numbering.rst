@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.change\_numbering
-==================================
+﻿chemcoord.Zmat.change\_numbering
+================================
 
 .. currentmodule:: chemcoord
 

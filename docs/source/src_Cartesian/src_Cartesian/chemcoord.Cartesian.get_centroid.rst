@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_centroid
-===================================
+﻿chemcoord.Cartesian.get\_centroid
+=================================
 
 .. currentmodule:: chemcoord
 

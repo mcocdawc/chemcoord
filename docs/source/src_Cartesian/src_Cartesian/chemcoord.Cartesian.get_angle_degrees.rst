@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_angle\_degrees
-=========================================
+﻿chemcoord.Cartesian.get\_angle\_degrees
+=======================================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_distance\_to
-=======================================
+﻿chemcoord.Cartesian.get\_distance\_to
+=====================================
 
 .. currentmodule:: chemcoord
 

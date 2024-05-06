@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_coordination\_sphere
-===============================================
+﻿chemcoord.Cartesian.get\_coordination\_sphere
+=============================================
 
 .. currentmodule:: chemcoord
 

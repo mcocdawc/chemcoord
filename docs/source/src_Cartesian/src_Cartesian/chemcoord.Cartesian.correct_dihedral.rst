@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.correct\_dihedral
-=======================================
+﻿chemcoord.Cartesian.correct\_dihedral
+=====================================
 
 .. currentmodule:: chemcoord
 

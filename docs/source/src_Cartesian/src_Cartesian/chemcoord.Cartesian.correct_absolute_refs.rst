@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.correct\_absolute\_refs
-=============================================
+﻿chemcoord.Cartesian.correct\_absolute\_refs
+===========================================
 
 .. currentmodule:: chemcoord
 

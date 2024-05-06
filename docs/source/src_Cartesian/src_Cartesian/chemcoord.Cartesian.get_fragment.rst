@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_fragment
-===================================
+﻿chemcoord.Cartesian.get\_fragment
+=================================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,5 @@
-chemcoord.Zmat.get_grad_cartesian
-=================================
+﻿chemcoord.Zmat.get\_grad\_cartesian
+===================================
 
 .. currentmodule:: chemcoord
 

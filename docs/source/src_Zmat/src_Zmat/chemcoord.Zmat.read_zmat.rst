@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.read\_zmat
-===========================
+﻿chemcoord.Zmat.read\_zmat
+=========================
 
 .. currentmodule:: chemcoord
 

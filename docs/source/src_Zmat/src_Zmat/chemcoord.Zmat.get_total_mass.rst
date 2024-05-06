@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.get\_total\_mass
-=================================
+﻿chemcoord.Zmat.get\_total\_mass
+===============================
 
 .. currentmodule:: chemcoord
 

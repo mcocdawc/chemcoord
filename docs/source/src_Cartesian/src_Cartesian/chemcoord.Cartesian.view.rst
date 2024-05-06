@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.view
-==========================
+﻿chemcoord.Cartesian.view
+========================
 
 .. currentmodule:: chemcoord
 

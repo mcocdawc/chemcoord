@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.get\_electron\_number
-======================================
+﻿chemcoord.Zmat.get\_electron\_number
+====================================
 
 .. currentmodule:: chemcoord
 

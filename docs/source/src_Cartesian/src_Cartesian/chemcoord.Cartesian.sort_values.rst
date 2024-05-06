@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.sort\_values
-==================================
+﻿chemcoord.Cartesian.sort\_values
+================================
 
 .. currentmodule:: chemcoord
 

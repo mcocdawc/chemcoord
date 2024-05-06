@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.sort\_values
-=============================
+﻿chemcoord.Zmat.sort\_values
+===========================
 
 .. currentmodule:: chemcoord
 

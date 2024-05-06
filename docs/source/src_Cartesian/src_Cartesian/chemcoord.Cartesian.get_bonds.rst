@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_bonds
-================================
+﻿chemcoord.Cartesian.get\_bonds
+==============================
 
 .. currentmodule:: chemcoord
 

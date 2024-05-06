@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.\_\_init\_\_
-=============================
+﻿chemcoord.Zmat.\_\_init\_\_
+===========================
 
 .. currentmodule:: chemcoord
 

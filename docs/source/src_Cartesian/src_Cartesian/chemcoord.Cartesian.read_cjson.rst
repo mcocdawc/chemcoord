@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.read\_cjson
-=================================
+﻿chemcoord.Cartesian.read\_cjson
+===============================
 
 .. currentmodule:: chemcoord
 

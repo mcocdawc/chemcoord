@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.add\_data
-===============================
+﻿chemcoord.Cartesian.add\_data
+=============================
 
 .. currentmodule:: chemcoord
 

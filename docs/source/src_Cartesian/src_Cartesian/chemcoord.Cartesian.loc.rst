@@ -1,6 +1,6 @@
-chemcoord\.Cartesian\.loc
-=========================
+﻿chemcoord.Cartesian.loc
+=======================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Cartesian.loc
+.. autoproperty:: Cartesian.loc

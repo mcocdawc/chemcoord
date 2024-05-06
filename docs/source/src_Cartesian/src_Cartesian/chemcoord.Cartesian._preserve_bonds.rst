@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.\_preserve\_bonds
-=======================================
+﻿chemcoord.Cartesian.\_preserve\_bonds
+=====================================
 
 .. currentmodule:: chemcoord
 

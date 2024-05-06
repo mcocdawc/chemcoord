@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.symmetrize
-================================
+﻿chemcoord.Cartesian.symmetrize
+==============================
 
 .. currentmodule:: chemcoord
 

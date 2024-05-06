@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.cut\_sphere
-=================================
+﻿chemcoord.Cartesian.cut\_sphere
+===============================
 
 .. currentmodule:: chemcoord
 

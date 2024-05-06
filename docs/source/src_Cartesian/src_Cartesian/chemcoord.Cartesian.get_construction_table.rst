@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_construction\_table
-==============================================
+﻿chemcoord.Cartesian.get\_construction\_table
+============================================
 
 .. currentmodule:: chemcoord
 

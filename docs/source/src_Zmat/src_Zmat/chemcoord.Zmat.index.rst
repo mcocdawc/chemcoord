@@ -1,6 +1,6 @@
-chemcoord\.Zmat\.index
-======================
+﻿chemcoord.Zmat.index
+====================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Zmat.index
+.. autoproperty:: Zmat.index

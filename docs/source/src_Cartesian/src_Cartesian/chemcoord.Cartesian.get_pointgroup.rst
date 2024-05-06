@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_pointgroup
-=====================================
+﻿chemcoord.Cartesian.get\_pointgroup
+===================================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,5 @@
-chemcoord\.xyz\_functions\.dot
-==============================
+﻿chemcoord.xyz\_functions.dot
+============================
 
 .. currentmodule:: chemcoord.xyz_functions
 

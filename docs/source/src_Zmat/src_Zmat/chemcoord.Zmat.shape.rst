@@ -1,6 +1,6 @@
-chemcoord\.Zmat\.shape
-======================
+﻿chemcoord.Zmat.shape
+====================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Zmat.shape
+.. autoproperty:: Zmat.shape

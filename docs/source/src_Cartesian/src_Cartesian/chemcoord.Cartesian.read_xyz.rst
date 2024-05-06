@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.read\_xyz
-===============================
+﻿chemcoord.Cartesian.read\_xyz
+=============================
 
 .. currentmodule:: chemcoord
 

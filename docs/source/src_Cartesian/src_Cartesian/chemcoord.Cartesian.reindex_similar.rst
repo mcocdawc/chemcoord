@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.reindex\_similar
-======================================
+﻿chemcoord.Cartesian.reindex\_similar
+====================================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,5 @@
-chemcoord\.Zmat\.copy
-=====================
+﻿chemcoord.Zmat.copy
+===================
 
 .. currentmodule:: chemcoord
 

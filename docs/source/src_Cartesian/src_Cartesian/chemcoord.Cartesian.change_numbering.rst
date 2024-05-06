@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.change\_numbering
-=======================================
+﻿chemcoord.Cartesian.change\_numbering
+=====================================
 
 .. currentmodule:: chemcoord
 

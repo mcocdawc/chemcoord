@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.partition\_chem\_env
-==========================================
+﻿chemcoord.Cartesian.partition\_chem\_env
+========================================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.subs
-==========================
+﻿chemcoord.Cartesian.subs
+========================
 
 .. currentmodule:: chemcoord
 

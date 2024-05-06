@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.get\_total\_mass
-======================================
+﻿chemcoord.Cartesian.get\_total\_mass
+====================================
 
 .. currentmodule:: chemcoord
 

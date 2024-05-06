@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.align
-===========================
+﻿chemcoord.Cartesian.align
+=========================
 
 .. currentmodule:: chemcoord
 

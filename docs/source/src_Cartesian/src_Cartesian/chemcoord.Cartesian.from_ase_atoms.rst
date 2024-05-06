@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.from\_ase\_atoms
-======================================
+﻿chemcoord.Cartesian.from\_ase\_atoms
+====================================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,5 @@
-chemcoord\.Cartesian\.set\_index
-================================
+﻿chemcoord.Cartesian.set\_index
+==============================
 
 .. currentmodule:: chemcoord
 
