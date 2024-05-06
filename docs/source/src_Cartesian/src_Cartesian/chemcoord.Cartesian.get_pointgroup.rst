@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.get\_pointgroup
+﻿:orphan:
+
+chemcoord.Cartesian.get\_pointgroup
 ===================================
 
 .. currentmodule:: chemcoord

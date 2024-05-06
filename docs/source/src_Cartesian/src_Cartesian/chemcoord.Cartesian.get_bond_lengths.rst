@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.get\_bond\_lengths
+﻿:orphan:
+
+chemcoord.Cartesian.get\_bond\_lengths
 ======================================
 
 .. currentmodule:: chemcoord

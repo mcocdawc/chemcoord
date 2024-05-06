@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.change\_numbering
+﻿:orphan:
+
+chemcoord.Zmat.change\_numbering
 ================================
 
 .. currentmodule:: chemcoord

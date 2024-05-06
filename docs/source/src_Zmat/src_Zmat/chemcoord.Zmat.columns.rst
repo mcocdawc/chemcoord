@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.columns
+﻿:orphan:
+
+chemcoord.Zmat.columns
 ======================
 
 .. currentmodule:: chemcoord

@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.shape
+﻿:orphan:
+
+chemcoord.Zmat.shape
 ====================
 
 .. currentmodule:: chemcoord

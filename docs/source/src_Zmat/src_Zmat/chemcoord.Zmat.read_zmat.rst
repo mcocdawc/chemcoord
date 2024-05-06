@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.read\_zmat
+﻿:orphan:
+
+chemcoord.Zmat.read\_zmat
 =========================
 
 .. currentmodule:: chemcoord

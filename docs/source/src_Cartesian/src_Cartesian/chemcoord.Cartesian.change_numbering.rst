@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.change\_numbering
+﻿:orphan:
+
+chemcoord.Cartesian.change\_numbering
 =====================================
 
 .. currentmodule:: chemcoord

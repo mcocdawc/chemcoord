@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.index
+﻿:orphan:
+
+chemcoord.Zmat.index
 ====================
 
 .. currentmodule:: chemcoord

@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.get\_total\_mass
+﻿:orphan:
+
+chemcoord.Cartesian.get\_total\_mass
 ====================================
 
 .. currentmodule:: chemcoord

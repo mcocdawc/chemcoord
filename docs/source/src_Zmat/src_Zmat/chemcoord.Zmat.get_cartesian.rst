@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.get\_cartesian
+﻿:orphan:
+
+chemcoord.Zmat.get\_cartesian
 =============================
 
 .. currentmodule:: chemcoord

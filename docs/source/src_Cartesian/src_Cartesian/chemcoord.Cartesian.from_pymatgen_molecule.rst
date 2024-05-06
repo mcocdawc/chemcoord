@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.from\_pymatgen\_molecule
+﻿:orphan:
+
+chemcoord.Cartesian.from\_pymatgen\_molecule
 ============================================
 
 .. currentmodule:: chemcoord

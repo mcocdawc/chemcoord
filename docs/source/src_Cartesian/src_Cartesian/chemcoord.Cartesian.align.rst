@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.align
+﻿:orphan:
+
+chemcoord.Cartesian.align
 =========================
 
 .. currentmodule:: chemcoord

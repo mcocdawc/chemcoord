@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.safe\_iloc
+﻿:orphan:
+
+chemcoord.Zmat.safe\_iloc
 =========================
 
 .. currentmodule:: chemcoord

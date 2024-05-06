@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.loc
+﻿:orphan:
+
+chemcoord.Cartesian.loc
 =======================
 
 .. currentmodule:: chemcoord

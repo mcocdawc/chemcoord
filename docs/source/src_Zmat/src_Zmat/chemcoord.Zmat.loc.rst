@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.loc
+﻿:orphan:
+
+chemcoord.Zmat.loc
 ==================
 
 .. currentmodule:: chemcoord

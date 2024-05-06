@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.iupacify
+﻿:orphan:
+
+chemcoord.Zmat.iupacify
 =======================
 
 .. currentmodule:: chemcoord

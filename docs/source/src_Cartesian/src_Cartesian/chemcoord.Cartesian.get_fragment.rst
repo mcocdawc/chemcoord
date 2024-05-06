@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.get\_fragment
+﻿:orphan:
+
+chemcoord.Cartesian.get\_fragment
 =================================
 
 .. currentmodule:: chemcoord

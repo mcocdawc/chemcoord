@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.from\_ase\_atoms
+﻿:orphan:
+
+chemcoord.Cartesian.from\_ase\_atoms
 ====================================
 
 .. currentmodule:: chemcoord

@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.sort\_values
+﻿:orphan:
+
+chemcoord.Zmat.sort\_values
 ===========================
 
 .. currentmodule:: chemcoord

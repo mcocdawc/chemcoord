@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.subs
+﻿:orphan:
+
+chemcoord.Cartesian.subs
 ========================
 
 .. currentmodule:: chemcoord

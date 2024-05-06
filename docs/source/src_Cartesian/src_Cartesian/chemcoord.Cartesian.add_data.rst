@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.add\_data
+﻿:orphan:
+
+chemcoord.Cartesian.add\_data
 =============================
 
 .. currentmodule:: chemcoord

@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.get\_distance\_to
+﻿:orphan:
+
+chemcoord.Cartesian.get\_distance\_to
 =====================================
 
 .. currentmodule:: chemcoord

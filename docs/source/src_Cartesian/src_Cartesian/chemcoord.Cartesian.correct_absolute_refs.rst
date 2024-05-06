@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.correct\_absolute\_refs
+﻿:orphan:
+
+chemcoord.Cartesian.correct\_absolute\_refs
 ===========================================
 
 .. currentmodule:: chemcoord

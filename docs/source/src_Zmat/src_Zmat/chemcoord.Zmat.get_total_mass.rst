@@ -1,4 +1,6 @@
-﻿chemcoord.Zmat.get\_total\_mass
+﻿:orphan:
+
+chemcoord.Zmat.get\_total\_mass
 ===============================
 
 .. currentmodule:: chemcoord

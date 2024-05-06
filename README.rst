@@ -1,6 +1,10 @@
 chemcoord: A python module for coordinates of molecules
 =======================================================
 
+.. image:: docs/source/_static/logo/chemcoord_logo.png
+  :width: 400
+  :alt: Alternative text
+
 
 .. list-table::
    :widths: 25 25

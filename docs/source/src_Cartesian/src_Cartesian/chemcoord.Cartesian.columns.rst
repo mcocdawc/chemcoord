@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.columns
+﻿:orphan:
+
+chemcoord.Cartesian.columns
 ===========================
 
 .. currentmodule:: chemcoord

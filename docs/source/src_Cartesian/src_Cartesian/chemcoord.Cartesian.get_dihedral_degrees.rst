@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.get\_dihedral\_degrees
+﻿:orphan:
+
+chemcoord.Cartesian.get\_dihedral\_degrees
 ==========================================
 
 .. currentmodule:: chemcoord

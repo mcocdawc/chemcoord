@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.\_preserve\_bonds
+﻿:orphan:
+
+chemcoord.Cartesian.\_preserve\_bonds
 =====================================
 
 .. currentmodule:: chemcoord

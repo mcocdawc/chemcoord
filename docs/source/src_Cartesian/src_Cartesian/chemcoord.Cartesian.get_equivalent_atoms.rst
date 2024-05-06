@@ -1,4 +1,6 @@
-﻿chemcoord.Cartesian.get\_equivalent\_atoms
+﻿:orphan:
+
+chemcoord.Cartesian.get\_equivalent\_atoms
 ==========================================
 
 .. currentmodule:: chemcoord
