@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.check\_dihedral
-=====================================
+﻿:orphan:
+
+chemcoord.Cartesian.check\_dihedral
+===================================
 
 .. currentmodule:: chemcoord
 

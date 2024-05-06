@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.get\_centroid
-===================================
+﻿:orphan:
+
+chemcoord.Cartesian.get\_centroid
+=================================
 
 .. currentmodule:: chemcoord
 

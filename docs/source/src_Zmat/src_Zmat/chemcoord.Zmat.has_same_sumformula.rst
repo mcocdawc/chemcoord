@@ -1,5 +1,8 @@
-chemcoord\.Zmat\.has\_same\_sumformula
-======================================
+﻿:orphan:
+
+
+chemcoord.Zmat.has\_same\_sumformula
+====================================
 
 .. currentmodule:: chemcoord
 

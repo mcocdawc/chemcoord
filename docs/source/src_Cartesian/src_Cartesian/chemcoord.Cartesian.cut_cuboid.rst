@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.cut\_cuboid
-=================================
+﻿:orphan:
+
+chemcoord.Cartesian.cut\_cuboid
+===============================
 
 .. currentmodule:: chemcoord
 

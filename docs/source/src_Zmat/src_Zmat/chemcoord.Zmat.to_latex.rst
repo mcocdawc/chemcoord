@@ -1,5 +1,7 @@
-chemcoord\.Zmat\.to\_latex
-==========================
+﻿:orphan:
+
+chemcoord.Zmat.to\_latex
+========================
 
 .. currentmodule:: chemcoord
 

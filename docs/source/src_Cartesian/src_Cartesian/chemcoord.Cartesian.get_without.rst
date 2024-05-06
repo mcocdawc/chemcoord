@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.get\_without
-==================================
+﻿:orphan:
+
+chemcoord.Cartesian.get\_without
+================================
 
 .. currentmodule:: chemcoord
 

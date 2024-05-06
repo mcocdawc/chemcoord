@@ -1,6 +1,8 @@
-chemcoord\.Zmat\.unsafe\_loc
-============================
+﻿:orphan:
+
+chemcoord.Zmat.unsafe\_loc
+==========================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Zmat.unsafe_loc
+.. autoproperty:: Zmat.unsafe_loc

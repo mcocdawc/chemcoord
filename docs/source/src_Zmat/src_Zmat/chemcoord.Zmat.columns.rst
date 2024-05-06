@@ -1,6 +1,8 @@
-chemcoord\.Zmat\.columns
-========================
+﻿:orphan:
+
+chemcoord.Zmat.columns
+======================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Zmat.columns
+.. autoproperty:: Zmat.columns

@@ -1,5 +1,5 @@
-chemcoord\.xyz\_functions\.read\_molden
-=======================================
+﻿chemcoord.xyz\_functions.read\_molden
+=====================================
 
 .. currentmodule:: chemcoord.xyz_functions
 

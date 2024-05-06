@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.view
-==========================
+﻿:orphan:
+
+chemcoord.Cartesian.view
+========================
 
 .. currentmodule:: chemcoord
 

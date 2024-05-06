@@ -1,5 +1,7 @@
-chemcoord\.Zmat\.minimize\_dihedrals
-====================================
+﻿:orphan:
+
+chemcoord.Zmat.minimize\_dihedrals
+==================================
 
 .. currentmodule:: chemcoord
 

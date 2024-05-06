@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.sort\_values
-==================================
+﻿:orphan:
+
+chemcoord.Cartesian.sort\_values
+================================
 
 .. currentmodule:: chemcoord
 

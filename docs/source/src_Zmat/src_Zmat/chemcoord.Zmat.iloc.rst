@@ -1,6 +1,8 @@
-chemcoord\.Zmat\.iloc
-=====================
+﻿:orphan:
+
+chemcoord.Zmat.iloc
+===================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Zmat.iloc
+.. autoproperty:: Zmat.iloc

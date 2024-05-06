@@ -1,6 +1,8 @@
-chemcoord\.Zmat\.dtypes
-=======================
+﻿:orphan:
+
+chemcoord.Zmat.dtypes
+=====================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Zmat.dtypes
+.. autoproperty:: Zmat.dtypes

@@ -1,3 +1,7 @@
+.. raw:: html
+
+    <img src="docs/source/_static/logo/chemcoord_logo.png " align="left" alt="NECI logo" width="115">
+
 chemcoord: A python module for coordinates of molecules
 =======================================================
 
@@ -125,7 +129,7 @@ publication, please acknowledge it by citing.
 
 My (Oskar Weser) master thesis including a more detailed derivation of implemented equations and
 the mathematical background can be found
-`here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf>`__.
+`here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/_static/master_thesis_oskar_weser_chemcoord.pdf>`__.
 
 
 

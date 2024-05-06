@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.to\_latex
-===============================
+﻿:orphan:
+
+chemcoord.Cartesian.to\_latex
+=============================
 
 .. currentmodule:: chemcoord
 

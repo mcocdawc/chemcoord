@@ -1,5 +1,7 @@
-chemcoord\.Zmat\.copy
-=====================
+﻿:orphan:
+
+chemcoord.Zmat.copy
+===================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.get\_angle\_degrees
-=========================================
+﻿:orphan:
+
+chemcoord.Cartesian.get\_angle\_degrees
+=======================================
 
 .. currentmodule:: chemcoord
 

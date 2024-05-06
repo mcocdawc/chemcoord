@@ -1,6 +1,8 @@
-chemcoord\.Cartesian\.iloc
-==========================
+﻿:orphan:
+
+chemcoord.Cartesian.iloc
+========================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Cartesian.iloc
+.. autoproperty:: Cartesian.iloc

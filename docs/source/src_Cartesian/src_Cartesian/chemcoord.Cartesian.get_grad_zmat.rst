@@ -1,5 +1,7 @@
-chemcoord.Cartesian.get_grad_zmat
-=================================
+﻿:orphan:
+
+chemcoord.Cartesian.get\_grad\_zmat
+===================================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.get\_inertia
-==================================
+﻿:orphan:
+
+chemcoord.Cartesian.get\_inertia
+================================
 
 .. currentmodule:: chemcoord
 
