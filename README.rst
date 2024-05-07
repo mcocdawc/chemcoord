@@ -1,6 +1,6 @@
-.. raw:: html
+.. figure:: docs/source/_static/logo/chemcoord_logo.png
 
-    <img src="docs/source/_static/logo/chemcoord_logo.png " align="left" alt="NECI logo" width="115">
+   This is the caption of the figure.
 
 chemcoord: A python module for coordinates of molecules
 =======================================================
