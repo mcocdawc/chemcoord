@@ -1,7 +1,3 @@
-.. raw:: html
-
-    <img src="docs/source/_static/logo/chemcoord_logo.png " align="left" alt="NECI logo" width="115">
-
 chemcoord: A python module for coordinates of molecules
 =======================================================
 
@@ -10,6 +6,11 @@ chemcoord: A python module for coordinates of molecules
    :widths: 25 25
    :header-rows: 0
 
+   * - .. image:: docs/source/_static/logo/chemcoord_logo.png
+              :align: center
+              :width: 140
+              :alt: Chemcoord logo
+     -
    * - Latest Release
      - .. image:: https://img.shields.io/pypi/v/chemcoord.svg
             :target: https://pypi.python.org/pypi/chemcoord
