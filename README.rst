@@ -1,6 +1,7 @@
-.. figure:: docs/source/_static/logo/chemcoord_logo.png
+.. image:: docs/source/_static/logo/chemcoord_logo.png
+   :align: center
+   :width: 120
 
-   This is the caption of the figure.
 
 chemcoord: A python module for coordinates of molecules
 =======================================================
