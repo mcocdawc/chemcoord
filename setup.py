@@ -55,6 +55,7 @@ def setup_package():
         include_package_data=True,
         keywords=KEYWORDS,
         license=LICENSE,
+        long_description_content_type="text/x-rst",
         long_description=readme(),
         classifiers=CLASSIFIERS,
         packages=find_packages('src'),
