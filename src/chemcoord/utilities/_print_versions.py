@@ -46,7 +46,6 @@ def show_versions(as_json=False):
         # (MODULE_NAME, f(mod) -> mod version)
         ("chemcoord", lambda mod: mod.__version__),
         ("numpy", lambda mod: mod.version.version),
-        ("scipy", lambda mod: mod.version.version),
         ("pandas", lambda mod: mod.__version__),
         ("numba", lambda mod: mod.__version__),
         ("sortedcontainers", lambda mod: mod.__version__),
