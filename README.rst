@@ -6,7 +6,7 @@ chemcoord: A python module for coordinates of molecules
    :widths: 25 25
    :header-rows: 0
 
-   * - .. image:: https://raw.githubusercontent.com/mcocdawc/chemcoord/v2.1.1/docs/source/_static/logo/chemcoord_logo.png
+   * - .. image:: https://raw.githubusercontent.com/mcocdawc/chemcoord/v2.1.2/docs/source/_static/logo/chemcoord_logo.png
               :align: center
               :width: 140
               :alt: Chemcoord logo

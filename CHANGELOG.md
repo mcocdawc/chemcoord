@@ -1,11 +1,10 @@
-# Changelog for
+# Changelog for v2.1.1 -> v2.1.2
 
-## Adjust for API changes
+- Removed scipy from the dependencies in the `setup.py` because it is indeed unused.
+    This is necessary for the conda packaging.
 
-- There were various changes in the API of numba, numpy, and pandas.
-Chemcoord did not work for too new python versions.
-All these deprecation warnings are fixed now.
+- Made URLs in the doc that pointing to images more stable.
 
-- There were various changes in the API of sphinx for building the documentation.
+- Improved Logo.
 
-## Added Logo
+- Removed `conda.recipe`. We now do this from the outside with `conda-forge`.
