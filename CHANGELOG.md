@@ -7,3 +7,4 @@
 
 - Improved Logo.
 
+- Removed `conda.recipe`. We now do this from the outside with `conda-forge`.
