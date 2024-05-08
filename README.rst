@@ -6,6 +6,11 @@ chemcoord: A python module for coordinates of molecules
    :widths: 25 25
    :header-rows: 0
 
+   * - .. image:: https://raw.githubusercontent.com/mcocdawc/chemcoord/v2.1.1/docs/source/_static/logo/chemcoord_logo.png
+              :align: center
+              :width: 140
+              :alt: Chemcoord logo
+     -
    * - Latest Release
      - .. image:: https://img.shields.io/pypi/v/chemcoord.svg
             :target: https://pypi.python.org/pypi/chemcoord
@@ -125,7 +130,7 @@ publication, please acknowledge it by citing.
 
 My (Oskar Weser) master thesis including a more detailed derivation of implemented equations and
 the mathematical background can be found
-`here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/files/master_thesis_oskar_weser_chemcoord.pdf>`__.
+`here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/_static/master_thesis_oskar_weser_chemcoord.pdf>`__.
 
 
 
@@ -133,7 +138,7 @@ Acknowledgement
 ~~~~~~~~~~~~~~~
 
 
-.. image:: https://github.com/zulip/zulip/blob/main/static/images/logo/zulip-icon-circle.svg
+.. image:: https://raw.githubusercontent.com/zulip/zulip/982097f0a7fe2ecf46edc8756fc19f2a5c354ad7/static/images/logo/zulip-icon-circle.svg
    :width: 80
    :align: left
    :target: https://zulip.com/

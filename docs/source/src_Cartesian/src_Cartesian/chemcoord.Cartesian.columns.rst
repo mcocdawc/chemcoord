@@ -1,6 +1,8 @@
-chemcoord\.Cartesian\.columns
-=============================
+﻿:orphan:
+
+chemcoord.Cartesian.columns
+===========================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Cartesian.columns
+.. autoproperty:: Cartesian.columns

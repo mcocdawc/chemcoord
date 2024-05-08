@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.fragmentate
-=================================
+﻿:orphan:
+
+chemcoord.Cartesian.fragmentate
+===============================
 
 .. currentmodule:: chemcoord
 

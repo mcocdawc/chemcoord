@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.replace
-=============================
+﻿:orphan:
+
+chemcoord.Cartesian.replace
+===========================
 
 .. currentmodule:: chemcoord
 

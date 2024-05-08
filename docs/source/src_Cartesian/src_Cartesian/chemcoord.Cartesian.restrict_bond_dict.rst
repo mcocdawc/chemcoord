@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.restrict\_bond\_dict
-==========================================
+﻿:orphan:
+
+chemcoord.Cartesian.restrict\_bond\_dict
+========================================
 
 .. currentmodule:: chemcoord
 

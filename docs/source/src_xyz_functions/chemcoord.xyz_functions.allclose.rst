@@ -1,5 +1,5 @@
-chemcoord\.xyz\_functions\.allclose
-===================================
+﻿chemcoord.xyz\_functions.allclose
+=================================
 
 .. currentmodule:: chemcoord.xyz_functions
 

@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.copy
-==========================
+﻿:orphan:
+
+chemcoord.Cartesian.copy
+========================
 
 .. currentmodule:: chemcoord
 

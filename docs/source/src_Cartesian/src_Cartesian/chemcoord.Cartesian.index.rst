@@ -1,6 +1,8 @@
-chemcoord\.Cartesian\.index
-===========================
+﻿:orphan:
+
+chemcoord.Cartesian.index
+=========================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Cartesian.index
+.. autoproperty:: Cartesian.index

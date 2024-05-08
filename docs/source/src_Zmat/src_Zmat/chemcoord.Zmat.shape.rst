@@ -1,6 +1,8 @@
-chemcoord\.Zmat\.shape
-======================
+﻿:orphan:
+
+chemcoord.Zmat.shape
+====================
 
 .. currentmodule:: chemcoord
 
-.. autoattribute:: Zmat.shape
+.. autoproperty:: Zmat.shape

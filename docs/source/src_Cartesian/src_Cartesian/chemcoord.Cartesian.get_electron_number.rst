@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.get\_electron\_number
-===========================================
+﻿:orphan:
+
+chemcoord.Cartesian.get\_electron\_number
+=========================================
 
 .. currentmodule:: chemcoord
 

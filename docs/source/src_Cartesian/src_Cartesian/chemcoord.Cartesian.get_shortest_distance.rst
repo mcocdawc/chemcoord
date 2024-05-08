@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.get\_shortest\_distance
-=============================================
+﻿:orphan:
+
+chemcoord.Cartesian.get\_shortest\_distance
+===========================================
 
 .. currentmodule:: chemcoord
 

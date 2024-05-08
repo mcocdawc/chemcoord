@@ -1,5 +1,7 @@
-chemcoord\.Zmat\.write
-======================
+﻿:orphan:
+
+chemcoord.Zmat.write
+====================
 
 .. currentmodule:: chemcoord
 

@@ -1,5 +1,7 @@
-chemcoord\.Cartesian\.write\_xyz
-================================
+﻿:orphan:
+
+chemcoord.Cartesian.write\_xyz
+==============================
 
 .. currentmodule:: chemcoord
 
