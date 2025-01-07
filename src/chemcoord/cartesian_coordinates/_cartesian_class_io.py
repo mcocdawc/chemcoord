@@ -35,7 +35,7 @@ class CartesianIO(CartesianCore, GenericIO):
     def __repr__(self):
         return self._frame.__repr__()
 
-    def _repr_html_(self):    # noqa: PLW3201
+    def _repr_html_(self):  # noqa: PLW3201
         new = self._sympy_formatter()
 
         def insert_before_substring(insert_txt, substr, txt):

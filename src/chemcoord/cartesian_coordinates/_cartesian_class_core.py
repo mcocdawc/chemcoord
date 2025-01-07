@@ -20,7 +20,7 @@ from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
 
 
-class CartesianCore(PandasWrapper, GenericCore):      # noqa: PLW1641
+class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     _required_cols = frozenset({"atom", "x", "y", "z"})
 
     # Look into the numpy manual for description of __array_priority__:
