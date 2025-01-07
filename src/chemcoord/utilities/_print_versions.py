@@ -18,7 +18,7 @@ def get_sys_info():
     # blob.append(('commit', commit))
 
     try:
-        (sysname, nodename, release, version, machine, processor) = platform.uname()
+        (sysname, _, release, _, machine, processor) = platform.uname()
         blob.extend(
             [
                 ("python", "%d.%d.%d.%s.%s" % sys.version_info[:]),
@@ -97,9 +97,9 @@ def show_versions(as_json=False):
 
     if as_json:
         try:
-            import json
+            import json  # noqa: PLC0415
         except Exception:
-            import simplejson as json
+            import simplejson as json  # noqa: PLC0415
 
         j = dict(system=dict(sys_info), dependencies=dict(deps_blob))
 
@@ -122,7 +122,7 @@ def show_versions(as_json=False):
 
 
 def main():
-    from optparse import OptionParser
+    from optparse import OptionParser  # noqa: PLC0415
 
     parser = OptionParser()
     parser.add_option(
