@@ -8,8 +8,14 @@ shared: &shared
           name: Install chemcoord
           command: pip3 install --editable .
       - run:
-          name: Install pytest
-          command: pip3 install pytest pytest-cov
+          name: Install infrastructure
+          command: pip3 install pytest pytest-cov mypy ruff
+      - run:
+          name: Ruff formatting
+          command: ruff format --diff
+      - run:
+          name: Ruff check
+          command: ruff check . || true
       - run:
           name: Running tests
           command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
