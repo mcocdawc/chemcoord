@@ -2,13 +2,13 @@
 import collections
 import copy
 import itertools
-from functools import partial
 from itertools import product
 
 import numba as nb
 import numpy as np
 import pandas as pd
 from numba import jit
+from six.moves import zip  # pylint:disable=redefined-builtin
 from sortedcontainers import SortedSet
 
 import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
@@ -20,7 +20,6 @@ from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import (
 from chemcoord.cartesian_coordinates.xyz_functions import dot
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
-from six.moves import zip  # pylint:disable=redefined-builtin
 
 
 class CartesianCore(PandasWrapper, GenericCore):

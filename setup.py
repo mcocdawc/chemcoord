@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 """Setup file for the chemcoord package."""
 
-from setuptools import setup, find_packages
-
+from setuptools import find_packages, setup
 
 MAIN_PACKAGE = "chemcoord"
 DESCRIPTION = "Python module for dealing with chemical coordinates."

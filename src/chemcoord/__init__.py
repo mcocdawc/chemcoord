@@ -20,20 +20,20 @@ def export(func):
 
 
 # have to be imported after export definition
-import chemcoord.utilities
-from chemcoord.utilities._print_versions import show_versions
-from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
-from chemcoord.cartesian_coordinates.asymmetric_unit_cartesian_class import (
-    AsymmetricUnitCartesian,
-)
-import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
-from chemcoord.internal_coordinates.zmat_class_main import Zmat
-import chemcoord.internal_coordinates.zmat_functions as zmat_functions
-import chemcoord.configuration as configuration
-from chemcoord.configuration import settings
-import chemcoord.constants
-
 import sys
+
+import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
+import chemcoord.configuration as configuration
+import chemcoord.constants
+import chemcoord.internal_coordinates.zmat_functions as zmat_functions
+import chemcoord.utilities
+from chemcoord.cartesian_coordinates.asymmetric_unit_cartesian_class import (
+    AsymmetricUnitCartesian as AsymmetricUnitCartesian,
+)
+from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian as Cartesian
+from chemcoord.configuration import settings as settings
+from chemcoord.internal_coordinates.zmat_class_main import Zmat as Zmat
+from chemcoord.utilities._print_versions import show_versions as show_versions
 
 sys.modules["chemcoord.xyz_functions"] = xyz_functions
 sys.modules["chemcoord.zmat_functions"] = zmat_functions

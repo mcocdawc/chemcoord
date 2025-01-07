@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
+import json
 import os
+import re
 import subprocess
 import tempfile
 import warnings
-from threading import Thread
-import json
 from collections import defaultdict
-import re
 from functools import partial
+from threading import Thread
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
+from chemcoord import constants
 from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
-from chemcoord import constants
 
 
 class CartesianIO(CartesianCore, GenericIO):

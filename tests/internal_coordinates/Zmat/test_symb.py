@@ -1,8 +1,9 @@
 import os
 
-import chemcoord as cc
-import sympy
 import pandas as pd
+import sympy
+
+import chemcoord as cc
 
 try:
     pd.set_option("future.no_silent_downcasting", True)

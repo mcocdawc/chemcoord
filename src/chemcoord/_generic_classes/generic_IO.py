@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import sympy
 import numpy as np
+import sympy
 
 
 class GenericIO(object):

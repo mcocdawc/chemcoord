@@ -1,10 +1,10 @@
-import chemcoord as cc
-from chemcoord.xyz_functions import allclose
-import pytest
-from chemcoord.exceptions import UndefinedCoordinateSystem, InvalidReference
 import os
-import sys
+
 import pandas as pd
+import pytest
+
+import chemcoord as cc
+from chemcoord.exceptions import InvalidReference
 
 try:
     pd.set_option("future.no_silent_downcasting", True)
