@@ -15,12 +15,12 @@ from chemcoord.cartesian_coordinates.xyz_functions import (
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
-def _stub_get_ref_pos(X, indices):  # pylint:disable=unused-argument
+def _stub_get_ref_pos(X, indices):  # noqa: ARG001
     raise AssertionError("Should not call this function unjitted.")
 
 
 @overload(_stub_get_ref_pos)
-def _get_ref_pos_impl(X, indices):  # pylint:disable=unused-argument
+def _get_ref_pos_impl(X, indices):  # noqa: ARG001
     if isinstance(indices, nb.types.Array):
 
         def f(X, indices):

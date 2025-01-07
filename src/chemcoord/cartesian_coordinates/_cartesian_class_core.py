@@ -8,7 +8,6 @@ import numba as nb
 import numpy as np
 import pandas as pd
 from numba import jit
-from six.moves import zip  # pylint:disable=redefined-builtin
 from sortedcontainers import SortedSet
 
 import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
@@ -21,7 +20,7 @@ from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
 
 
-class CartesianCore(PandasWrapper, GenericCore):
+class CartesianCore(PandasWrapper, GenericCore):      # noqa: PLW1641
     _required_cols = frozenset({"atom", "x", "y", "z"})
 
     # Look into the numpy manual for description of __array_priority__:
@@ -1289,8 +1288,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         Uses the Kabsch algorithm implemented within
         :func:`~.xyz_functions.get_kabsch_rotation`.
         If ``mass_weight`` is ``True`` the atoms are weighted by their mass.
-        The atoms are moved first to the centroid/barycenter (depending on ``mass_weight``)
-        if centered is ``False``.
+        The atoms are moved first to the centroid/barycenter
+        (depending on ``mass_weight``) if centered is ``False``.
 
         Args:
             other (Cartesian):

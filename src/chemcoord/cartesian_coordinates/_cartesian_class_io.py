@@ -35,7 +35,7 @@ class CartesianIO(CartesianCore, GenericIO):
     def __repr__(self):
         return self._frame.__repr__()
 
-    def _repr_html_(self):
+    def _repr_html_(self):    # noqa: PLW3201
         new = self._sympy_formatter()
 
         def insert_before_substring(insert_txt, substr, txt):
@@ -149,7 +149,8 @@ class CartesianIO(CartesianCore, GenericIO):
 
         Args:
             buf (str, path object or file-like object):
-                File path or object, if None is provided the result is returned as a string.
+                File path or object, if None is provided the result is returned as
+                a string.
             sort_index (bool): If sort_index is true, the
                 :class:`~chemcoord.Cartesian`
                 is sorted by the index before writing.
@@ -210,12 +211,14 @@ class CartesianIO(CartesianCore, GenericIO):
 
         Args:
             buf (str, path object or file-like object):
-                This is passed on to :func:`pandas.read_table` and has the same constraints.
+                This is passed on to :func:`pandas.read_table` and has the same
+                constraints.
                 Any valid string path is acceptable. The string could be a URL.
                 Valid URL schemes include http, ftp, s3, and file.
                 For file URLs, a host is expected. A local file could be: file://localhost/path/to/table.csv.
                 If you want to pass in a path object, pandas accepts any os.PathLike.
-                By file-like object, we refer to objects with a read() method, such as a file handler (e.g. via builtin open function) or StringIO.
+                By file-like object, we refer to objects with a read() method,
+                such as a file handler (e.g. via builtin open function) or StringIO.
             start_index (int):
             get_bonds (bool):
             nrows (int): Number of rows of file to read.
@@ -408,7 +411,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             :class:`pymatgen.core.structure.Molecule`:
         """
-        from pymatgen.core import Molecule
+        from pymatgen.core import Molecule  # noqa: PLC0415
 
         return Molecule(self["atom"].values, self.loc[:, ["x", "y", "z"]].values)
 
@@ -439,7 +442,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             :class:`ase.atoms.Atoms`:
         """
-        from ase import Atoms
+        from ase import Atoms  # noqa: PLC0415
 
         return Atoms("".join(self["atom"]), self.loc[:, ["x", "y", "z"]])
 
