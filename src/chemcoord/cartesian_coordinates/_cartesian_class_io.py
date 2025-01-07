@@ -232,7 +232,7 @@ class CartesianIO(CartesianCore, GenericIO):
             nrows=nrows,
             sep=r"\s+",
             names=["atom", "x", "y", "z"],
-            dtype = {'x': float, 'y': float, 'z': float},
+            dtype={"x": float, "y": float, "z": float},
             engine=engine,
         )
 

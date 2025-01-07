@@ -67,11 +67,11 @@ Created by chemcoord http://chemcoord.readthedocs.io/
     with pytest.warns(DeprecationWarning):
         assert molecule.write_xyz() in expected
 
+
 def test_xyz_cast():
+    molecule_float = cc.Cartesian.read_xyz(get_complete_path("hydrogen_float.xyz"))
 
-    molecule_float = cc.Cartesian.read_xyz(get_complete_path('hydrogen_float.xyz'))
-
-    molecule_int = cc.Cartesian.read_xyz(get_complete_path('hydrogen_int.xyz'))
+    molecule_int = cc.Cartesian.read_xyz(get_complete_path("hydrogen_int.xyz"))
 
     assert molecule_int.x.dtype == float
 
