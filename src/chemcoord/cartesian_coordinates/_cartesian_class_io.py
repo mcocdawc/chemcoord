@@ -171,9 +171,9 @@ class CartesianIO(CartesianCore, GenericIO):
         """
         frame = pd.read_csv(buf, skiprows=2, comment='#',
                             nrows=nrows, sep=r'\s+',
-                            names=['atom', 'x', 'y', 'z'], engine=engine)
-
-        # TODO explicitly cast to float
+                            names=['atom', 'x', 'y', 'z'], 
+                            dtype = {'x': 'float', 'y': 'float', 'z': 'float'},
+                            engine=engine)
 
         remove_digits = partial(re.sub, r'[0-9]+', '')
         frame['atom'] = frame['atom'].apply(
