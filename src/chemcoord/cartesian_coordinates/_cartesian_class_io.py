@@ -173,6 +173,7 @@ class CartesianIO(CartesianCore, GenericIO):
                             nrows=nrows, sep=r'\s+',
                             names=['atom', 'x', 'y', 'z'], engine=engine)
 
+        # TODO explicitly cast to float
         remove_digits = partial(re.sub, r'[0-9]+', '')
         frame['atom'] = frame['atom'].apply(
             lambda x: remove_digits(x).capitalize())
