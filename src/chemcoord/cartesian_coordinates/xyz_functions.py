@@ -10,8 +10,9 @@ import numba as nb
 import numpy as np
 import pandas as pd
 import sympy
-from chemcoord.configuration import settings
 from numba import jit
+
+from chemcoord.configuration import settings
 
 
 def view(molecule, viewer=None, use_curr_dir=False):

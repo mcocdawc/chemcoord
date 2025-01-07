@@ -14,8 +14,9 @@
 # serve to show the default.
 
 from __future__ import absolute_import
-import sys
+
 import os
+import sys
 
 # on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # if on_rtd:
@@ -30,7 +31,6 @@ import os
 sys.path.insert(0, os.path.abspath("../../src"))
 
 import chemcoord as cc
-
 
 # -- General configuration ------------------------------------------------
 
@@ -246,13 +246,13 @@ htmlhelp_basename = "ChemCoorddoc"
 
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
-    #'papersize': 'letterpaper',
+    # 'papersize': 'letterpaper',
     # The font size ('10pt', '11pt' or '12pt').
-    #'pointsize': '10pt',
+    # 'pointsize': '10pt',
     # Additional stuff for the LaTeX preamble.
-    #'preamble': '',
+    # 'preamble': '',
     # Latex figure (float) alignment
-    #'figure_align': 'htbp',
+    # 'figure_align': 'htbp',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-import warnings
 
 import numba as nb
-from numba import jit
-from numba.core.errors import NumbaDeprecationWarning
-from numba.extending import overload
 import numpy as np
+from numba import jit
+from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants

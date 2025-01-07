@@ -7,20 +7,19 @@ from __future__ import (
     with_statement,
 )
 
-
 import numba as nb
 import numpy as np
-from numpy import sin, cos, cross
-from numpy.linalg import inv
 from numba import jit
+from numpy import cos, cross, sin
+from numpy.linalg import inv
 
 import chemcoord.constants as constants
-from chemcoord.cartesian_coordinates.xyz_functions import _jit_isclose
 from chemcoord.cartesian_coordinates._cart_transformation import (
     get_B,
     get_grad_B,
     get_ref_pos,
 )
+from chemcoord.cartesian_coordinates.xyz_functions import _jit_isclose
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 

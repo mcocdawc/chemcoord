@@ -3,11 +3,12 @@ import copy
 import warnings
 from functools import partial
 
+import numpy as np
+import pandas as pd
+
 import chemcoord.constants as constants
 import chemcoord.internal_coordinates._indexers as indexers
 import chemcoord.internal_coordinates._zmat_transformation as transformation
-import numpy as np
-import pandas as pd
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.exceptions import (
     ERR_CODE_OK,

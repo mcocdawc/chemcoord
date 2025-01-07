@@ -1,18 +1,14 @@
-import itertools
 import os
-import sys
 
 import numpy as np
+import pandas as pd
 import pytest
-
 import sympy
 
 import chemcoord as cc
 from chemcoord.cartesian_coordinates.xyz_functions import dot, get_rotation_matrix
-from chemcoord.exceptions import PhysicalMeaning, UndefinedCoordinateSystem
+from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.xyz_functions import allclose
-
-import pandas as pd
 
 try:
     pd.set_option("future.no_silent_downcasting", True)

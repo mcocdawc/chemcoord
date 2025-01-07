@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-import chemcoord.constants as constants
 import pandas as pd
+
+import chemcoord.constants as constants
 
 
 class GenericCore(object):

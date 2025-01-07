@@ -1,15 +1,10 @@
-import itertools
 import os
-import sys
 
-import chemcoord as cc
 import numpy as np
 import pandas as pd
-import pytest
 import sympy
-from chemcoord.exceptions import UndefinedCoordinateSystem
-from chemcoord.xyz_functions import allclose
-import pandas as pd
+
+import chemcoord as cc
 
 try:
     pd.set_option("future.no_silent_downcasting", True)
