@@ -17,7 +17,6 @@ from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import (
     PandasWrapper,
 )
-from chemcoord.cartesian_coordinates.xyz_functions import dot
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
 
@@ -1124,9 +1123,9 @@ class CartesianCore(PandasWrapper, GenericCore):
             is_rotation_matrix = True
 
         if is_rotation_matrix:
-            return dot(np.dot(new_basis.T, old_basis), self)
+            return np.dot(new_basis.T, old_basis) @ self
         else:
-            return dot(np.dot(np.linalg.inv(new_basis), old_basis), self)
+            return np.dot(np.linalg.inv(new_basis), old_basis) @ self
 
     def _get_positions(self, indices):
         old_index = self.index
