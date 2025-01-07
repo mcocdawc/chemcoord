@@ -18,21 +18,22 @@ def get_sys_info():
     # blob.append(('commit', commit))
 
     try:
-        (sysname, nodename, release, version,
-         machine, processor) = platform.uname()
-        blob.extend([
-            ("python", "%d.%d.%d.%s.%s" % sys.version_info[:]),
-            ("python-bits", struct.calcsize("P") * 8),
-            ("OS", "%s" % (sysname)),
-            ("OS-release", "%s" % (release)),
-            # ("Version", "%s" % (version)),
-            ("machine", "%s" % (machine)),
-            ("processor", "%s" % (processor)),
-            # ("byteorder", "%s" % sys.byteorder),
-            ("LC_ALL", "%s" % os.environ.get('LC_ALL', "None")),
-            ("LANG", "%s" % os.environ.get('LANG', "None")),
-            ("LOCALE", "%s.%s" % locale.getlocale()),
-        ])
+        (sysname, nodename, release, version, machine, processor) = platform.uname()
+        blob.extend(
+            [
+                ("python", "%d.%d.%d.%s.%s" % sys.version_info[:]),
+                ("python-bits", struct.calcsize("P") * 8),
+                ("OS", "%s" % (sysname)),
+                ("OS-release", "%s" % (release)),
+                # ("Version", "%s" % (version)),
+                ("machine", "%s" % (machine)),
+                ("processor", "%s" % (processor)),
+                # ("byteorder", "%s" % sys.byteorder),
+                ("LC_ALL", "%s" % os.environ.get("LC_ALL", "None")),
+                ("LANG", "%s" % os.environ.get("LANG", "None")),
+                ("LOCALE", "%s.%s" % locale.getlocale()),
+            ]
+        )
     except Exception:
         pass
 
@@ -83,7 +84,7 @@ def show_versions(as_json=False):
     ]
 
     deps_blob = list()
-    for (modname, ver_f) in deps:
+    for modname, ver_f in deps:
         try:
             if modname in sys.modules:
                 mod = sys.modules[modname]
@@ -94,7 +95,7 @@ def show_versions(as_json=False):
         except Exception:
             deps_blob.append((modname, None))
 
-    if (as_json):
+    if as_json:
         try:
             import json
         except Exception:
@@ -105,11 +106,10 @@ def show_versions(as_json=False):
         if as_json is True:
             print(j)
         else:
-            with codecs.open(as_json, "wb", encoding='utf8') as f:
+            with codecs.open(as_json, "wb", encoding="utf8") as f:
                 json.dump(j, f, indent=2)
 
     else:
-
         print("\nINSTALLED VERSIONS")
         print("------------------")
 
@@ -123,10 +123,15 @@ def show_versions(as_json=False):
 
 def main():
     from optparse import OptionParser
+
     parser = OptionParser()
-    parser.add_option("-j", "--json", metavar="FILE", nargs=1,
-                      help="Save output as JSON into file, pass in "
-                      "'-' to output to stdout")
+    parser.add_option(
+        "-j",
+        "--json",
+        metavar="FILE",
+        nargs=1,
+        help="Save output as JSON into file, pass in " "'-' to output to stdout",
+    )
 
     options = parser.parse_args()[0]
 

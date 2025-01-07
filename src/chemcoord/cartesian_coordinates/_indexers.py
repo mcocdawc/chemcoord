@@ -4,16 +4,18 @@ import warnings
 
 from chemcoord.utilities._temporary_deprecation_workarounds import is_iterable
 
+
 class _generic_Indexer(object):
     def __init__(self, molecule):
         self.molecule = molecule
 
 
 class _Loc(_generic_Indexer):
-
     def __getitem__(self, key):
         if isinstance(key, tuple):
-            selected = self.molecule._frame.loc[_set_caster(key[0]), _set_caster(key[1])]
+            selected = self.molecule._frame.loc[
+                _set_caster(key[0]), _set_caster(key[1])
+            ]
         else:
             selected = self.molecule._frame.loc[_set_caster(key)]
         try:
@@ -41,19 +43,22 @@ class _Loc(_generic_Indexer):
             #  then in the future.
             if isinstance(key, tuple):
                 if type(key[1]) is not str and is_iterable(key[1]):
-                    self.molecule._frame = df.astype({k: 'O' for k in key[1]})
+                    self.molecule._frame = df.astype({k: "O" for k in key[1]})
                 else:
-                    self.molecule._frame = df.astype({key[1]: 'O'})
-                self.molecule._frame.loc[_set_caster(key[0]), _set_caster(key[1])] = value
+                    self.molecule._frame = df.astype({key[1]: "O"})
+                self.molecule._frame.loc[_set_caster(key[0]), _set_caster(key[1])] = (
+                    value
+                )
             else:
                 raise TypeError("Assignment not supported.")
 
 
 class _ILoc(_generic_Indexer):
-
     def __getitem__(self, key):
         if isinstance(key, tuple):
-            selected = self.molecule._frame.iloc[_set_caster(key[0]), _set_caster(key[1])]
+            selected = self.molecule._frame.iloc[
+                _set_caster(key[0]), _set_caster(key[1])
+            ]
         else:
             selected = self.molecule._frame.iloc[_set_caster(key)]
         try:
@@ -81,13 +86,16 @@ class _ILoc(_generic_Indexer):
             #  then in the future.
             if isinstance(key, tuple):
                 if type(key[1]) is not str and is_iterable(key[1]):
-                    self.molecule._frame = df.astype({df.columns[k]: 'O' for k in key[1]})
+                    self.molecule._frame = df.astype(
+                        {df.columns[k]: "O" for k in key[1]}
+                    )
                 else:
-                    self.molecule._frame = df.astype({df.columns[key[1]]: 'O'})
-                self.molecule._frame.iloc[_set_caster(key[0]), _set_caster(key[1])] = value
+                    self.molecule._frame = df.astype({df.columns[key[1]]: "O"})
+                self.molecule._frame.iloc[_set_caster(key[0]), _set_caster(key[1])] = (
+                    value
+                )
             else:
                 raise TypeError("Assignment not supported.")
-
 
 
 def _set_caster(x):

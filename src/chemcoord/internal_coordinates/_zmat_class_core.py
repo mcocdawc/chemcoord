@@ -9,10 +9,13 @@ import chemcoord.internal_coordinates._zmat_transformation as transformation
 import numpy as np
 import pandas as pd
 from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
-                                  InvalidReference, PhysicalMeaning)
-from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import \
-    PandasWrapper
+from chemcoord.exceptions import (
+    ERR_CODE_OK,
+    ERR_CODE_InvalidReference,
+    InvalidReference,
+    PhysicalMeaning,
+)
+from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import PandasWrapper
 from chemcoord.utilities import _decorators
 from chemcoord.utilities._temporary_deprecation_workarounds import replace_without_warn
 
@@ -24,14 +27,15 @@ Indexing and Selecting data in
 For assigning elements it is necessary to make a explicit decision
 between safe and unsafe assignments.
 The differences are explained in the stub page of
-:meth:`~Zmat.safe_loc`.""", join='\n\n')
+:meth:`~Zmat.safe_loc`.""",
+    join="\n\n",
+)
 
 
 class ZmatCore(PandasWrapper, GenericCore):
-    """The main class for dealing with internal coordinates.
-    """
-    _required_cols = frozenset({'atom', 'b', 'bond', 'a', 'angle',
-                                'd', 'dihedral'})
+    """The main class for dealing with internal coordinates."""
+
+    _required_cols = frozenset({"atom", "b", "bond", "a", "angle", "d", "dihedral"})
     dummy_manipulation_allowed = True
     test_operators = True
     pure_internal_mov = False
@@ -52,8 +56,10 @@ class ZmatCore(PandasWrapper, GenericCore):
             Zmat: A new zmat instance.
         """
         if not self._required_cols <= set(frame.columns):
-            raise PhysicalMeaning('There are columns missing for a '
-                                  'meaningful description of a molecule')
+            raise PhysicalMeaning(
+                "There are columns missing for a "
+                "meaningful description of a molecule"
+            )
         self._frame = frame.copy()
         if metadata is None:
             self.metadata = {}
@@ -66,16 +72,17 @@ class ZmatCore(PandasWrapper, GenericCore):
             self._metadata = copy.deepcopy(_metadata)
 
         def fill_missing_keys_with_defaults(_metadata):
-            if 'last_valid_cartesian' not in _metadata:
-                _metadata['last_valid_cartesian'] = self.get_cartesian()
-            if 'has_dummies' not in _metadata:
-                _metadata['has_dummies'] = {}
+            if "last_valid_cartesian" not in _metadata:
+                _metadata["last_valid_cartesian"] = self.get_cartesian()
+            if "has_dummies" not in _metadata:
+                _metadata["has_dummies"] = {}
 
         fill_missing_keys_with_defaults(self._metadata)
 
     def copy(self):
         molecule = self.__class__(
-            self._frame, metadata=self.metadata, _metadata=self._metadata)
+            self._frame, metadata=self.metadata, _metadata=self._metadata
+        )
         return molecule
 
     def __getitem__(self, key):
@@ -93,26 +100,25 @@ class ZmatCore(PandasWrapper, GenericCore):
         # Note: obj.x will always call obj.__getattribute__('x') prior to
         # calling obj.__getattr__('x').
 
-        if name.startswith('__'):
+        if name.startswith("__"):
             # See here, why we do this
             # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
             raise AttributeError()
-        if (name in self._frame.columns):
+        if name in self._frame.columns:
             return self[name]
         return object.__getattribute__(self, name)
 
     @property
     @append_indexer_docstring
     def loc(self):
-        """Label based indexing for obtaining elements.
-        """
+        """Label based indexing for obtaining elements."""
         return indexers._Loc(self)
 
     @property
     @append_indexer_docstring
     def unsafe_loc(self):
         """Label based indexing for obtaining elements
-and assigning values unsafely.
+        and assigning values unsafely.
         """
         return indexers._Unsafe_Loc(self)
 
@@ -131,15 +137,14 @@ and assigning values unsafely.
     @property
     @append_indexer_docstring
     def iloc(self):
-        """Integer position based indexing for obtaining elements.
-        """
+        """Integer position based indexing for obtaining elements."""
         return indexers._ILoc(self)
 
     @property
     @append_indexer_docstring
     def unsafe_iloc(self):
         """Integer position based indexing for obtaining elements
-and assigning values unsafely.
+        and assigning values unsafely.
         """
         return indexers._Unsafe_ILoc(self)
 
@@ -147,22 +152,26 @@ and assigning values unsafely.
     @append_indexer_docstring
     def safe_iloc(self):
         """Integer position based indexing for obtaining elements
-and assigning values safely.
+        and assigning values safely.
         """
         return indexers._Safe_ILoc(self)
 
     def _test_if_can_be_added(self, other):
-        cols = ['atom', 'b', 'a', 'd']
-        if not ((self.loc[:, cols] == other.loc[:, cols]).all(axis=None)
-                and (self.index == other.index).all()):
-            message = ("You can add only those zmatrices that have the same "
-                       "index, use the same construction table, have the same "
-                       "ordering... The only allowed difference is in the "
-                       "columns ['bond', 'angle', 'dihedral']")
+        cols = ["atom", "b", "a", "d"]
+        if not (
+            (self.loc[:, cols] == other.loc[:, cols]).all(axis=None)
+            and (self.index == other.index).all()
+        ):
+            message = (
+                "You can add only those zmatrices that have the same "
+                "index, use the same construction table, have the same "
+                "ordering... The only allowed difference is in the "
+                "columns ['bond', 'angle', 'dihedral']"
+            )
             raise PhysicalMeaning(message)
 
     def __add__(self, other):
-        coords = ['bond', 'angle', 'dihedral']
+        coords = ["bond", "angle", "dihedral"]
         if isinstance(other, ZmatCore):
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] + other.loc[:, coords]
@@ -179,7 +188,7 @@ and assigning values safely.
         return self + other
 
     def __sub__(self, other):
-        coords = ['bond', 'angle', 'dihedral']
+        coords = ["bond", "angle", "dihedral"]
         if isinstance(other, ZmatCore):
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] - other.loc[:, coords]
@@ -193,7 +202,7 @@ and assigning values safely.
         return new
 
     def __rsub__(self, other):
-        coords = ['bond', 'angle', 'dihedral']
+        coords = ["bond", "angle", "dihedral"]
         if isinstance(other, ZmatCore):
             self._test_if_can_be_added(other)
             result = other.loc[:, coords] - self.loc[:, coords]
@@ -207,7 +216,7 @@ and assigning values safely.
         return new
 
     def __mul__(self, other):
-        coords = ['bond', 'angle', 'dihedral']
+        coords = ["bond", "angle", "dihedral"]
         if isinstance(other, ZmatCore):
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] * other.loc[:, coords]
@@ -224,7 +233,7 @@ and assigning values safely.
         return self * other
 
     def __truediv__(self, other):
-        coords = ['bond', 'angle', 'dihedral']
+        coords = ["bond", "angle", "dihedral"]
         if isinstance(other, ZmatCore):
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] / other.loc[:, coords]
@@ -238,7 +247,7 @@ and assigning values safely.
         return new
 
     def __rtruediv__(self, other):
-        coords = ['bond', 'angle', 'dihedral']
+        coords = ["bond", "angle", "dihedral"]
         if isinstance(other, ZmatCore):
             self._test_if_can_be_added(other)
             result = other.loc[:, coords] / self.loc[:, coords]
@@ -252,12 +261,12 @@ and assigning values safely.
         return new
 
     def __pow__(self, other):
-        coords = ['bond', 'angle', 'dihedral']
+        coords = ["bond", "angle", "dihedral"]
         new = self.copy()
         if self.test_operators:
-            new.safe_loc[:, coords] = self.loc[:, coords]**other
+            new.safe_loc[:, coords] = self.loc[:, coords] ** other
         else:
-            new.unsafe_loc[:, coords] = self.loc[:, coords]**other
+            new.unsafe_loc[:, coords] = self.loc[:, coords] ** other
         return new
 
     def __pos__(self):
@@ -267,7 +276,7 @@ and assigning values safely.
         return -1 * self
 
     def __abs__(self):
-        coords = ['bond', 'angle', 'dihedral']
+        coords = ["bond", "angle", "dihedral"]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = abs(self.loc[:, coords])
@@ -286,10 +295,10 @@ and assigning values safely.
     @staticmethod
     def _cast_correct_types(frame):
         new = frame.copy()
-        zmat_values = ['bond', 'angle', 'dihedral']
-        new.loc[:, zmat_values] = frame.loc[:, zmat_values].astype('f8')
-        zmat_cols = ['b', 'a', 'd']
-        new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype('i8')
+        zmat_values = ["bond", "angle", "dihedral"]
+        new.loc[:, zmat_values] = frame.loc[:, zmat_values].astype("f8")
+        zmat_cols = ["b", "a", "d"]
+        new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype("i8")
         return new
 
     def iupacify(self):
@@ -321,18 +330,19 @@ and assigning values safely.
         Returns:
             Zmat: Zmatrix with accordingly changed angles and dihedrals.
         """
+
         def convert_d(d):
             r = d % 360
             return r - (r // 180) * 360
 
         new = self.copy()
 
-        new.unsafe_loc[:, 'angle'] = new['angle'] % 360
-        select = new['angle'] > 180
-        new.unsafe_loc[select, 'angle'] = new.loc[select, 'angle'] - 180
-        new.unsafe_loc[select, 'dihedral'] = new.loc[select, 'dihedral'] + 180
+        new.unsafe_loc[:, "angle"] = new["angle"] % 360
+        select = new["angle"] > 180
+        new.unsafe_loc[select, "angle"] = new.loc[select, "angle"] - 180
+        new.unsafe_loc[select, "dihedral"] = new.loc[select, "dihedral"] + 180
 
-        new.unsafe_loc[:, 'dihedral'] = convert_d(new.loc[:, 'dihedral'])
+        new.unsafe_loc[:, "dihedral"] = convert_d(new.loc[:, "dihedral"])
         return new
 
     def minimize_dihedrals(self):
@@ -383,7 +393,8 @@ and assigning values safely.
         def convert_d(d):
             r = d % 360
             return r - (r // 180) * 360
-        new.unsafe_loc[:, 'dihedral'] = convert_d(new.loc[:, 'dihedral'])
+
+        new.unsafe_loc[:, "dihedral"] = convert_d(new.loc[:, "dihedral"])
         return new
 
     # python 3.x is so much butter than 2.7
@@ -419,26 +430,27 @@ and assigning values safely.
             If all resulting sympy expressions in a column are numbers,
             the column is recasted to 64bit float.
         """
-        perform_checks = kwargs.pop('perform_checks', True)
-        cols = ['bond', 'angle', 'dihedral']
+        perform_checks = kwargs.pop("perform_checks", True)
+        cols = ["bond", "angle", "dihedral"]
         out = self.copy()
 
         def get_subs_f(*args):
             def subs_function(x):
-                if hasattr(x, 'subs'):
+                if hasattr(x, "subs"):
                     x = x.subs(*args)
                     try:
                         x = float(x)
                     except TypeError:
                         pass
                 return x
+
             return subs_function
 
         for col in cols:
-            if out.loc[:, col].dtype is np.dtype('O'):
+            if out.loc[:, col].dtype is np.dtype("O"):
                 out.unsafe_loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
-                    out._frame = out._frame.astype({col: 'f8'})
+                    out._frame = out._frame.astype({col: "f8"})
                 except (SystemError, TypeError):
                     pass
         if perform_checks:
@@ -453,8 +465,8 @@ and assigning values safely.
                 else:
                     raise e
             else:
-                out._metadata['last_valid_cartesian'] = new_cartesian
-                self._metadata['last_valid_cartesian'] = new_cartesian
+                out._metadata["last_valid_cartesian"] = new_cartesian
+                self._metadata["last_valid_cartesian"] = new_cartesian
         return out
 
     def change_numbering(self, new_index=None):
@@ -472,12 +484,12 @@ and assigning values safely.
         Returns:
             Zmat: Reindexed version of the zmatrix.
         """
-        if (new_index is None):
+        if new_index is None:
             new_index = range(len(self))
         elif len(new_index) != len(self):
-            raise ValueError('len(new_index) has to be the same as len(self)')
+            raise ValueError("len(new_index) has to be the same as len(self)")
 
-        c_table = self.loc[:, ['b', 'a', 'd']]
+        c_table = self.loc[:, ["b", "a", "d"]]
         # Strange bug in pandas where .replace is transitive for object columns
         # and non-transitive for all other types.
         # (Remember that string columns are just object columns)
@@ -492,22 +504,22 @@ and assigning values safely.
 
         c_table = replace_without_warn(c_table, constants.int_label)
         try:
-            c_table = c_table.astype('i8')
+            c_table = c_table.astype("i8")
         except ValueError:
-            raise ValueError('Due to a bug in pandas it is necessary to have '
-                             'integer columns')
+            raise ValueError(
+                "Due to a bug in pandas it is necessary to have " "integer columns"
+            )
         c_table = c_table.replace(self.index, new_index)
-        c_table = c_table.replace(
-            {v: k for k, v in constants.int_label.items()})
+        c_table = c_table.replace({v: k for k, v in constants.int_label.items()})
 
         out = self.copy()
-        out.unsafe_loc[:, ['b', 'a', 'd']] = c_table
+        out.unsafe_loc[:, ["b", "a", "d"]] = c_table
         out._frame.index = new_index
         return out
 
     def _insert_dummy_cart(self, exception, last_valid_cartesian=None):
-        """Insert dummy atom into the already built cartesian of exception
-        """
+        """Insert dummy atom into the already built cartesian of exception"""
+
         def get_normal_vec(cartesian, reference_labels):
             b_pos, a_pos, d_pos = cartesian._get_positions(reference_labels)
             BA = a_pos - b_pos
@@ -523,21 +535,22 @@ and assigning values safely.
             N2 = np.cross(n1, BA)
             n2 = N2 / np.linalg.norm(N2)
             i_dummy = max(self.index) + 1
-            cartesian.loc[i_dummy, 'atom'] = 'X'
-            cartesian.loc[i_dummy, ['x', 'y', 'z']] = a_pos + n2
+            cartesian.loc[i_dummy, "atom"] = "X"
+            cartesian.loc[i_dummy, ["x", "y", "z"]] = a_pos + n2
             return cartesian, i_dummy
 
         if last_valid_cartesian is None:
-            last_valid_cartesian = self._metadata['last_valid_cartesian']
-        ref_labels = self.loc[exception.index, ['b', 'a', 'd']]
+            last_valid_cartesian = self._metadata["last_valid_cartesian"]
+        ref_labels = self.loc[exception.index, ["b", "a", "d"]]
         n1 = get_normal_vec(last_valid_cartesian, ref_labels)
         return insert_dummy(exception.already_built_cartesian, ref_labels, n1)
 
     def _insert_dummy_zmat(self, exception, inplace=False):
         """Works INPLACE"""
+
         def insert_row(df, pos, key):
             if pos < len(df):
-                middle = df.iloc[pos:(pos + 1)]
+                middle = df.iloc[pos : (pos + 1)]
                 middle.index = [key]
                 start, end = df.iloc[:pos], df.iloc[pos:]
                 return pd.concat([start, middle, end])
@@ -547,37 +560,41 @@ and assigning values safely.
                 return start
 
         def raise_warning(i, dummy_d):
-            give_message = ('For the dihedral reference of atom {i} the '
-                            'dummy atom {dummy_d} was inserted').format
+            give_message = (
+                "For the dihedral reference of atom {i} the "
+                "dummy atom {dummy_d} was inserted"
+            ).format
             warnings.warn(give_message(i=i, dummy_d=dummy_d), UserWarning)
 
         def insert_dummy(zmat, i, dummy_cart, dummy_d):
             """Works INPLACE on self._frame"""
-            cols = ['b', 'a', 'd']
-            actual_d = zmat.loc[i, 'd']
+            cols = ["b", "a", "d"]
+            actual_d = zmat.loc[i, "d"]
             zframe = insert_row(zmat, zmat.index.get_loc(i), dummy_d)
-            zframe.loc[i, 'd'] = dummy_d
-            zframe.loc[dummy_d, 'atom'] = 'X'
+            zframe.loc[i, "d"] = dummy_d
+            zframe.loc[dummy_d, "atom"] = "X"
             zframe.loc[dummy_d, cols] = zmat.loc[actual_d, cols]
             zmat_values = dummy_cart._calculate_zmat_values(
-                [dummy_d] + list(zmat.loc[actual_d, cols]))[0]
-            zframe.loc[dummy_d, ['bond', 'angle', 'dihedral']] = zmat_values
+                [dummy_d] + list(zmat.loc[actual_d, cols])
+            )[0]
+            zframe.loc[dummy_d, ["bond", "angle", "dihedral"]] = zmat_values
 
             zmat._frame = zframe
-            zmat._metadata['has_dummies'][i] = {'dummy_d': dummy_d,
-                                                'actual_d': actual_d}
+            zmat._metadata["has_dummies"][i] = {
+                "dummy_d": dummy_d,
+                "actual_d": actual_d,
+            }
             raise_warning(i, dummy_d)
 
         zmat = self if inplace else self.copy()
 
-        if exception.index in zmat._metadata['has_dummies']:
+        if exception.index in zmat._metadata["has_dummies"]:
             zmat._remove_dummies(to_remove=[exception.index], inplace=True)
         else:
-            insert_dummy(zmat, exception.index,
-                         *zmat._insert_dummy_cart(exception))
+            insert_dummy(zmat, exception.index, *zmat._insert_dummy_cart(exception))
 
         try:
-            zmat._metadata['last_valid_cartesian'] = zmat.get_cartesian()
+            zmat._metadata["last_valid_cartesian"] = zmat.get_cartesian()
         except InvalidReference as e:
             zmat._insert_dummy_zmat(e, inplace=True)
 
@@ -585,13 +602,13 @@ and assigning values safely.
             return zmat
 
     def _has_removable_dummies(self):
-        has_dummies = self._metadata['has_dummies']
+        has_dummies = self._metadata["has_dummies"]
         to_be_tested = has_dummies.keys()
-        c_table = self.loc[to_be_tested, ['b', 'a', 'd']]
-        c_table['d'] = [has_dummies[i]['actual_d'] for i in to_be_tested]
-        xyz = self.get_cartesian().loc[:, ['x', 'y', 'z']]
-        BA = (xyz.loc[c_table['a']].values - xyz.loc[c_table['b']].values)
-        AD = (xyz.loc[c_table['d']].values - xyz.loc[c_table['a']].values)
+        c_table = self.loc[to_be_tested, ["b", "a", "d"]]
+        c_table["d"] = [has_dummies[i]["actual_d"] for i in to_be_tested]
+        xyz = self.get_cartesian().loc[:, ["x", "y", "z"]]
+        BA = xyz.loc[c_table["a"]].values - xyz.loc[c_table["b"]].values
+        AD = xyz.loc[c_table["d"]].values - xyz.loc[c_table["a"]].values
 
         remove = ~np.isclose(np.cross(BA, AD), np.zeros_like(BA)).all(axis=1)
         return [k for r, k in enumerate(to_be_tested) if remove[r]]
@@ -606,20 +623,18 @@ and assigning values safely.
                 return None
             else:
                 return zmat
-        has_dummies = zmat._metadata['has_dummies']
+        has_dummies = zmat._metadata["has_dummies"]
 
-        c_table = zmat.loc[to_remove, ['b', 'a', 'd']]
-        c_table['d'] = [has_dummies[k]['actual_d'] for k in to_remove]
-        zmat.unsafe_loc[to_remove, 'd'] = c_table['d'].astype('i8')
+        c_table = zmat.loc[to_remove, ["b", "a", "d"]]
+        c_table["d"] = [has_dummies[k]["actual_d"] for k in to_remove]
+        zmat.unsafe_loc[to_remove, "d"] = c_table["d"].astype("i8")
 
         zmat_values = zmat.get_cartesian()._calculate_zmat_values(c_table)
-        zmat.unsafe_loc[to_remove, ['bond', 'angle', 'dihedral']] = zmat_values
-        zmat._frame.drop([has_dummies[k]['dummy_d'] for k in to_remove],
-                         inplace=True)
-        warnings.warn('The dummy atoms {} were removed'.format(to_remove),
-                      UserWarning)
+        zmat.unsafe_loc[to_remove, ["bond", "angle", "dihedral"]] = zmat_values
+        zmat._frame.drop([has_dummies[k]["dummy_d"] for k in to_remove], inplace=True)
+        warnings.warn("The dummy atoms {} were removed".format(to_remove), UserWarning)
         for k in to_remove:
-            zmat._metadata['has_dummies'].pop(k)
+            zmat._metadata["has_dummies"].pop(k)
         if not inplace:
             return zmat
 
@@ -644,24 +659,27 @@ and assigning values safely.
         Returns:
             Cartesian: Reindexed version of the zmatrix.
         """
+
         def create_cartesian(positions, row):
-            xyz_frame = pd.DataFrame(columns=['atom', 'x', 'y', 'z'],
-                                     index=self.index[:row], dtype='f8')
-            xyz_frame['atom'] = self.loc[xyz_frame.index, 'atom']
-            xyz_frame.loc[:, ['x', 'y', 'z']] = positions[:row]
-            from chemcoord.cartesian_coordinates.cartesian_class_main \
-                import Cartesian
+            xyz_frame = pd.DataFrame(
+                columns=["atom", "x", "y", "z"], index=self.index[:row], dtype="f8"
+            )
+            xyz_frame["atom"] = self.loc[xyz_frame.index, "atom"]
+            xyz_frame.loc[:, ["x", "y", "z"]] = positions[:row]
+            from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
+
             cartesian = Cartesian(xyz_frame, metadata=self.metadata)
             return cartesian
 
-        c_table = self.loc[:, ['b', 'a', 'd']]
-        c_table = (replace_without_warn(c_table, constants.int_label)
-                    .astype('i8')
-                    .replace({k: v for v, k in enumerate(c_table.index)})
-                    .values
-                    .T)
+        c_table = self.loc[:, ["b", "a", "d"]]
+        c_table = (
+            replace_without_warn(c_table, constants.int_label)
+            .astype("i8")
+            .replace({k: v for v, k in enumerate(c_table.index)})
+            .values.T
+        )
 
-        C = self.loc[:, ['bond', 'angle', 'dihedral']].values.T
+        C = self.loc[:, ["bond", "angle", "dihedral"]].values.T
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
         err, row, positions = transformation.get_X(C, c_table)
@@ -670,15 +688,17 @@ and assigning values safely.
         if err == ERR_CODE_InvalidReference:
             rename = dict(enumerate(self.index))
             i = rename[row]
-            b, a, d = self.loc[i, ['b', 'a', 'd']]
+            b, a, d = self.loc[i, ["b", "a", "d"]]
             cartesian = create_cartesian(positions, row)
-            raise InvalidReference(i=i, b=b, a=a, d=d,
-                                   already_built_cartesian=cartesian)
+            raise InvalidReference(
+                i=i, b=b, a=a, d=d, already_built_cartesian=cartesian
+            )
         elif err == ERR_CODE_OK:
             return create_cartesian(positions, row + 1)
 
-    def get_grad_cartesian(self, as_function=True, chain=True,
-                           drop_auto_dummies=True, pure_internal=None):
+    def get_grad_cartesian(
+        self, as_function=True, chain=True, drop_auto_dummies=True, pure_internal=None
+    ):
         r"""Return the gradient for the transformation to a Cartesian.
 
         If ``as_function`` is True, a function is returned that can be directly
@@ -771,31 +791,32 @@ and assigning values safely.
         """
         zmat = self.change_numbering()
 
-        c_table = (replace_without_warn(zmat.loc[:, ['b', 'a', 'd']],
-                                        constants.int_label)
-                    .astype('i8')
-                    .values
-                    .T)
+        c_table = (
+            replace_without_warn(zmat.loc[:, ["b", "a", "d"]], constants.int_label)
+            .astype("i8")
+            .values.T
+        )
 
-        C = zmat.loc[:, ['bond', 'angle', 'dihedral']].values.T
-        if C.dtype == np.dtype('i8'):
-            C = C.astype('f8')
+        C = zmat.loc[:, ["bond", "angle", "dihedral"]].values.T
+        if C.dtype == np.dtype("i8"):
+            C = C.astype("f8")
         C[[1, 2], :] = np.radians(C[[1, 2], :])
-
 
         grad_X = transformation.get_grad_X(C, c_table, chain=chain)
 
         if pure_internal or (pure_internal is None and self.pure_internal_mov):
-            masses = zmat.add_data('mass').loc[:, 'mass'].values
-            X = zmat.get_cartesian().loc[:, ['x', 'y', 'z']].values.T
-            theta = zmat.get_cartesian().get_inertia()['inertia_tensor']
+            masses = zmat.add_data("mass").loc[:, "mass"].values
+            X = zmat.get_cartesian().loc[:, ["x", "y", "z"]].values.T
+            theta = zmat.get_cartesian().get_inertia()["inertia_tensor"]
             grad_X = transformation.pure_internal_grad(X, grad_X, masses, theta)
 
         if drop_auto_dummies:
+
             def drop_dummies(grad_X, zmolecule):
                 rename = dict(zip(zmolecule.index, range(len(zmolecule))))
-                dummies = [rename[v['dummy_d']] for v in
-                           self._metadata['has_dummies'].values()]
+                dummies = [
+                    rename[v["dummy_d"]] for v in self._metadata["has_dummies"].values()
+                ]
                 excluded = np.full(grad_X.shape[1], True)
                 excluded[dummies] = False
                 coord_rows = np.full(3, True)
@@ -806,15 +827,16 @@ and assigning values safely.
 
         if as_function:
             from chemcoord.internal_coordinates.zmat_functions import (
-                apply_grad_cartesian_tensor)
+                apply_grad_cartesian_tensor,
+            )
+
             return partial(apply_grad_cartesian_tensor, grad_X)
         else:
             return grad_X
 
     def to_xyz(self, *args, **kwargs):
-        """Deprecated, use :meth:`~chemcoord.Zmat.get_cartesian`
-        """
-        message = 'Will be removed in the future. Please use get_cartesian.'
+        """Deprecated, use :meth:`~chemcoord.Zmat.get_cartesian`"""
+        message = "Will be removed in the future. Please use get_cartesian."
         with warnings.catch_warnings():
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)

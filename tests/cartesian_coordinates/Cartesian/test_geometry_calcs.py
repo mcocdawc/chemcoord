@@ -4,6 +4,7 @@ import numpy as np
 import os
 import sys
 import pandas as pd
+
 try:
     pd.set_option("future.no_silent_downcasting", True)
 except:
@@ -18,16 +19,16 @@ def get_script_path():
 def get_structure_path(script_path):
     test_path = os.path.join(script_path)
     while True:
-        structure_path = os.path.join(test_path, 'structures')
+        structure_path = os.path.join(test_path, "structures")
         if os.path.exists(structure_path):
             return structure_path
         else:
-            test_path = os.path.join(test_path, '..')
+            test_path = os.path.join(test_path, "..")
 
 
 STRUCTURES = get_structure_path(get_script_path())
 
-molecule = cc.Cartesian.read_xyz(os.path.join(STRUCTURES, 'MIL53_small.xyz'))
+molecule = cc.Cartesian.read_xyz(os.path.join(STRUCTURES, "MIL53_small.xyz"))
 
 
 def test_bond_length():
@@ -42,9 +43,11 @@ def test_bond_length():
 
 def test_get_dihedral_degrees():
     zmolecule = molecule.get_zmat()
-    c_table = zmolecule.loc[:, ['b', 'a', 'd']]
-    assert np.allclose(molecule.get_dihedral_degrees(c_table.iloc[3:]) % 360,
-                       zmolecule['dihedral'][3:] % 360)
+    c_table = zmolecule.loc[:, ["b", "a", "d"]]
+    assert np.allclose(
+        molecule.get_dihedral_degrees(c_table.iloc[3:]) % 360,
+        zmolecule["dihedral"][3:] % 360,
+    )
 
 
 def test_fragmentate():

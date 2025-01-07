@@ -29,6 +29,7 @@ class DummyManipulation(object):
             # which can be handled appropiately.
             # The zmat instance is unmodified, if an exception was raised.
     """
+
     def __init__(self, dummy_manipulation_allowed, cls=None):
         if cls is None:
             cls = Zmat
@@ -55,6 +56,7 @@ class TestOperators(object):
             zmat_1 + zmat_2
             # Raises InvalidReference Exception
     """
+
     def __init__(self, test_operators, cls=None):
         if cls is None:
             cls = Zmat
@@ -85,6 +87,7 @@ class PureInternalMovement(object):
     For the details read [6]_.
 
     """
+
     def __init__(self, pure_internal_mov, cls=None):
         if cls is None:
             cls = Zmat
@@ -112,14 +115,14 @@ def apply_grad_cartesian_tensor(grad_X, zmat_dist):
     Returns:
         :class:`~chemcoord.Cartesian`: Distortions in cartesian space.
     """
-    columns = ['bond', 'angle', 'dihedral']
+    columns = ["bond", "angle", "dihedral"]
     C_dist = zmat_dist.loc[:, columns].values.T
     try:
-        C_dist = C_dist.astype('f8')
+        C_dist = C_dist.astype("f8")
         C_dist[[1, 2], :] = np.radians(C_dist[[1, 2], :])
     except (TypeError, AttributeError):
         C_dist[[1, 2], :] = sympy.rad(C_dist[[1, 2], :])
     cart_dist = np.tensordot(grad_X, C_dist, axes=([3, 2], [0, 1])).T
     from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
-    return Cartesian(atoms=zmat_dist['atom'],
-                     coords=cart_dist, index=zmat_dist.index)
+
+    return Cartesian(atoms=zmat_dist["atom"], coords=cart_dist, index=zmat_dist.index)

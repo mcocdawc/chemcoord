@@ -41,33 +41,73 @@ class CartesianIO(CartesianCore, GenericIO):
         def insert_before_substring(insert_txt, substr, txt):
             "Under the assumption that substr only appears once."
             return (insert_txt + substr).join(txt.split(substr))
-        html_txt = new._frame._repr_html_()
-        insert_txt = '<caption>{}</caption>\n'.format(self.__class__.__name__)
-        return insert_before_substring(insert_txt, '<thead>', html_txt)
 
-    def to_string(self, buf=None, columns=None, col_space=None, header=True,
-                  index=True, na_rep='NaN', formatters=None,
-                  float_format=None, sparsify=None, index_names=True,
-                  justify=None, line_width=None, max_rows=None,
-                  max_cols=None, show_dimensions=False):
+        html_txt = new._frame._repr_html_()
+        insert_txt = "<caption>{}</caption>\n".format(self.__class__.__name__)
+        return insert_before_substring(insert_txt, "<thead>", html_txt)
+
+    def to_string(
+        self,
+        buf=None,
+        columns=None,
+        col_space=None,
+        header=True,
+        index=True,
+        na_rep="NaN",
+        formatters=None,
+        float_format=None,
+        sparsify=None,
+        index_names=True,
+        justify=None,
+        line_width=None,
+        max_rows=None,
+        max_cols=None,
+        show_dimensions=False,
+    ):
         """Render a DataFrame to a console-friendly tabular output.
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.
         """
         return self._frame.to_string(
-            buf=buf, columns=columns, col_space=col_space, header=header,
-            index=index, na_rep=na_rep, formatters=formatters,
-            float_format=float_format, sparsify=sparsify,
-            index_names=index_names, justify=justify, line_width=line_width,
-            max_rows=max_rows, max_cols=max_cols,
-            show_dimensions=show_dimensions)
+            buf=buf,
+            columns=columns,
+            col_space=col_space,
+            header=header,
+            index=index,
+            na_rep=na_rep,
+            formatters=formatters,
+            float_format=float_format,
+            sparsify=sparsify,
+            index_names=index_names,
+            justify=justify,
+            line_width=line_width,
+            max_rows=max_rows,
+            max_cols=max_cols,
+            show_dimensions=show_dimensions,
+        )
 
-    def to_latex(self, buf=None, columns=None, col_space=None, header=True,
-                 index=True, na_rep='NaN', formatters=None, float_format=None,
-                 sparsify=None, index_names=True, bold_rows=True,
-                 column_format=None, longtable=None, escape=None,
-                 encoding=None, decimal='.', multicolumn=None,
-                 multicolumn_format=None, multirow=None):
+    def to_latex(
+        self,
+        buf=None,
+        columns=None,
+        col_space=None,
+        header=True,
+        index=True,
+        na_rep="NaN",
+        formatters=None,
+        float_format=None,
+        sparsify=None,
+        index_names=True,
+        bold_rows=True,
+        column_format=None,
+        longtable=None,
+        escape=None,
+        encoding=None,
+        decimal=".",
+        multicolumn=None,
+        multicolumn_format=None,
+        multirow=None,
+    ):
         """Render a DataFrame to a tabular environment table.
 
         You can splice this into a LaTeX document.
@@ -75,17 +115,36 @@ class CartesianIO(CartesianCore, GenericIO):
         Wrapper around the :meth:`pandas.DataFrame.to_latex` method.
         """
         return self._frame.to_latex(
-            buf=buf, columns=columns, col_space=col_space, header=header,
-            index=index, na_rep=na_rep, formatters=formatters,
-            float_format=float_format, sparsify=sparsify,
-            index_names=index_names, bold_rows=bold_rows,
-            column_format=column_format, longtable=longtable, escape=escape,
-            encoding=encoding, decimal=decimal, multicolumn=multicolumn,
-            multicolumn_format=multicolumn_format, multirow=multirow)
+            buf=buf,
+            columns=columns,
+            col_space=col_space,
+            header=header,
+            index=index,
+            na_rep=na_rep,
+            formatters=formatters,
+            float_format=float_format,
+            sparsify=sparsify,
+            index_names=index_names,
+            bold_rows=bold_rows,
+            column_format=column_format,
+            longtable=longtable,
+            escape=escape,
+            encoding=encoding,
+            decimal=decimal,
+            multicolumn=multicolumn,
+            multicolumn_format=multicolumn_format,
+            multirow=multirow,
+        )
 
-    def to_xyz(self, buf=None, sort_index=True,
-               index=False, header=False, float_format='{:.6f}'.format,
-               overwrite=True):
+    def to_xyz(
+        self,
+        buf=None,
+        sort_index=True,
+        index=False,
+        header=False,
+        float_format="{:.6f}".format,
+        overwrite=True,
+    ):
         """Write xyz-file
 
         Args:
@@ -104,50 +163,47 @@ class CartesianIO(CartesianCore, GenericIO):
         """
         if sort_index:
             molecule_string = (
-                self
-                    .loc[:, ['atom', 'x', 'y', 'z']]
-                    .sort_index()
-                    .to_string(header=header, index=index, float_format=float_format)
+                self.loc[:, ["atom", "x", "y", "z"]]
+                .sort_index()
+                .to_string(header=header, index=index, float_format=float_format)
             )
         else:
-            molecule_string = (
-                self
-                    .loc[:, ['atom', 'x', 'y', 'z']]
-                    .to_string(header=header, index=index, float_format=float_format)
+            molecule_string = self.loc[:, ["atom", "x", "y", "z"]].to_string(
+                header=header, index=index, float_format=float_format
             )
 
         # NOTE the following might be removed in the future
         # introduced because of formatting bug in pandas
         # See https://github.com/pandas-dev/pandas/issues/13032
-        space = ' ' * (self.loc[:, 'atom'].str.len().max()
-                       - len(self.iloc[0, 0]))
+        space = " " * (self.loc[:, "atom"].str.len().max() - len(self.iloc[0, 0]))
 
-        output = '{n}\n{message}\n{alignment}{frame_string}'.format(
-            n=len(self), alignment=space, frame_string=molecule_string,
-            message='Created by chemcoord http://chemcoord.readthedocs.io/')
+        output = "{n}\n{message}\n{alignment}{frame_string}".format(
+            n=len(self),
+            alignment=space,
+            frame_string=molecule_string,
+            message="Created by chemcoord http://chemcoord.readthedocs.io/",
+        )
 
         if buf is not None:
             if overwrite:
-                with open(buf, mode='w') as f:
+                with open(buf, mode="w") as f:
                     f.write(output)
             else:
-                with open(buf, mode='x') as f:
+                with open(buf, mode="x") as f:
                     f.write(output)
         else:
             return output
 
     def write_xyz(self, *args, **kwargs):
-        """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`
-        """
-        message = 'Will be removed in the future. Please use to_xyz().'
+        """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`"""
+        message = "Will be removed in the future. Please use to_xyz()."
         with warnings.catch_warnings():
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)
         return self.to_xyz(*args, **kwargs)
 
     @classmethod
-    def read_xyz(cls, buf, start_index=0, get_bonds=True,
-                 nrows=None, engine=None):
+    def read_xyz(cls, buf, start_index=0, get_bonds=True, nrows=None, engine=None):
         """Read a file of coordinate information.
 
         Reads xyz-files.
@@ -169,15 +225,19 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             Cartesian:
         """
-        frame = pd.read_csv(buf, skiprows=2, comment='#',
-                            nrows=nrows, sep=r'\s+',
-                            names=['atom', 'x', 'y', 'z'],
-                            dtype = {'x': float, 'y': float, 'z': float},
-                            engine=engine)
+        frame = pd.read_csv(
+            buf,
+            skiprows=2,
+            comment="#",
+            nrows=nrows,
+            sep=r"\s+",
+            names=["atom", "x", "y", "z"],
+            dtype={"x": float, "y": float, "z": float},
+            engine=engine,
+        )
 
-        remove_digits = partial(re.sub, r'[0-9]+', '')
-        frame['atom'] = frame['atom'].apply(
-            lambda x: remove_digits(x).capitalize())
+        remove_digits = partial(re.sub, r"[0-9]+", "")
+        frame["atom"] = frame["atom"].apply(lambda x: remove_digits(x).capitalize())
 
         molecule = cls(frame)
         molecule.index = range(start_index, start_index + len(molecule))
@@ -203,18 +263,19 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             dict:
         """
-        cjson_dict = {'chemical json': 0}
+        cjson_dict = {"chemical json": 0}
 
-        cjson_dict['atoms'] = {}
+        cjson_dict["atoms"] = {}
 
-        atomic_number = constants.elements['atomic_number'].to_dict()
-        cjson_dict['atoms'] = {'elements': {}}
-        cjson_dict['atoms']['elements']['number'] = [
-            int(atomic_number[x]) for x in self['atom']]
+        atomic_number = constants.elements["atomic_number"].to_dict()
+        cjson_dict["atoms"] = {"elements": {}}
+        cjson_dict["atoms"]["elements"]["number"] = [
+            int(atomic_number[x]) for x in self["atom"]
+        ]
 
-        cjson_dict['atoms']['coords'] = {}
-        coords = self.loc[:, ['x', 'y', 'z']].values.reshape(len(self) * 3)
-        cjson_dict['atoms']['coords']['3d'] = [float(x) for x in coords]
+        cjson_dict["atoms"]["coords"] = {}
+        coords = self.loc[:, ["x", "y", "z"]].values.reshape(len(self) * 3)
+        cjson_dict["atoms"]["coords"]["3d"] = [float(x) for x in coords]
 
         bonds = []
         bond_dict = self.get_bonds()
@@ -223,11 +284,11 @@ class CartesianIO(CartesianCore, GenericIO):
                 bonds += [int(i), int(b)]
                 bond_dict[b].remove(i)
 
-        cjson_dict['bonds'] = {'connections': {}}
-        cjson_dict['bonds']['connections']['index'] = bonds
+        cjson_dict["bonds"] = {"connections": {}}
+        cjson_dict["bonds"]["connections"]["index"] = bonds
 
         if buf is not None:
-            with open(buf, mode='w') as f:
+            with open(buf, mode="w") as f:
                 f.write(json.dumps(cjson_dict, **kwargs))
         else:
             return cjson_dict
@@ -250,23 +311,24 @@ class CartesianIO(CartesianCore, GenericIO):
         if isinstance(buf, dict):
             data = buf.copy()
         else:
-            with open(buf, 'r') as f:
+            with open(buf, "r") as f:
                 data = json.load(f)
-            assert data['chemical json'] == 0
+            assert data["chemical json"] == 0
 
-        n_atoms = len(data['atoms']['coords']['3d'])
+        n_atoms = len(data["atoms"]["coords"]["3d"])
         metadata = {}
         _metadata = {}
 
-        coords = np.array(
-            data['atoms']['coords']['3d']).reshape((n_atoms // 3, 3))
+        coords = np.array(data["atoms"]["coords"]["3d"]).reshape((n_atoms // 3, 3))
 
-        atomic_number = constants.elements['atomic_number']
-        elements = [dict(zip(atomic_number, atomic_number.index))[x]
-                    for x in data['atoms']['elements']['number']]
+        atomic_number = constants.elements["atomic_number"]
+        elements = [
+            dict(zip(atomic_number, atomic_number.index))[x]
+            for x in data["atoms"]["elements"]["number"]
+        ]
 
         try:
-            connections = data['bonds']['connections']['index']
+            connections = data["bonds"]["connections"]["index"]
         except KeyError:
             pass
         else:
@@ -274,15 +336,14 @@ class CartesianIO(CartesianCore, GenericIO):
             for i, b in zip(connections[::2], connections[1::2]):
                 bond_dict[i].add(b)
                 bond_dict[b].add(i)
-            _metadata['bond_dict'] = dict(bond_dict)
+            _metadata["bond_dict"] = dict(bond_dict)
 
         try:
-            metadata.update(data['properties'])
+            metadata.update(data["properties"])
         except KeyError:
             pass
 
-        out = cls(atoms=elements, coords=coords, _metadata=_metadata,
-                  metadata=metadata)
+        out = cls(atoms=elements, coords=coords, _metadata=_metadata, metadata=metadata)
         return out
 
     def view(self, viewer=None, use_curr_dir=False):
@@ -305,14 +366,14 @@ class CartesianIO(CartesianCore, GenericIO):
             None:
         """
         if viewer is None:
-            viewer = settings['defaults']['viewer']
+            viewer = settings["defaults"]["viewer"]
         if use_curr_dir:
             TEMP_DIR = os.path.curdir
         else:
             TEMP_DIR = tempfile.gettempdir()
 
         def give_filename(i):
-            filename = 'ChemCoord_' + str(i) + '.xyz'
+            filename = "ChemCoord_" + str(i) + ".xyz"
             return os.path.join(TEMP_DIR, filename)
 
         i = 1
@@ -348,8 +409,8 @@ class CartesianIO(CartesianCore, GenericIO):
             :class:`pymatgen.core.structure.Molecule`:
         """
         from pymatgen.core import Molecule
-        return Molecule(self['atom'].values,
-                        self.loc[:, ['x', 'y', 'z']].values)
+
+        return Molecule(self["atom"].values, self.loc[:, ["x", "y", "z"]].values)
 
     @classmethod
     def from_pymatgen_molecule(cls, molecule):
@@ -361,8 +422,9 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             Cartesian:
         """
-        return cls(atoms=[el.value for el in molecule.species],
-                   coords=molecule.cart_coords)
+        return cls(
+            atoms=[el.value for el in molecule.species], coords=molecule.cart_coords
+        )
 
     def get_ase_atoms(self):
         """Create an Atoms instance of the ase library
@@ -378,7 +440,8 @@ class CartesianIO(CartesianCore, GenericIO):
             :class:`ase.atoms.Atoms`:
         """
         from ase import Atoms
-        return Atoms(''.join(self['atom']), self.loc[:, ['x', 'y', 'z']])
+
+        return Atoms("".join(self["atom"]), self.loc[:, ["x", "y", "z"]])
 
     @classmethod
     def from_ase_atoms(cls, atoms):

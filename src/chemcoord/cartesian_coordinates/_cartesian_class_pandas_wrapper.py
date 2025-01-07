@@ -23,6 +23,7 @@ class PandasWrapper(object):
         called `metadata` and `_metadata`
         which are passed on when doing slices...
     """
+
     def __len__(self):
         return self.shape[0]
 
@@ -123,14 +124,13 @@ class PandasWrapper(object):
         # Note: obj.x will always call obj.__getattribute__('x') prior to
         # calling obj.__getattr__('x').
 
-        if name.startswith('__'):
+        if name.startswith("__"):
             # See here, why we do this
             # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
             raise AttributeError()
-        if (name in self._frame.columns):
+        if name in self._frame.columns:
             return self[name]
         return object.__getattribute__(self, name)
-
 
     @property
     def index(self):
@@ -155,8 +155,10 @@ class PandasWrapper(object):
     @columns.setter
     def columns(self, value):
         if not self._required_cols <= set(value):
-            raise PhysicalMeaning('There are columns missing for a '
-                                  'meaningful description of a molecule')
+            raise PhysicalMeaning(
+                "There are columns missing for a "
+                "meaningful description of a molecule"
+            )
         self._frame.columns = value
 
     @property
@@ -167,65 +169,126 @@ class PandasWrapper(object):
     def dtypes(self):
         return self._frame.dtypes
 
-    def sort_values(self, by, axis=0, ascending=True, inplace=False,
-                    kind='quicksort', na_position='last'):
+    def sort_values(
+        self,
+        by,
+        axis=0,
+        ascending=True,
+        inplace=False,
+        kind="quicksort",
+        na_position="last",
+    ):
         """Sort by the values along either axis
 
         Wrapper around the :meth:`pandas.DataFrame.sort_values` method.
         """
         if inplace:
             self._frame.sort_values(
-                by, axis=axis, ascending=ascending,
-                inplace=inplace, kind=kind, na_position=na_position)
+                by,
+                axis=axis,
+                ascending=ascending,
+                inplace=inplace,
+                kind=kind,
+                na_position=na_position,
+            )
         else:
-            new = self.__class__(self._frame.sort_values(
-                by, axis=axis, ascending=ascending, inplace=inplace,
-                kind=kind, na_position=na_position))
+            new = self.__class__(
+                self._frame.sort_values(
+                    by,
+                    axis=axis,
+                    ascending=ascending,
+                    inplace=inplace,
+                    kind=kind,
+                    na_position=na_position,
+                )
+            )
             new.metadata = self.metadata.copy()
             new._metadata = copy.deepcopy(self._metadata)
             return new
 
-    def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
-                   kind='quicksort', na_position='last',
-                   sort_remaining=True):
+    def sort_index(
+        self,
+        axis=0,
+        level=None,
+        ascending=True,
+        inplace=False,
+        kind="quicksort",
+        na_position="last",
+        sort_remaining=True,
+    ):
         """Sort object by labels (along an axis)
 
         Wrapper around the :meth:`pandas.DataFrame.sort_index` method.
         """
         if inplace:
             self._frame.sort_index(
-                axis=axis, level=level, ascending=ascending, inplace=inplace,
-                kind=kind, na_position=na_position,
-                sort_remaining=sort_remaining)
+                axis=axis,
+                level=level,
+                ascending=ascending,
+                inplace=inplace,
+                kind=kind,
+                na_position=na_position,
+                sort_remaining=sort_remaining,
+            )
         else:
-            new = self.__class__(self._frame.sort_index(
-                axis=axis, level=level, ascending=ascending,
-                inplace=inplace, kind=kind, na_position=na_position,
-                sort_remaining=sort_remaining))
+            new = self.__class__(
+                self._frame.sort_index(
+                    axis=axis,
+                    level=level,
+                    ascending=ascending,
+                    inplace=inplace,
+                    kind=kind,
+                    na_position=na_position,
+                    sort_remaining=sort_remaining,
+                )
+            )
             new.metadata = self.metadata.copy()
             new._metadata = copy.deepcopy(self._metadata)
             return new
 
-    def replace(self, to_replace=None, value=None, inplace=False,
-                limit=None, regex=False, method='pad', axis=None):
+    def replace(
+        self,
+        to_replace=None,
+        value=None,
+        inplace=False,
+        limit=None,
+        regex=False,
+        method="pad",
+        axis=None,
+    ):
         """Replace values given in 'to_replace' with 'value'.
 
         Wrapper around the :meth:`pandas.DataFrame.replace` method.
         """
         if inplace:
-            self._frame.replace(to_replace=to_replace, value=value,
-                                inplace=inplace, limit=limit, regex=regex,
-                                method=method, axis=axis)
+            self._frame.replace(
+                to_replace=to_replace,
+                value=value,
+                inplace=inplace,
+                limit=limit,
+                regex=regex,
+                method=method,
+                axis=axis,
+            )
         else:
-            new = self.__class__(self._frame.replace(
-                to_replace=to_replace, value=value, inplace=inplace,
-                limit=limit, regex=regex, method=method, axis=axis))
+            new = self.__class__(
+                self._frame.replace(
+                    to_replace=to_replace,
+                    value=value,
+                    inplace=inplace,
+                    limit=limit,
+                    regex=regex,
+                    method=method,
+                    axis=axis,
+                )
+            )
             new.metadata = self.metadata.copy()
             new._metadata = copy.deepcopy(self._metadata)
             return new
 
-    def set_index(self, keys, drop=True, append=False,
-                  inplace=False, verify_integrity=False):
+    def set_index(
+        self, keys, drop=True, append=False, inplace=False, verify_integrity=False
+    ):
         """Set the DataFrame index (row labels) using one or more existing
         columns.
 
@@ -240,37 +303,41 @@ class PandasWrapper(object):
                 dropped_cols = set([keys])
 
         if not self._required_cols <= (set(self.columns) - set(dropped_cols)):
-            raise PhysicalMeaning('You drop a column that is needed to '
-                                  'be a physical meaningful description '
-                                  'of a molecule.')
+            raise PhysicalMeaning(
+                "You drop a column that is needed to "
+                "be a physical meaningful description "
+                "of a molecule."
+            )
 
         if inplace:
-            self._frame.set_index(keys, drop=drop, append=append,
-                                  inplace=inplace,
-                                  verify_integrity=verify_integrity)
+            self._frame.set_index(
+                keys,
+                drop=drop,
+                append=append,
+                inplace=inplace,
+                verify_integrity=verify_integrity,
+            )
         else:
-            new = self._frame.set_index(keys, drop=drop, append=append,
-                                        inplace=inplace,
-                                        verify_integrity=verify_integrity)
-            return self.__class__(new, _metadata=self._metadata,
-                                  metadata=self.metadata)
-
+            new = self._frame.set_index(
+                keys,
+                drop=drop,
+                append=append,
+                inplace=inplace,
+                verify_integrity=verify_integrity,
+            )
+            return self.__class__(new, _metadata=self._metadata, metadata=self.metadata)
 
     def reset_index(self):
-        """Resets the index to 0...n
-        """
+        """Resets the index to 0...n"""
         return self.__class__(self._frame.reset_index(drop=True))
 
-
-    def insert(self, loc, column, value, allow_duplicates=False,
-               inplace=False):
+    def insert(self, loc, column, value, allow_duplicates=False, inplace=False):
         """Insert column into molecule at specified location.
 
         Wrapper around the :meth:`pandas.DataFrame.insert` method.
         """
         out = self if inplace else self.copy()
-        out._frame.insert(loc, column, value,
-                          allow_duplicates=allow_duplicates)
+        out._frame.insert(loc, column, value, allow_duplicates=allow_duplicates)
         if not inplace:
             return out
 
@@ -279,15 +346,19 @@ class PandasWrapper(object):
 
         Wrapper around the :meth:`pandas.DataFrame.apply` method.
         """
-        return self.__class__(self._frame.apply(*args, **kwargs),
-                              metadata=self.metadata,
-                              _metadata=self._metadata)
+        return self.__class__(
+            self._frame.apply(*args, **kwargs),
+            metadata=self.metadata,
+            _metadata=self._metadata,
+        )
 
     def applymap(self, *args, **kwargs):
         """Applies function elementwise
 
         Wrapper around the :meth:`pandas.DataFrame.applymap` method.
         """
-        return self.__class__(self._frame.applymap(*args, **kwargs),
-                              metadata=self.metadata,
-                              _metadata=self._metadata)
+        return self.__class__(
+            self._frame.applymap(*args, **kwargs),
+            metadata=self.metadata,
+            _metadata=self._metadata,
+        )

@@ -18,30 +18,38 @@ import pandas as pd
 from numba import jit
 
 keys_below_are_abs_refs = -sys.maxsize + 100
-int_label = {'origin': -sys.maxsize - 1, 'e_x': -sys.maxsize,
-             'e_y': -sys.maxsize + 1, 'e_z': -sys.maxsize + 2}
-absolute_refs = {'origin': np.array([0., 0., 0.]),
-                 'e_x': np.array([1., 0., 0.]),
-                 'e_y': np.array([0., 1., 0.]),
-                 'e_z': np.array([0., 0., 1.])}
+int_label = {
+    "origin": -sys.maxsize - 1,
+    "e_x": -sys.maxsize,
+    "e_y": -sys.maxsize + 1,
+    "e_z": -sys.maxsize + 2,
+}
+absolute_refs = {
+    "origin": np.array([0.0, 0.0, 0.0]),
+    "e_x": np.array([1.0, 0.0, 0.0]),
+    "e_y": np.array([0.0, 1.0, 0.0]),
+    "e_z": np.array([0.0, 0.0, 1.0]),
+}
 string_repr = {j: i for i, j in int_label.items()}
-latex_repr = {'origin': '$\\vec{0}$',
-              'e_x': '$\\vec{e_x}$',
-              'e_y': '$\\vec{e_y}$',
-              'e_z': '$\\vec{e_z}$', }
+latex_repr = {
+    "origin": "$\\vec{0}$",
+    "e_x": "$\\vec{e_x}$",
+    "e_y": "$\\vec{e_y}$",
+    "e_z": "$\\vec{e_z}$",
+}
 
 
 @jit(nopython=True, cache=True)
 def _jit_absolute_refs(j):
     # Because dicts are not supported in numba :(
     if j == -sys.maxsize - 1:
-        return np.array([0., 0., 0.])
+        return np.array([0.0, 0.0, 0.0])
     elif j == -sys.maxsize:
-        return np.array([1., 0., 0.])
+        return np.array([1.0, 0.0, 0.0])
     elif j == -sys.maxsize + 1:
-        return np.array([0., 1., 0.])
+        return np.array([0.0, 1.0, 0.0])
     elif j == -sys.maxsize + 2:
-        return np.array([0., 0., 1.])
+        return np.array([0.0, 0.0, 1.0])
     else:
         raise ValueError
 
@@ -49,7 +57,7 @@ def _jit_absolute_refs(j):
 # The data comes from the mendeleev package written by Lukasz Mentel
 # https://bitbucket.org/lukaszmentel/mendeleev/
 atom_properties = StringIO(
-""",annotation,atomic_number,atomic_radius,atomic_volume,block,boiling_point,density,description,dipole_polarizability,electron_affinity,electronic_configuration,evaporation_heat,fusion_heat,group_id,lattice_constant,lattice_structure,mass,melting_point,name,period,series_id,specific_heat,thermal_conductivity,vdw_radius,covalent_radius_cordero,covalent_radius_pyykko,en_pauling,en_allen,jmol_color,cpk_color,proton_affinity,gas_basicity,heat_of_formation,c6,covalent_radius_bragg,covalent_radius_slater,vdw_radius_bondi,vdw_radius_truhlar,vdw_radius_rt,vdw_radius_batsanov,vdw_radius_dreiding,vdw_radius_uff,vdw_radius_mm3,abundance_crust,abundance_sea,atomic_radius_gv,valency,size_in_gv,gv_color,atomic_radius_cc
+    """,annotation,atomic_number,atomic_radius,atomic_volume,block,boiling_point,density,description,dipole_polarizability,electron_affinity,electronic_configuration,evaporation_heat,fusion_heat,group_id,lattice_constant,lattice_structure,mass,melting_point,name,period,series_id,specific_heat,thermal_conductivity,vdw_radius,covalent_radius_cordero,covalent_radius_pyykko,en_pauling,en_allen,jmol_color,cpk_color,proton_affinity,gas_basicity,heat_of_formation,c6,covalent_radius_bragg,covalent_radius_slater,vdw_radius_bondi,vdw_radius_truhlar,vdw_radius_rt,vdw_radius_batsanov,vdw_radius_dreiding,vdw_radius_uff,vdw_radius_mm3,abundance_crust,abundance_sea,atomic_radius_gv,valency,size_in_gv,gv_color,atomic_radius_cc
 H,"density(@ -253C), evaporation_heat(H-H), fusion_heat(H-H), ",1.0,79.0,14.1,s,20.28,0.0708,"Colourless, odourless gaseous chemical element. Lightest and most abundant element in the universe. Present in water and in all organic compounds. Chemically reacts with most elements. Discovered by Henry Cavendish in 1776.",4.50710742367,0.754195,1s,0.904,0.117,1.0,3.75,HEX,1.00794,14.01,Hydrogen,1.0,1.0,,0.1815,110.0,31.0,32.0,2.2,13.61,#ffffff,#ffffff,,,217.998,6.499026705,,25.0,120.0,,110.0,,319.5,288.6,162.0,1400.0,108000.0,0.37,1.0,0.32,#f2f2f2,0.37
 He,"density(@ -270C), ",2.0,,31.8,s,4.216,0.147,"Colourless, odourless gaseous nonmetallic element. Belongs to group 18 of the periodic table. Lowest boiling point of all elements and can only be solidified under pressure. Chemically inert, no known compounds. Discovered in the solar spectrum in 1868 by Lockyer.",1.3837467,-19.7,1s2,0.08,,18.0,3.57,HEX,4.002602,0.95,Helium,1.0,2.0,5.188,0.152,140.0,28.000000000000004,46.0,,24.59,#d9ffff,#ffc0cb,177.8,148.5,,1.42,,,140.0,,,,,236.2,153.0,0.008,7.000000000000003e-06,0.32,8.0,0.414,#d9ffff,0.32
 Li,,3.0,155.0,13.1,s,1118.15,0.534,Socket silvery metal. First member of group 1 of the periodic table. Lithium salts are used in psychomedicine.,164.0,0.618049,[He] 2s,148.0,2.89,1.0,3.49,BCC,6.941,553.69,Lithium,2.0,3.0,3.489,84.8,182.0,128.0,133.0,0.98,5.392,#cc80ff,#b22222,,,159.3,1392.0,150.0,145.0,181.0,,,220.00000000000003,,245.1,255.0,20.0,0.18,1.34,1.0,0.466,#cc80ff,1.34
@@ -169,11 +177,12 @@ Lv,,116.0,,,p,,,,,,[Rn] 5f14 6d10 7s2 7p4,,,16.0,,,,,Livermorium,7.0,7.0,,,,,175
 Uus,,117.0,,,p,,,,,,[Rn] 5f14 6d10 7s2 7p5,,,17.0,,,,,Ununseptium,7.0,6.0,,,,,165.0,,,,,,,,,,,,,,,,,,,,,,,nan,
 Uuo,,118.0,,,p,,,,46.33,0.055999999999999994,[Rn] 5f14 6d10 7s2 7p6,,,18.0,,,,,Ununoctium,7.0,2.0,,,,,157.0,,,,,,,,,,,,,,,,,,,,,,,nan,
 X,,0.0,,,,,,,,,,,,,,,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0.0,,nan,0.8
-""")
+"""
+)
 
 
 elements = pd.read_csv(atom_properties, index_col=0)
-elements = elements.astype({'atomic_number': np.dtype('i8')})
+elements = elements.astype({"atomic_number": np.dtype("i8")})
 
 
 def replace_data(path, data):
@@ -186,7 +195,7 @@ def replace_data(path, data):
 
 
 try:
-    if os.path.exists('~/.chemcoord_data_rc'):
-        elements = replace_data('~/.chemcoord_data_rc', elements)
+    if os.path.exists("~/.chemcoord_data_rc"):
+        elements = replace_data("~/.chemcoord_data_rc", elements)
 except OSError:
     pass

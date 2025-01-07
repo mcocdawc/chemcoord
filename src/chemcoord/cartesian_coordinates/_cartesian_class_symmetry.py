@@ -6,21 +6,22 @@ from chemcoord.cartesian_coordinates.point_group import PointGroupOperations
 class CartesianSymmetry(CartesianCore):
     def _get_point_group_analyzer(self, tolerance=0.3):
         from pymatgen.symmetry.analyzer import PointGroupAnalyzer
-        return PointGroupAnalyzer(self.get_pymatgen_molecule(),
-                                  tolerance=tolerance)
+
+        return PointGroupAnalyzer(self.get_pymatgen_molecule(), tolerance=tolerance)
 
     def _convert_eq(self, eq):
-        """WORKS INPLACE on eq
-        """
+        """WORKS INPLACE on eq"""
         rename = dict(enumerate(self.index))
-        eq['eq_sets'] = {rename[k]: {rename[x] for x in v}
-                         for k, v in eq['eq_sets'].items()}
-        eq['sym_ops'] = {rename[k]: {rename[x]: v[x] for x in v}
-                         for k, v in eq['sym_ops'].items()}
+        eq["eq_sets"] = {
+            rename[k]: {rename[x] for x in v} for k, v in eq["eq_sets"].items()
+        }
+        eq["sym_ops"] = {
+            rename[k]: {rename[x]: v[x] for x in v} for k, v in eq["sym_ops"].items()
+        }
         try:
-            sym_mol = self.from_pymatgen_molecule(eq['sym_mol'])
+            sym_mol = self.from_pymatgen_molecule(eq["sym_mol"])
             sym_mol.index = self.index
-            eq['sym_mol'] = sym_mol
+            eq["sym_mol"] = sym_mol
         except KeyError:
             pass
 
@@ -105,14 +106,17 @@ class CartesianSymmetry(CartesianCore):
         from pymatgen.symmetry.analyzer import iterative_symmetrize
 
         mg_mol = self.get_pymatgen_molecule()
-        eq = iterative_symmetrize(mg_mol, max_n=max_n, tolerance=tolerance,
-                                  epsilon=epsilon)
+        eq = iterative_symmetrize(
+            mg_mol, max_n=max_n, tolerance=tolerance, epsilon=epsilon
+        )
         self._convert_eq(eq)
         return eq
 
     def get_asymmetric_unit(self, eq=None):
         eq = self.get_equivalent_atoms() if (eq is None) else eq
-        new_frame = self.loc[eq['eq_sets'].keys(), :]._frame
-        from chemcoord.cartesian_coordinates.asymmetric_unit_cartesian_class \
-            import AsymmetricUnitCartesian
-        return AsymmetricUnitCartesian(new_frame, _metadata={'eq': eq})
+        new_frame = self.loc[eq["eq_sets"].keys(), :]._frame
+        from chemcoord.cartesian_coordinates.asymmetric_unit_cartesian_class import (
+            AsymmetricUnitCartesian,
+        )
+
+        return AsymmetricUnitCartesian(new_frame, _metadata={"eq": eq})
