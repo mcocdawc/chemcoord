@@ -4,6 +4,7 @@ import warnings
 from chemcoord.exceptions import InvalidReference
 from chemcoord.utilities._temporary_deprecation_workarounds import is_iterable
 
+
 class _generic_Indexer(object):
     def __init__(self, molecule):
         self.molecule = molecule
@@ -18,12 +19,14 @@ class _generic_Indexer(object):
 
 
 class _Loc(_generic_Indexer):
-    indexer = 'loc'
+    indexer = "loc"
+
 
 class _ILoc(_generic_Indexer):
-    indexer = 'iloc'
+    indexer = "iloc"
 
-class _Unsafe_base():
+
+class _Unsafe_base:
     def __setitem__(self, key, value):
         try:
             with warnings.catch_warnings():
@@ -43,19 +46,23 @@ class _Unsafe_base():
             # The `except FutureWarning:` has likely to become `except TypeError:` then.
             if isinstance(key, tuple):
                 if type(key[1]) is not str and is_iterable(key[1]):
-                    self.molecule._frame = self.molecule._frame.astype({k: 'O' for k in key[1]})
+                    self.molecule._frame = self.molecule._frame.astype(
+                        {k: "O" for k in key[1]}
+                    )
                 else:
-                    self.molecule._frame = self.molecule._frame.astype({key[1]: 'O'})
+                    self.molecule._frame = self.molecule._frame.astype({key[1]: "O"})
                 indexer = getattr(self.molecule._frame, self.indexer)
                 indexer[key[0], key[1]] = value
             else:
                 raise TypeError("Assignment not supported.")
 
 
-class _SafeBase():
+class _SafeBase:
     def __setitem__(self, key, value):
         try:
-            self.molecule._metadata['last_valid_cartesian'] = self.molecule.get_cartesian()
+            self.molecule._metadata["last_valid_cartesian"] = (
+                self.molecule.get_cartesian()
+            )
         except TypeError:
             # We are here because of Sympy
             pass
@@ -65,7 +72,7 @@ class _SafeBase():
         else:
             molecule = self.molecule.copy()
 
-        indexer = getattr(molecule, f'unsafe_{self.indexer}')
+        indexer = getattr(molecule, f"unsafe_{self.indexer}")
         indexer[key] = value
 
         try:
@@ -92,13 +99,12 @@ class _SafeBase():
                 pass
 
         if self.molecule.pure_internal_mov:
-            ref = self.molecule._metadata['last_valid_cartesian']
+            ref = self.molecule._metadata["last_valid_cartesian"]
             new = self.molecule.get_cartesian()
             # TODO(@Oskar): Ensure that this works with Dummy atoms as well
             rotated = ref.align(new, mass_weight=True)[1]
-            c_table = self.molecule.loc[:, ['b', 'a', 'd']]
+            c_table = self.molecule.loc[:, ["b", "a", "d"]]
             self.molecule._frame = rotated.get_zmat(c_table)._frame
-
 
 
 class _Unsafe_Loc(_Loc, _Unsafe_base):
@@ -111,6 +117,7 @@ class _Safe_Loc(_Loc, _SafeBase):
 
 class _Unsafe_ILoc(_ILoc, _Unsafe_base):
     pass
+
 
 class _Safe_ILoc(_ILoc, _SafeBase):
     pass

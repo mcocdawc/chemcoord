@@ -1,5 +1,5 @@
-"""This is a proposed interface to chemcoord and will currently not work!
-"""
+"""This is a proposed interface to chemcoord and will currently not work!"""
+
 import os
 
 from ase.structure import molecule
@@ -13,24 +13,24 @@ import numpy as np
 
 import chemcoord as cc
 
-if os.path.exists('CH3_Al.traj'):
-    slab = ase.io.read('CH3_Al.traj')
+if os.path.exists("CH3_Al.traj"):
+    slab = ase.io.read("CH3_Al.traj")
     slab.set_calculator(EMT())  # Need to reset when loading from traj file
 else:
-    slab = fcc111('Al', size=(2, 2, 2), vacuum=3.0)
+    slab = fcc111("Al", size=(2, 2, 2), vacuum=3.0)
 
-    CH3 = molecule('CH3')
-    add_adsorbate(slab, CH3, 2.5, 'ontop')
+    CH3 = molecule("CH3")
+    add_adsorbate(slab, CH3, 2.5, "ontop")
 
-    constraint = FixAtoms(mask=[a.symbol == 'Al' for a in slab])
+    constraint = FixAtoms(mask=[a.symbol == "Al" for a in slab])
     slab.set_constraint(constraint)
 
     slab.set_calculator(EMT())
 
-    dyn = QuasiNewton(slab, trajectory='QN_slab.traj')
+    dyn = QuasiNewton(slab, trajectory="QN_slab.traj")
     dyn.run(fmax=0.05)
 
-    ase.io.write('CH3_Al.traj', slab)
+    ase.io.write("CH3_Al.traj", slab)
 
 # Running vibrational analysis
 vib = Vibrations(slab, indices=[8, 9, 10, 11])
@@ -42,10 +42,10 @@ vib.summary()
 InternalCoordinates = cc.vibrations_to_internal_coordinates(
     vib,
     restrict_to_bending=1,  # exclude all vibrational extensions if this is on
-    bonding_to_environment=[[7, 8]]  # list of pairs of atomic indices.
+    bonding_to_environment=[[7, 8]],  # list of pairs of atomic indices.
     # This is suppose to be the indices of the carbon atom (8) and
     # the Al atom that it is bonded to (7).
-    )
+)
 
 # See the infitisimal movement vector of mode 0, which is the mode with the
 # lowest eigenvalue in the eigenvalue spectrum of the harmonic normal mode

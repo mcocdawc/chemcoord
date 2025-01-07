@@ -14,9 +14,13 @@ import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
 from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
-from chemcoord.exceptions import (ERR_CODE_OK, ERR_CODE_InvalidReference,
-                                  IllegalArgumentCombination, InvalidReference,
-                                  UndefinedCoordinateSystem)
+from chemcoord.exceptions import (
+    ERR_CODE_OK,
+    ERR_CODE_InvalidReference,
+    IllegalArgumentCombination,
+    InvalidReference,
+    UndefinedCoordinateSystem,
+)
 from chemcoord.internal_coordinates.zmat_class_main import Zmat
 from chemcoord.utilities._temporary_deprecation_workarounds import replace_without_warn
 
@@ -29,26 +33,27 @@ class CartesianGetZmat(CartesianCore):
         """
         c_table = construction_table
         for row, i in enumerate(c_table.index):
-            give_message = ("Not a valid construction table. "
-                            "The index {i} uses an invalid reference").format
+            give_message = (
+                "Not a valid construction table. "
+                "The index {i} uses an invalid reference"
+            ).format
             if row == 0:
                 pass
             elif row == 1:
-                if c_table.loc[i, 'b'] not in c_table.index[:row]:
+                if c_table.loc[i, "b"] not in c_table.index[:row]:
                     raise UndefinedCoordinateSystem(give_message(i=i))
             elif row == 2:
-                reference = c_table.loc[i, ['b', 'a']]
+                reference = c_table.loc[i, ["b", "a"]]
                 if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
             else:
-                reference = c_table.loc[i, ['b', 'a', 'd']]
+                reference = c_table.loc[i, ["b", "a", "d"]]
                 if not reference.isin(c_table.index[:row]).all():
                     raise UndefinedCoordinateSystem(give_message(i=i))
 
-
-
-    def _get_frag_constr_table(self, start_atom=None, predefined_table=None,
-                               use_lookup=None, bond_dict=None):
+    def _get_frag_constr_table(
+        self, start_atom=None, predefined_table=None, use_lookup=None, bond_dict=None
+    ):
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
@@ -74,11 +79,12 @@ class CartesianGetZmat(CartesianCore):
             pd.DataFrame: Construction table
         """
         if use_lookup is None:
-            use_lookup = settings['defaults']['use_lookup']
+            use_lookup = settings["defaults"]["use_lookup"]
 
         if start_atom is not None and predefined_table is not None:
-            raise IllegalArgumentCombination('Either start_atom or '
-                                             'predefined_table has to be None')
+            raise IllegalArgumentCombination(
+                "Either start_atom or " "predefined_table has to be None"
+            )
         if bond_dict is None:
             bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
 
@@ -89,24 +95,23 @@ class CartesianGetZmat(CartesianCore):
             i = construction_table.index[0]
             order_of_def = list(construction_table.index)
             user_defined = list(construction_table.index)
-            construction_table = construction_table.to_dict(orient='index')
+            construction_table = construction_table.to_dict(orient="index")
         else:
             if start_atom is None:
                 molecule = self.get_distance_to(self.get_centroid())
-                i = molecule['distance'].idxmin()
+                i = molecule["distance"].idxmin()
             else:
                 i = start_atom
             order_of_def = [i]
             user_defined = []
-            construction_table = {i: {'b': 'origin',
-                                      'a': 'e_z',
-                                      'd': 'e_x'}}
+            construction_table = {i: {"b": "origin", "a": "e_z", "d": "e_x"}}
 
         visited = {i}
         if len(self) > 1:
             parent = {j: i for j in bond_dict[i]}
             work_bond_dict = OrderedDict(
-                [(j, bond_dict[j] - visited) for j in bond_dict[i]])
+                [(j, bond_dict[j] - visited) for j in bond_dict[i]]
+            )
             _modify_priority(work_bond_dict, user_defined)
         else:
             parent, work_bond_dict = {}, {}
@@ -120,13 +125,10 @@ class CartesianGetZmat(CartesianCore):
                     b = parent[i]
                     if b in order_of_def[:3]:
                         if len(order_of_def) == 1:
-                            construction_table[i] = {'b': b,
-                                                     'a': 'e_z',
-                                                     'd': 'e_x'}
+                            construction_table[i] = {"b": b, "a": "e_z", "d": "e_x"}
                         elif len(order_of_def) == 2:
                             a = (bond_dict[b] & set(order_of_def))[0]
-                            construction_table[i] = {'b': b, 'a': a,
-                                                     'd': 'e_x'}
+                            construction_table[i] = {"b": b, "a": a, "d": "e_x"}
                         else:
                             try:
                                 a = parent[b]
@@ -139,15 +141,17 @@ class CartesianGetZmat(CartesianCore):
                                     raise UndefinedCoordinateSystem(message)
                             except (KeyError, UndefinedCoordinateSystem):
                                 try:
-                                    d = ((bond_dict[a] & set(order_of_def))
-                                         - set([b, a]))[0]
+                                    d = (
+                                        (bond_dict[a] & set(order_of_def)) - set([b, a])
+                                    )[0]
                                 except IndexError:
-                                    d = ((bond_dict[b] & set(order_of_def))
-                                         - set([b, a]))[0]
-                            construction_table[i] = {'b': b, 'a': a, 'd': d}
+                                    d = (
+                                        (bond_dict[b] & set(order_of_def)) - set([b, a])
+                                    )[0]
+                            construction_table[i] = {"b": b, "a": a, "d": d}
                     else:
-                        a, d = [construction_table[b][k] for k in ['b', 'a']]
-                        construction_table[i] = {'b': b, 'a': a, 'd': d}
+                        a, d = [construction_table[b][k] for k in ["b", "a"]]
+                        construction_table[i] = {"b": b, "a": a, "d": d}
                     order_of_def.append(i)
 
                 visited.add(i)
@@ -157,13 +161,13 @@ class CartesianGetZmat(CartesianCore):
 
             work_bond_dict = new_work_bond_dict
             _modify_priority(work_bond_dict, user_defined)
-        output = pd.DataFrame.from_dict(construction_table, orient='index')
-        output = output.loc[order_of_def, ['b', 'a', 'd']]
+        output = pd.DataFrame.from_dict(construction_table, orient="index")
+        output = output.loc[order_of_def, ["b", "a", "d"]]
         return output
 
-    def get_construction_table(self, fragment_list=None,
-                               use_lookup=None,
-                               perform_checks=True):
+    def get_construction_table(
+        self, fragment_list=None, use_lookup=None, perform_checks=True
+    ):
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
@@ -220,13 +224,14 @@ class CartesianGetZmat(CartesianCore):
             :class:`pandas.DataFrame`: Construction table
         """
         if use_lookup is None:
-            use_lookup = settings['defaults']['use_lookup']
+            use_lookup = settings["defaults"]["use_lookup"]
 
         if fragment_list is None:
             self.get_bonds(use_lookup=use_lookup)
             self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-            fragments = sorted(self.fragmentate(use_lookup=use_lookup),
-                               key=len, reverse=True)
+            fragments = sorted(
+                self.fragmentate(use_lookup=use_lookup), key=len, reverse=True
+            )
             # During function execution the bonding situation does not change,
             # so the lookup may be used now.
             use_lookup = True
@@ -247,8 +252,9 @@ class CartesianGetZmat(CartesianCore):
                         full_index = fragment.index
 
             if not self.index.difference(full_index).empty:
-                missing_part = self.get_without(self.loc[full_index],
-                                                use_lookup=use_lookup)
+                missing_part = self.get_without(
+                    self.loc[full_index], use_lookup=use_lookup
+                )
                 fragment_list = missing_part + fragment_list
             return fragment_list
 
@@ -257,7 +263,8 @@ class CartesianGetZmat(CartesianCore):
         if isinstance(fragments[0], tuple):
             fragment, references = fragments[0]
             full_table = fragment._get_frag_constr_table(
-                use_lookup=use_lookup, predefined_table=references)
+                use_lookup=use_lookup, predefined_table=references
+            )
         else:
             fragment = fragments[0]
             full_table = fragment._get_frag_constr_table(use_lookup=use_lookup)
@@ -267,33 +274,37 @@ class CartesianGetZmat(CartesianCore):
             if pd.api.types.is_list_like(fragment):
                 fragment, references = fragment
                 if len(references) < min(3, len(fragment)):
-                    raise ValueError('If you specify references for a '
-                                     'fragment, it has to consist of at least'
-                                     'min(3, len(fragment)) rows.')
+                    raise ValueError(
+                        "If you specify references for a "
+                        "fragment, it has to consist of at least"
+                        "min(3, len(fragment)) rows."
+                    )
                 constr_table = fragment._get_frag_constr_table(
-                    predefined_table=references, use_lookup=use_lookup)
+                    predefined_table=references, use_lookup=use_lookup
+                )
             else:
                 i, b = fragment.get_shortest_distance(finished_part)[:2]
                 constr_table = fragment._get_frag_constr_table(
-                    start_atom=i, use_lookup=use_lookup)
+                    start_atom=i, use_lookup=use_lookup
+                )
                 if len(full_table) == 1:
-                    a, d = 'e_z', 'e_x'
+                    a, d = "e_z", "e_x"
                 elif len(full_table) == 2:
                     if b == full_table.index[0]:
                         a = full_table.index[1]
                     else:
                         a = full_table.index[0]
-                    d = 'e_x'
+                    d = "e_x"
                 else:
                     if b in full_table.index[:2]:
                         if b == full_table.index[0]:
                             a = full_table.index[2]
                             d = full_table.index[1]
                         else:
-                            a = full_table.loc[b, 'b']
+                            a = full_table.loc[b, "b"]
                             d = full_table.index[2]
                     else:
-                        a, d = full_table.loc[b, ['b', 'a']]
+                        a, d = full_table.loc[b, ["b", "a"]]
 
                 if len(constr_table) >= 1:
                     constr_table.iloc[0, :] = b, a, d
@@ -330,8 +341,7 @@ class CartesianGetZmat(CartesianCore):
         problem_index = [rename[i] for i in problem_index]
         return problem_index
 
-    def correct_dihedral(self, construction_table,
-                         use_lookup=None):
+    def correct_dihedral(self, construction_table, use_lookup=None):
         """Reindexe the dihedral defining atom if linear reference is used.
 
         Uses :meth:`~Cartesian.check_dihedral` to obtain the problematic
@@ -347,21 +357,23 @@ class CartesianGetZmat(CartesianCore):
             pd.DataFrame: Appropiately renamed construction table.
         """
         if use_lookup is None:
-            use_lookup = settings['defaults']['use_lookup']
+            use_lookup = settings["defaults"]["use_lookup"]
 
         problem_index = self.check_dihedral(construction_table)
         bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
         c_table = construction_table.copy()
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
-            b, a, problem_d = c_table.loc[i, ['b', 'a', 'd']]
+            b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]
             try:
-                c_table.loc[i, 'd'] = (bond_dict[a] - {b, a, problem_d}
-                                       - set(c_table.index[loc_i:]))[0]
+                c_table.loc[i, "d"] = (
+                    bond_dict[a] - {b, a, problem_d} - set(c_table.index[loc_i:])
+                )[0]
             except IndexError:
                 visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
-                tmp_bond_dict = OrderedDict([(j, bond_dict[j] - visited)
-                                             for j in bond_dict[problem_d]])
+                tmp_bond_dict = OrderedDict(
+                    [(j, bond_dict[j] - visited) for j in bond_dict[problem_d]]
+                )
                 found = False
                 while tmp_bond_dict and not found:
                     new_tmp_bond_dict = OrderedDict()
@@ -371,7 +383,7 @@ class CartesianGetZmat(CartesianCore):
                         angle = self.get_angle_degrees([b, a, new_d])[0]
                         if 5 < angle < 175:
                             found = True
-                            c_table.loc[i, 'd'] = new_d
+                            c_table.loc[i, "d"] = new_d
                         else:
                             visited.add(new_d)
                             for j in tmp_bond_dict[new_d]:
@@ -379,19 +391,22 @@ class CartesianGetZmat(CartesianCore):
                     tmp_bond_dict = new_tmp_bond_dict
                 if not found:
                     other_atoms = c_table.index[:loc_i].difference({b, a})
-                    molecule = self.get_distance_to(origin=i, sort=True,
-                                                    other_atoms=other_atoms)
+                    molecule = self.get_distance_to(
+                        origin=i, sort=True, other_atoms=other_atoms
+                    )
                     k = 0
                     while not found and k < len(molecule):
                         new_d = molecule.index[k]
                         angle = self.get_angle_degrees([b, a, new_d])[0]
                         if 5 < angle < 175:
                             found = True
-                            c_table.loc[i, 'd'] = new_d
+                            c_table.loc[i, "d"] = new_d
                         k = k + 1
                     if not found:
-                        message = ('The atom with index {} has no possibility '
-                                   'to get nonlinear reference atoms'.format)
+                        message = (
+                            "The atom with index {} has no possibility "
+                            "to get nonlinear reference atoms".format
+                        )
                         raise UndefinedCoordinateSystem(message(i))
         return c_table
 
@@ -417,18 +432,19 @@ class CartesianGetZmat(CartesianCore):
         A = np.empty((3, 3))
         row = c_table.index.get_loc(i)
         if row > 2:
-            message = 'The index {i} is not from the first three, rows'.format
+            message = "The index {i} is not from the first three, rows".format
             raise ValueError(message(i=i))
         for k in range(3):
             if k < row:
-                A[k] = self.loc[c_table.iloc[row, k], ['x', 'y', 'z']]
+                A[k] = self.loc[c_table.iloc[row, k], ["x", "y", "z"]]
             else:
                 A[k] = abs_refs[c_table.iloc[row, k]]
         v1, v2 = A[2] - A[1], A[1] - A[0]
         K = np.cross(v1, v2)
-        zero = np.full(3, 0.)
-        return not (np.allclose(K, zero) or np.allclose(v1, zero)
-                    or np.allclose(v2, zero))
+        zero = np.full(3, 0.0)
+        return not (
+            np.allclose(K, zero) or np.allclose(v1, zero) or np.allclose(v2, zero)
+        )
 
     def check_absolute_refs(self, construction_table):
         """Checks first three rows of ``construction_table`` for linear references
@@ -447,8 +463,9 @@ class CartesianGetZmat(CartesianCore):
             list: A list of problematic indices.
         """
         c_table = construction_table
-        problem_index = [i for i in c_table.index[:3]
-                         if not self._has_valid_abs_ref(i, c_table)]
+        problem_index = [
+            i for i in c_table.index[:3] if not self._has_valid_abs_ref(i, c_table)
+        ]
         return problem_index
 
     def correct_absolute_refs(self, construction_table):
@@ -488,14 +505,14 @@ class CartesianGetZmat(CartesianCore):
                 if len(c_table.shape) == 1:
                     c_table = c_table[None, :]
                 c_table = pd.DataFrame(
-                    data=c_table[:, 1:], index=c_table[:, 0],
-                    columns=['b', 'a', 'd'])
+                    data=c_table[:, 1:], index=c_table[:, 0], columns=["b", "a", "d"]
+                )
 
-        c_table = replace_without_warn(c_table, constants.int_label).astype('i8')
-        c_table.index = c_table.index.astype('i8')
+        c_table = replace_without_warn(c_table, constants.int_label).astype("i8")
+        c_table.index = c_table.index.astype("i8")
 
         new_index = c_table.index.append(self.index.difference(c_table.index))
-        X = self.loc[new_index, ['x', 'y', 'z']].values.astype('f8').T
+        X = self.loc[new_index, ["x", "y", "z"]].values.astype("f8").T
         c_table = c_table.replace(dict(zip(new_index, range(len(self)))))
         c_table = c_table.values.T
 
@@ -514,29 +531,38 @@ class CartesianGetZmat(CartesianCore):
             Zmat: A new instance of :class:`Zmat`.
         """
         c_table = construction_table
-        dtypes = [('atom', str),
-                        ('b', str), ('bond', float),
-                        ('a', str), ('angle', float),
-                        ('d', str), ('dihedral', float)]
+        dtypes = [
+            ("atom", str),
+            ("b", str),
+            ("bond", float),
+            ("a", str),
+            ("angle", float),
+            ("d", str),
+            ("dihedral", float),
+        ]
 
-        zmat_frame = pd.DataFrame(np.empty(len(c_table), dtype=dtypes),
-                                  index=c_table.index)
+        zmat_frame = pd.DataFrame(
+            np.empty(len(c_table), dtype=dtypes), index=c_table.index
+        )
 
-        zmat_frame.loc[:, 'atom'] = self.loc[c_table.index, 'atom']
-        zmat_frame.loc[:, ['b', 'a', 'd']] = c_table
+        zmat_frame.loc[:, "atom"] = self.loc[c_table.index, "atom"]
+        zmat_frame.loc[:, ["b", "a", "d"]] = c_table
 
         zmat_values = self._calculate_zmat_values(c_table)
-        zmat_frame.loc[:, ['bond', 'angle', 'dihedral']] = zmat_values
+        zmat_frame.loc[:, ["bond", "angle", "dihedral"]] = zmat_values
 
         zmat_frame = zmat_frame.join(
-            self._frame.loc[:, list(set(self.columns) - {'atom', 'x', 'y', 'z'})])
+            self._frame.loc[:, list(set(self.columns) - {"atom", "x", "y", "z"})]
+        )
 
-        zmatrix = Zmat(zmat_frame, metadata=self.metadata,
-                       _metadata={'last_valid_cartesian': self.copy()})
+        zmatrix = Zmat(
+            zmat_frame,
+            metadata=self.metadata,
+            _metadata={"last_valid_cartesian": self.copy()},
+        )
         return zmatrix
 
-    def get_zmat(self, construction_table=None,
-                 use_lookup=None):
+    def get_zmat(self, construction_table=None, use_lookup=None):
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
@@ -597,7 +623,7 @@ class CartesianGetZmat(CartesianCore):
             Zmat: A new instance of :class:`~Zmat`.
         """
         if use_lookup is None:
-            use_lookup = settings['defaults']['use_lookup']
+            use_lookup = settings["defaults"]["use_lookup"]
 
         self.get_bonds(use_lookup=use_lookup)
         self._give_val_sorted_bond_dict(use_lookup=use_lookup)
@@ -695,17 +721,17 @@ class CartesianGetZmat(CartesianCore):
         if (construction_table.index != self.index).any():
             message = "construction_table and self must use the same index"
             raise ValueError(message)
-        c_table = construction_table.loc[:, ['b', 'a', 'd']]
+        c_table = construction_table.loc[:, ["b", "a", "d"]]
 
-
-        c_table = (replace_without_warn(c_table, constants.int_label)
-                        .astype('i8')
-                        .replace({k: v for v, k in enumerate(c_table.index)})
-                        .values
-                        .T)
-        X = self.loc[:, ['x', 'y', 'z']].values.T
-        if X.dtype == np.dtype('i8'):
-            X = X.astype('f8')
+        c_table = (
+            replace_without_warn(c_table, constants.int_label)
+            .astype("i8")
+            .replace({k: v for v, k in enumerate(c_table.index)})
+            .values.T
+        )
+        X = self.loc[:, ["x", "y", "z"]].values.T
+        if X.dtype == np.dtype("i8"):
+            X = X.astype("f8")
 
         with warnings.catch_warnings():
             # There were some performance warnings about non-contiguos arrays.
@@ -716,19 +742,19 @@ class CartesianGetZmat(CartesianCore):
         if err == ERR_CODE_InvalidReference:
             rename = dict(enumerate(self.index))
             i = rename[row]
-            b, a, d = construction_table.loc[i, ['b', 'a', 'd']]
+            b, a, d = construction_table.loc[i, ["b", "a", "d"]]
             raise InvalidReference(i=i, b=b, a=a, d=d)
 
         if as_function:
-            return partial(xyz_functions.apply_grad_zmat_tensor,
-                           grad_C, construction_table)
+            return partial(
+                xyz_functions.apply_grad_zmat_tensor, grad_C, construction_table
+            )
         else:
             return grad_C
 
     def to_zmat(self, *args, **kwargs):
-        """Deprecated, use :meth:`~Cartesian.get_zmat`
-        """
-        message = 'Will be removed in the future. Please use give_zmat.'
+        """Deprecated, use :meth:`~Cartesian.get_zmat`"""
+        message = "Will be removed in the future. Please use give_zmat."
         with warnings.catch_warnings():
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)

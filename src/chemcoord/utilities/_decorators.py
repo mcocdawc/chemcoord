@@ -36,7 +36,7 @@ class Substitution(object):
     """
 
     def __init__(self, *args, **kwargs):
-        if (args and kwargs):
+        if args and kwargs:
             raise AssertionError("Only positional or keyword args are allowed")
 
         self.params = args or kwargs
@@ -82,7 +82,7 @@ class Appender(object):
         pass
     """
 
-    def __init__(self, addendum, join='', indents=0):
+    def __init__(self, addendum, join="", indents=0):
         if indents > 0:
             self.addendum = indent(addendum, indents=indents)
         else:
@@ -90,8 +90,8 @@ class Appender(object):
         self.join = join
 
     def __call__(self, func):
-        func.__doc__ = func.__doc__ if func.__doc__ else ''
-        self.addendum = self.addendum if self.addendum else ''
+        func.__doc__ = func.__doc__ if func.__doc__ else ""
+        self.addendum = self.addendum if self.addendum else ""
         docitems = [func.__doc__, self.addendum]
         func.__doc__ = dedent(self.join.join(docitems))
         return func
@@ -99,6 +99,6 @@ class Appender(object):
 
 def indent(text, indents=1):
     if not text or not isinstance(text, str):
-        return ''
-    jointext = ''.join(['\n'] + ['    '] * indents)
-    return jointext.join(text.split('\n'))
+        return ""
+    jointext = "".join(["\n"] + ["    "] * indents)
+    return jointext.join(text.split("\n"))

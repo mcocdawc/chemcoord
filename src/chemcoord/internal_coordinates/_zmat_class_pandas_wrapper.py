@@ -17,6 +17,7 @@ class PandasWrapper(object):
         called `metadata` and `_metadata`
         which are passed on when doing slices...
     """
+
     def __len__(self):
         return self.shape[0]
 
@@ -56,36 +57,52 @@ class PandasWrapper(object):
         """
         return self._frame.dtypes
 
-    def sort_values(self, by, axis=0, ascending=True,
-                    kind='quicksort', na_position='last'):
+    def sort_values(
+        self, by, axis=0, ascending=True, kind="quicksort", na_position="last"
+    ):
         """Sort by the values along either axis
 
         Wrapper around the :meth:`pandas.DataFrame.sort_values` method.
         """
-        return self._frame.sort_values(by, axis=axis, ascending=ascending,
-                                       inplace=False, kind=kind,
-                                       na_position=na_position)
+        return self._frame.sort_values(
+            by,
+            axis=axis,
+            ascending=ascending,
+            inplace=False,
+            kind=kind,
+            na_position=na_position,
+        )
 
-    def sort_index(self, axis=0, level=None, ascending=True, inplace=False,
-                   kind='quicksort', na_position='last',
-                   sort_remaining=True):
+    def sort_index(
+        self,
+        axis=0,
+        level=None,
+        ascending=True,
+        inplace=False,
+        kind="quicksort",
+        na_position="last",
+        sort_remaining=True,
+    ):
         """Sort object by labels (along an axis)
 
         Wrapper around the :meth:`pandas.DataFrame.sort_index` method.
         """
-        return self._frame.sort_index(axis=axis, level=level,
-                                      ascending=ascending, inplace=inplace,
-                                      kind=kind, na_position=na_position,
-                                      sort_remaining=sort_remaining)
+        return self._frame.sort_index(
+            axis=axis,
+            level=level,
+            ascending=ascending,
+            inplace=inplace,
+            kind=kind,
+            na_position=na_position,
+            sort_remaining=sort_remaining,
+        )
 
-    def insert(self, loc, column, value, allow_duplicates=False,
-               inplace=False):
+    def insert(self, loc, column, value, allow_duplicates=False, inplace=False):
         """Insert column into molecule at specified location.
 
         Wrapper around the :meth:`pandas.DataFrame.insert` method.
         """
         out = self if inplace else self.copy()
-        out._frame.insert(loc, column, value,
-                          allow_duplicates=allow_duplicates)
+        out._frame.insert(loc, column, value, allow_duplicates=allow_duplicates)
         if not inplace:
             return out

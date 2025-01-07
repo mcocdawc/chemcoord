@@ -1,0 +1,25 @@
+[lint]
+# see the rules [here](https://docs.astral.sh/ruff/rules/)
+select = ["E", "F", "I", "NPY", "PL", "ARG"]
+ignore = [
+    "S101",
+        # https://docs.astral.sh/ruff/rules/assert/
+        # We want to use assert especially because it is disabled for
+        # optimized builds.
+    "E741",
+        # https://docs.astral.sh/ruff/rules/ambiguous-variable-name/
+        # Prevents the use of the characters 'l', 'O', or 'I' as variable names.
+        # Overly restrictive, in particular when implementing mathematical expressions.
+    "PLR",
+        # https://docs.astral.sh/ruff/rules/#refactor-r
+        # while these warnings are nice for a fresh codebase,
+        # they are too many to fix now and not important enough
+    "PLW1514",
+        # https://docs.astral.sh/ruff/rules/unspecified-encoding/
+        # we just assume today that everything is UTF-8
+    "PLC2701"
+        # https://docs.astral.sh/ruff/rules/import-private-name/
+        # if people import stuff with a leading underscore
+        # they (should) know that this is private by convention
+]
+preview = true

@@ -33,21 +33,21 @@ def view(molecule, viewer=None, use_curr_dir=False):
     Returns:
         None:
     """
-    viewer = settings['defaults']['viewer']
-    if hasattr(molecule, 'view'):
+    viewer = settings["defaults"]["viewer"]
+    if hasattr(molecule, "view"):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
     else:
         if pd.api.types.is_list_like(molecule):
             cartesian_list = molecule
         else:
-            raise ValueError('Argument is neither list nor Cartesian.')
+            raise ValueError("Argument is neither list nor Cartesian.")
         if use_curr_dir:
             TEMP_DIR = os.path.curdir
         else:
             TEMP_DIR = tempfile.gettempdir()
 
         def give_filename(i):
-            filename = 'ChemCoord_list_' + str(i) + '.molden'
+            filename = "ChemCoord_list_" + str(i) + ".molden"
             return os.path.join(TEMP_DIR, filename)
 
         i = 1
@@ -67,11 +67,17 @@ def view(molecule, viewer=None, use_curr_dir=False):
                     pass
                 else:
                     os.remove(give_filename(i))
+
         Thread(target=open_file, args=(i,)).start()
 
 
-def to_molden(cartesian_list, buf=None, sort_index=True,
-              overwrite=True, float_format='{:.6f}'.format):
+def to_molden(
+    cartesian_list,
+    buf=None,
+    sort_index=True,
+    overwrite=True,
+    float_format="{:.6f}".format,
+):
     """Write a list of Cartesians into a molden file.
 
     .. note:: Since it permamently writes a file, this function
@@ -94,40 +100,44 @@ def to_molden(cartesian_list, buf=None, sort_index=True,
     if sort_index:
         cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
 
-    give_header = ("[MOLDEN FORMAT]\n"
-                   + "[N_GEO]\n"
-                   + str(len(cartesian_list)) + "\n"
-                   + '[GEOCONV]\n'
-                   + 'energy\n{energy}'
-                   + 'max-force\n{max_force}'
-                   + 'rms-force\n{rms_force}'
-                   + '[GEOMETRIES] (XYZ)\n').format
+    give_header = (
+        "[MOLDEN FORMAT]\n"
+        + "[N_GEO]\n"
+        + str(len(cartesian_list))
+        + "\n"
+        + "[GEOCONV]\n"
+        + "energy\n{energy}"
+        + "max-force\n{max_force}"
+        + "rms-force\n{rms_force}"
+        + "[GEOMETRIES] (XYZ)\n"
+    ).format
 
-    values = len(cartesian_list) * '1\n'
-    energy = [str(m.metadata.get('energy', 1)) for m in cartesian_list]
-    energy = '\n'.join(energy) + '\n'
+    values = len(cartesian_list) * "1\n"
+    energy = [str(m.metadata.get("energy", 1)) for m in cartesian_list]
+    energy = "\n".join(energy) + "\n"
 
     header = give_header(energy=energy, max_force=values, rms_force=values)
 
-    coordinates = [x.to_xyz(sort_index=sort_index, float_format=float_format)
-                   for x in cartesian_list]
-    output = header + '\n'.join(coordinates)
+    coordinates = [
+        x.to_xyz(sort_index=sort_index, float_format=float_format)
+        for x in cartesian_list
+    ]
+    output = header + "\n".join(coordinates)
 
     if buf is not None:
         if overwrite:
-            with open(buf, mode='w') as f:
+            with open(buf, mode="w") as f:
                 f.write(output)
         else:
-            with open(buf, mode='x') as f:
+            with open(buf, mode="x") as f:
                 f.write(output)
     else:
         return output
 
 
 def write_molden(*args, **kwargs):
-    """Deprecated, use :func:`~chemcoord.xyz_functions.to_molden`
-    """
-    message = 'Will be removed in the future. Please use to_molden().'
+    """Deprecated, use :func:`~chemcoord.xyz_functions.to_molden`"""
+    message = "Will be removed in the future. Please use to_molden()."
     with warnings.catch_warnings():
         warnings.simplefilter("always")
         warnings.warn(message, DeprecationWarning)
@@ -145,11 +155,12 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
     from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
-    with open(inputfile, 'r') as f:
+
+    with open(inputfile, "r") as f:
         found = False
         while not found:
             line = f.readline()
-            if '[N_GEO]' in line:
+            if "[N_GEO]" in line:
                 found = True
                 number_of_molecules = int(f.readline().strip())
 
@@ -157,7 +168,7 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
         found = False
         while not found:
             line = f.readline()
-            if 'energy' in line:
+            if "energy" in line:
                 found = True
                 for _ in range(number_of_molecules):
                     energies.append(float(f.readline().strip()))
@@ -165,7 +176,7 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
         found = False
         while not found:
             line = f.readline()
-            if '[GEOMETRIES] (XYZ)' in line:
+            if "[GEOMETRIES] (XYZ)" in line:
                 found = True
                 current_line = f.tell()
                 number_of_atoms = int(f.readline().strip())
@@ -174,14 +185,18 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
         cartesians = []
         for energy in energies:
             cartesian = Cartesian.read_xyz(
-                f, start_index=start_index, get_bonds=get_bonds,
-                nrows=number_of_atoms, engine='python')
-            cartesian.metadata['energy'] = energy
+                f,
+                start_index=start_index,
+                get_bonds=get_bonds,
+                nrows=number_of_atoms,
+                engine="python",
+            )
+            cartesian.metadata["energy"] = energy
             cartesians.append(cartesian)
     return cartesians
 
 
-def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
+def isclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
     """Compare two molecules for numerical equality.
 
     Args:
@@ -198,24 +213,26 @@ def isclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
     Returns:
         :class:`numpy.ndarray`: Boolean array.
     """
-    coords = ['x', 'y', 'z']
-    if not (set(a.index) == set(b.index)
-            and (a.loc[:, 'atom'] == b.loc[a.index, 'atom']).all(axis=None)):
-        message = 'Can only compare molecules with the same atoms and labels'
+    coords = ["x", "y", "z"]
+    if not (
+        set(a.index) == set(b.index)
+        and (a.loc[:, "atom"] == b.loc[a.index, "atom"]).all(axis=None)
+    ):
+        message = "Can only compare molecules with the same atoms and labels"
         raise ValueError(message)
 
     if align:
-        a = a.get_inertia()['transformed_Cartesian']
-        b = b.get_inertia()['transformed_Cartesian']
+        a = a.get_inertia()["transformed_Cartesian"]
+        b = b.get_inertia()["transformed_Cartesian"]
     A, B = a.loc[:, coords], b.loc[a.index, coords]
 
-    out = pd.DataFrame(index=a.index, columns=['atom'] + coords, dtype=bool)
-    out.loc[:, 'atom'] = True
+    out = pd.DataFrame(index=a.index, columns=["atom"] + coords, dtype=bool)
+    out.loc[:, "atom"] = True
     out.loc[:, coords] = np.isclose(A, B, rtol=rtol, atol=atol)
     return out
 
 
-def allclose(a, b, align=False, rtol=1.e-5, atol=1.e-8):
+def allclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
     """Compare two molecules for numerical equality.
 
     Args:
@@ -260,18 +277,16 @@ def concat(cartesians, ignore_index=False, keys=None):
         Cartesian:
     """
     frames = [molecule._frame for molecule in cartesians]
-    new = pd.concat(frames, ignore_index=ignore_index, keys=keys,
-                    verify_integrity=True)
+    new = pd.concat(frames, ignore_index=ignore_index, keys=keys, verify_integrity=True)
 
     if type(ignore_index) is bool:
-        new = pd.concat(frames, ignore_index=ignore_index, keys=keys,
-                        verify_integrity=True)
+        new = pd.concat(
+            frames, ignore_index=ignore_index, keys=keys, verify_integrity=True
+        )
     else:
-        new = pd.concat(frames, ignore_index=True, keys=keys,
-                        verify_integrity=True)
+        new = pd.concat(frames, ignore_index=True, keys=keys, verify_integrity=True)
         if type(ignore_index) is int:
-            new.index = range(ignore_index,
-                              ignore_index + len(new))
+            new.index = range(ignore_index, ignore_index + len(new))
         else:
             new.index = ignore_index
     return cartesians[0].__class__(new)
@@ -324,16 +339,14 @@ def _jit_cross(A, B):
 
 
 def normalize(vector):
-    """Normalizes a vector
-    """
+    """Normalizes a vector"""
     normed_vector = vector / np.linalg.norm(vector)
     return normed_vector
 
 
 @jit(nopython=True, cache=True)
 def _jit_normalize(vector):
-    """Normalizes a vector
-    """
+    """Normalizes a vector"""
     normed_vector = vector / np.linalg.norm(vector)
     return normed_vector
 
@@ -353,8 +366,8 @@ def get_rotation_matrix(axis, angle):
         Rotation matrix (np.array):
     """
     axis = normalize(np.array(axis))
-    if not (np.array([1, 1, 1]).shape) == (3, ):
-        raise ValueError('axis.shape has to be 3')
+    if not (np.array([1, 1, 1]).shape) == (3,):
+        raise ValueError("axis.shape has to be 3")
     angle = float(angle)
     return _jit_get_rotation_matrix(axis, angle)
 
@@ -379,13 +392,13 @@ def _jit_get_rotation_matrix(axis, angle):
     b, c, d = axis * m.sin(angle / 2)
     rot_matrix = np.empty((3, 3))
     rot_matrix[0, 0] = a**2 + b**2 - c**2 - d**2
-    rot_matrix[0, 1] = 2. * (b * c - a * d)
-    rot_matrix[0, 2] = 2. * (b * d + a * c)
-    rot_matrix[1, 0] = 2. * (b * c + a * d)
+    rot_matrix[0, 1] = 2.0 * (b * c - a * d)
+    rot_matrix[0, 2] = 2.0 * (b * d + a * c)
+    rot_matrix[1, 0] = 2.0 * (b * c + a * d)
     rot_matrix[1, 1] = a**2 + c**2 - b**2 - d**2
-    rot_matrix[1, 2] = 2. * (c * d - a * b)
-    rot_matrix[2, 0] = 2. * (b * d - a * c)
-    rot_matrix[2, 1] = 2. * (c * d + a * b)
+    rot_matrix[1, 2] = 2.0 * (c * d - a * b)
+    rot_matrix[2, 0] = 2.0 * (b * d - a * c)
+    rot_matrix[2, 1] = 2.0 * (c * d + a * b)
     rot_matrix[2, 2] = a**2 + d**2 - b**2 - c**2
     return rot_matrix
 
@@ -445,7 +458,7 @@ def get_kabsch_rotation(Q, P, weights=None):
     V, S, W = np.linalg.svd(A)  # pylint:disable=unused-variable
     W = W.T
     d = np.linalg.det(W @ V.T)
-    return W @ np.diag([1., 1., d]) @ V.T
+    return W @ np.diag([1.0, 1.0, d]) @ V.T
 
 
 def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
@@ -467,18 +480,25 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
     from chemcoord.internal_coordinates.zmat_class_main import Zmat
-    dtypes = [('atom', str),
-                    ('b', str), ('bond', float),
-                    ('a', str), ('angle', float),
-                    ('d', str), ('dihedral', float)]
 
-    new = pd.DataFrame(np.empty(len(construction_table), dtype=dtypes),
-                              index=cart_dist.index)
+    dtypes = [
+        ("atom", str),
+        ("b", str),
+        ("bond", float),
+        ("a", str),
+        ("angle", float),
+        ("d", str),
+        ("dihedral", float),
+    ]
 
-    X_dist = cart_dist.loc[:, ['x', 'y', 'z']].values.T
+    new = pd.DataFrame(
+        np.empty(len(construction_table), dtype=dtypes), index=cart_dist.index
+    )
+
+    X_dist = cart_dist.loc[:, ["x", "y", "z"]].values.T
     C_dist = np.tensordot(grad_C, X_dist, axes=([3, 2], [0, 1])).T
-    if C_dist.dtype == np.dtype('i8'):
-        C_dist = C_dist.astype('f8')
+    if C_dist.dtype == np.dtype("i8"):
+        C_dist = C_dist.astype("f8")
     try:
         C_dist[:, [1, 2]] = np.rad2deg(C_dist[:, [1, 2]])
     # Unevaluated symbolic expressions are remaining.
@@ -486,9 +506,9 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     # the raised exception before https://github.com/numpy/numpy/issues/13666
     except (AttributeError, TypeError):
         C_dist[:, [1, 2]] = sympy.deg(C_dist[:, [1, 2]])
-        new = new.astype({k: 'O' for k in ['bond', 'angle', 'dihedral']})
+        new = new.astype({k: "O" for k in ["bond", "angle", "dihedral"]})
 
-    new.loc[:, ['b', 'a', 'd']] = construction_table
-    new.loc[:, 'atom'] = cart_dist.loc[:, 'atom']
-    new.loc[:, ['bond', 'angle', 'dihedral']] = C_dist
-    return Zmat(new, _metadata={'last_valid_cartesian': cart_dist})
+    new.loc[:, ["b", "a", "d"]] = construction_table
+    new.loc[:, "atom"] = cart_dist.loc[:, "atom"]
+    new.loc[:, ["bond", "angle", "dihedral"]] = C_dist
+    return Zmat(new, _metadata={"last_valid_cartesian": cart_dist})

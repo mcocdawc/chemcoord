@@ -40,7 +40,7 @@ class GenericCore(object):
         Returns:
             Cartesian:
         """
-        atoms = self['atom']
+        atoms = self["atom"]
         data = constants.elements
         if pd.api.types.is_list_like(new_cols):
             new_cols = set(new_cols)
@@ -62,10 +62,10 @@ class GenericCore(object):
             float:
         """
         try:
-            mass = self.loc[:, 'mass'].sum()
+            mass = self.loc[:, "mass"].sum()
         except KeyError:
-            mass_molecule = self.add_data('mass')
-            mass = mass_molecule.loc[:, 'mass'].sum()
+            mass_molecule = self.add_data("mass")
+            mass = mass_molecule.loc[:, "mass"].sum()
         return mass
 
     def has_same_sumformula(self, other):
@@ -78,10 +78,10 @@ class GenericCore(object):
             bool:
         """
         same_atoms = True
-        for atom in set(self['atom']):
-            own_atom_number = len(self[self['atom'] == atom])
-            other_atom_number = len(other[other['atom'] == atom])
-            same_atoms = (own_atom_number == other_atom_number)
+        for atom in set(self["atom"]):
+            own_atom_number = len(self[self["atom"] == atom])
+            other_atom_number = len(other[other["atom"] == atom])
+            same_atoms = own_atom_number == other_atom_number
             if not same_atoms:
                 break
         return same_atoms
@@ -95,5 +95,5 @@ class GenericCore(object):
         Returns:
             int:
         """
-        atomic_number = constants.elements['atomic_number'].to_dict()
-        return sum([atomic_number[atom] for atom in self['atom']]) - charge
+        atomic_number = constants.elements["atomic_number"].to_dict()
+        return sum([atomic_number[atom] for atom in self["atom"]]) - charge

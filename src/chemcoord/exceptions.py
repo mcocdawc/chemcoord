@@ -12,7 +12,8 @@ class PhysicalMeaning(Exception):
     any information of physical meaning.
 
     """
-    def __init__(self, message=''):
+
+    def __init__(self, message=""):
         self.message = message
 
     def __str__(self):
@@ -27,6 +28,7 @@ class UndefinedCoordinateSystem(PhysicalMeaning):
     system for the chosen construction table.
 
     """
+
     pass
 
 
@@ -45,13 +47,21 @@ class InvalidReference(UndefinedCoordinateSystem):
       it was raised from the safe assignment methods
       (:meth:`Zmat.safe_loc` and :meth:`Zmat.unsafe_loc`).
     """
-    def __init__(self, message=None, i=None, b=None, a=None, d=None,
-                 already_built_cartesian=None,
-                 zmat_after_assignment=None):
+
+    def __init__(
+        self,
+        message=None,
+        i=None,
+        b=None,
+        a=None,
+        d=None,
+        already_built_cartesian=None,
+        zmat_after_assignment=None,
+    ):
         self.message = message
         if i:
             self.index = i
-        references = {'b': b, 'a': a, 'd': d}
+        references = {"b": b, "a": a, "d": d}
         references = {k: v for k, v in references.items() if v is not None}
         if references:
             self.references = references
@@ -62,15 +72,15 @@ class InvalidReference(UndefinedCoordinateSystem):
 
     def __str__(self):
         if self.message is None:
-            give_message = ('Atom {i} uses an invalid/linear reference '
-                            'spanned by: {r}'.format)
+            give_message = (
+                "Atom {i} uses an invalid/linear reference " "spanned by: {r}".format
+            )
             return give_message(i=self.index, r=self.references)
         else:
             return repr(self.message)
 
 
 class IllegalArgumentCombination(ValueError):
-    """Raised if the combination of correctly typed arguments is invalid.
+    """Raised if the combination of correctly typed arguments is invalid."""
 
-    """
     pass

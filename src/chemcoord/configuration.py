@@ -9,8 +9,8 @@ from warnings import warn
 
 
 def _give_default_file_path():
-    HOME = os.path.expanduser('~')
-    filepath = os.path.join(HOME, '.chemcoordrc')
+    HOME = os.path.expanduser("~")
+    filepath = os.path.join(HOME, ".chemcoordrc")
     return filepath
 
 
@@ -19,18 +19,17 @@ def provide_default_settings():
     # The Cartesian().get_bonds() method will use or not use a lookup.
     # Greatly increases performance if True, but could introduce bugs
     # if the Cartesian().xyz_frame is changed manually.
-    settings['defaults'] = {}
-    settings['defaults']['use_lookup'] = False
-    settings['defaults']['atomic_radius_data'] = 'atomic_radius_cc'
-    settings['defaults']['viewer'] = 'gv.exe'
+    settings["defaults"] = {}
+    settings["defaults"]["use_lookup"] = False
+    settings["defaults"]["atomic_radius_data"] = "atomic_radius_cc"
+    settings["defaults"]["viewer"] = "gv.exe"
     # settings['viewer'] = 'avogadro'
     # settings['viewer'] = 'molden'
     # settings['viewer'] = 'jmol'
     return settings
 
 
-def write_configuration_file(filepath=_give_default_file_path(),
-                             overwrite=False):
+def write_configuration_file(filepath=_give_default_file_path(), overwrite=False):
     """Create a configuration file.
 
     Writes the current state of settings into a configuration file.
@@ -53,9 +52,9 @@ def write_configuration_file(filepath=_give_default_file_path(),
         try:
             raise FileExistsError
         except NameError:  # because of python2
-            warn('File exists already and overwrite is False (default).')
+            warn("File exists already and overwrite is False (default).")
     else:
-        with open(filepath, 'w') as configfile:
+        with open(filepath, "w") as configfile:
             config.write(configfile)
 
 
@@ -77,6 +76,7 @@ def read_configuration_file(filepath=_give_default_file_path()):
 
     def get_correct_type(section, key, config):
         """Gives e.g. the boolean True for the string 'True'"""
+
         def getstring(section, key, config):
             return config[section][key]
 
@@ -88,9 +88,10 @@ def read_configuration_file(filepath=_give_default_file_path()):
 
         def getfloat(section, key, config):  # pylint:disable=unused-variable
             return config[section].getfloat(key)
+
         special_actions = {}  # Something different than a string is expected
-        special_actions['defaults'] = {}
-        special_actions['defaults']['use_lookup'] = getboolean
+        special_actions["defaults"] = {}
+        special_actions["defaults"]["use_lookup"] = getboolean
         try:
             return special_actions[section][key](section, key, config)
         except KeyError:

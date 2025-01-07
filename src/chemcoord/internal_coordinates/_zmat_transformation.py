@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals, with_statement)
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+    with_statement,
+)
 
 
 import numba as nb
@@ -12,7 +17,10 @@ from numba import jit
 import chemcoord.constants as constants
 from chemcoord.cartesian_coordinates.xyz_functions import _jit_isclose
 from chemcoord.cartesian_coordinates._cart_transformation import (
-    get_B, get_grad_B, get_ref_pos)
+    get_B,
+    get_grad_B,
+    get_ref_pos,
+)
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
@@ -49,7 +57,7 @@ def get_grad_S(C, j):
     # Derive for delta
     grad_S[0, 2] = -r * sin(alpha) * sin(delta)
     grad_S[1, 2] = -r * sin(alpha) * cos(delta)
-    grad_S[2, 2] = 0.
+    grad_S[2, 2] = 0.0
     return grad_S
 
 
@@ -109,7 +117,9 @@ def chain_grad(X, grad_X, C, c_table, j, l):
             for m2 in range(3):
                 if c_table[m2, j] > constants.keys_below_are_abs_refs:
                     for m1 in range(3):
-                        change_of_B += (grad_B[:, :, m2, m1] * grad_X[m1, c_table[m2, j], l, k])
+                        change_of_B += (
+                            grad_B[:, :, m2, m1] * grad_X[m1, c_table[m2, j], l, k]
+                        )
 
             new_grad_X[:, k] = change_of_B @ S + grad_X[:, c_table[0, j], l, k]
     return new_grad_X
