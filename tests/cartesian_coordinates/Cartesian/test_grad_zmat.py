@@ -52,7 +52,7 @@ def test_grad_zmat():
 
     zmat_dist = molecule.get_grad_zmat(c_table)(dist_mol)
 
-    moved_atoms = zmat_dist.index[zmat_dist.loc[:, ['bond', 'angle', 'dihedral']] != 0]
+    moved_atoms = zmat_dist.index[(zmat_dist.loc[:, ['bond', 'angle', 'dihedral']] != 0).any(axis=1)]
 
     assert moved_atoms[0] == 13
     assert (moved_atoms[1:] == c_table.index[(c_table == 13).any(axis=1)]).all()
