@@ -17,7 +17,7 @@ class PointGroupOperations(list):
     """
 
     def __init__(self, sch_symbol, operations, tolerance=0.1):
-        from pymatgen.symmetry.analyzer import generate_full_symmops
+        from pymatgen.symmetry.analyzer import generate_full_symmops  # noqa: PLC0415
 
         self.sch_symbol = sch_symbol
         super(PointGroupOperations, self).__init__(

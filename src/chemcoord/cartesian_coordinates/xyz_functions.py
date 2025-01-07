@@ -155,7 +155,9 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
-    from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
+    from chemcoord.cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
+        Cartesian,
+    )
 
     with open(inputfile, "r") as f:
         found = False
@@ -291,28 +293,6 @@ def concat(cartesians, ignore_index=False, keys=None):
         else:
             new.index = ignore_index
     return cartesians[0].__class__(new)
-
-
-def dot(A, B):
-    """Matrix multiplication between A and B
-
-    This function is equivalent to ``A @ B``, which is unfortunately
-    not possible under python 2.x.
-
-    Args:
-        A (sequence):
-        B (sequence):
-
-    Returns:
-        sequence:
-    """
-    try:
-        result = A.__matmul__(B)
-        if result is NotImplemented:
-            result = B.__rmatmul__(A)
-    except AttributeError:
-        result = B.__rmatmul__(A)
-    return result
 
 
 @jit(nopython=True, cache=True)
@@ -456,7 +436,7 @@ def get_kabsch_rotation(Q, P, weights=None):
     else:
         A = P.T @ np.diag(weights) @ Q
     # One can't initialize an array over its transposed
-    V, S, W = np.linalg.svd(A)  # pylint:disable=unused-variable
+    V, S, W = np.linalg.svd(A)  # noqa: F841
     W = W.T
     d = np.linalg.det(W @ V.T)
     return W @ np.diag([1.0, 1.0, d]) @ V.T
@@ -480,7 +460,7 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     if (construction_table.index != cart_dist.index).any():
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
-    from chemcoord.internal_coordinates.zmat_class_main import Zmat
+    from chemcoord.internal_coordinates.zmat_class_main import Zmat  # noqa: PLC0415
 
     dtypes = [
         ("atom", str),
