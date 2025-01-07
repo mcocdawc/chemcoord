@@ -12,7 +12,7 @@ from chemcoord.xyz_functions import allclose
 
 try:
     pd.set_option("future.no_silent_downcasting", True)
-except:
+except:  # noqa: E722
     # Yes I want a bare except
     pass
 
@@ -292,8 +292,8 @@ def test_coordination_sphere():
     }
     expctd[6] = set()
 
-    for i in expctd:
-        assert expctd[i] == set(molecule.get_coordination_sphere(7, i).index)
+    for i_atom, connected_atoms in expctd.items():
+        assert connected_atoms == set(molecule.get_coordination_sphere(7, i_atom).index)
 
 
 def test_cut_sphere():
@@ -321,9 +321,6 @@ def test_cut_cuboid():
 def test_get_inertia():
     A = molecule.get_inertia()
     eig, t_mol = A["eigenvectors"], A["transformed_Cartesian"]
-    assert cc.xyz_functions.allclose(
-        (molecule - molecule.get_barycenter()).__rmatmul__(eig), t_mol
-    )
     assert cc.xyz_functions.allclose(
         eig @ (molecule - molecule.get_barycenter()), t_mol
     )

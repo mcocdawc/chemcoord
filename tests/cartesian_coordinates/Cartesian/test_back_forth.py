@@ -10,7 +10,7 @@ from chemcoord.xyz_functions import allclose
 
 try:
     pd.set_option("future.no_silent_downcasting", True)
-except:
+except:  # noqa: E722
     # Yes I want a bare except
     pass
 
@@ -43,19 +43,19 @@ def test_back_and_forth1():
     back_and_forth(os.path.join(STRUCTURE_PATH, "MIL53_small.xyz"))
 
 
-def test_back_and_forth1():
+def test_back_and_forth2():
     back_and_forth(os.path.join(STRUCTURE_PATH, "MIL53_middle.xyz"))
 
 
-def test_back_and_forth2():
+def test_back_and_forth3():
     back_and_forth(os.path.join(STRUCTURE_PATH, "ruthenium.xyz"))
 
 
-def test_back_and_forth3():
+def test_back_and_forth4():
     back_and_forth(os.path.join(STRUCTURE_PATH, "Cd_lattice.xyz"))
 
 
-def test_back_and_forth4():
+def test_back_and_forth5():
     back_and_forth(os.path.join(STRUCTURE_PATH, "nasty_cube.xyz"))
 
 

@@ -6,7 +6,7 @@ import chemcoord as cc
 
 try:
     pd.set_option("future.no_silent_downcasting", True)
-except:
+except:  # noqa: E722
     # Yes I want a bare except
     pass
 
