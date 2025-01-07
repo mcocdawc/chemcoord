@@ -80,7 +80,7 @@ class PureInternalMovement(object):
         with PureInternalMovement(True):
             zmat_1.loc[1, 'bond'] = value
 
-    the translational and rotational degrees of freedom are automatically projected oout.
+    the translational and rotational degrees of freedom are automatically projected out.
 
     For infinitesimal movements this would be done with the Eckhard conditions,
     but in this case we allow large non-infinitesimal movements.
@@ -123,6 +123,8 @@ def apply_grad_cartesian_tensor(grad_X, zmat_dist):
     except (TypeError, AttributeError):
         C_dist[[1, 2], :] = sympy.rad(C_dist[[1, 2], :])
     cart_dist = np.tensordot(grad_X, C_dist, axes=([3, 2], [0, 1])).T
-    from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
+    from chemcoord.cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
+        Cartesian,
+    )
 
     return Cartesian(atoms=zmat_dist["atom"], coords=cart_dist, index=zmat_dist.index)

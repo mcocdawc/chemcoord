@@ -33,7 +33,7 @@ The differences are explained in the stub page of
 )
 
 
-class ZmatCore(PandasWrapper, GenericCore):
+class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     """The main class for dealing with internal coordinates."""
 
     _required_cols = frozenset({"atom", "b", "bond", "a", "angle", "d", "dihedral"})
@@ -531,7 +531,7 @@ class ZmatCore(PandasWrapper, GenericCore):
 
         def insert_dummy(cartesian, reference_labels, n1):
             cartesian = cartesian.copy()
-            b_pos, a_pos, d_pos = cartesian._get_positions(reference_labels)
+            b_pos, a_pos, _ = cartesian._get_positions(reference_labels)
             BA = a_pos - b_pos
             N2 = np.cross(n1, BA)
             n2 = N2 / np.linalg.norm(N2)
@@ -667,7 +667,9 @@ class ZmatCore(PandasWrapper, GenericCore):
             )
             xyz_frame["atom"] = self.loc[xyz_frame.index, "atom"]
             xyz_frame.loc[:, ["x", "y", "z"]] = positions[:row]
-            from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
+            from chemcoord.cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
+                Cartesian,
+            )
 
             cartesian = Cartesian(xyz_frame, metadata=self.metadata)
             return cartesian
@@ -827,7 +829,7 @@ class ZmatCore(PandasWrapper, GenericCore):
             grad_X = drop_dummies(grad_X, self)
 
         if as_function:
-            from chemcoord.internal_coordinates.zmat_functions import (
+            from chemcoord.internal_coordinates.zmat_functions import (  # noqa: PLC0415
                 apply_grad_cartesian_tensor,
             )
 

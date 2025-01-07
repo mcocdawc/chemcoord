@@ -1,9 +1,8 @@
-import os
+# ruff: noqa: E402
+# ruff: noqa: PLC0414
+# ruff: noqa: F401
 
-try:
-    from importlib.metadata import version
-except ModuleNotFoundError:
-    from importlib_metadata import version
+from importlib.metadata import version
 
 __version__ = version("chemcoord")
 _git_branch = "master"
@@ -15,7 +14,7 @@ def export(func):
     try:
         __all__.append(func.__name__)
     except NameError:
-        __all__ = [func.__name__]
+        __all__ = [func.__name__]  # noqa: F841
     return func
 
 

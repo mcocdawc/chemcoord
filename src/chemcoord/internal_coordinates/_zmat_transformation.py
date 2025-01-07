@@ -146,13 +146,11 @@ def to_barycenter(X, masses):
 
 @jit(nopython=True, cache=True)
 def remove_translation(grad_X, masses):
-    M = masses.sum()
     clean_grad_X = np.empty_like(grad_X)
     n_atoms = grad_X.shape[1]
     for j in range(3):
         for i in range(n_atoms):
             clean_grad_X[:, :, i, j] = to_barycenter(grad_X[:, :, i, j], masses)
-
     return clean_grad_X
 
 
