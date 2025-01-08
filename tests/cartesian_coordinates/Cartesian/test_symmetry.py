@@ -5,11 +5,7 @@ import pandas as pd
 
 import chemcoord as cc
 
-try:
-    pd.set_option("future.no_silent_downcasting", True)
-except:  # noqa: E722
-    # Yes I want a bare except
-    pass
+pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():
