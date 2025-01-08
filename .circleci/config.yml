@@ -6,7 +6,7 @@ analysis: &analysis
       - checkout
       - run:
           name: Install chemcoord
-          command: pip3 install --editable .
+          command: pip3 install .
       - run:
           name: Install infrastructure
           command: pip3 install -r tests/static_analysis_requirements.txt
@@ -51,22 +51,23 @@ workflows:
 
 jobs:
   py39:
-    <<: *run_tests
     docker:
       - image: cimg/python:3.9
+    <<: *run_tests
 
   py310:
-    <<: *run_tests
     docker:
       - image: cimg/python:3.10
+    <<: *run_tests
 
   py311:
-    <<: *analysis
-    <<: *run_tests
     docker:
       - image: cimg/python:3.11
+    steps:
+      - <<: *analysis
+      - <<: *run_tests
 
   py312:
-    <<: *run_tests
     docker:
       - image: cimg/python:3.12
+    <<: *run_tests
