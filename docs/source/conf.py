@@ -57,7 +57,7 @@ intersphinx_mapping = {
     "pandas": ("http://pandas.pydata.org/pandas-docs/stable/", None),
     "sympy": ("http://docs.sympy.org/latest/", None),
     "pymatgen": ("http://pymatgen.org/", None),
-    "https://docs.python.org/3": None,
+    "python": ("https://docs.python.org/3", None),
 }
 #    'sympy': ('http://www.sympy.org/', None)}
 

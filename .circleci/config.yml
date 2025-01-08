@@ -40,6 +40,12 @@ run_tests: &run_tests
           name: Upload coverage reports to Codecov
           command: |
             bash <(curl -s https://codecov.io/bash)
+      - run:
+          name: Prepare documentation
+          command: pip3 install -r docs/requirements.txt
+      - run:
+          name: Build documentation
+          command: cd docs; make html
 
 workflows:
   sample:
