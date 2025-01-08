@@ -41,6 +41,11 @@ run_tests: &run_tests
           command: |
             bash <(curl -s https://codecov.io/bash)
 
+combined_steps: &combined_steps
+  steps:
+    - <<: *analysis
+    - <<: *run_tests
+
 workflows:
   sample:
     jobs:
@@ -62,8 +67,7 @@ jobs:
 
   py311:
     steps:
-      - <<: *analysis
-      - <<: *run_tests
+    <<: *combined_steps
     docker:
       - image: cimg/python:3.11
 
