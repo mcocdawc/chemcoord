@@ -1,15 +1,15 @@
 version: 2.1
 
 
-shared: &shared
+analysis: &analysis
     steps:
       - checkout
       - run:
           name: Install chemcoord
-          command: pip3 install --editable .
+          command: pip3 install .
       - run:
           name: Install infrastructure
-          command: pip3 install pytest pytest-cov mypy ruff
+          command: pip3 install -r tests/static_analysis_requirements.txt
       - run:
           name: Check trailing whitespace
           command: git diff-tree --check $(git hash-object -t tree /dev/null)  HEAD -- '(exclude)docs/make.bat'
@@ -18,7 +18,21 @@ shared: &shared
           command: ruff format --diff
       - run:
           name: Ruff check
-          command: ruff check . || true
+          command: ruff check
+      - run:
+          name: Type checking
+          command: mypy src/ tests/
+
+
+run_tests: &run_tests
+    steps:
+      - checkout
+      - run:
+          name: Install chemcoord
+          command: pip3 install .
+      - run:
+          name: Install infrastructure
+          command: pip3 install pytest pytest-cov
       - run:
           name: Running tests
           command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
@@ -32,26 +46,44 @@ workflows:
     jobs:
       - py39
       - py310
+      - py310_analysis
       - py311
+      - py311_analysis
       - py312
+      - py313
 
 jobs:
   py39:
-    <<: *shared
+    <<: *run_tests
     docker:
       - image: cimg/python:3.9
 
   py310:
-    <<: *shared
+    <<: *run_tests
+    docker:
+      - image: cimg/python:3.10
+
+  py310_analysis:
+    <<: *analysis
     docker:
       - image: cimg/python:3.10
 
   py311:
-    <<: *shared
+    <<: *run_tests
+    docker:
+      - image: cimg/python:3.11
+
+  py311_analysis:
+    <<: *analysis
     docker:
       - image: cimg/python:3.11
 
   py312:
-    <<: *shared
+    <<: *run_tests
+    docker:
+      - image: cimg/python:3.12
+
+  py313:
+    <<: *run_tests
     docker:
       - image: cimg/python:3.12
