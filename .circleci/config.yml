@@ -1,7 +1,7 @@
 version: 2.1
 
 
-shared: &shared
+analysis: &analysis
     steps:
       - checkout
       - run:
@@ -22,6 +22,17 @@ shared: &shared
       - run:
           name: Type checking
           command: mypy src/ tests/
+
+
+run_tests: &run_tests
+    steps:
+      - checkout
+      - run:
+          name: Install chemcoord
+          command: pip3 install --editable .
+      - run:
+          name: Install infrastructure
+          command: pip3 install -r pytest pytest-cov
       - run:
           name: Running tests
           command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
@@ -40,21 +51,21 @@ workflows:
 
 jobs:
   py39:
-    <<: *shared
+    <<: *run_tests
     docker:
       - image: cimg/python:3.9
 
   py310:
-    <<: *shared
+    <<: *run_tests
     docker:
       - image: cimg/python:3.10
 
   py311:
-    <<: *shared
+    <<: *run_tests
     docker:
       - image: cimg/python:3.11
 
   py312:
-    <<: *shared
+    <<: *run_tests
     docker:
       - image: cimg/python:3.12
