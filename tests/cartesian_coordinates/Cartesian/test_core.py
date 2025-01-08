@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pandas as pd
 import pytest
 import sympy
 
@@ -8,6 +9,12 @@ import chemcoord as cc
 from chemcoord.cartesian_coordinates.xyz_functions import get_rotation_matrix
 from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.xyz_functions import allclose
+
+try:
+    pd.set_option("future.no_silent_downcasting", True)
+except:  # noqa: E722
+    # Yes I want a bare except
+    pass
 
 
 def get_script_path():
