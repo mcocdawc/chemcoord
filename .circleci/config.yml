@@ -50,7 +50,6 @@ workflows:
       - py311
       - py311_analysis
       - py312
-      - py312_analysis
       - py313
 
 jobs:
@@ -81,11 +80,6 @@ jobs:
 
   py312:
     <<: *run_tests
-    docker:
-      - image: cimg/python:3.12
-
-  py312_analysis:
-    <<: *analysis
     docker:
       - image: cimg/python:3.12
 
