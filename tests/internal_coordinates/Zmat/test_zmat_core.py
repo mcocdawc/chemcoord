@@ -11,7 +11,7 @@ from chemcoord.xyz_functions import allclose
 
 try:
     pd.set_option("future.no_silent_downcasting", True)
-except:
+except:  # noqa: E722
     # Yes I want a bare except
     pass
 
@@ -34,7 +34,7 @@ STRUCTURE_PATH = get_structure_path(get_script_path())
 
 
 def test_assignment():
-    theta, x = Symbol("theta", real=True), Symbol("x", real=True)
+    x = Symbol("x", real=True)
 
     molecule = cc.Cartesian.read_xyz(
         join(STRUCTURE_PATH, "MIL53_small.xyz"), start_index=1
@@ -48,7 +48,7 @@ def test_assignment():
 
 
 def test_addition_with_sympy():
-    theta, x = Symbol("theta", real=True), Symbol("x", real=True)
+    x = Symbol("x", real=True)
 
     molecule = cc.Cartesian.read_xyz(
         join(STRUCTURE_PATH, "MIL53_small.xyz"), start_index=1
