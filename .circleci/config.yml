@@ -30,23 +30,13 @@ shared: &shared
 workflows:
   sample:
     jobs:
-      - py37
-      - py38
       - py39
       - py310
       - py311
+      - py312
+      - py313
 
 jobs:
-  py37:
-    <<: *shared
-    docker:
-      - image: cimg/python:3.7
-
-  py38:
-    <<: *shared
-    docker:
-      - image: cimg/python:3.8
-
   py39:
     <<: *shared
     docker:
@@ -61,3 +51,13 @@ jobs:
     <<: *shared
     docker:
       - image: cimg/python:3.11
+
+  py312:
+    <<: *shared
+    docker:
+      - image: cimg/python:3.12
+
+  py313:
+    <<: *shared
+    docker:
+      - image: cimg/python:3.13
