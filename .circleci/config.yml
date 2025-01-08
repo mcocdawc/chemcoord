@@ -29,10 +29,10 @@ run_tests: &run_tests
       - checkout
       - run:
           name: Install chemcoord
-          command: pip3 install --editable .
+          command: pip3 install .
       - run:
           name: Install infrastructure
-          command: pip3 install -r pytest pytest-cov
+          command: pip3 install pytest pytest-cov
       - run:
           name: Running tests
           command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
@@ -61,6 +61,7 @@ jobs:
       - image: cimg/python:3.10
 
   py311:
+    <<: *analysis
     <<: *run_tests
     docker:
       - image: cimg/python:3.11
