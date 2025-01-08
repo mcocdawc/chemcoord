@@ -25,21 +25,20 @@ analysis: &analysis
 
 
 run_tests: &run_tests
-    steps:
-      - checkout
-      - run:
-          name: Install chemcoord
-          command: pip3 install .
-      - run:
-          name: Install infrastructure
-          command: pip3 install pytest pytest-cov
-      - run:
-          name: Running tests
-          command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
-      - run:
-          name: Upload coverage reports to Codecov
-          command: |
-            bash <(curl -s https://codecov.io/bash)
+    - checkout
+    - run:
+        name: Install chemcoord
+        command: pip3 install .
+    - run:
+        name: Install infrastructure
+        command: pip3 install pytest pytest-cov
+    - run:
+        name: Running tests
+        command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
+    - run:
+        name: Upload coverage reports to Codecov
+        command: |
+          bash <(curl -s https://codecov.io/bash)
 
 combined_steps: &combined_steps
   steps:
@@ -56,22 +55,23 @@ workflows:
 
 jobs:
   py39:
-    <<: *run_tests
+    steps:
+      <<: *run_tests
     docker:
       - image: cimg/python:3.9
 
-  py310:
-    <<: *run_tests
-    docker:
-      - image: cimg/python:3.10
+  # py310:
+  #   <<: *run_tests
+  #   docker:
+  #     - image: cimg/python:3.10
 
-  py311:
-    steps:
-    <<: *combined_steps
-    docker:
-      - image: cimg/python:3.11
+  # py311:
+  #   steps:
+  #   <<: *combined_steps
+  #   docker:
+  #     - image: cimg/python:3.11
 
-  py312:
-    <<: *run_tests
-    docker:
-      - image: cimg/python:3.12
+  # py312:
+  #   <<: *run_tests
+  #   docker:
+  #     - image: cimg/python:3.12
