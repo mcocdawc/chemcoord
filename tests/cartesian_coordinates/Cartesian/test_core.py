@@ -413,8 +413,8 @@ def test_align_and_reindex_similar():
     m2 = cartesians[-1]
 
     m2_shuffled = get_rotation_matrix([1, 1, 1], 0.2) @ m2 + 8
-    np.random.seed(77)
-    m2_shuffled.index = np.random.permutation(m2.index)
+    rng = np.random.RandomState(77)
+    m2_shuffled.index = rng.permutation(m2.index)
 
     m2 = (m2 - m2.get_centroid()).sort_index()
     m2_shuffled = (m2_shuffled - m2_shuffled.get_centroid()).sort_index()
