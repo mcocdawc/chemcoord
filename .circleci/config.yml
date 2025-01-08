@@ -18,7 +18,10 @@ shared: &shared
           command: ruff format --diff
       - run:
           name: Ruff check
-          command: ruff check . || true
+          command: ruff check
+      - run:
+          name: Type checking
+          command: mypy src/ tests/
       - run:
           name: Running tests
           command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
