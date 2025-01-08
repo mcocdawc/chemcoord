@@ -28,11 +28,11 @@ else
         >&2 echo 'You can check yourself by executing "ruff format --diff `git rev-parse --show-toplevel`"'
         exit 1
     fi
-    # if ! ruff check `git rev-parse --show-toplevel` || true >/dev/null 2>&1; then
-    #     >&2 echo "There are problems in the code."
-    #     >&2 echo 'You can check yourself by executing "ruff check `git rev-parse --show-toplevel`"'
-    #     exit 1
-    # fi
+    if ! ruff check `git rev-parse --show-toplevel` >/dev/null 2>&1; then
+        >&2 echo "There are problems in the code."
+        >&2 echo 'You can check yourself by executing "ruff check `git rev-parse --show-toplevel`"'
+        exit 1
+    fi
 fi
 
 
