@@ -44,13 +44,20 @@ run_tests: &run_tests
 workflows:
   sample:
     jobs:
+      - py38
       - py39
       - py310
       - py311
       - py311_analysis
       - py312
+      - py313
 
 jobs:
+  py38:
+    <<: *run_tests
+    docker:
+      - image: cimg/python:3.8
+
   py39:
     <<: *run_tests
     docker:
@@ -72,6 +79,11 @@ jobs:
       - image: cimg/python:3.11
 
   py312:
+    <<: *run_tests
+    docker:
+      - image: cimg/python:3.12
+
+  py313:
     <<: *run_tests
     docker:
       - image: cimg/python:3.12
