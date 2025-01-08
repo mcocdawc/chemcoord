@@ -1,14 +1,11 @@
 import os
 
-import chemcoord as cc
 import numpy as np
 import pandas as pd
 
-try:
-    pd.set_option("future.no_silent_downcasting", True)
-except:
-    # Yes I want a bare except
-    pass
+import chemcoord as cc
+
+pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():
@@ -46,10 +43,10 @@ def test_asymmetric_unit():
 
 
 def test_point_group_detection_and_symmetrizing():
-    np.random.seed(77)
+    rng = np.random.RandomState(77)
     dist_molecule = molecule.copy()
     assert "C2v" == dist_molecule.get_pointgroup(tolerance=0.1).sch_symbol
-    dist_molecule += np.random.randn(len(dist_molecule), 3) / 25
+    dist_molecule += rng.standard_normal((len(dist_molecule), 3)) / 25
     assert "C1" == dist_molecule.get_pointgroup(tolerance=0.1).sch_symbol
     eq = dist_molecule.symmetrize(max_n=25, tolerance=0.3, epsilon=1e-5)
     assert "C2v" == eq["sym_mol"].get_pointgroup(tolerance=0.1).sch_symbol

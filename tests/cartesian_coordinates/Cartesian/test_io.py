@@ -1,18 +1,12 @@
+import os
+
+import pandas as pd
+import pytest
+
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
-import pytest
-from chemcoord.exceptions import UndefinedCoordinateSystem
-import itertools
-import numpy as np
-import os
-import sys
-import pandas as pd
 
-try:
-    pd.set_option("future.no_silent_downcasting", True)
-except:
-    # Yes I want a bare except
-    pass
+pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

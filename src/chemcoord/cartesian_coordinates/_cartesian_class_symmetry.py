@@ -5,7 +5,7 @@ from chemcoord.cartesian_coordinates.point_group import PointGroupOperations
 
 class CartesianSymmetry(CartesianCore):
     def _get_point_group_analyzer(self, tolerance=0.3):
-        from pymatgen.symmetry.analyzer import PointGroupAnalyzer
+        from pymatgen.symmetry.analyzer import PointGroupAnalyzer  # noqa: PLC0415
 
         return PointGroupAnalyzer(self.get_pymatgen_molecule(), tolerance=tolerance)
 
@@ -103,7 +103,7 @@ class CartesianSymmetry(CartesianCore):
             ``operations[i][j]`` gives the symmetry operation
             that maps atom ``i`` unto ``j``.
         """
-        from pymatgen.symmetry.analyzer import iterative_symmetrize
+        from pymatgen.symmetry.analyzer import iterative_symmetrize  # noqa: PLC0415
 
         mg_mol = self.get_pymatgen_molecule()
         eq = iterative_symmetrize(
@@ -115,7 +115,7 @@ class CartesianSymmetry(CartesianCore):
     def get_asymmetric_unit(self, eq=None):
         eq = self.get_equivalent_atoms() if (eq is None) else eq
         new_frame = self.loc[eq["eq_sets"].keys(), :]._frame
-        from chemcoord.cartesian_coordinates.asymmetric_unit_cartesian_class import (
+        from chemcoord.cartesian_coordinates.asymmetric_unit_cartesian_class import (  # noqa: PLC0415
             AsymmetricUnitCartesian,
         )
 

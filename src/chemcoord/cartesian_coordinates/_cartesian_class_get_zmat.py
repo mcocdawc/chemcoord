@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import warnings
 from collections import OrderedDict
-
 from functools import partial
 from itertools import permutations
 
@@ -272,7 +271,7 @@ class CartesianGetZmat(CartesianCore):
         for fragment in fragments[1:]:
             finished_part = self.loc[full_table.index]
             if pd.api.types.is_list_like(fragment):
-                fragment, references = fragment
+                fragment, references = fragment  # noqa: PLW2901
                 if len(references) < min(3, len(fragment)):
                     raise ValueError(
                         "If you specify references for a "

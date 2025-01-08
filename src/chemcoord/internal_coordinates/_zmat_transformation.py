@@ -7,20 +7,19 @@ from __future__ import (
     with_statement,
 )
 
-
 import numba as nb
 import numpy as np
-from numpy import sin, cos, cross
-from numpy.linalg import inv
 from numba import jit
+from numpy import cos, cross, sin
+from numpy.linalg import inv
 
 import chemcoord.constants as constants
-from chemcoord.cartesian_coordinates.xyz_functions import _jit_isclose
 from chemcoord.cartesian_coordinates._cart_transformation import (
     get_B,
     get_grad_B,
     get_ref_pos,
 )
+from chemcoord.cartesian_coordinates.xyz_functions import _jit_isclose
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
@@ -147,13 +146,11 @@ def to_barycenter(X, masses):
 
 @jit(nopython=True, cache=True)
 def remove_translation(grad_X, masses):
-    M = masses.sum()
     clean_grad_X = np.empty_like(grad_X)
     n_atoms = grad_X.shape[1]
     for j in range(3):
         for i in range(n_atoms):
             clean_grad_X[:, :, i, j] = to_barycenter(grad_X[:, :, i, j], masses)
-
     return clean_grad_X
 
 

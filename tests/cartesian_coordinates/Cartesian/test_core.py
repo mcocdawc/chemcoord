@@ -1,24 +1,16 @@
-import itertools
 import os
-import sys
 
 import numpy as np
+import pandas as pd
 import pytest
-
 import sympy
 
 import chemcoord as cc
-from chemcoord.cartesian_coordinates.xyz_functions import dot, get_rotation_matrix
-from chemcoord.exceptions import PhysicalMeaning, UndefinedCoordinateSystem
+from chemcoord.cartesian_coordinates.xyz_functions import get_rotation_matrix
+from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.xyz_functions import allclose
 
-import pandas as pd
-
-try:
-    pd.set_option("future.no_silent_downcasting", True)
-except:
-    # Yes I want a bare except
-    pass
+pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():
@@ -296,8 +288,8 @@ def test_coordination_sphere():
     }
     expctd[6] = set()
 
-    for i in expctd:
-        assert expctd[i] == set(molecule.get_coordination_sphere(7, i).index)
+    for i_atom, connected_atoms in expctd.items():
+        assert connected_atoms == set(molecule.get_coordination_sphere(7, i_atom).index)
 
 
 def test_cut_sphere():
@@ -326,13 +318,10 @@ def test_get_inertia():
     A = molecule.get_inertia()
     eig, t_mol = A["eigenvectors"], A["transformed_Cartesian"]
     assert cc.xyz_functions.allclose(
-        (molecule - molecule.get_barycenter()).__rmatmul__(eig), t_mol
-    )
-    assert cc.xyz_functions.allclose(
-        dot(eig, (molecule - molecule.get_barycenter())), t_mol
+        eig @ (molecule - molecule.get_barycenter()), t_mol
     )
 
-    molecule2 = dot(get_rotation_matrix([1, 1, 1], 72), molecule)
+    molecule2 = get_rotation_matrix([1, 1, 1], 72) @ molecule
     B = molecule2.get_inertia()
     assert cc.xyz_functions.allclose(B["transformed_Cartesian"], t_mol)
 
@@ -393,7 +382,7 @@ def test_align():
         get_complete_path("total_movement.molden"), start_index=1
     )
     m1, m2 = cartesians[0], cartesians[-1]
-    m2 = dot(get_rotation_matrix([1, 1, 1], 0.334), m2) + 5
+    m2 = get_rotation_matrix([1, 1, 1], 0.334) @ m2 + 5
     m1, m2_aligned = m1.align(m2)
     dev = abs((m2_aligned - m1).loc[:, ["x", "y", "z"]]).sum() / len(m1)
     assert np.allclose(dev, [0.73398451, 1.61863496, 0.13181807])
@@ -406,7 +395,7 @@ def test_mass_align():
         get_complete_path("total_movement.molden"), start_index=1
     )
     m1, m2 = cartesians[0], cartesians[-1]
-    m2 = dot(get_rotation_matrix([1, 1, 1], 0.334), m2) + 5
+    m2 = get_rotation_matrix([1, 1, 1], 0.334) @ m2 + 5
     m1, m2_aligned = m1.align(m2, mass_weight=True)
     assert cc.xyz_functions.allclose(
         m1.align(m2_aligned, mass_weight=True)[1], m2_aligned
@@ -419,9 +408,9 @@ def test_align_and_reindex_similar():
     )
     m2 = cartesians[-1]
 
-    m2_shuffled = dot(get_rotation_matrix([1, 1, 1], 0.2), m2) + 8
-    np.random.seed(77)
-    m2_shuffled.index = np.random.permutation(m2.index)
+    m2_shuffled = get_rotation_matrix([1, 1, 1], 0.2) @ m2 + 8
+    rng = np.random.RandomState(77)
+    m2_shuffled.index = rng.permutation(m2.index)
 
     m2 = (m2 - m2.get_centroid()).sort_index()
     m2_shuffled = (m2_shuffled - m2_shuffled.get_centroid()).sort_index()

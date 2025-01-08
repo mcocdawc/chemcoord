@@ -1,19 +1,15 @@
 import os
-from os.path import join
 from io import StringIO
-from sympy import Symbol
-import pytest
+from os.path import join
+
 import numpy as np
+import pandas as pd
+from sympy import Symbol
 
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
-import pandas as pd
 
-try:
-    pd.set_option("future.no_silent_downcasting", True)
-except:
-    # Yes I want a bare except
-    pass
+pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():
@@ -34,7 +30,7 @@ STRUCTURE_PATH = get_structure_path(get_script_path())
 
 
 def test_assignment():
-    theta, x = Symbol("theta", real=True), Symbol("x", real=True)
+    x = Symbol("x", real=True)
 
     molecule = cc.Cartesian.read_xyz(
         join(STRUCTURE_PATH, "MIL53_small.xyz"), start_index=1
@@ -48,7 +44,7 @@ def test_assignment():
 
 
 def test_addition_with_sympy():
-    theta, x = Symbol("theta", real=True), Symbol("x", real=True)
+    x = Symbol("x", real=True)
 
     molecule = cc.Cartesian.read_xyz(
         join(STRUCTURE_PATH, "MIL53_small.xyz"), start_index=1

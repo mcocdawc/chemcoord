@@ -1,6 +1,7 @@
 # The following code was taken from the MIT licensed pandas project
 # and modified. http://pandas.pydata.org/
 from textwrap import dedent
+
 # # Substitution and Appender are derived from matplotlib.docstring (1.1.0)
 # # module http://matplotlib.org/users/license.html
 #

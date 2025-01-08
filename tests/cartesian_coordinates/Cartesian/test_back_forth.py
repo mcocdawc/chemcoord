@@ -1,18 +1,14 @@
-import chemcoord as cc
-from chemcoord.xyz_functions import allclose
-import pytest
-from chemcoord.exceptions import UndefinedCoordinateSystem
 import itertools
 import os
-import sys
 
 import pandas as pd
+import pytest
 
-try:
-    pd.set_option("future.no_silent_downcasting", True)
-except:
-    # Yes I want a bare except
-    pass
+import chemcoord as cc
+from chemcoord.exceptions import UndefinedCoordinateSystem
+from chemcoord.xyz_functions import allclose
+
+pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():
@@ -43,19 +39,19 @@ def test_back_and_forth1():
     back_and_forth(os.path.join(STRUCTURE_PATH, "MIL53_small.xyz"))
 
 
-def test_back_and_forth1():
+def test_back_and_forth2():
     back_and_forth(os.path.join(STRUCTURE_PATH, "MIL53_middle.xyz"))
 
 
-def test_back_and_forth2():
+def test_back_and_forth3():
     back_and_forth(os.path.join(STRUCTURE_PATH, "ruthenium.xyz"))
 
 
-def test_back_and_forth3():
+def test_back_and_forth4():
     back_and_forth(os.path.join(STRUCTURE_PATH, "Cd_lattice.xyz"))
 
 
-def test_back_and_forth4():
+def test_back_and_forth5():
     back_and_forth(os.path.join(STRUCTURE_PATH, "nasty_cube.xyz"))
 
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import warnings
+
 from chemcoord.exceptions import InvalidReference
 from chemcoord.utilities._temporary_deprecation_workarounds import is_iterable
 

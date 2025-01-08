@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 """Setup file for the chemcoord package."""
 
-from setuptools import setup, find_packages
-
+from setuptools import find_packages, setup
 
 MAIN_PACKAGE = "chemcoord"
 DESCRIPTION = "Python module for dealing with chemical coordinates."
@@ -42,11 +41,10 @@ CLASSIFIERS = [
     "Operating System :: Microsoft :: Windows",
     "Natural Language :: English",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -76,6 +74,7 @@ def setup_package():
         packages=find_packages("src"),
         package_dir={"": "src"},
         install_requires=INSTALL_REQUIRES,
+        python_requires=">=3.9,<3.13",
     )
 
 

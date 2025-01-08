@@ -2,14 +2,14 @@
 
 import os
 
-from ase.structure import molecule
-from ase.lattice.surface import fcc111, add_adsorbate
-from ase.optimize import QuasiNewton
-from ase.constraints import FixAtoms
-from ase.calculators.emt import EMT
-from ase.vibrations import Vibrations
 import ase.io
 import numpy as np
+from ase.calculators.emt import EMT
+from ase.constraints import FixAtoms
+from ase.lattice.surface import add_adsorbate, fcc111
+from ase.optimize import QuasiNewton
+from ase.structure import molecule
+from ase.vibrations import Vibrations
 
 import chemcoord as cc
 

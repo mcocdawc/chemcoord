@@ -2,7 +2,6 @@
 import collections
 import copy
 import itertools
-from functools import partial
 from itertools import product
 
 import numba as nb
@@ -17,13 +16,11 @@ from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import (
     PandasWrapper,
 )
-from chemcoord.cartesian_coordinates.xyz_functions import dot
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
-from six.moves import zip  # pylint:disable=redefined-builtin
 
 
-class CartesianCore(PandasWrapper, GenericCore):
+class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     _required_cols = frozenset({"atom", "x", "y", "z"})
 
     # Look into the numpy manual for description of __array_priority__:
@@ -1125,9 +1122,9 @@ class CartesianCore(PandasWrapper, GenericCore):
             is_rotation_matrix = True
 
         if is_rotation_matrix:
-            return dot(np.dot(new_basis.T, old_basis), self)
+            return np.dot(new_basis.T, old_basis) @ self
         else:
-            return dot(np.dot(np.linalg.inv(new_basis), old_basis), self)
+            return np.dot(np.linalg.inv(new_basis), old_basis) @ self
 
     def _get_positions(self, indices):
         old_index = self.index
@@ -1291,8 +1288,8 @@ class CartesianCore(PandasWrapper, GenericCore):
         Uses the Kabsch algorithm implemented within
         :func:`~.xyz_functions.get_kabsch_rotation`.
         If ``mass_weight`` is ``True`` the atoms are weighted by their mass.
-        The atoms are moved first to the centroid/barycenter (depending on ``mass_weight``)
-        if centered is ``False``.
+        The atoms are moved first to the centroid/barycenter
+        (depending on ``mass_weight``) if centered is ``False``.
 
         Args:
             other (Cartesian):

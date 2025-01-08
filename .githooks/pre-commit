@@ -1,0 +1,39 @@
+#!/bin/bash
+# Stops accidental commits to master/main/develop. https://gist.github.com/stefansundin/9059706
+# Install:
+# cd path/to/git/repo
+# curl -fL -o .git/hooks/pre-commit https://gist.githubusercontent.com/stefansundin/9059706/raw/pre-commit-2
+# chmod +x .git/hooks/pre-commit
+
+
+BRANCH=`git rev-parse --abbrev-ref HEAD`
+if [[ "$BRANCH" =~ ^(master|main|develop)$ ]]; then
+    >&2 echo "You are on branch $BRANCH, direct comitting is not allowed."
+    exit 2
+fi
+
+if [ "`git diff --check --cached | wc -c`" -gt 0 ]; then
+    >&2 echo "Your spaces don't agree with your core.whitespace rules."
+    >&2 echo 'Please run `git diff --check HEAD` to see your errors.'
+    exit 3
+fi
+
+
+if ! command -v ruff >/dev/null 2>&1; then
+    >&2 echo "Please install ruff via 'pip install ruff'."
+    exit 1
+else
+    if ! ruff format --diff `git rev-parse --show-toplevel` >/dev/null 2>&1; then
+        >&2 echo "There are problems with PEP8-compliance."
+        >&2 echo 'You can check yourself by executing "ruff format --diff `git rev-parse --show-toplevel`"'
+        exit 1
+    fi
+    if ! ruff check `git rev-parse --show-toplevel` >/dev/null 2>&1; then
+        >&2 echo "There are problems in the code."
+        >&2 echo 'You can check yourself by executing "ruff check `git rev-parse --show-toplevel`"'
+        exit 1
+    fi
+fi
+
+
+exit 0
