@@ -3,17 +3,10 @@ from io import StringIO
 from os.path import join
 
 import numpy as np
-import pandas as pd
 from sympy import Symbol
 
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
-
-try:
-    pd.set_option("future.no_silent_downcasting", True)
-except:  # noqa: E722
-    # Yes I want a bare except
-    pass
 
 
 def get_script_path():

@@ -1,15 +1,8 @@
 import os
 
-import pandas as pd
 import sympy
 
 import chemcoord as cc
-
-try:
-    pd.set_option("future.no_silent_downcasting", True)
-except:  # noqa: E722
-    # Yes I want a bare except
-    pass
 
 
 def get_script_path():
