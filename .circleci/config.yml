@@ -51,23 +51,23 @@ workflows:
 
 jobs:
   py39:
+    <<: *run_tests
     docker:
       - image: cimg/python:3.9
-    <<: *run_tests
 
   py310:
+    <<: *run_tests
     docker:
       - image: cimg/python:3.10
-    <<: *run_tests
 
   py311:
-    docker:
-      - image: cimg/python:3.11
     steps:
       - <<: *analysis
       - <<: *run_tests
+    docker:
+      - image: cimg/python:3.11
 
   py312:
+    <<: *run_tests
     docker:
       - image: cimg/python:3.12
-    <<: *run_tests
