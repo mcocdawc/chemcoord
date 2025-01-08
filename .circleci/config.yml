@@ -61,9 +61,7 @@ jobs:
       - image: cimg/python:3.10
 
   py311:
-    steps:
-      - <<: *analysis
-      - <<: *run_tests
+    <<: *run_tests
     docker:
       - image: cimg/python:3.11
 
