@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-from chemcoord import export
-
-
-@export
 class PointGroupOperations(list):
     """Defines a point group as sequence of symmetry operations.
 

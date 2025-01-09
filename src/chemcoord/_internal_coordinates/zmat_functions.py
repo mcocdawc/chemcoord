@@ -2,11 +2,9 @@
 import numpy as np
 import sympy
 
-from chemcoord import export
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 
 
-@export
 class DummyManipulation(object):
     """Contextmanager that controls the behaviour of
     :meth:`~chemcoord.Zmat.safe_loc` and
@@ -44,7 +42,6 @@ class DummyManipulation(object):
         self.cls.dummy_manipulation_allowed = self.old_value
 
 
-@export
 class TestOperators(object):
     """Switch the validity testing of zmatrices resulting from operators.
 
@@ -71,7 +68,6 @@ class TestOperators(object):
         self.cls.test_operators = self.old_value
 
 
-@export
 class PureInternalMovement(object):
     """Remove the translational and rotational degrees of freedom.
 

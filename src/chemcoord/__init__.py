@@ -8,19 +8,6 @@ __version__ = version("chemcoord")
 _git_branch = "master"
 
 
-def export(func):
-    if callable(func) and hasattr(func, "__name__"):
-        globals()[func.__name__] = func
-    try:
-        __all__.append(func.__name__)
-    except NameError:
-        __all__ = [func.__name__]  # noqa: F841
-    return func
-
-
-# have to be imported after export definition
-import sys
-
 import chemcoord._utilities
 import chemcoord.configuration as configuration
 import chemcoord.constants
@@ -30,6 +17,12 @@ from chemcoord._cartesian_coordinates.asymmetric_unit_cartesian_class import (
     AsymmetricUnitCartesian as AsymmetricUnitCartesian,
 )
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian as Cartesian
+from chemcoord._cartesian_coordinates.point_group import PointGroupOperations
 from chemcoord._internal_coordinates.zmat_class_main import Zmat as Zmat
 from chemcoord._utilities._print_versions import show_versions as show_versions
 from chemcoord.configuration import settings as settings
+from chemcoord.zmat_functions import (
+    DummyManipulation,
+    PureInternalMovement,
+    TestOperators,
+)
