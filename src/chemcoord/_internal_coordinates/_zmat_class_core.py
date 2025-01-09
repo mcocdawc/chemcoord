@@ -57,8 +57,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning(
-                "There are columns missing for a "
-                "meaningful description of a molecule"
+                "There are columns missing for a meaningful description of a molecule"
             )
         self._frame = frame.copy()
         if metadata is None:
@@ -507,7 +506,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             c_table = c_table.astype("i8")
         except ValueError:
             raise ValueError(
-                "Due to a bug in pandas it is necessary to have " "integer columns"
+                "Due to a bug in pandas it is necessary to have integer columns"
             )
         c_table = c_table.replace(self.index, new_index)
         c_table = c_table.replace({v: k for k, v in constants.int_label.items()})

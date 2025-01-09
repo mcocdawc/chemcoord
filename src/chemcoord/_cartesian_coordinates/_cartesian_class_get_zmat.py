@@ -81,7 +81,7 @@ class CartesianGetZmat(CartesianCore):
 
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination(
-                "Either start_atom or " "predefined_table has to be None"
+                "Either start_atom or predefined_table has to be None"
             )
         if bond_dict is None:
             bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
