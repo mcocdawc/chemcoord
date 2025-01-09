@@ -8,7 +8,6 @@ __version__ = version("chemcoord")
 _git_branch = "master"
 
 
-import chemcoord._utilities
 import chemcoord.configuration as configuration
 import chemcoord.constants
 import chemcoord.xyz_functions
