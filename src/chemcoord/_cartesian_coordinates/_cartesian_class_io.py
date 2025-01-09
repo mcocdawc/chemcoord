@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 
 from chemcoord import constants
+from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._generic_classes.generic_IO import GenericIO
-from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.configuration import settings
 
 

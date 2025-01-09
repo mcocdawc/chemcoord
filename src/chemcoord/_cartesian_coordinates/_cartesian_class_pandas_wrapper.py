@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import copy
 
-import chemcoord.cartesian_coordinates._indexers as indexers
+import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
 
 

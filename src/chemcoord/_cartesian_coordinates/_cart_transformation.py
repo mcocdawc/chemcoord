@@ -7,7 +7,7 @@ from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
-from chemcoord.cartesian_coordinates.xyz_functions import (
+from chemcoord._cartesian_coordinates.xyz_functions import (
     _jit_cross,
     _jit_isclose,
     _jit_normalize,

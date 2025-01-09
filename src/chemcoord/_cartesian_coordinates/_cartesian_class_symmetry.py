@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
-from chemcoord.cartesian_coordinates.point_group import PointGroupOperations
+from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
+from chemcoord._cartesian_coordinates.point_group import PointGroupOperations
 
 
 class CartesianSymmetry(CartesianCore):
@@ -115,7 +115,7 @@ class CartesianSymmetry(CartesianCore):
     def get_asymmetric_unit(self, eq=None):
         eq = self.get_equivalent_atoms() if (eq is None) else eq
         new_frame = self.loc[eq["eq_sets"].keys(), :]._frame
-        from chemcoord.cartesian_coordinates.asymmetric_unit_cartesian_class import (  # noqa: PLC0415
+        from chemcoord._cartesian_coordinates.asymmetric_unit_cartesian_class import (  # noqa: PLC0415
             AsymmetricUnitCartesian,
         )
 

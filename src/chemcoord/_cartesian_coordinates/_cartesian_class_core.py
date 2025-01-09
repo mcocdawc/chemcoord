@@ -10,12 +10,12 @@ import pandas as pd
 from numba import jit
 from sortedcontainers import SortedSet
 
-import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
+import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
-from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import (
+from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
     PandasWrapper,
 )
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
 

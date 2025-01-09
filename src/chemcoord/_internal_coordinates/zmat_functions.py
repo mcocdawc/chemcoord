@@ -3,7 +3,7 @@ import numpy as np
 import sympy
 
 from chemcoord import export
-from chemcoord.internal_coordinates.zmat_class_main import Zmat
+from chemcoord._internal_coordinates.zmat_class_main import Zmat
 
 
 @export
@@ -123,7 +123,7 @@ def apply_grad_cartesian_tensor(grad_X, zmat_dist):
     except (TypeError, AttributeError):
         C_dist[[1, 2], :] = sympy.rad(C_dist[[1, 2], :])
     cart_dist = np.tensordot(grad_X, C_dist, axes=([3, 2], [0, 1])).T
-    from chemcoord.cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
+    from chemcoord._cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
         Cartesian,
     )
 
