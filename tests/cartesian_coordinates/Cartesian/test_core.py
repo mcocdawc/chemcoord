@@ -6,7 +6,7 @@ import pytest
 import sympy
 
 import chemcoord as cc
-from chemcoord.cartesian_coordinates.xyz_functions import get_rotation_matrix
+from chemcoord._cartesian_coordinates.xyz_functions import get_rotation_matrix
 from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.xyz_functions import allclose
 

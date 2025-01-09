@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 class PandasWrapper(object):
     """This class provides wrappers for :class:`pandas.DataFrame` methods.
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import math as m
 import os
 import subprocess
@@ -155,7 +154,7 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
-    from chemcoord.cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
+    from chemcoord._cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
         Cartesian,
     )
 
@@ -460,7 +459,7 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     if (construction_table.index != cart_dist.index).any():
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
-    from chemcoord.internal_coordinates.zmat_class_main import Zmat  # noqa: PLC0415
+    from chemcoord._internal_coordinates.zmat_class_main import Zmat  # noqa: PLC0415
 
     dtypes = [
         ("atom", str),

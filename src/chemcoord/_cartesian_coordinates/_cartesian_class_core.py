@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import collections
 import copy
 import itertools
@@ -10,12 +9,12 @@ import pandas as pd
 from numba import jit
 from sortedcontainers import SortedSet
 
-import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
+import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
-from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord.cartesian_coordinates._cartesian_class_pandas_wrapper import (
+from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
     PandasWrapper,
 )
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord.configuration import settings
 from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
 
@@ -69,8 +68,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             raise ValueError("Need a pd.DataFrame as input")
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning(
-                "There are columns missing for a "
-                "meaningful description of a molecule"
+                "There are columns missing for a meaningful description of a molecule"
             )
         self._frame = frame.copy()
         if metadata is None:
@@ -596,9 +594,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             use_lookup = settings["defaults"]["use_lookup"]
 
         included_atoms_set = set(sliced_cartesian.index)
-        assert included_atoms_set.issubset(
-            set(self.index)
-        ), "The sliced Cartesian has to be a subset of the bigger frame"
+        assert included_atoms_set.issubset(set(self.index)), (
+            "The sliced Cartesian has to be a subset of the bigger frame"
+        )
         bond_dic = self.get_bonds(use_lookup=use_lookup)
         new_atoms = set([])
         for atom in included_atoms_set:

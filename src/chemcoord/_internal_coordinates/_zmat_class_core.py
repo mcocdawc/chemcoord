@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import copy
 import warnings
 from functools import partial
@@ -6,19 +5,19 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
+import chemcoord._internal_coordinates._indexers as indexers
+import chemcoord._internal_coordinates._zmat_transformation as transformation
 import chemcoord.constants as constants
-import chemcoord.internal_coordinates._indexers as indexers
-import chemcoord.internal_coordinates._zmat_transformation as transformation
 from chemcoord._generic_classes.generic_core import GenericCore
+from chemcoord._internal_coordinates._zmat_class_pandas_wrapper import PandasWrapper
+from chemcoord._utilities import _decorators
+from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
 from chemcoord.exceptions import (
     ERR_CODE_OK,
     ERR_CODE_InvalidReference,
     InvalidReference,
     PhysicalMeaning,
 )
-from chemcoord.internal_coordinates._zmat_class_pandas_wrapper import PandasWrapper
-from chemcoord.utilities import _decorators
-from chemcoord.utilities._temporary_deprecation_workarounds import replace_without_warn
 
 append_indexer_docstring = _decorators.Appender(
     """In the case of obtaining elements, the indexing behaves like
@@ -58,8 +57,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning(
-                "There are columns missing for a "
-                "meaningful description of a molecule"
+                "There are columns missing for a meaningful description of a molecule"
             )
         self._frame = frame.copy()
         if metadata is None:
@@ -508,7 +506,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             c_table = c_table.astype("i8")
         except ValueError:
             raise ValueError(
-                "Due to a bug in pandas it is necessary to have " "integer columns"
+                "Due to a bug in pandas it is necessary to have integer columns"
             )
         c_table = c_table.replace(self.index, new_index)
         c_table = c_table.replace({v: k for k, v in constants.int_label.items()})
@@ -667,7 +665,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             xyz_frame["atom"] = self.loc[xyz_frame.index, "atom"]
             xyz_frame.loc[:, ["x", "y", "z"]] = positions[:row]
-            from chemcoord.cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
+            from chemcoord._cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
                 Cartesian,
             )
 
@@ -829,7 +827,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             grad_X = drop_dummies(grad_X, self)
 
         if as_function:
-            from chemcoord.internal_coordinates.zmat_functions import (  # noqa: PLC0415
+            from chemcoord._internal_coordinates.zmat_functions import (  # noqa: PLC0415
                 apply_grad_cartesian_tensor,
             )
 

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-
 import warnings
 
-from chemcoord.utilities._temporary_deprecation_workarounds import is_iterable
+from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 
 
 class _generic_Indexer(object):

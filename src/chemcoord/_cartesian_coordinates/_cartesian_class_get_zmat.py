@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import warnings
 from collections import OrderedDict
 from functools import partial
@@ -8,10 +7,12 @@ import numpy as np
 import pandas as pd
 from numba.core.errors import NumbaPerformanceWarning
 
-import chemcoord.cartesian_coordinates._cart_transformation as transformation
-import chemcoord.cartesian_coordinates.xyz_functions as xyz_functions
+import chemcoord._cartesian_coordinates._cart_transformation as transformation
+import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
-from chemcoord.cartesian_coordinates._cartesian_class_core import CartesianCore
+from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
+from chemcoord._internal_coordinates.zmat_class_main import Zmat
+from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (
     ERR_CODE_OK,
@@ -20,8 +21,6 @@ from chemcoord.exceptions import (
     InvalidReference,
     UndefinedCoordinateSystem,
 )
-from chemcoord.internal_coordinates.zmat_class_main import Zmat
-from chemcoord.utilities._temporary_deprecation_workarounds import replace_without_warn
 
 
 class CartesianGetZmat(CartesianCore):
@@ -82,7 +81,7 @@ class CartesianGetZmat(CartesianCore):
 
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination(
-                "Either start_atom or " "predefined_table has to be None"
+                "Either start_atom or predefined_table has to be None"
             )
         if bond_dict is None:
             bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)

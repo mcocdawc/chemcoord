@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Errorcodes are there for the jit_functions
 ERR_CODE_OK = 0
 
@@ -73,7 +71,7 @@ class InvalidReference(UndefinedCoordinateSystem):
     def __str__(self):
         if self.message is None:
             give_message = (
-                "Atom {i} uses an invalid/linear reference " "spanned by: {r}".format
+                "Atom {i} uses an invalid/linear reference spanned by: {r}".format
             )
             return give_message(i=self.index, r=self.references)
         else:

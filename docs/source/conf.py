@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # ChemCoord documentation build configuration file, created by
 # sphinx-quickstart on Tue Jan 12 23:12:55 2016.
@@ -59,7 +58,6 @@ intersphinx_mapping = {
     "pymatgen": ("http://pymatgen.org/", None),
     "python": ("https://docs.python.org/3", None),
 }
-#    'sympy': ('http://www.sympy.org/', None)}
 
 
 # 'numpydoc'
@@ -244,7 +242,7 @@ htmlhelp_basename = "ChemCoorddoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
-latex_elements = {
+latex_elements: dict = {
     # The paper size ('letterpaper' or 'a4paper').
     # 'papersize': 'letterpaper',
     # The font size ('10pt', '11pt' or '12pt').

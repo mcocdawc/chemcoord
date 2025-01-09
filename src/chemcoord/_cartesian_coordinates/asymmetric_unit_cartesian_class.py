@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 import pandas as pd
 
-from chemcoord.cartesian_coordinates.cartesian_class_main import Cartesian
+from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 
 
 class AsymmetricUnitCartesian(Cartesian):

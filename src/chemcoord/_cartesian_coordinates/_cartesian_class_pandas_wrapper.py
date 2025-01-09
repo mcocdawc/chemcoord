@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 import copy
 
-import chemcoord.cartesian_coordinates._indexers as indexers
+import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
 
 
@@ -156,8 +155,7 @@ class PandasWrapper(object):
     def columns(self, value):
         if not self._required_cols <= set(value):
             raise PhysicalMeaning(
-                "There are columns missing for a "
-                "meaningful description of a molecule"
+                "There are columns missing for a meaningful description of a molecule"
             )
         self._frame.columns = value
 
