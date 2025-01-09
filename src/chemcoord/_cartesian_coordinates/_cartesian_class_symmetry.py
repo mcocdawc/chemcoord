@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._cartesian_coordinates.point_group import PointGroupOperations
 

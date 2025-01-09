@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Errorcodes are there for the jit_functions
 ERR_CODE_OK = 0
 

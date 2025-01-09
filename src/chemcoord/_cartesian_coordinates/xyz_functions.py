@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import math as m
 import os
 import subprocess

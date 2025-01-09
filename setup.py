@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Setup file for the chemcoord package."""
 
 from setuptools import find_packages, setup

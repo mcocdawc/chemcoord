@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import warnings
 from collections import OrderedDict
 from functools import partial

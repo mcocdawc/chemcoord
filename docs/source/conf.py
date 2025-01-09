@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # ChemCoord documentation build configuration file, created by
 # sphinx-quickstart on Tue Jan 12 23:12:55 2016.

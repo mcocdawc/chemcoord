@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import copy
 
 import chemcoord._cartesian_coordinates._indexers as indexers

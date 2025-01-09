@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from chemcoord._cartesian_coordinates._cartesian_class_get_zmat import CartesianGetZmat
 from chemcoord._cartesian_coordinates._cartesian_class_io import CartesianIO
 from chemcoord._cartesian_coordinates._cartesian_class_symmetry import CartesianSymmetry

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 class PointGroupOperations(list):
     """Defines a point group as sequence of symmetry operations.
 

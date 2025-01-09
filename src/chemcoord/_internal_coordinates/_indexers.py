@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import warnings
 
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable

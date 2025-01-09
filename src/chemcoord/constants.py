@@ -1,5 +1,4 @@
 # ruff: noqa: E501
-# -*- coding: utf-8 -*-
 ###############################################################################
 # If you are editing this file please consider commiting the change
 # and sending a pull request to my Github account 'mcocdawc'.

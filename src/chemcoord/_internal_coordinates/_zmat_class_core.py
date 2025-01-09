@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import copy
 import warnings
 from functools import partial
