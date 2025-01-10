@@ -194,6 +194,18 @@ class CartesianIO(CartesianCore, GenericIO):
         else:
             return output
 
+    def to_pyscf_str(self) -> str:
+        """Write a string for PySCF input.
+
+        Returns:
+            str:
+            Ready to be passed to :func:`pyscf.gto.M`
+        """
+        ordered = self.loc[:, ["atom", "x", "y", "z"]].sort_index()
+        return "; ".join(
+            [" ".join([str(x) for x in row[1]]) for row in ordered._frame.iterrows()]
+        )
+
     def write_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`"""
         message = "Will be removed in the future. Please use to_xyz()."
@@ -247,6 +259,21 @@ class CartesianIO(CartesianCore, GenericIO):
         if get_bonds:
             molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
+
+    @classmethod
+    def from_pyscf_molecule(cls, mol):
+        """Create an instance of the own class from a PySCF molecule
+
+        Args:
+            mol (:class:`pyscf.gto.Mole`):
+
+        Returns:
+            Cartesian:
+        """
+        return cls(
+            atoms=[mol.atom_symbol(i) for i in range(mol.natm)],
+            coords=mol.atom_coords(unit="Angstrom"),
+        )
 
     def to_cjson(self, buf=None, **kwargs):
         """Write a cjson file or return dictionary.
