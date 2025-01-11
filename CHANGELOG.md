@@ -1,10 +1,10 @@
-# Changelog for v2.1.1 -> v2.1.2
+# Changelog for v2.1.2 -> v2.2.1
 
-- Removed scipy from the dependencies in the `setup.py` because it is indeed unused.
-    This is necessary for the conda packaging.
 
-- Made URLs in the doc that pointing to images more stable.
+## Bugfixes
 
-- Improved Logo.
+- Ensured that xyz files are always read as floats, even if xyz coordinates are formatted as integers.
 
-- Removed `conda.recipe`. We now do this from the outside with `conda-forge`.
+## New features
+
+- Enable conversion to/from pyscf molecules
