@@ -195,11 +195,14 @@ class CartesianIO(CartesianCore, GenericIO):
             return output
 
     def to_pyscf(self):
-        """Write a string for PySCF input.
+        """Convert to a PySCF molecule.
+
+        .. note:: The `pyscf library <https://sunqm.github.io/pyscf/>`_ is imported
+            locally in this function and will raise an ``ImportError`` exception,
+            if it is not installed.
 
         Returns:
-            str:
-            Ready to be passed to :func:`pyscf.gto.M`
+            pyscf.gto.Mole:
         """
         from pyscf.gto import Mole  # noqa: PLC0415
 
