@@ -57,6 +57,7 @@ intersphinx_mapping = {
     "sympy": ("http://docs.sympy.org/latest/", None),
     "pymatgen": ("http://pymatgen.org/", None),
     "python": ("https://docs.python.org/3", None),
+    "pyscf": ("https://pyscf.org/", None),
 }
 
 

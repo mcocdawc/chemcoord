@@ -1,0 +1,6 @@
+# the additional (!) requirements for performing tests
+# the dependencies of `chemcoord` itself are given in the setup.py
+pytest
+pytest-cov
+
+pyscf

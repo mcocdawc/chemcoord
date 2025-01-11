@@ -32,7 +32,7 @@ run_tests: &run_tests
           command: pip3 install .
       - run:
           name: Install infrastructure
-          command: pip3 install pytest pytest-cov
+          command: pip3 install -r tests/testsuite_requirements.txt
       - run:
           name: Running tests
           command: python3 -m pytest -Werror --cov=./src/chemcoord tests/

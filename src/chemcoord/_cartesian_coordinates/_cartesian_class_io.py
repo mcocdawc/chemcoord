@@ -194,6 +194,25 @@ class CartesianIO(CartesianCore, GenericIO):
         else:
             return output
 
+    def to_pyscf(self):
+        """Convert to a PySCF molecule.
+
+        .. note:: The `pyscf library <https://sunqm.github.io/pyscf/>`_ is imported
+            locally in this function and will raise an ``ImportError`` exception,
+            if it is not installed.
+
+        Returns:
+            pyscf.gto.Mole:
+        """
+        from pyscf.gto import Mole  # noqa: PLC0415
+
+        mol = Mole()
+        mol.atom = [
+            [row[1].iloc[0], tuple(row[1].iloc[1:4])] for row in self._frame.iterrows()
+        ]
+        mol.build()
+        return mol
+
     def write_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`"""
         message = "Will be removed in the future. Please use to_xyz()."
@@ -247,6 +266,21 @@ class CartesianIO(CartesianCore, GenericIO):
         if get_bonds:
             molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
+
+    @classmethod
+    def from_pyscf_molecule(cls, mol):
+        """Create an instance of the own class from a PySCF molecule
+
+        Args:
+            mol (:class:`pyscf.gto.Mole`):
+
+        Returns:
+            Cartesian:
+        """
+        return cls(
+            atoms=mol.elements,
+            coords=mol.atom_coords(unit="Angstrom"),
+        )
 
     def to_cjson(self, buf=None, **kwargs):
         """Write a cjson file or return dictionary.

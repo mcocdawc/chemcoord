@@ -4,8 +4,8 @@ from importlib.metadata import version
 
 import chemcoord.configuration
 import chemcoord.constants
-import chemcoord.xyz_functions
-import chemcoord.zmat_functions
+import chemcoord.xyz_functions as xyz_functions
+import chemcoord.zmat_functions as zmat_functions
 from chemcoord._cartesian_coordinates.asymmetric_unit_cartesian_class import (
     AsymmetricUnitCartesian,
 )
@@ -19,6 +19,20 @@ from chemcoord.zmat_functions import (
     PureInternalMovement,
     TestOperators,
 )
+
+__all__ = [
+    "Cartesian",
+    "Zmat",
+    "AsymmetricUnitCartesian",
+    "PointGroupOperations",
+    "settings",
+    "show_versions",
+    "DummyManipulation",
+    "PureInternalMovement",
+    "TestOperators",
+    "xyz_functions",
+    "zmat_functions",
+]
 
 __version__ = version("chemcoord")
 _git_branch = "master"
