@@ -278,7 +278,7 @@ class CartesianIO(CartesianCore, GenericIO):
             Cartesian:
         """
         return cls(
-            atoms=[mol.atom_symbol(i) for i in range(mol.natm)],
+            atoms=mol.elements,
             coords=mol.atom_coords(unit="Angstrom"),
         )
 
