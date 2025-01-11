@@ -1,0 +1,14 @@
+# the additional (!) requirements for performing static analysis of the code
+# the dependencies of `chemcoord` itself are given in the setup.py
+ruff
+pylint
+mypy
+
+pytest
+pytest-cov
+
+types-simplejson
+pandas-stubs
+ase-stubs
+
+pyscf
