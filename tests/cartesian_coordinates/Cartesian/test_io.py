@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import pytest
 
-import chemcoord as cc
+from chemcoord import Cartesian
 from chemcoord.xyz_functions import allclose
 
 pd.set_option("future.no_silent_downcasting", True)
@@ -28,7 +28,7 @@ def get_complete_path(structure):
     return os.path.join(STRUCTURES, structure)
 
 
-molecule = cc.Cartesian.read_xyz(get_complete_path("water.xyz"), start_index=1)
+molecule = Cartesian.read_xyz(get_complete_path("water.xyz"), start_index=1)
 
 
 def test_to_string():
@@ -63,10 +63,15 @@ Created by chemcoord http://chemcoord.readthedocs.io/
 
 
 def test_xyz_cast():
-    molecule_float = cc.Cartesian.read_xyz(get_complete_path("hydrogen_float.xyz"))
+    molecule_float = Cartesian.read_xyz(get_complete_path("hydrogen_float.xyz"))
 
-    molecule_int = cc.Cartesian.read_xyz(get_complete_path("hydrogen_int.xyz"))
+    molecule_int = Cartesian.read_xyz(get_complete_path("hydrogen_int.xyz"))
 
     assert molecule_int.x.dtype == float
 
     assert allclose(molecule_float, molecule_int)
+
+
+def test_pyscf_conversion():
+    m = Cartesian.read_xyz(get_complete_path("water.xyz"))
+    assert allclose(Cartesian.from_pyscf_molecule(m.to_pyscf()), m)

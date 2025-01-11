@@ -9,7 +9,7 @@ analysis: &analysis
           command: pip3 install .
       - run:
           name: Install infrastructure
-          command: pip3 install -r tests/static_analysis_requirements.txt
+          command: pip3 install -r tests/testsuite_requirements.txt
       - run:
           name: Check trailing whitespace
           command: git diff-tree --check $(git hash-object -t tree /dev/null)  HEAD -- '(exclude)docs/make.bat'

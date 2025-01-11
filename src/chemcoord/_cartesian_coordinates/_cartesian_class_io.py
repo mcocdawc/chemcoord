@@ -194,17 +194,21 @@ class CartesianIO(CartesianCore, GenericIO):
         else:
             return output
 
-    def to_pyscf_str(self) -> str:
+    def to_pyscf(self):
         """Write a string for PySCF input.
 
         Returns:
             str:
             Ready to be passed to :func:`pyscf.gto.M`
         """
-        ordered = self.loc[:, ["atom", "x", "y", "z"]].sort_index()
-        return "; ".join(
-            [" ".join([str(x) for x in row[1]]) for row in ordered._frame.iterrows()]
-        )
+        from pyscf.gto import Mole  # noqa: PLC0415
+
+        mol = Mole()
+        mol.atom = [
+            [row[1].iloc[0], tuple(row[1].iloc[1:4])] for row in self._frame.iterrows()
+        ]
+        mol.build()
+        return mol
 
     def write_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`"""
