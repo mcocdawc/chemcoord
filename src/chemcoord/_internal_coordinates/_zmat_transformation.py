@@ -18,7 +18,6 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
     get_grad_B,
     get_ref_pos,
 )
-from chemcoord._cartesian_coordinates.xyz_functions import _jit_isclose
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
@@ -26,9 +25,9 @@ from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 def get_S(C, j):
     S = np.zeros(3)
     r, alpha, delta = C[:, j]
-    if _jit_isclose(alpha, np.pi):
+    if np.isclose(alpha, np.pi):
         S[2] = r
-    elif _jit_isclose(alpha, 0):
+    elif np.isclose(alpha, 0):
         S[2] = -r
     else:
         S[0] = r * sin(alpha) * cos(delta)
