@@ -236,7 +236,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def __rmatmul__(self, other):
         coords = ["x", "y", "z"]
         new = self.copy()
-        new.loc[:, coords] = (np.dot(other, new.loc[:, coords].T)).T
+        new.loc[:, coords] = (other @ new.loc[:, coords].T).T
         return new
 
     def __eq__(self, other):
@@ -1120,9 +1120,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             is_rotation_matrix = True
 
         if is_rotation_matrix:
-            return np.dot(new_basis.T, old_basis) @ self
+            return new_basis.T @ old_basis @ self
         else:
-            return np.dot(np.linalg.inv(new_basis), old_basis) @ self
+            return np.linalg.inv(new_basis) @ old_basis @ self
 
     def _get_positions(self, indices):
         old_index = self.index

@@ -1,6 +1,6 @@
 import numba as nb
 import numpy as np
-from numba import njit
+from numba import njit, prange
 from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
@@ -1135,17 +1135,17 @@ def get_T(X, c_table, j):
     err, B = get_B(X, c_table, j)
     if err == ERR_CODE_OK:
         v_b = get_ref_pos(X, c_table[0, j])
-        result = np.dot(B.T, X[:, j] - v_b)
+        result = B.T @ (X[:, j] - v_b)
     else:
         result = np.empty(3)
     return err, result
 
 
-@njit(cache=True)
+@njit(parallel=True, cache=True)
 def get_C(X, c_table):
     C = np.empty((3, c_table.shape[1]))
 
-    for j in range(C.shape[1]):
+    for j in prange(C.shape[1]):
         err, v = get_T(X, c_table, j)
         if err == ERR_CODE_OK:
             C[:, j] = get_S_inv(v)
@@ -1168,26 +1168,26 @@ def get_grad_C(X, c_table):
         grad_B = get_grad_B(X, c_table, j)
 
         # Derive for j
-        grad_C[:, j, j, :] = np.dot(grad_S_inv, B.T)
+        grad_C[:, j, j, :] = grad_S_inv @ B.T
 
         # Derive for b(j)
         if c_table[0, j] > constants.keys_below_are_abs_refs:
             A = np.sum(grad_B[:, :, 0, :] * IB, axis=0)
-            grad_C[:, j, c_table[0, j], :] = np.dot(grad_S_inv, A - B.T)
+            grad_C[:, j, c_table[0, j], :] = grad_S_inv @ (A - B.T)
         else:
             grad_C[:, j, c_table[0, j], :] = 0.0
 
         # Derive for a(j)
         if c_table[1, j] > constants.keys_below_are_abs_refs:
             A = np.sum(grad_B[:, :, 1, :] * IB, axis=0)
-            grad_C[:, j, c_table[1, j], :] = np.dot(grad_S_inv, A)
+            grad_C[:, j, c_table[1, j], :] = grad_S_inv @ A
         else:
             grad_C[:, j, c_table[1, j], :] = 0.0
 
         # Derive for d(j)
         if c_table[2, j] > constants.keys_below_are_abs_refs:
             A = np.sum(grad_B[:, :, 2, :] * IB, axis=0)
-            grad_C[:, j, c_table[2, j], :] = np.dot(grad_S_inv, A)
+            grad_C[:, j, c_table[2, j], :] = grad_S_inv @ A
         else:
             grad_C[:, j, c_table[2, j], :] = 0.0
     return (ERR_CODE_OK, j, grad_C)  # pylint:disable=undefined-loop-variable
