@@ -1,6 +1,6 @@
 import numba as nb
 import numpy as np
-from numba import jit
+from numba import njit, prange
 from numpy import cos, cross, sin
 from numpy.linalg import inv
 
@@ -13,7 +13,7 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_S(C, j):
     S = np.zeros(3)
     r, alpha, delta = C[:, j]
@@ -28,7 +28,7 @@ def get_S(C, j):
     return S
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_grad_S(C, j):
     grad_S = np.empty((3, 3), dtype=nb.f8)
     r, alpha, delta = C[:, j]
@@ -50,7 +50,7 @@ def get_grad_S(C, j):
     return grad_S
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_X(C, c_table):
     X = np.empty_like(C)
     n_atoms = X.shape[1]
@@ -62,7 +62,7 @@ def get_X(C, c_table):
     return (ERR_CODE_OK, j, X)  # pylint:disable=undefined-loop-variable
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def chain_grad(X, grad_X, C, c_table, j, l):
     """Chain the gradients.
 
@@ -114,7 +114,7 @@ def chain_grad(X, grad_X, C, c_table, j, l):
     return new_grad_X
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_grad_X(C, c_table, chain=True):
     n_atoms = C.shape[1]
     grad_X = np.zeros((3, n_atoms, n_atoms, 3))
@@ -127,24 +127,24 @@ def get_grad_X(C, c_table, chain=True):
     return grad_X
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def to_barycenter(X, masses):
     M = masses.sum()
     v = (X * masses).sum(axis=1).reshape((3, 1)) / M
     return X - v
 
 
-@jit(nopython=True, cache=True)
+@njit(parallel=True, cache=True)
 def remove_translation(grad_X, masses):
     clean_grad_X = np.empty_like(grad_X)
     n_atoms = grad_X.shape[1]
-    for j in range(3):
+    for j in prange(3):
         for i in range(n_atoms):
             clean_grad_X[:, :, i, j] = to_barycenter(grad_X[:, :, i, j], masses)
     return clean_grad_X
 
 
-@jit(nopython=True, cache=True)
+@njit(parallel=True, cache=True)
 def pure_internal_grad(X, grad_X, masses, theta):
     """Return a gradient for the transformation to X
     that only contains internal degrees of freedom
@@ -164,8 +164,8 @@ def pure_internal_grad(X, grad_X, masses, theta):
     X = to_barycenter(X, masses)
     grad_X = remove_translation(grad_X, masses)
     inv_theta = inv(theta)
-    for j in range(3):
-        for i in range(n_atoms):
+    for j in prange(3):
+        for i in prange(n_atoms):
             L = (cross(X.T, grad_X[:, :, i, j].T).T * masses).sum(axis=1)
 
             grad_X[:, :, i, j] = grad_X[:, :, i, j] + cross(-inv_theta @ L, X.T).T
