@@ -1,6 +1,6 @@
 import numba as nb
 import numpy as np
-from numba import jit
+from numba import njit
 from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
@@ -44,12 +44,12 @@ def _get_ref_pos_impl(X, indices):  # noqa: ARG001
         raise AssertionError("Should not be here")
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_ref_pos(X, indices):
     return _stub_get_ref_pos(X, indices)
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_B(X, c_table, j):
     B = np.empty((3, 3))
     ref_pos = get_ref_pos(X, c_table[:, j])
@@ -66,7 +66,7 @@ def get_B(X, c_table, j):
     return (ERR_CODE_OK, B)
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_grad_B(X, c_table, j):
     grad_B = np.empty((3, 3, 3, 3))
     ref_pos = get_ref_pos(X, c_table[:, j])
@@ -1088,7 +1088,7 @@ def get_grad_B(X, c_table, j):
     return grad_B
 
 
-@jit(nb.f8[:](nb.f8[:]), nopython=True)
+@njit(nb.f8[:](nb.f8[:]))
 def get_S_inv(v):
     x, y, z = v
     r = np.linalg.norm(v)
@@ -1099,7 +1099,7 @@ def get_S_inv(v):
     return np.array([r, alpha, delta])
 
 
-@jit(nb.f8[:, :](nb.f8[:]), nopython=True)
+@njit(nb.f8[:, :](nb.f8[:]))
 def get_grad_S_inv(v):
     x, y, z = v
     grad_S_inv = np.zeros((3, 3))
@@ -1130,7 +1130,7 @@ def get_grad_S_inv(v):
     return grad_S_inv
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_T(X, c_table, j):
     err, B = get_B(X, c_table, j)
     if err == ERR_CODE_OK:
@@ -1141,7 +1141,7 @@ def get_T(X, c_table, j):
     return err, result
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_C(X, c_table):
     C = np.empty((3, c_table.shape[1]))
 
@@ -1154,7 +1154,7 @@ def get_C(X, c_table):
     return (ERR_CODE_OK, C)
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def get_grad_C(X, c_table):
     n_atoms = X.shape[1]
     grad_C = np.zeros((3, n_atoms, n_atoms, 3))

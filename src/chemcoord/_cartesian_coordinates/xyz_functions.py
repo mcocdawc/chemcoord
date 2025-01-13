@@ -8,7 +8,7 @@ from threading import Thread
 import numpy as np
 import pandas as pd
 import sympy
-from numba import jit
+from numba import njit
 
 from chemcoord.configuration import settings
 
@@ -293,7 +293,7 @@ def concat(cartesians, ignore_index=False, keys=None):
     return cartesians[0].__class__(new)
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def normalize(vector):
     """Normalizes a vector"""
     normed_vector = vector / np.linalg.norm(vector)
@@ -321,7 +321,7 @@ def get_rotation_matrix(axis, angle):
     return _jit_get_rotation_matrix(axis, angle)
 
 
-@jit(nopython=True, cache=True)
+@njit(cache=True)
 def _jit_get_rotation_matrix(axis, angle):
     """Returns the rotation matrix.
 

@@ -6,7 +6,7 @@ from itertools import product
 import numba as nb
 import numpy as np
 import pandas as pd
-from numba import jit
+from numba import njit
 from sortedcontainers import SortedSet
 
 import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
@@ -298,7 +298,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return out
 
     @staticmethod
-    @jit(nopython=True, cache=True)
+    @njit(cache=True)
     def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
@@ -979,7 +979,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return sorted(missing_part, key=len, reverse=True)
 
     @staticmethod
-    @jit(nopython=True, cache=True)
+    @njit(cache=True)
     def _jit_pairwise_distances(pos1, pos2):
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.
