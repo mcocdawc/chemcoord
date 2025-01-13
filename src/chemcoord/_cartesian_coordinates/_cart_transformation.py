@@ -6,7 +6,7 @@ from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates.xyz_functions import (
-    normalize,
+    _jit_normalize,
 )
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
@@ -57,11 +57,11 @@ def get_B(X, c_table, j):
     if np.allclose(BA, 0.0):
         return (ERR_CODE_InvalidReference, B)
     AD = ref_pos[:, 2] - ref_pos[:, 1]
-    B[:, 2] = -normalize(BA)
+    B[:, 2] = -_jit_normalize(BA)
     N = np.cross(AD, BA)
     if np.allclose(N, 0.0):
         return (ERR_CODE_InvalidReference, B)
-    B[:, 1] = normalize(N)
+    B[:, 1] = _jit_normalize(N)
     B[:, 0] = np.cross(B[:, 1], B[:, 2])
     return (ERR_CODE_OK, B)
 
