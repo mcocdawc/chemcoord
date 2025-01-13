@@ -294,11 +294,6 @@ def concat(cartesians, ignore_index=False, keys=None):
 
 
 @jit(nopython=True, cache=True)
-def _jit_isclose(a, b, atol=1e-5, rtol=1e-8):
-    return np.abs(a - b) <= (atol + rtol * np.abs(b))
-
-
-@jit(nopython=True, cache=True)
 def _jit_allclose(a, b, atol=1e-5, rtol=1e-8):
     n, m = a.shape
     for i in range(n):
