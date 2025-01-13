@@ -293,14 +293,8 @@ def concat(cartesians, ignore_index=False, keys=None):
     return cartesians[0].__class__(new)
 
 
-def normalize(vector):
-    """Normalizes a vector"""
-    normed_vector = vector / np.linalg.norm(vector)
-    return normed_vector
-
-
 @jit(nopython=True, cache=True)
-def _jit_normalize(vector):
+def normalize(vector):
     """Normalizes a vector"""
     normed_vector = vector / np.linalg.norm(vector)
     return normed_vector
@@ -342,7 +336,7 @@ def _jit_get_rotation_matrix(axis, angle):
     Returns:
         Rotation matrix (np.array):
     """
-    axis = _jit_normalize(axis)
+    axis = normalize(axis)
     a = m.cos(angle / 2)
     b, c, d = axis * m.sin(angle / 2)
     rot_matrix = np.empty((3, 3))
