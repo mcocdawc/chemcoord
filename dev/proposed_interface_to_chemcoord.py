@@ -3,7 +3,6 @@
 import os
 
 import ase.io
-import numpy as np
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms
 from ase.lattice.surface import add_adsorbate, fcc111
@@ -69,7 +68,7 @@ f = slab.get_forces()
 # Now I can see what the projection vector is for the displacement
 infinitesimal_mode_vector = InternalCoordinates.get_mode_infitisimal(0)
 # project forces on the mode vector
-forces_projected = np.dot(infinitesimal_mode_vector, f)
+forces_projected = infinitesimal_mode_vector @ f
 
 # Reset the displacements so that I can do a displacement along a different
 # internal mode

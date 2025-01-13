@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
@@ -36,5 +35,5 @@ class AsymmetricUnitCartesian(Cartesian):
         frame.loc[self.index, coords] = self.loc[:, coords]
         for i in eq_sets:
             for j in eq_sets[i]:
-                frame.loc[j, coords] = np.dot(sym_ops[i][j], frame.loc[i, coords])
+                frame.loc[j, coords] = sym_ops[i][j] @ frame.loc[i, coords]
         return Cartesian(frame)
