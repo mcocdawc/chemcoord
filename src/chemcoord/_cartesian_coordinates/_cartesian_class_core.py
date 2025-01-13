@@ -1120,9 +1120,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             is_rotation_matrix = True
 
         if is_rotation_matrix:
-            return np.dot(new_basis.T, old_basis) @ self
+            return new_basis.T @ old_basis @ self
         else:
-            return np.dot(np.linalg.inv(new_basis), old_basis) @ self
+            return np.linalg.inv(new_basis) @ old_basis @ self
 
     def _get_positions(self, indices):
         old_index = self.index
