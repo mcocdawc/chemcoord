@@ -6,7 +6,6 @@ from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates.xyz_functions import (
-    _jit_cross,
     _jit_isclose,
     _jit_normalize,
 )
@@ -60,11 +59,11 @@ def get_B(X, c_table, j):
         return (ERR_CODE_InvalidReference, B)
     AD = ref_pos[:, 2] - ref_pos[:, 1]
     B[:, 2] = -_jit_normalize(BA)
-    N = _jit_cross(AD, BA)
+    N = np.cross(AD, BA)
     if _jit_isclose(N, 0.0).all():
         return (ERR_CODE_InvalidReference, B)
     B[:, 1] = _jit_normalize(N)
-    B[:, 0] = _jit_cross(B[:, 1], B[:, 2])
+    B[:, 0] = np.cross(B[:, 1], B[:, 2])
     return (ERR_CODE_OK, B)
 
 
@@ -77,7 +76,7 @@ def get_grad_B(X, c_table, j):
     x_a, y_a, z_a = v_a
     x_d, y_d, z_d = v_d
     BA, AD = v_a - v_b, v_d - v_a
-    norm_AD_cross_BA = np.linalg.norm(_jit_cross(AD, BA))
+    norm_AD_cross_BA = np.linalg.norm(np.cross(AD, BA))
     norm_BA = np.linalg.norm(BA)
     grad_B[0, 0, 0, 0] = (
         (x_a - x_b)
