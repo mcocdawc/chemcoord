@@ -293,16 +293,6 @@ def concat(cartesians, ignore_index=False, keys=None):
     return cartesians[0].__class__(new)
 
 
-@jit(nopython=True, cache=True)
-def _jit_allclose(a, b, atol=1e-5, rtol=1e-8):
-    n, m = a.shape
-    for i in range(n):
-        for j in range(m):
-            if np.abs(a[i, j] - b[i, j]) > (atol + rtol * np.abs(b[i, j])):
-                return False
-    return True
-
-
 def normalize(vector):
     """Normalizes a vector"""
     normed_vector = vector / np.linalg.norm(vector)
