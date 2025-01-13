@@ -1154,12 +1154,12 @@ def get_C(X, c_table):
     return (ERR_CODE_OK, C)
 
 
-@njit(cache=True)
+@njit(parallel=True, cache=True)
 def get_grad_C(X, c_table):
     n_atoms = X.shape[1]
     grad_C = np.zeros((3, n_atoms, n_atoms, 3))
 
-    for j in range(X.shape[1]):
+    for j in prange(X.shape[1]):
         IB = (X[:, j] - get_ref_pos(X, c_table[0, j])).reshape((3, 1, 1))
         grad_S_inv = get_grad_S_inv(get_T(X, c_table, j)[1])
         err, B = get_B(X, c_table, j)
