@@ -1,9 +1,10 @@
+from chemcoord._cartesian_coordinates._cartesian_class_bmat import CartesianBmat
 from chemcoord._cartesian_coordinates._cartesian_class_get_zmat import CartesianGetZmat
 from chemcoord._cartesian_coordinates._cartesian_class_io import CartesianIO
 from chemcoord._cartesian_coordinates._cartesian_class_symmetry import CartesianSymmetry
 
 
-class Cartesian(CartesianIO, CartesianGetZmat, CartesianSymmetry):
+class Cartesian(CartesianIO, CartesianGetZmat, CartesianSymmetry, CartesianBmat):
     """The main class for dealing with cartesian Coordinates.
 
     **Mathematical Operations**:
