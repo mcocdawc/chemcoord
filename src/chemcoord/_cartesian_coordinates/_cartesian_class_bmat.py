@@ -1,5 +1,4 @@
 from itertools import chain, combinations
-from typing import TypeAlias
 
 import numpy as np
 from numba import float64, int32, njit, prange
@@ -7,7 +6,7 @@ from numpy import cross
 from numpy.linalg import norm, pinv
 from numpy.typing import NDArray
 from sortedcontainers import SortedSet
-from typing_extensions import Self
+from typing_extensions import Self, TypeAlias
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.xyz_functions import to_molden
