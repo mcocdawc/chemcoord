@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from itertools import chain, combinations
 
 import numpy as np
@@ -8,13 +6,13 @@ from numpy import cross
 from numpy.linalg import norm, pinv
 from numpy.typing import NDArray
 from sortedcontainers import SortedSet
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self, TypeAlias, Union
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.xyz_functions import to_molden
 
 primitives: TypeAlias = SortedSet[
-    tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]
+    Union[tuple[int, int], tuple[int, int, int], tuple[int, int, int, int]]
 ]
 
 
@@ -64,7 +62,7 @@ class CartesianBmat(CartesianCore):
 
         return prims
 
-    def get_Wilson_B(self, coordinates: primitives | None = None) -> NDArray:
+    def get_Wilson_B(self, coordinates: Union[primitives, None] = None) -> NDArray:
         """
         Generate Wilson's B matrix for the current structure.
 
@@ -241,7 +239,7 @@ class CartesianBmat(CartesianCore):
 
         return B_mat
 
-    def x_to_c(self, coordinates: primitives | None = None) -> NDArray:
+    def x_to_c(self, coordinates: Union[primitives, None] = None) -> NDArray:
         """
         Conversion between cartesian coordinates and internal coordinates
 
