@@ -1,17 +1,40 @@
 from itertools import chain, combinations
+from typing import TypeAlias
 
 import numpy as np
 from numba import float64, int32, njit, prange
 from numpy import cross
 from numpy.linalg import norm, pinv
+from numpy.typing import NDArray
 from sortedcontainers import SortedSet
+from typing_extensions import Self
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.xyz_functions import to_molden
 
+primitives: TypeAlias = SortedSet[
+    tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]
+]
+
 
 class CartesianBmat(CartesianCore):
-    def get_primitive_coords(self):
+    def get_primitive_coords(self) -> primitives:
+        """
+        Generate set of redundant internal coordinates for the system.
+
+        Stored in a sortedcontainers.SortedSet to maintain order while
+        being able to use Python's union operator. Sorted by length of
+        coordinate, then by standard order based on the atoms' indices.
+
+        Args:
+            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
+                coordinates to use in the calculation. If None, calculates using the
+                get_primitive_coords method
+
+        Returns:
+            SortedSet[tuple]: SortedSet of redundant internal coordinates
+        """
+
         # the key prioritizes length, then sorts lexicographically
         prims = SortedSet(key=lambda x: (len(x), x))
 
@@ -40,7 +63,19 @@ class CartesianBmat(CartesianCore):
 
         return prims
 
-    def get_Wilson_B(self, coordinates=None):
+    def get_Wilson_B(self, coordinates: primitives | None = None) -> NDArray:
+        """
+        Generate Wilson's B matrix for the current structure.
+
+        Args:
+            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
+                coordinates to use in the calculation. If None, calculates using the
+                get_primitive_coords method
+
+        Returns:
+            NDArray[float64]: Wilson's B matrix
+        """
+
         # get primitive coordinates
         if coordinates is None:
             coordinates = self.get_primitive_coords()
@@ -57,8 +92,26 @@ class CartesianBmat(CartesianCore):
 
         return self.jit_get_Wilson_B(pos_arr, coord_arr, len(self))
 
+    @staticmethod
     @njit((float64[:, :, :], int32[:, :], int32), parallel=True)
-    def jit_get_Wilson_B(pos_arr, coord_arr, n_atoms):
+    def jit_get_Wilson_B(pos_arr: NDArray, coord_arr: NDArray, n_atoms: int) -> NDArray:
+        """
+        Jit-compiled Wilson's B matrix generator.
+
+        Args:
+            pos_arr (NDArray): array of cartesian coordinate locations of the atoms
+                associated with each internal coordinate. If the coordinate is not a
+                dihedral, there are unused coordinates in the 4th, or 3rd and 4th,
+                places
+            coord_arr (NDArray): array of internal coordinates, followed by the length
+                of the coordinate. If the coordinate is not a dihedral, there are unused
+                numbers in the 4th, or 3rd and 4th, places to ensure a rectangular array
+            n_atoms (int): the number of atoms in the system, used to get matrix size
+
+        Returns:
+            NDArray[float64]: Wilson's B matrix
+        """
+
         # initialize B matrix
         B_mat = np.zeros((len(coord_arr), 3 * n_atoms))
 
@@ -187,7 +240,19 @@ class CartesianBmat(CartesianCore):
 
         return B_mat
 
-    def x_to_c(self, coordinates=None):
+    def x_to_c(self, coordinates: primitives | None = None) -> NDArray:
+        """
+        Conversion between cartesian coordinates and internal coordinates
+
+        Args:
+            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
+                coordinates to convert to. If None, calculates them using the
+                get_primitive_coords method
+
+        Returns:
+            NDArray[float64]: array of internal coordinate values
+        """
+
         # get primitive coordinates
         if coordinates is None:
             coordinates = self.get_primitive_coords
@@ -203,8 +268,24 @@ class CartesianBmat(CartesianCore):
         )
         return self.jit_x_to_c(pos_arr, coord_arr)
 
+    @staticmethod
     @njit((float64[:, :, :], int32[:, :]), parallel=True)
-    def jit_x_to_c(pos_arr, coord_arr):
+    def jit_x_to_c(pos_arr: NDArray, coord_arr: NDArray) -> NDArray:
+        """
+        Jit-compiled conversion between cartesian coordinates and internal coordinates
+
+        Args:
+            pos_arr (NDArray): array of cartesian coordinate locations of the atoms
+                associated with each internal coordinate. If the coordinate is not a
+                dihedral, there are unused coordinates in the 4th, or 3rd and 4th,
+                places
+            coord_arr (NDArray): array of internal coordinates, followed by the length
+                of the coordinate. If the coordinate is not a dihedral, there are unused
+                numbers in the 4th, or 3rd and 4th, places to ensure a rectangular array
+
+        Returns:
+            NDArray[float64]: array of internal coordinate values
+        """
         cs = np.empty(len(coord_arr))
 
         for i in prange(len(coord_arr)):
@@ -257,24 +338,40 @@ class CartesianBmat(CartesianCore):
 
         return cs
 
-    # NOTE: I am not sure this is the proper way to do this in OOP
-    def get_B_traj(self, end, N, M, additional_coords={}, verbose=False, filename=None):
+    def get_B_traj(
+        self,
+        end: Self,
+        N: int,
+        M: int,
+        generate_file: bool = True,
+        filename: str = "",
+        additional_coords: primitives = {},
+        verbose: bool = False,
+    ) -> NDArray:
         """
-        RECALCULATES WILSON B MATRIX EVERY M STEPS
+        Create a trajectory between two structures.
 
-        input:
-            start: str, input starting .xyz file path
-            end: str, input ending .xyz file path
-            N: int, number of subdivisions
-            M: int (default 1), number of subdivisions before
-            recalculating B-matrix
-            verbose: bool (default False), if True, prints extra information
-            filename: str (default None)
-        output:
-            path: list of Cartesian, pathway between
-            start and end
-            Also generates a trajectory file at
-            "{start[:-4]}_{N},{M}recal_anim.xyz"
+        This should be called in the following manner:
+        StartCartesian.get_B_traj(EndCartesian, N, M)
+
+        The trajectory should end close to the end Cartesian, but this is
+        not currently guaranteed. I plan to update this soon.
+
+        If generate_file is True, creates a molden file with name filename.
+
+        Args:
+            end (Cartesian): end structure
+            N (int): number of subdivisions
+            M (int): number of subdivisions before recalculating B-matrix
+            generate_file (bool): default True, if True, generates molden out file
+            filename (str): default "", filename for molden out file. If "", defaults to
+                trajectory.out
+            additional_coords (SortedSet[tuple]): SortedSet of additional primitive
+                coordinates to use in the calculation of the trajectory.
+            verbose (bool): default False, if True, prints extra information
+
+        Returns:
+            list[Cartesian]: pathway between self and end
         """
 
         path = np.concatenate((np.array([self]), np.empty(N)))
@@ -324,4 +421,10 @@ class CartesianBmat(CartesianCore):
             print(f"target end internal coordinates: {c2}")
             print(f"difference: {np.array(c2) - np.array(c_current)}")
 
-        to_molden(path, buf=filename)
+        if generate_file:
+            if not filename:
+                to_molden(path, buf="trajectory.out")
+            else:
+                to_molden(path, buf=filename)
+
+        return path
