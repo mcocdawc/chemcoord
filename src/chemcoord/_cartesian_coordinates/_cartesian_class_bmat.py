@@ -251,10 +251,9 @@ class CartesianBmat(CartesianCore):
         Returns:
             NDArray[float64]: array of internal coordinate values
         """
-
         # get primitive coordinates
         if coordinates is None:
-            coordinates = self.get_primitive_coords
+            coordinates = self.get_primitive_coords()
 
         coord_arr = np.array(
             [
