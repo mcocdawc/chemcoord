@@ -52,6 +52,37 @@ def test_fragmentate():
     assert (fragments[0] == molecule).all(axis=None)
 
 
+def test_get_fragment():
+    fragment = molecule.get_fragment([(6, 10), (9, 11), (16, 19)])
+    expected = np.array(
+        [
+            10,
+            11,
+            12,
+            13,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            32,
+            33,
+            38,
+            39,
+            41,
+            42,
+            44,
+            45,
+            47,
+            48,
+            49,
+            53,
+        ]
+    )
+    assert (expected == fragment.index).all()
+
+
 def test_get_shortest_distance():
     i, j, d = molecule.get_shortest_distance(molecule + [0, 0, 10])
     assert (i, j) == (27, 24)
