@@ -936,6 +936,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             use_lookup = settings["defaults"]["use_lookup"]
 
         exclude = [tuple[0] for tuple in list_of_indextuples]
+
+        # we just need one index that is definitely in the fragment
+        #  and then find all connected atoms (minus the excluded ones)
         index_of_atom = list_of_indextuples[0][1]
         fragment_index = self.get_coordination_sphere(
             index_of_atom,
