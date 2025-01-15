@@ -15,7 +15,7 @@ i.e. the type is mostly useful to document intent to the developer.
 import os
 
 import numpy as np
-from typing_extensions import Any, Dict, Tuple, TypeAlias, TypeVar
+from typing_extensions import Any, Dict, Tuple, TypeAlias, TypeVar, Union
 
 # We want the dtype to behave covariant, i.e. if a
 #  Vector[float] is allowed, then the more specific
@@ -48,6 +48,6 @@ Tensor7D = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
 Tensor = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
 
 #: Type annotation for pathlike objects.
-PathLike: TypeAlias = str | os.PathLike
+PathLike: TypeAlias = Union[str, os.PathLike]
 #: Type annotation for dictionaries holding keyword arguments.
 KwargDict: TypeAlias = Dict[str, Any]
