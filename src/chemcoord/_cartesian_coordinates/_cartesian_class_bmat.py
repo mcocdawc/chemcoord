@@ -4,11 +4,11 @@ import numpy as np
 from numba import float64, int32, njit, prange
 from numpy import cross
 from numpy.linalg import norm, pinv
-from numpy.typing import NDArray
 from sortedcontainers import SortedSet
 from typing_extensions import Self, TypeAlias, Union
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
+from chemcoord._utilities.typing import Matrix, Tensor3D, Vector
 from chemcoord.xyz_functions import to_molden
 
 primitives: TypeAlias = SortedSet[
@@ -62,7 +62,7 @@ class CartesianBmat(CartesianCore):
 
         return prims
 
-    def get_Wilson_B(self, coordinates: Union[primitives, None] = None) -> NDArray:
+    def get_Wilson_B(self, coordinates: Union[primitives, None] = None) -> Matrix:
         """
         Generate Wilson's B matrix for the current structure.
 
@@ -93,22 +93,22 @@ class CartesianBmat(CartesianCore):
 
     @staticmethod
     @njit((float64[:, :, :], int32[:, :], int32), parallel=True)
-    def jit_get_Wilson_B(pos_arr: NDArray, coord_arr: NDArray, n_atoms: int) -> NDArray:
+    def jit_get_Wilson_B(pos_arr: Tensor3D, coord_arr: Matrix, n_atoms: int) -> Matrix:
         """
         Jit-compiled Wilson's B matrix generator.
 
         Args:
-            pos_arr (NDArray): array of cartesian coordinate locations of the atoms
+            pos_arr (Tensor3D): array of cartesian coordinate locations of the atoms
                 associated with each internal coordinate. If the coordinate is not a
                 dihedral, there are unused coordinates in the 4th, or 3rd and 4th,
                 places
-            coord_arr (NDArray): array of internal coordinates, followed by the length
+            coord_arr (Matrix): array of internal coordinates, followed by the length
                 of the coordinate. If the coordinate is not a dihedral, there are unused
                 numbers in the 4th, or 3rd and 4th, places to ensure a rectangular array
             n_atoms (int): the number of atoms in the system, used to get matrix size
 
         Returns:
-            NDArray[float64]: Wilson's B matrix
+            Matrix[float64]: Wilson's B matrix
         """
 
         # initialize B matrix
@@ -239,7 +239,7 @@ class CartesianBmat(CartesianCore):
 
         return B_mat
 
-    def x_to_c(self, coordinates: Union[primitives, None] = None) -> NDArray:
+    def x_to_c(self, coordinates: Union[primitives, None] = None) -> Vector:
         """
         Conversion between cartesian coordinates and internal coordinates
 
@@ -249,7 +249,7 @@ class CartesianBmat(CartesianCore):
                 get_primitive_coords method
 
         Returns:
-            NDArray[float64]: array of internal coordinate values
+            Vector[float64]: array of internal coordinate values
         """
         # get primitive coordinates
         if coordinates is None:
@@ -268,21 +268,21 @@ class CartesianBmat(CartesianCore):
 
     @staticmethod
     @njit((float64[:, :, :], int32[:, :]), parallel=True)
-    def jit_x_to_c(pos_arr: NDArray, coord_arr: NDArray) -> NDArray:
+    def jit_x_to_c(pos_arr: Tensor3D, coord_arr: Matrix) -> Vector:
         """
         Jit-compiled conversion between cartesian coordinates and internal coordinates
 
         Args:
-            pos_arr (NDArray): array of cartesian coordinate locations of the atoms
+            pos_arr (Tensor3D): array of cartesian coordinate locations of the atoms
                 associated with each internal coordinate. If the coordinate is not a
                 dihedral, there are unused coordinates in the 4th, or 3rd and 4th,
                 places
-            coord_arr (NDArray): array of internal coordinates, followed by the length
+            coord_arr (Matrix): array of internal coordinates, followed by the length
                 of the coordinate. If the coordinate is not a dihedral, there are unused
                 numbers in the 4th, or 3rd and 4th, places to ensure a rectangular array
 
         Returns:
-            NDArray[float64]: array of internal coordinate values
+            Vector[float64]: array of internal coordinate values
         """
         cs = np.empty(len(coord_arr))
 
@@ -345,7 +345,7 @@ class CartesianBmat(CartesianCore):
         filename: str = "",
         additional_coords: primitives = {},
         verbose: bool = False,
-    ) -> NDArray:
+    ) -> Vector:
         """
         Create a trajectory between two structures.
 
@@ -369,7 +369,7 @@ class CartesianBmat(CartesianCore):
             verbose (bool): default False, if True, prints extra information
 
         Returns:
-            list[Cartesian]: pathway between self and end
+            Vector[Cartesian]: pathway between self and end
         """
 
         path = np.concatenate((np.array([self]), np.empty(N)))
