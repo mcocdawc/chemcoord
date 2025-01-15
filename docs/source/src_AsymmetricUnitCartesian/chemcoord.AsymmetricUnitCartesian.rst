@@ -30,6 +30,7 @@
       ~AsymmetricUnitCartesian.fragmentate
       ~AsymmetricUnitCartesian.from_ase_atoms
       ~AsymmetricUnitCartesian.from_pymatgen_molecule
+      ~AsymmetricUnitCartesian.from_pyscf
       ~AsymmetricUnitCartesian.get_align_transf
       ~AsymmetricUnitCartesian.get_angle_degrees
       ~AsymmetricUnitCartesian.get_ase_atoms
@@ -70,6 +71,7 @@
       ~AsymmetricUnitCartesian.symmetrize
       ~AsymmetricUnitCartesian.to_cjson
       ~AsymmetricUnitCartesian.to_latex
+      ~AsymmetricUnitCartesian.to_pyscf
       ~AsymmetricUnitCartesian.to_string
       ~AsymmetricUnitCartesian.to_xyz
       ~AsymmetricUnitCartesian.to_zmat
