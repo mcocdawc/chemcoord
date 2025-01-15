@@ -9,7 +9,6 @@ from typing_extensions import Self, TypeAlias, Union
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._utilities.typing import Matrix, Tensor3D, Vector
-from chemcoord.xyz_functions import to_molden
 
 primitives: TypeAlias = SortedSet[
     Union[tuple[int, int], tuple[int, int, int], tuple[int, int, int, int]]
@@ -321,16 +320,16 @@ class CartesianBmat(CartesianCore):
                 normedw = w / norm(w)
                 normedv = v / norm(v)
 
-                if np.dot(normedu, normedw) != 1 and np.dot(normedw, normedv) != 1:
-                    cs[i] = np.arccos(
-                        np.dot(cross(normedu, normedw), cross(normedv, normedw))
-                        / (
-                            np.sqrt(
-                                (1 - np.dot(normedu, normedw) ** 2)
-                                * (1 - np.dot(normedw, normedv) ** 2)
-                            )
-                        )
-                    )
+                uw = np.dot(normedu, normedw)
+                wv = np.dot(normedw, normedv)
+
+                x = -np.dot(cross(normedu, normedw), cross(normedv, normedw))
+                y = np.dot(
+                    cross(cross(normedu, normedw), normedw), cross(normedv, normedw)
+                )
+
+                if uw != 1 and wv != 1:
+                    cs[i] = np.arctan2(y, x)
                 else:
                     cs[i] = float("nan")
 
@@ -341,11 +340,9 @@ class CartesianBmat(CartesianCore):
         end: Self,
         N: int,
         M: int,
-        generate_file: bool = True,
-        filename: str = "",
         additional_coords: primitives = {},
         verbose: bool = False,
-    ) -> Vector:
+    ) -> list[Self]:
         """
         Create a trajectory between two structures.
 
@@ -361,18 +358,15 @@ class CartesianBmat(CartesianCore):
             end (Cartesian): end structure
             N (int): number of subdivisions
             M (int): number of subdivisions before recalculating B-matrix
-            generate_file (bool): default True, if True, generates molden out file
-            filename (str): default "", filename for molden out file. If "", defaults to
-                trajectory.out
             additional_coords (SortedSet[tuple]): SortedSet of additional primitive
                 coordinates to use in the calculation of the trajectory.
             verbose (bool): default False, if True, prints extra information
 
         Returns:
-            Vector[Cartesian]: pathway between self and end
+            list[Cartesian]: pathway between self and end
         """
 
-        path = np.concatenate((np.array([self]), np.empty(N)))
+        path = [self]
 
         # initial cartesian coordinates
         x_current = list(chain.from_iterable(self.loc[:, ["x", "y", "z"]].values))
@@ -396,6 +390,17 @@ class CartesianBmat(CartesianCore):
             # difference between current point and final point in internal coordinates
             delta_c = c2 - c_current
 
+            # TODO: change this to use the modulus function already written in here
+            # check to make sure it takes the shorter dihedral and angle
+            delta_c = [
+                delta_c[i]
+                if (np.abs(delta_c[i]) < np.pi or len(coords[i]) == 2)
+                else -(2 * np.pi - delta_c[i])
+                if delta_c[i] > 0
+                else (2 * np.pi + delta_c[i])
+                for i in range(len(delta_c))
+            ]
+
             if i % M == 0:
                 if verbose:
                     print(f"recalculating B at iteration {i}")
@@ -412,17 +417,11 @@ class CartesianBmat(CartesianCore):
             # converting to internal coordinates
             c_current = current_struct.x_to_c(coordinates=coords)
 
-            path[i + 1] = current_struct.copy()
+            path.append(current_struct.copy())
 
         if verbose:
             print(f"end internal coordinates: {c_current}")
             print(f"target end internal coordinates: {c2}")
             print(f"difference: {np.array(c2) - np.array(c_current)}")
-
-        if generate_file:
-            if not filename:
-                to_molden(path, buf="trajectory.out")
-            else:
-                to_molden(path, buf=filename)
 
         return path
