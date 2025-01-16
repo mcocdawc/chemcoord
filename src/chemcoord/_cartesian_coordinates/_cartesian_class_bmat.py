@@ -335,13 +335,48 @@ class CartesianBmat(CartesianCore):
 
         return cs
 
-    def get_B_traj(
+    def B_traj_step(self, end: Self, N: int, coords: primitives) -> Self:
+        current_struct = self.copy()
+
+        # TODO: make this a numpy array
+        x_current = list(chain.from_iterable(self.loc[:, ["x", "y", "z"]].values))
+
+        c_current = self.x_to_c(coordinates=coords)
+        # this could be made faster by not recalculating this at every step, just
+        # storing it in the main loop and passing it to this function
+        c2 = end.x_to_c(coordinates=coords)
+
+        # difference between current point and final point in internal coordinates
+        delta_c = c2 - c_current
+
+        # TODO: change this to use the modulus function already written in here
+        # check to make sure it takes the shorter dihedral and angle
+        delta_c = [
+            delta_c[i]
+            if (np.abs(delta_c[i]) < np.pi or len(coords[i]) == 2)
+            else -(2 * np.pi - delta_c[i])
+            if delta_c[i] > 0
+            else (2 * np.pi + delta_c[i])
+            for i in range(len(delta_c))
+        ]
+
+        B = current_struct.get_Wilson_B(coordinates=coords)
+        invB = pinv(B)
+
+        x_current = x_current + (invB @ delta_c / N)
+
+        assert len(x_current) % 3 == 0
+        current_struct.loc[:, ["x", "y", "z"]] = np.reshape(
+            x_current, (len(x_current) // 3, 3)
+        )
+
+        return current_struct
+
+    def get_B_traj2(
         self,
         end: Self,
         N: int,
-        M: int,
-        additional_coords: primitives = {},
-        verbose: bool = False,
+        additional_coords: Union[primitives, None] = None,
     ) -> list[Self]:
         """
         Create a trajectory between two structures.
@@ -366,9 +401,60 @@ class CartesianBmat(CartesianCore):
             list[Cartesian]: pathway between self and end
         """
 
+        if additional_coords is None:
+            additional_coords = set()
+
+        path = [self]
+
+        coords = (
+            self.get_primitive_coords()
+            | end.get_primitive_coords()
+            | SortedSet(additional_coords, key=lambda x: (len(x), x))
+        )
+
+        # for each subdivision,
+        for i in range(N):
+            path.append(path[i].B_traj_step(end, N - i, coords))
+
+        return path
+
+    def get_B_traj(
+        self,
+        end: Self,
+        N: int,
+        M: int,
+        additional_coords: Union[primitives, None] = None,
+    ) -> list[Self]:
+        """
+        Create a trajectory between two structures.
+
+        This should be called in the following manner:
+        StartCartesian.get_B_traj(EndCartesian, N, M)
+
+        The trajectory should end close to the end Cartesian, but this is
+        not currently guaranteed. I plan to update this soon.
+
+        If generate_file is True, creates a molden file with name filename.
+
+        Args:
+            end (Cartesian): end structure
+            N (int): number of subdivisions
+            M (int): number of subdivisions before recalculating B-matrix
+            additional_coords (SortedSet[tuple]): SortedSet of additional primitive
+                coordinates to use in the calculation of the trajectory.
+            verbose (bool): default False, if True, prints extra information
+
+        Returns:
+            list[Cartesian]: pathway between self and end
+        """
+
+        if additional_coords is None:
+            additional_coords = set()
+
         path = [self]
 
         # initial cartesian coordinates
+        # TODO: make this a numpy array
         x_current = list(chain.from_iterable(self.loc[:, ["x", "y", "z"]].values))
 
         coords = (
@@ -402,8 +488,6 @@ class CartesianBmat(CartesianCore):
             ]
 
             if i % M == 0:
-                if verbose:
-                    print(f"recalculating B at iteration {i}")
                 B = current_struct.get_Wilson_B(coordinates=coords)
                 invB = pinv(B)
 
@@ -418,10 +502,5 @@ class CartesianBmat(CartesianCore):
             c_current = current_struct.x_to_c(coordinates=coords)
 
             path.append(current_struct.copy())
-
-        if verbose:
-            print(f"end internal coordinates: {c_current}")
-            print(f"target end internal coordinates: {c2}")
-            print(f"difference: {np.array(c2) - np.array(c_current)}")
 
         return path
