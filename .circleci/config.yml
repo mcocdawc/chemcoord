@@ -92,4 +92,4 @@ jobs:
   py313:
     <<: *run_tests
     docker:
-      - image: cimg/python:3.12
+      - image: cimg/python:3.13
