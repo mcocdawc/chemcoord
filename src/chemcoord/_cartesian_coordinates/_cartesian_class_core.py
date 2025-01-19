@@ -241,6 +241,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new.loc[:, coords] = (np.dot(other, new.loc[:, coords].T)).T
         return new
 
+    # Somehow the base class `object` expects the return type to be `bool``
+    #  but the correct type hint is DataFrame.
+    # Ignore this override error.
     def __eq__(self, other: Self) -> DataFrame:  # type: ignore[override]
         return self._frame == other._frame
 
