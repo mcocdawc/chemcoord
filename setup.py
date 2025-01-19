@@ -74,7 +74,7 @@ def setup_package():
         packages=find_packages("src"),
         package_dir={"": "src"},
         install_requires=INSTALL_REQUIRES,
-        python_requires=">=3.8,<3.14",
+        python_requires=">=3.8",
     )
 
 
