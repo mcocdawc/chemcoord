@@ -11,12 +11,13 @@ i.e. the type is mostly useful to document intent to the developer.
 
 import os
 from collections.abc import Sequence
-from typing import Any, Dict, Tuple, TypeAlias, TypeVar, Union
+from typing import Any, Dict, Tuple, TypeVar, Union
 
 import numpy as np
 
 # Reexpose some pandas types
 from pandas._typing import Axes  # noqa: F401
+from typing_extensions import TypeAlias
 
 # We want the dtype to behave covariant, i.e. if a
 #  Vector[float] is allowed, then the more specific
