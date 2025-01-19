@@ -19,7 +19,7 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
 )
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._decorators import njit
-from chemcoord._utilities.typing import ArithmeticOther, Axes, Matrix
+from chemcoord._utilities.typing import ArithmeticOther, Axes, Matrix, Vector
 from chemcoord.configuration import settings
 from chemcoord.exceptions import PhysicalMeaning
 
@@ -306,7 +306,11 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     @staticmethod
     @njit
-    def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
+    def _jit_give_bond_array(
+        pos: Matrix[np.floating],
+        bond_radii: Vector[np.floating],
+        self_bonding_allowed: bool = False,
+    ) -> Matrix[np.float64]:
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
         """
