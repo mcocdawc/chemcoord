@@ -1,6 +1,10 @@
 # The following code was taken from the MIT licensed pandas project
 # and modified. http://pandas.pydata.org/
+from collections.abc import Callable
 from textwrap import dedent
+from typing import TypeVar, overload
+
+import numba as nb
 
 # # Substitution and Appender are derived from matplotlib.docstring (1.1.0)
 # # module http://matplotlib.org/users/license.html
@@ -103,3 +107,40 @@ def indent(text, indents=1):
         return ""
     jointext = "".join(["\n"] + ["    "] * indents)
     return jointext.join(text.split("\n"))
+
+
+Function = TypeVar("Function", bound=Callable)
+
+
+@overload
+def njit(f: Function, **kwargs) -> Function: ...
+@overload
+def njit(**kwargs) -> Callable[[Function], Function]: ...
+
+
+def njit(
+    f: Function | None = None, **kwargs
+) -> Function | Callable[[Function], Function]:
+    """Type-safe jit wrapper that caches the compiled function
+
+    With this jit wrapper, you can actually use static typing together with numba.
+    The crucial declaration is that the decorated function's interface is preserved,
+    i.e. mapping :class:`Function` to :class:`Function`.
+    Otherwise the following example would not raise a type error:
+
+    .. code-block:: python
+
+        @numba.njit
+        def f(x: int) -> int:
+            return x
+
+        f(2.0)   # No type error
+
+    While the same example, using this custom :func:`njit` would raise a type error.
+
+    In addition to type safety, this wrapper also sets :code:`cache=True` by default.
+    """
+    if f is None:
+        return nb.njit(cache=True, **kwargs)
+    else:
+        return nb.njit(f, cache=True, **kwargs)
