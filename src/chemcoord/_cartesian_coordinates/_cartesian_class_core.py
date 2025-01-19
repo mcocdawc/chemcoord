@@ -1,6 +1,7 @@
 import collections
 import copy
 import itertools
+from collections.abc import Sequence
 from itertools import product
 
 import numba as nb
@@ -29,13 +30,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     # overwrites existing method
     def __init__(
         self,
-        frame=None,
-        atoms=None,
-        coords=None,
-        index=None,
-        metadata=None,
-        _metadata=None,
-    ):
+        frame: pd.DataFrame | None = None,
+        atoms: Sequence[str] | None = None,
+        coords: dict | None = None,
+        index: dict | None = None,
+        metadata: dict | None = None,
+        _metadata: dict | None = None,
+    ) -> None:
         """How to initialize a Cartesian instance.
 
         Args:
