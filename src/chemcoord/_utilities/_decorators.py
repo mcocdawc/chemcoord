@@ -2,7 +2,7 @@
 # and modified. http://pandas.pydata.org/
 from collections.abc import Callable
 from textwrap import dedent
-from typing import TypeVar, overload
+from typing import TypeVar, Union, overload
 
 import numba as nb
 
@@ -119,8 +119,8 @@ def njit(**kwargs) -> Callable[[Function], Function]: ...
 
 
 def njit(
-    f: Function | None = None, **kwargs
-) -> Function | Callable[[Function], Function]:
+    f: Union[Function, None] = None, **kwargs
+) -> Union[Function, Callable[[Function], Function]]:
     """Type-safe jit wrapper that caches the compiled function
 
     With this jit wrapper, you can actually use static typing together with numba.
