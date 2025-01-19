@@ -3,7 +3,7 @@ import copy
 import itertools
 from collections.abc import Sequence
 from itertools import product
-from typing import Any
+from typing import Any, Union
 
 import numba as nb
 import numpy as np
@@ -35,8 +35,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def __init__(
         self,
         frame: DataFrame,
-        metadata: dict | None = None,
-        _metadata: dict | None = None,
+        metadata: Union[dict, None] = None,
+        _metadata: Union[dict, None] = None,
     ) -> None:
         """How to initialize a Cartesian instance.
 
@@ -75,7 +75,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         cls,
         atoms: Sequence[str],
         coords: Matrix,
-        index: Axes | None = None,
+        index: Union[Axes, None] = None,
     ) -> Self:
         dtypes = [("atom", str), ("x", float), ("y", float), ("z", float)]
         frame = DataFrame(np.empty(len(atoms), dtype=dtypes), index=index)
@@ -84,8 +84,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return cls(frame)
 
     def _return_appropiate_type(
-        self, selected: Series | DataFrame
-    ) -> Self | Series | DataFrame:
+        self, selected: Union[Series, DataFrame]
+    ) -> Union[Self, Series, DataFrame]:
         if isinstance(selected, Series):
             frame = DataFrame(selected).T
             if self._required_cols <= set(frame.columns):
