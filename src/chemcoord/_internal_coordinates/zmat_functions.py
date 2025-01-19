@@ -122,4 +122,6 @@ def apply_grad_cartesian_tensor(grad_X, zmat_dist):
         Cartesian,
     )
 
-    return Cartesian(atoms=zmat_dist["atom"], coords=cart_dist, index=zmat_dist.index)
+    return Cartesian.set_atom_coords(
+        atoms=zmat_dist["atom"], coords=cart_dist, index=zmat_dist.index
+    )

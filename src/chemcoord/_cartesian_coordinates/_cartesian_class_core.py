@@ -8,7 +8,6 @@ from typing import Any
 import numba as nb
 import numpy as np
 import pandas as pd
-from numba import njit
 from pandas import DataFrame, Series
 from sortedcontainers import SortedSet
 from typing_extensions import Self
@@ -19,6 +18,7 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
     PandasWrapper,
 )
 from chemcoord._generic_classes.generic_core import GenericCore
+from chemcoord._utilities._decorators import njit
 from chemcoord._utilities.typing import ArithmeticOther, Axes, Matrix
 from chemcoord.configuration import settings
 from chemcoord.exceptions import PhysicalMeaning
@@ -53,6 +53,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             Cartesian: A new cartesian instance.
         """
+        if not isinstance(frame, DataFrame):
+            raise TypeError("frame has to be a pandas DataFrame")
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning(
                 "There are columns missing for a meaningful description of a molecule"
@@ -303,7 +305,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return out
 
     @staticmethod
-    @njit(cache=True)
+    @njit
     def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
@@ -987,7 +989,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return sorted(missing_part, key=len, reverse=True)
 
     @staticmethod
-    @njit(cache=True)
+    @njit
     def _jit_pairwise_distances(pos1, pos2):
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.

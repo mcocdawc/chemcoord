@@ -17,6 +17,7 @@ INSTALL_REQUIRES = [
     "sympy",
     "six",
     "pymatgen",
+    "typing_extensions",
 ]
 KEYWORDS = [
     "chemcoord",
