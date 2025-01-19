@@ -31,7 +31,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     # https://docs.scipy.org/doc/numpy-1.12.0/reference/arrays.classes.html
     __array_priority__ = 15.0
 
-    # overwrites existing method
     def __init__(
         self,
         frame: DataFrame,
