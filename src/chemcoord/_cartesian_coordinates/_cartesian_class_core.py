@@ -3,12 +3,15 @@ import copy
 import itertools
 from collections.abc import Sequence
 from itertools import product
+from typing import Any
 
 import numba as nb
 import numpy as np
 import pandas as pd
 from numba import njit
+from pandas import DataFrame, Series
 from sortedcontainers import SortedSet
+from typing_extensions import Self
 
 import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
@@ -16,8 +19,9 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
     PandasWrapper,
 )
 from chemcoord._generic_classes.generic_core import GenericCore
+from chemcoord._utilities.typing import ArithmeticOther, Axes, Matrix
 from chemcoord.configuration import settings
-from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
+from chemcoord.exceptions import PhysicalMeaning
 
 
 class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
@@ -30,10 +34,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     # overwrites existing method
     def __init__(
         self,
-        frame: pd.DataFrame | None = None,
-        atoms: Sequence[str] | None = None,
-        coords: dict | None = None,
-        index: dict | None = None,
+        frame: DataFrame,
         metadata: dict | None = None,
         _metadata: dict | None = None,
     ) -> None:
@@ -52,21 +53,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             Cartesian: A new cartesian instance.
         """
-        if bool(atoms is None and coords is None) == bool(
-            atoms is not None and coords is not None
-        ):
-            message = "atoms and coords have to be both None or not None"
-            raise IllegalArgumentCombination(message)
-        elif frame is None and atoms is None and coords is None:
-            message = "Either frame or atoms and coords have to be not None"
-            raise IllegalArgumentCombination(message)
-        elif atoms is not None and coords is not None:
-            dtypes = [("atom", str), ("x", float), ("y", float), ("z", float)]
-            frame = pd.DataFrame(np.empty(len(atoms), dtype=dtypes), index=index)
-            frame["atom"] = atoms
-            frame.loc[:, ["x", "y", "z"]] = coords
-        elif not isinstance(frame, pd.DataFrame):
-            raise ValueError("Need a pd.DataFrame as input")
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning(
                 "There are columns missing for a meaningful description of a molecule"
@@ -82,15 +68,30 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         else:
             self._metadata = copy.deepcopy(_metadata)
 
-    def _return_appropiate_type(self, selected):
-        if isinstance(selected, pd.Series):
-            frame = pd.DataFrame(selected).T
+    @classmethod
+    def set_atom_coords(
+        cls,
+        atoms: Sequence[str],
+        coords: Matrix,
+        index: Axes | None = None,
+    ) -> Self:
+        dtypes = [("atom", str), ("x", float), ("y", float), ("z", float)]
+        frame = DataFrame(np.empty(len(atoms), dtype=dtypes), index=index)
+        frame["atom"] = atoms
+        frame.loc[:, ["x", "y", "z"]] = coords
+        return cls(frame)
+
+    def _return_appropiate_type(
+        self, selected: Series | DataFrame
+    ) -> Self | Series | DataFrame:
+        if isinstance(selected, Series):
+            frame = DataFrame(selected).T
             if self._required_cols <= set(frame.columns):
                 selected = frame.apply(pd.to_numeric, errors="ignore")
             else:
                 return selected
 
-        if isinstance(selected, pd.DataFrame) and self._required_cols <= set(
+        if isinstance(selected, DataFrame) and self._required_cols <= set(
             selected.columns
         ):
             molecule = self.__class__(selected)
@@ -100,7 +101,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         else:
             return selected
 
-    def _test_if_can_be_added(self, other):
+    def _test_if_can_be_added(self, other: Self) -> None:
         if not (
             set(self.index) == set(other.index)
             and (self["atom"] == other.loc[self.index, "atom"]).all(axis=None)
@@ -111,13 +112,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             raise PhysicalMeaning(message)
 
-    def __add__(self, other):
+    def __add__(self, other: ArithmeticOther) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, CartesianCore):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
+        elif isinstance(other, DataFrame):
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         else:
             try:
@@ -127,16 +128,16 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = self.loc[:, coords] + other
         return new
 
-    def __radd__(self, other):
+    def __radd__(self, other: ArithmeticOther) -> Self:
         return self.__add__(other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: ArithmeticOther) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, CartesianCore):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
+        elif isinstance(other, DataFrame):
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         else:
             try:
@@ -146,13 +147,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = self.loc[:, coords] - other
         return new
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: ArithmeticOther) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, CartesianCore):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
+        elif isinstance(other, DataFrame):
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         else:
             try:
@@ -162,13 +163,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = other - self.loc[:, coords]
         return new
 
-    def __mul__(self, other):
+    def __mul__(self, other: ArithmeticOther) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, CartesianCore):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
+        elif isinstance(other, DataFrame):
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         else:
             try:
@@ -178,16 +179,16 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = self.loc[:, coords] * other
         return new
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: ArithmeticOther) -> Self:
         return self.__mul__(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: ArithmeticOther) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, CartesianCore):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
+        elif isinstance(other, DataFrame):
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         else:
             try:
@@ -197,13 +198,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = self.loc[:, coords] / other
         return new
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other: ArithmeticOther) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, CartesianCore):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
+        elif isinstance(other, DataFrame):
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
         else:
             try:
@@ -213,46 +214,46 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = other / self.loc[:, coords]
         return new
 
-    def __pow__(self, other):
+    def __pow__(self, other: ArithmeticOther) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         new.loc[:, coords] = self.loc[:, coords] ** other
         return new
 
-    def __pos__(self):
+    def __pos__(self) -> Self:
         return self.copy()
 
-    def __neg__(self):
+    def __neg__(self) -> Self:
         return -1 * self.copy()
 
-    def __abs__(self):
+    def __abs__(self) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         new.loc[:, coords] = abs(new.loc[:, coords])
         return new
 
-    def __matmul__(self, other):
+    def __matmul__(self, other: Matrix) -> Self:
         return NotImplemented
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self, other: Matrix) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         new.loc[:, coords] = (np.dot(other, new.loc[:, coords].T)).T
         return new
 
-    def __eq__(self, other):
+    def __eq__(self, other: Self) -> DataFrame:  # type: ignore[override]
         return self._frame == other._frame
 
-    def __ne__(self, other):
+    def __ne__(self, other: Self) -> DataFrame:  # type: ignore[override]
         return self._frame != other._frame
 
-    def copy(self):
+    def copy(self) -> Self:
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
         molecule._metadata = copy.deepcopy(self._metadata)
         return molecule
 
-    def subs(self, *args):
+    def subs(self, *args: Any) -> Self:
         """Substitute a symbolic expression in ``['x', 'y', 'z']``
 
         This is a wrapper around the substitution mechanism of
@@ -453,7 +454,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             data = self.add_data([atomic_radius_data, "valency"])
             bond_radii = data[atomic_radius_data]
             if modified_properties is not None:
-                bond_radii.update(pd.Series(modified_properties))
+                bond_radii.update(Series(modified_properties))
             bond_radii = bond_radii.values
             bond_dict = collections.defaultdict(set)
             for i, j, k in product(*[range(x) for x in fragments.shape]):
@@ -743,7 +744,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
         coords = ["x", "y", "z"]
-        if isinstance(indices, pd.DataFrame):
+        if isinstance(indices, DataFrame):
             i_pos = self.loc[indices.index, coords].values
             b_pos = self.loc[indices.loc[:, "b"], coords].values
         else:
@@ -773,7 +774,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
         coords = ["x", "y", "z"]
-        if isinstance(indices, pd.DataFrame):
+        if isinstance(indices, DataFrame):
             i_pos = self.loc[indices.index, coords].values
             b_pos = self.loc[indices.loc[:, "b"], coords].values
             a_pos = self.loc[indices.loc[:, "a"], coords].values
@@ -813,7 +814,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
         coords = ["x", "y", "z"]
-        if isinstance(indices, pd.DataFrame):
+        if isinstance(indices, DataFrame):
             i_pos = self.loc[indices.index, coords].values
             b_pos = self.loc[indices.loc[:, "b"], coords].values
             a_pos = self.loc[indices.loc[:, "a"], coords].values

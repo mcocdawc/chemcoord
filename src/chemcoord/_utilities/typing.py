@@ -10,9 +10,13 @@ i.e. the type is mostly useful to document intent to the developer.
 """
 
 import os
+from collections.abc import Sequence
 from typing import Any, Dict, Tuple, TypeAlias, TypeVar
 
 import numpy as np
+
+# Reexpose some pandas types
+from pandas._typing import Axes  # noqa: F401
 
 # We want the dtype to behave covariant, i.e. if a
 #  Vector[float] is allowed, then the more specific
@@ -48,3 +52,5 @@ Tensor = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
 PathLike: TypeAlias = str | os.PathLike
 #: Type annotation for dictionaries holding keyword arguments.
 KwargDict: TypeAlias = Dict[str, Any]
+
+ArithmeticOther = float | np.floating | Sequence | Sequence[Sequence] | Vector | Matrix

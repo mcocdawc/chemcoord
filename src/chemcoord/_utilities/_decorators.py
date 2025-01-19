@@ -7,7 +7,7 @@ from textwrap import dedent
 #
 
 
-class Substitution(object):
+class Substitution:
     """
     A decorator to take a function's docstring and perform string
     substitution on it.
@@ -63,7 +63,7 @@ class Substitution(object):
         return result
 
 
-class Appender(object):
+class Appender:
     """
     A function decorator that will append an addendum to the docstring
     of the target function.

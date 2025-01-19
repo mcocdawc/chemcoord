@@ -4,7 +4,7 @@ from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 from chemcoord.exceptions import InvalidReference
 
 
-class _generic_Indexer(object):
+class _generic_Indexer:
     def __init__(self, molecule):
         self.molecule = molecule
 

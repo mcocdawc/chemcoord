@@ -2,7 +2,7 @@ import numpy as np
 import sympy
 
 
-class GenericIO(object):
+class GenericIO:
     def _sympy_formatter(self):
         def formatter(x):
             if isinstance(x, sympy.Basic):
