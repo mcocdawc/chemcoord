@@ -114,10 +114,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             raise PhysicalMeaning(message)
 
-    def __add__(self, other: ArithmeticOther) -> Self:
+    def __add__(self, other: Union[Self, ArithmeticOther]) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
         elif isinstance(other, DataFrame):
@@ -130,13 +130,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = self.loc[:, coords] + other
         return new
 
-    def __radd__(self, other: ArithmeticOther) -> Self:
+    def __radd__(self, other: Union[Self, ArithmeticOther]) -> Self:
         return self.__add__(other)
 
-    def __sub__(self, other: ArithmeticOther) -> Self:
+    def __sub__(self, other: Union[Self, ArithmeticOther]) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
         elif isinstance(other, DataFrame):
@@ -149,10 +149,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = self.loc[:, coords] - other
         return new
 
-    def __rsub__(self, other: ArithmeticOther) -> Self:
+    def __rsub__(self, other: Union[Self, ArithmeticOther]) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
         elif isinstance(other, DataFrame):
@@ -165,10 +165,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = other - self.loc[:, coords]
         return new
 
-    def __mul__(self, other: ArithmeticOther) -> Self:
+    def __mul__(self, other: Union[Self, ArithmeticOther]) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
         elif isinstance(other, DataFrame):
@@ -181,13 +181,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = self.loc[:, coords] * other
         return new
 
-    def __rmul__(self, other: ArithmeticOther) -> Self:
+    def __rmul__(self, other: Union[Self, ArithmeticOther]) -> Self:
         return self.__mul__(other)
 
-    def __truediv__(self, other: ArithmeticOther) -> Self:
+    def __truediv__(self, other: Union[Self, ArithmeticOther]) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         elif isinstance(other, DataFrame):
@@ -200,10 +200,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = self.loc[:, coords] / other
         return new
 
-    def __rtruediv__(self, other: ArithmeticOther) -> Self:
+    def __rtruediv__(self, other: Union[Self, ArithmeticOther]) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
         elif isinstance(other, DataFrame):
@@ -216,7 +216,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.loc[:, coords] = other / self.loc[:, coords]
         return new
 
-    def __pow__(self, other: ArithmeticOther) -> Self:
+    def __pow__(self, other: Union[Self, ArithmeticOther]) -> Self:
         coords = ["x", "y", "z"]
         new = self.copy()
         new.loc[:, coords] = self.loc[:, coords] ** other
