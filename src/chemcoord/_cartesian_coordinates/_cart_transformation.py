@@ -1095,7 +1095,7 @@ def get_S_inv(v):
     if r == 0:
         return np.array([0.0, 0.0, 0.0])
     alpha = arccos(-z / r)
-    delta = arctan2(-y / r, x / r)
+    delta = arctan2(-y, x)
     return np.array([r, alpha, delta])
 
 

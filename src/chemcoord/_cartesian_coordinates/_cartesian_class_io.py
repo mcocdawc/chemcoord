@@ -268,7 +268,7 @@ class CartesianIO(CartesianCore, GenericIO):
         return molecule
 
     @classmethod
-    def from_pyscf_molecule(cls, mol):
+    def from_pyscf(cls, mol):
         """Create an instance of the own class from a PySCF molecule
 
         Args:
