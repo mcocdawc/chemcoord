@@ -15,7 +15,9 @@ i.e. the type is mostly useful to document intent to the developer.
 import os
 
 import numpy as np
-from typing_extensions import Any, Dict, Tuple, TypeAlias, TypeVar, Union
+from typing_extensions import Any, Callable, Dict, Tuple, TypeAlias, TypeVar, Union
+
+Function = TypeVar("Function", bound=Callable)
 
 # We want the dtype to behave covariant, i.e. if a
 #  Vector[float] is allowed, then the more specific
