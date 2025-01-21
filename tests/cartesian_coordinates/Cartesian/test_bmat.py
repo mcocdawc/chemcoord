@@ -31,7 +31,7 @@ def get_complete_path(structure):
 
 molecule1 = Cartesian.read_xyz(get_complete_path("cyclohexane_chair.xyz"))
 molecule2 = Cartesian.read_xyz(get_complete_path("cyclohexane_twist_boat.xyz"))
-molecule3 = Cartesian.read_xyz(get_complete_path("peroxide_trans.xyz"))
+molecule3 = Cartesian.read_xyz(get_complete_path("peroxide.xyz"))
 
 
 def test_primitive_coordinates():

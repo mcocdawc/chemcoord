@@ -3,9 +3,9 @@ from itertools import combinations
 import numpy as np
 from numba import njit, prange
 from numpy import cross
-from numpy.linalg import norm
+from numpy.linalg import norm, pinv
 from sortedcontainers import SortedSet
-from typing_extensions import TypeAlias, Union
+from typing_extensions import Self, TypeAlias, Union
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._utilities.typing import Matrix, Tensor3D, Vector
@@ -266,6 +266,8 @@ class CartesianBmat(CartesianCore):
         if coordinates is None:
             coordinates = self.get_primitive_coords()
 
+        position_arr = np.array(self.loc[:, ["x", "y", "z"]])
+
         internal_coord_arr = np.array(
             [
                 np.append(np.resize(coord, 4), np.array(len(coord)))
@@ -273,13 +275,11 @@ class CartesianBmat(CartesianCore):
             ]
         )
 
-        pos_arr = np.array(self.loc[:, ["x", "y", "z"]])
-
-        return self.jit_x_to_c(pos_arr, internal_coord_arr)
+        return self.jit_x_to_c(position_arr, internal_coord_arr)
 
     @staticmethod
     @njit(parallel=True, cache=True)
-    def jit_x_to_c(pos_arr: Tensor3D, coord_arr: Matrix) -> Vector:
+    def jit_x_to_c(position_arr: Tensor3D, internal_coord_arr: Matrix) -> Vector:
         """
         Jit-compiled conversion between cartesian coordinates and internal coordinates
 
@@ -295,18 +295,18 @@ class CartesianBmat(CartesianCore):
         Returns:
             Vector[float64]: array of internal coordinate values
         """
-        cs = np.empty(len(coord_arr))
+        cs = np.empty(len(internal_coord_arr))
 
-        for i in prange(len(coord_arr)):
+        for i in prange(len(internal_coord_arr)):
             # get ith internal coordinate
-            coord = coord_arr[i]
+            coord = internal_coord_arr[i]
 
             # separate cases for distances, angles, and dihedrals
 
             # distances
             if coord[-1] == 2:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:2]]
+                pos = position_arr[coord[:2]]
 
                 # derivatives are just components of unit vector along distance
                 u = pos[1] - pos[0]
@@ -315,7 +315,7 @@ class CartesianBmat(CartesianCore):
             # angles
             elif coord[-1] == 3:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:3]]
+                pos = position_arr[coord[:3]]
 
                 # vectors making up the angle
                 u = pos[0] - pos[1]
@@ -329,7 +329,7 @@ class CartesianBmat(CartesianCore):
             # dihedrals
             else:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:4]]
+                pos = position_arr[coord[:4]]
 
                 # vectors making up dihedral
                 u = pos[1] - pos[0]
@@ -359,7 +359,7 @@ class CartesianBmat(CartesianCore):
         current_struct = self.copy()
 
         # TODO: make this a numpy array
-        x_current = list(chain.from_iterable(self.loc[:, ["x", "y", "z"]].values))
+        x_current = np.array(self.loc[:, ["x", "y", "z"]]).flatten()
 
         c_current = self.x_to_c(coordinates=coords)
         # this could be made faster by not recalculating this at every step, just
@@ -475,7 +475,7 @@ class CartesianBmat(CartesianCore):
 
         # initial cartesian coordinates
         # TODO: make this a numpy array
-        x_current = list(chain.from_iterable(self.loc[:, ["x", "y", "z"]].values))
+        x_current = np.array(self.loc[:, ["x", "y", "z"]]).flatten()
 
         coords = (
             self.get_primitive_coords()
