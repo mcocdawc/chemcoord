@@ -54,6 +54,7 @@ class CartesianBmat(CartesianCore):
                     for atom4 in bonds[atom3] - {atom1, atom2}:
                         prims.add((atom1, atom2, atom3, atom4))
 
+        # get rid of reversed duplicates
         for item in prims:
             rev = tuple(reversed(item))
             if rev in prims:
@@ -78,31 +79,32 @@ class CartesianBmat(CartesianCore):
         if coordinates is None:
             coordinates = self.get_primitive_coords()
 
-        coord_arr = np.array(
+        position_arr = np.array(self.loc[:, ["x", "y", "z"]])
+
+        internal_coord_arr = np.array(
             [
                 np.append(np.resize(coord, 4), np.array(len(coord)))
                 for coord in coordinates
             ]
         )
 
-        pos_arr = np.array(self.loc[:, ["x", "y", "z"]])
-
-        return self.jit_get_Wilson_B(pos_arr, coord_arr, len(self))
+        return self.jit_get_Wilson_B(position_arr, internal_coord_arr, len(self))
 
     @staticmethod
     @njit(parallel=True, cache=True)
-    def jit_get_Wilson_B(pos_arr: Tensor3D, coord_arr: Matrix, n_atoms: int) -> Matrix:
+    def jit_get_Wilson_B(
+        position_arr: Tensor3D, internal_coord_arr: Matrix, n_atoms: int
+    ) -> Matrix:
         """
         Jit-compiled Wilson's B matrix generator.
 
         Args:
-            pos_arr (Tensor3D): array of cartesian coordinate locations of the atoms
-                associated with each internal coordinate. If the coordinate is not a
-                dihedral, there are unused coordinates in the 4th, or 3rd and 4th,
-                places
-            coord_arr (Matrix): array of internal coordinates, followed by the length
-                of the coordinate. If the coordinate is not a dihedral, there are unused
-                numbers in the 4th, or 3rd and 4th, places to ensure a rectangular array
+            position_arr (Tensor3D): array of cartesian coordinate locations of the
+                atoms in the Cartesian object.
+            internal_coord_arr (Matrix): array of internal coordinates, followed by the
+                length of the coordinate. If the coordinate is not a dihedral, there are
+                unused numbers in the 4th, or 3rd and 4th, places to ensure a
+                rectangular array
             n_atoms (int): the number of atoms in the system, used to get matrix size
 
         Returns:
@@ -110,19 +112,19 @@ class CartesianBmat(CartesianCore):
         """
 
         # initialize B matrix
-        B_mat = np.zeros((len(coord_arr), 3 * n_atoms))
+        B_mat = np.zeros((len(internal_coord_arr), 3 * n_atoms))
 
-        for i in prange(len(coord_arr)):
+        for i in prange(len(internal_coord_arr)):
             # separate cases for distances, angles, and dihedrals
             # procedure from J. Chem. Phys. 117, 9160 (2002); https://doi.org/10.1063/1.1515483
 
             # get ith internal coordinate
-            coord = coord_arr[i]
+            coord = internal_coord_arr[i]
 
             # distances
             if coord[-1] == 2:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:2]]
+                pos = position_arr[coord[:2]]
 
                 # derivatives are just components of unit vector along distance
 
@@ -131,13 +133,13 @@ class CartesianBmat(CartesianCore):
                 normedu = u / norm(u)
                 # for each cartesian coordinate
                 for j in range(3):
-                    B_mat[i][j + 3 * coord[0]] = normedu[j]
-                    B_mat[i][j + 3 * coord[1]] = -normedu[j]
+                    B_mat[i, j + 3 * coord[0]] = normedu[j]
+                    B_mat[i, j + 3 * coord[1]] = -normedu[j]
 
             # angles
             elif coord[-1] == 3:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:3]]
+                pos = position_arr[coord[:3]]
 
                 # vectors making up the angle
                 u = pos[0] - pos[1]
@@ -162,16 +164,16 @@ class CartesianBmat(CartesianCore):
                 normedw = w / norm(w)
 
                 for j in range(3):
-                    B_mat[i][j + 3 * coord[0]] = cross(normedu, normedw)[j] / norm(u)
-                    B_mat[i][j + 3 * coord[1]] = -(
+                    B_mat[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / norm(u)
+                    B_mat[i, j + 3 * coord[1]] = -(
                         cross(normedu, normedw)[j] / norm(u)
                     ) - (cross(normedw, normedv)[j] / norm(v))
-                    B_mat[i][j + 3 * coord[2]] = cross(normedw, normedv)[j] / norm(v)
+                    B_mat[i, j + 3 * coord[2]] = cross(normedw, normedv)[j] / norm(v)
 
             # dihedrals
             else:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:4]]
+                pos = position_arr[coord[:4]]
 
                 # vectors making up dihedral
                 u = pos[0] - pos[1]
@@ -193,32 +195,32 @@ class CartesianBmat(CartesianCore):
                 # catching cases where certain dihedrals are undefined
                 if (sinu, sinv) == (0, 0):
                     for j in range(3):
-                        B_mat[i][j + 3 * coord[0]] = float("nan")
-                        B_mat[i][j + 3 * coord[1]] = float("nan")
-                        B_mat[i][j + 3 * coord[2]] = float("nan")
-                        B_mat[i][j + 3 * coord[3]] = float("nan")
+                        B_mat[i, j + 3 * coord[0]] = float("nan")
+                        B_mat[i, j + 3 * coord[1]] = float("nan")
+                        B_mat[i, j + 3 * coord[2]] = float("nan")
+                        B_mat[i, j + 3 * coord[3]] = float("nan")
                 elif sinv == 0:
                     for j in range(3):
-                        B_mat[i][j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
+                        B_mat[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
                             norm(u) * (sinu**2)
                         )
-                        B_mat[i][j + 3 * coord[1]] = float("nan")
-                        B_mat[i][j + 3 * coord[2]] = float("nan")
-                        B_mat[i][j + 3 * coord[3]] = float("nan")
+                        B_mat[i, j + 3 * coord[1]] = float("nan")
+                        B_mat[i, j + 3 * coord[2]] = float("nan")
+                        B_mat[i, j + 3 * coord[3]] = float("nan")
                 elif sinu == 0:
                     for j in range(3):
-                        B_mat[i][j + 3 * coord[0]] = float("nan")
-                        B_mat[i][j + 3 * coord[1]] = float("nan")
-                        B_mat[i][j + 3 * coord[2]] = float("nan")
-                        B_mat[i][j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
+                        B_mat[i, j + 3 * coord[0]] = float("nan")
+                        B_mat[i, j + 3 * coord[1]] = float("nan")
+                        B_mat[i, j + 3 * coord[2]] = float("nan")
+                        B_mat[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
                             norm(v) * (sinv**2)
                         )
                 else:
                     for j in range(3):
-                        B_mat[i][j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
+                        B_mat[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
                             norm(u) * (sinu**2)
                         )
-                        B_mat[i][j + 3 * coord[1]] = -cross(normedu, normedw)[j] / (
+                        B_mat[i, j + 3 * coord[1]] = -cross(normedu, normedw)[j] / (
                             norm(u) * (sinu**2)
                         ) + (
                             (
@@ -230,7 +232,7 @@ class CartesianBmat(CartesianCore):
                                 / (norm(w) * (sinv**2))
                             )
                         )
-                        B_mat[i][j + 3 * coord[2]] = cross(normedv, normedw)[j] / (
+                        B_mat[i, j + 3 * coord[2]] = cross(normedv, normedw)[j] / (
                             norm(v) * (sinv**2)
                         ) - (
                             (
@@ -242,7 +244,7 @@ class CartesianBmat(CartesianCore):
                                 / (norm(w) * (sinv**2))
                             )
                         )
-                        B_mat[i][j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
+                        B_mat[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
                             norm(v) * (sinv**2)
                         )
 
@@ -264,7 +266,7 @@ class CartesianBmat(CartesianCore):
         if coordinates is None:
             coordinates = self.get_primitive_coords()
 
-        coord_arr = np.array(
+        internal_coord_arr = np.array(
             [
                 np.append(np.resize(coord, 4), np.array(len(coord)))
                 for coord in coordinates
@@ -273,7 +275,7 @@ class CartesianBmat(CartesianCore):
 
         pos_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
-        return self.jit_x_to_c(pos_arr, coord_arr)
+        return self.jit_x_to_c(pos_arr, internal_coord_arr)
 
     @staticmethod
     @njit(parallel=True, cache=True)
