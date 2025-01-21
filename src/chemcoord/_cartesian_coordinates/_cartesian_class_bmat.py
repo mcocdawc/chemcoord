@@ -3,7 +3,7 @@ from itertools import combinations
 import numpy as np
 from numba import njit, prange
 from numpy import cross
-from numpy.linalg import norm, pinv
+from numpy.linalg import lstsq, norm
 from sortedcontainers import SortedSet
 from typing_extensions import Self, TypeAlias, Union
 
@@ -358,7 +358,6 @@ class CartesianBmat(CartesianCore):
     def B_traj_step(self, end: Self, N: int, coords: primitives) -> Self:
         current_struct = self.copy()
 
-        # TODO: make this a numpy array
         x_current = np.array(self.loc[:, ["x", "y", "z"]]).flatten()
 
         c_current = self.x_to_c(coordinates=coords)
@@ -381,9 +380,10 @@ class CartesianBmat(CartesianCore):
         ]
 
         B = current_struct.get_Wilson_B(coordinates=coords)
-        invB = pinv(B)
+        delta_x = lstsq(B, delta_c)[0]
+        # invB = pinv(B)
 
-        x_current = x_current + (invB @ delta_c / N)
+        x_current = x_current + (delta_x / N)
 
         assert len(x_current) % 3 == 0
         current_struct.loc[:, ["x", "y", "z"]] = np.reshape(
@@ -392,7 +392,7 @@ class CartesianBmat(CartesianCore):
 
         return current_struct
 
-    def get_B_traj2(
+    def get_B_traj(
         self,
         end: Self,
         N: int,
@@ -402,20 +402,16 @@ class CartesianBmat(CartesianCore):
         Create a trajectory between two structures.
 
         This should be called in the following manner:
-        StartCartesian.get_B_traj(EndCartesian, N, M)
+        StartCartesian.get_B_traj(EndCartesian, N)
 
         The trajectory should end close to the end Cartesian, but this is
         not currently guaranteed. I plan to update this soon.
 
-        If generate_file is True, creates a molden file with name filename.
-
         Args:
             end (Cartesian): end structure
             N (int): number of subdivisions
-            M (int): number of subdivisions before recalculating B-matrix
             additional_coords (SortedSet[tuple]): SortedSet of additional primitive
                 coordinates to use in the calculation of the trajectory.
-            verbose (bool): default False, if True, prints extra information
 
         Returns:
             list[Cartesian]: pathway between self and end
@@ -435,92 +431,5 @@ class CartesianBmat(CartesianCore):
         # for each subdivision,
         for i in range(N):
             path.append(path[i].B_traj_step(end, N - i, coords))
-
-        return path
-
-    def get_B_traj(
-        self,
-        end: Self,
-        N: int,
-        M: int,
-        additional_coords: Union[primitives, None] = None,
-    ) -> list[Self]:
-        """
-        Create a trajectory between two structures.
-
-        This should be called in the following manner:
-        StartCartesian.get_B_traj(EndCartesian, N, M)
-
-        The trajectory should end close to the end Cartesian, but this is
-        not currently guaranteed. I plan to update this soon.
-
-        If generate_file is True, creates a molden file with name filename.
-
-        Args:
-            end (Cartesian): end structure
-            N (int): number of subdivisions
-            M (int): number of subdivisions before recalculating B-matrix
-            additional_coords (SortedSet[tuple]): SortedSet of additional primitive
-                coordinates to use in the calculation of the trajectory.
-            verbose (bool): default False, if True, prints extra information
-
-        Returns:
-            list[Cartesian]: pathway between self and end
-        """
-
-        if additional_coords is None:
-            additional_coords = set()
-
-        path = [self]
-
-        # initial cartesian coordinates
-        # TODO: make this a numpy array
-        x_current = np.array(self.loc[:, ["x", "y", "z"]]).flatten()
-
-        coords = (
-            self.get_primitive_coords()
-            | end.get_primitive_coords()
-            | SortedSet(additional_coords, key=lambda x: (len(x), x))
-        )
-
-        B = self.get_Wilson_B()
-        invB = np.array(pinv(B))
-
-        c_current = self.x_to_c(coordinates=coords)
-        c2 = end.x_to_c(coordinates=coords)
-
-        # copy self to avoid side-effects
-        current_struct = self.copy()
-        # for each subdivision,
-        for i in range(N):
-            # difference between current point and final point in internal coordinates
-            delta_c = c2 - c_current
-
-            # TODO: change this to use the modulus function already written in here
-            # check to make sure it takes the shorter dihedral and angle
-            delta_c = [
-                delta_c[i]
-                if (np.abs(delta_c[i]) < np.pi or len(coords[i]) == 2)
-                else -(2 * np.pi - delta_c[i])
-                if delta_c[i] > 0
-                else (2 * np.pi + delta_c[i])
-                for i in range(len(delta_c))
-            ]
-
-            if i % M == 0:
-                B = current_struct.get_Wilson_B(coordinates=coords)
-                invB = pinv(B)
-
-            x_current = x_current + (invB @ delta_c / (N - i))
-
-            assert len(x_current) % 3 == 0
-            current_struct.loc[:, ["x", "y", "z"]] = np.reshape(
-                x_current, (len(x_current) // 3, 3)
-            )
-
-            # converting to internal coordinates
-            c_current = current_struct.x_to_c(coordinates=coords)
-
-            path.append(current_struct.copy())
 
         return path

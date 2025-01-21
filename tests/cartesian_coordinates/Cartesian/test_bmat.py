@@ -311,7 +311,7 @@ def test_x_to_c():
 
 
 def test_get_B_traj():
-    path = molecule1.get_B_traj(molecule2, 10, 1)
+    path = molecule1.get_B_traj(molecule2, 10)
     expected = []
 
     expected = read_molden(get_complete_path("cyclohexane_path.out"))
