@@ -84,9 +84,8 @@ class CartesianBmat(CartesianCore):
                 for coord in coordinates
             ]
         )
-        pos_arr = np.array(
-            [np.resize(self._get_positions(coord[:4]), (4, 3)) for coord in coord_arr]
-        )
+
+        pos_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
         return self.jit_get_Wilson_B(pos_arr, coord_arr, len(self))
 
@@ -116,10 +115,15 @@ class CartesianBmat(CartesianCore):
         for i in prange(len(coord_arr)):
             # separate cases for distances, angles, and dihedrals
             # procedure from J. Chem. Phys. 117, 9160 (2002); https://doi.org/10.1063/1.1515483
+
+            # get ith internal coordinate
             coord = coord_arr[i]
-            pos = pos_arr[i]
+
             # distances
             if coord[-1] == 2:
+                # get positions of participating atoms
+                pos = pos_arr[coord[:2]]
+
                 # derivatives are just components of unit vector along distance
 
                 u = pos[0] - pos[1]
@@ -132,6 +136,9 @@ class CartesianBmat(CartesianCore):
 
             # angles
             elif coord[-1] == 3:
+                # get positions of participating atoms
+                pos = pos_arr[coord[:3]]
+
                 # vectors making up the angle
                 u = pos[0] - pos[1]
                 v = pos[2] - pos[1]
@@ -163,6 +170,9 @@ class CartesianBmat(CartesianCore):
 
             # dihedrals
             else:
+                # get positions of participating atoms
+                pos = pos_arr[coord[:4]]
+
                 # vectors making up dihedral
                 u = pos[0] - pos[1]
                 w = pos[2] - pos[1]
@@ -260,9 +270,9 @@ class CartesianBmat(CartesianCore):
                 for coord in coordinates
             ]
         )
-        pos_arr = np.array(
-            [np.resize(self._get_positions(coord[:4]), (4, 3)) for coord in coord_arr]
-        )
+
+        pos_arr = np.array(self.loc[:, ["x", "y", "z"]])
+
         return self.jit_x_to_c(pos_arr, coord_arr)
 
     @staticmethod
@@ -286,20 +296,25 @@ class CartesianBmat(CartesianCore):
         cs = np.empty(len(coord_arr))
 
         for i in prange(len(coord_arr)):
-            # list of positions of atoms participating in coordinate
-            pos = pos_arr[i]
+            # get ith internal coordinate
             coord = coord_arr[i]
 
             # separate cases for distances, angles, and dihedrals
 
             # distances
             if coord[-1] == 2:
+                # get positions of participating atoms
+                pos = pos_arr[coord[:2]]
+
                 # derivatives are just components of unit vector along distance
                 u = pos[1] - pos[0]
                 cs[i] = norm(u)
 
             # angles
             elif coord[-1] == 3:
+                # get positions of participating atoms
+                pos = pos_arr[coord[:3]]
+
                 # vectors making up the angle
                 u = pos[0] - pos[1]
                 v = pos[2] - pos[1]
@@ -311,6 +326,9 @@ class CartesianBmat(CartesianCore):
 
             # dihedrals
             else:
+                # get positions of participating atoms
+                pos = pos_arr[coord[:4]]
+
                 # vectors making up dihedral
                 u = pos[1] - pos[0]
                 w = pos[2] - pos[1]
