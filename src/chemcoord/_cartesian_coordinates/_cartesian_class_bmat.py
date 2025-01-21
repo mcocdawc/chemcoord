@@ -1,7 +1,7 @@
 from itertools import combinations
 
 import numpy as np
-from numba import float64, int64, njit, prange
+from numba import njit, prange
 from numpy import cross
 from numpy.linalg import norm
 from sortedcontainers import SortedSet
@@ -91,7 +91,7 @@ class CartesianBmat(CartesianCore):
         return self.jit_get_Wilson_B(pos_arr, coord_arr, len(self))
 
     @staticmethod
-    @njit((float64[:, :, :], int64[:, :], int64), parallel=True, cache=True)
+    @njit(parallel=True, cache=True)
     def jit_get_Wilson_B(pos_arr: Tensor3D, coord_arr: Matrix, n_atoms: int) -> Matrix:
         """
         Jit-compiled Wilson's B matrix generator.
@@ -266,7 +266,7 @@ class CartesianBmat(CartesianCore):
         return self.jit_x_to_c(pos_arr, coord_arr)
 
     @staticmethod
-    @njit((float64[:, :, :], int64[:, :]), parallel=True, cache=True)
+    @njit(parallel=True, cache=True)
     def jit_x_to_c(pos_arr: Tensor3D, coord_arr: Matrix) -> Vector:
         """
         Jit-compiled conversion between cartesian coordinates and internal coordinates
