@@ -237,7 +237,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def __matmul__(self, other: Matrix) -> Self:
         return NotImplemented
 
-    def __rmatmul__(self, other: Matrix) -> Self:
+    # Here we get a type error, which is fine and expected. Ignore it.
+    #   Signatures of "__rmatmul__" of "CartesianCore" and "__matmul__" of
+    #   "ndarray[tuple[int, ...], dtype[Any]]" are unsafely overlapping
+    def __rmatmul__(self, other: Matrix) -> Self:  # type: ignore[misc]
         coords = ["x", "y", "z"]
         new = self.copy()
         new.loc[:, coords] = (np.dot(other, new.loc[:, coords].T)).T
