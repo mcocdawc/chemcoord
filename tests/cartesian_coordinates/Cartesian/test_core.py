@@ -96,7 +96,7 @@ bond_dict = {
 
 
 def test_init():
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         cc.Cartesian(5)
     with pytest.raises(PhysicalMeaning):
         cc.Cartesian(molecule.loc[:, ["atom", "x"]])

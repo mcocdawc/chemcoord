@@ -277,7 +277,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             Cartesian:
         """
-        return cls(
+        return cls.set_atom_coords(
             atoms=mol.elements,
             coords=mol.atom_coords(unit="Angstrom"),
         )
@@ -458,7 +458,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             Cartesian:
         """
-        return cls(
+        return cls.set_atom_coords(
             atoms=[el.value for el in molecule.species], coords=molecule.cart_coords
         )
 

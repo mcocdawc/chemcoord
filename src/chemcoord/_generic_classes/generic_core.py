@@ -3,7 +3,7 @@ import pandas as pd
 import chemcoord.constants as constants
 
 
-class GenericCore(object):
+class GenericCore:
     def add_data(self, new_cols=None):
         """Adds a column with the requested data.
 

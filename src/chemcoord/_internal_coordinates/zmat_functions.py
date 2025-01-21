@@ -4,7 +4,7 @@ import sympy
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 
 
-class DummyManipulation(object):
+class DummyManipulation:
     """Contextmanager that controls the behaviour of
     :meth:`~chemcoord.Zmat.safe_loc` and
     :meth:`~chemcoord.Zmat.safe_iloc`.
@@ -41,7 +41,7 @@ class DummyManipulation(object):
         self.cls.dummy_manipulation_allowed = self.old_value
 
 
-class TestOperators(object):
+class TestOperators:
     """Switch the validity testing of zmatrices resulting from operators.
 
     The following examples is done with ``+``
@@ -67,7 +67,7 @@ class TestOperators(object):
         self.cls.test_operators = self.old_value
 
 
-class PureInternalMovement(object):
+class PureInternalMovement:
     """Remove the translational and rotational degrees of freedom.
 
     When doing assignments to the z-matrix::
@@ -122,4 +122,6 @@ def apply_grad_cartesian_tensor(grad_X, zmat_dist):
         Cartesian,
     )
 
-    return Cartesian(atoms=zmat_dist["atom"], coords=cart_dist, index=zmat_dist.index)
+    return Cartesian.set_atom_coords(
+        atoms=zmat_dist["atom"], coords=cart_dist, index=zmat_dist.index
+    )

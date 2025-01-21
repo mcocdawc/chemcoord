@@ -1,6 +1,5 @@
 import numba as nb
 import numpy as np
-from numba import njit
 from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
@@ -8,6 +7,7 @@ import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates.xyz_functions import (
     _jit_normalize,
 )
+from chemcoord._utilities._decorators import njit
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
@@ -44,12 +44,12 @@ def _get_ref_pos_impl(X, indices):  # noqa: ARG001
         raise AssertionError("Should not be here")
 
 
-@njit(cache=True)
+@njit
 def get_ref_pos(X, indices):
     return _stub_get_ref_pos(X, indices)
 
 
-@njit(cache=True)
+@njit
 def get_B(X, c_table, j):
     B = np.empty((3, 3))
     ref_pos = get_ref_pos(X, c_table[:, j])
@@ -66,7 +66,7 @@ def get_B(X, c_table, j):
     return (ERR_CODE_OK, B)
 
 
-@njit(cache=True)
+@njit
 def get_grad_B(X, c_table, j):
     grad_B = np.empty((3, 3, 3, 3))
     ref_pos = get_ref_pos(X, c_table[:, j])
@@ -1130,7 +1130,7 @@ def get_grad_S_inv(v):
     return grad_S_inv
 
 
-@njit(cache=True)
+@njit
 def get_T(X, c_table, j):
     err, B = get_B(X, c_table, j)
     if err == ERR_CODE_OK:
@@ -1141,7 +1141,7 @@ def get_T(X, c_table, j):
     return err, result
 
 
-@njit(cache=True)
+@njit
 def get_C(X, c_table):
     C = np.empty((3, c_table.shape[1]))
 
@@ -1154,7 +1154,7 @@ def get_C(X, c_table):
     return (ERR_CODE_OK, C)
 
 
-@njit(cache=True)
+@njit
 def get_grad_C(X, c_table):
     n_atoms = X.shape[1]
     grad_C = np.zeros((3, n_atoms, n_atoms, 3))

@@ -8,8 +8,8 @@ from threading import Thread
 import numpy as np
 import pandas as pd
 import sympy
-from numba import njit
 
+from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
 
 
@@ -299,7 +299,7 @@ def normalize(vector):
     return normed_vector
 
 
-@njit(cache=True)
+@njit
 def _jit_normalize(vector):
     """Normalizes a vector"""
     normed_vector = vector / np.linalg.norm(vector)
@@ -327,7 +327,7 @@ def get_rotation_matrix(axis, angle):
     return _jit_get_rotation_matrix(axis, angle)
 
 
-@njit(cache=True)
+@njit
 def _jit_get_rotation_matrix(axis, angle):
     """Returns the rotation matrix.
 
