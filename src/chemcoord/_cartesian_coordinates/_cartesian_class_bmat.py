@@ -83,14 +83,11 @@ class CartesianBmat(CartesianCore):
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
-        # TODO: This seems to be the limiting performance factor for very connected
-        # molecules. find a way around using np.resize and np.append.
-        internal_coord_arr = np.array(
-            [
-                np.append(np.resize(coord, 4), np.array(len(coord)))
-                for coord in coordinates
-            ]
-        )
+        internal_coord_arr = np.empty((len(coordinates), 5), dtype=int)
+        for i, coord in enumerate(coordinates):
+            for j, index in enumerate(coord):
+                internal_coord_arr[i, j] = index
+            internal_coord_arr[i, 4] = len(coord)
 
         return self.jit_get_Wilson_B(position_arr, internal_coord_arr, len(self))
 
@@ -274,14 +271,11 @@ class CartesianBmat(CartesianCore):
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
-        # TODO: This seems to be the limiting performance factor for very connected
-        # molecules. find a way around using np.resize and np.append.
-        internal_coord_arr = np.array(
-            [
-                np.append(np.resize(coord, 4), np.array(len(coord)))
-                for coord in coordinates
-            ]
-        )
+        internal_coord_arr = np.empty((len(coordinates), 5), dtype=int)
+        for i, coord in enumerate(coordinates):
+            for j, index in enumerate(coord):
+                internal_coord_arr[i, j] = index
+            internal_coord_arr[i, 4] = len(coord)
 
         return self.jit_x_to_c(position_arr, internal_coord_arr)
 
