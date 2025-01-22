@@ -16,7 +16,7 @@ primitives: TypeAlias = SortedSet[
 
 
 class CartesianBmat(CartesianCore):
-    def get_primitive_coords(self) -> primitives:
+    def get_primitive_coords(self, use_lookup: bool = False) -> primitives:
         """
         Generate set of redundant internal coordinates for the system.
 
@@ -36,7 +36,7 @@ class CartesianBmat(CartesianCore):
         # the key prioritizes length, then sorts lexicographically
         prims = SortedSet(key=lambda x: (len(x), x))
 
-        bonds = self.get_bonds()
+        bonds = self.get_bonds(use_lookup=use_lookup)
 
         for atom1, atom2 in combinations(range(len(bonds)), 2):
             if atom2 in bonds[atom1]:
@@ -62,7 +62,9 @@ class CartesianBmat(CartesianCore):
 
         return prims
 
-    def get_Wilson_B(self, coordinates: Union[primitives, None] = None) -> Matrix:
+    def get_Wilson_B(
+        self, coordinates: Union[primitives, None] = None, use_lookup: bool = False
+    ) -> Matrix:
         """
         Generate Wilson's B matrix for the current structure.
 
@@ -77,10 +79,12 @@ class CartesianBmat(CartesianCore):
 
         # get primitive coordinates
         if coordinates is None:
-            coordinates = self.get_primitive_coords()
+            coordinates = self.get_primitive_coords(use_lookup=use_lookup)
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
+        # TODO: This seems to be the limiting performance factor for very connected
+        # molecules. find a way around using np.resize and np.append.
         internal_coord_arr = np.array(
             [
                 np.append(np.resize(coord, 4), np.array(len(coord)))
@@ -250,7 +254,9 @@ class CartesianBmat(CartesianCore):
 
         return B_mat
 
-    def x_to_c(self, coordinates: Union[primitives, None] = None) -> Vector:
+    def x_to_c(
+        self, coordinates: Union[primitives, None] = None, use_lookup: bool = False
+    ) -> Vector:
         """
         Conversion between cartesian coordinates and internal coordinates
 
@@ -264,10 +270,12 @@ class CartesianBmat(CartesianCore):
         """
         # get primitive coordinates
         if coordinates is None:
-            coordinates = self.get_primitive_coords()
+            coordinates = self.get_primitive_coords(use_lookup=use_lookup)
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
+        # TODO: This seems to be the limiting performance factor for very connected
+        # molecules. find a way around using np.resize and np.append.
         internal_coord_arr = np.array(
             [
                 np.append(np.resize(coord, 4), np.array(len(coord)))
@@ -420,13 +428,23 @@ class CartesianBmat(CartesianCore):
         if additional_coords is None:
             additional_coords = set()
 
-        path = [self]
+        self.get_bonds()
+        fragments = self.fragmentate()
+        if len(fragments) != 1:
+            for fragment_pair in combinations(fragments, 2):
+                index1, index2, _ = fragment_pair[0].get_shortest_distance(
+                    fragment_pair[1]
+                )
+                self._metadata["bond_dict"][index1].add(index2)
+                self._metadata["bond_dict"][index2].add(index1)
 
         coords = (
-            self.get_primitive_coords()
+            self.get_primitive_coords(use_lookup=True)
             | end.get_primitive_coords()
             | SortedSet(additional_coords, key=lambda x: (len(x), x))
         )
+
+        path = [self]
 
         # for each subdivision,
         for i in range(N):
