@@ -200,3 +200,31 @@ try:
         elements = replace_data("~/.chemcoord_data_rc", elements)
 except OSError:
     pass
+
+
+class RestoreElementData:
+    """Temporarily change the element data to a new data set.
+
+    This is useful for changing the element data when molecules are distorted
+    and bonds are not correctly identified and allows to temporarily
+    increase e.g. van der Waals radii.
+
+    .. code-block:: python
+
+        with cc.constants.RestoreElementData():
+            cc.constants.elements.loc["H", "atomic_radius_cc"] = 3
+            print(cc.constants.elements.loc["H", "atomic_radius_cc"])
+        print(cc.constants.elements.loc["H", "atomic_radius_cc"])
+        # Output:
+        # 3
+        # 0.37
+    """
+
+    def __init__(self):
+        self.tmp_storage = elements.copy()
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        elements.loc[:, :] = self.tmp_storage
