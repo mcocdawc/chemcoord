@@ -194,12 +194,14 @@ class CartesianIO(CartesianCore, GenericIO):
         else:
             return output
 
-    def to_pyscf(self):
+    def to_pyscf(self, **kwargs):
         """Convert to a PySCF molecule.
 
         .. note:: The `pyscf library <https://sunqm.github.io/pyscf/>`_ is imported
             locally in this function and will raise an ``ImportError`` exception,
             if it is not installed.
+
+        The kwargs are passed to the :meth:`pyscf.gto.Mole.build` method.
 
         Returns:
             pyscf.gto.Mole:
@@ -210,7 +212,7 @@ class CartesianIO(CartesianCore, GenericIO):
         mol.atom = [
             [row[1].iloc[0], tuple(row[1].iloc[1:4])] for row in self._frame.iterrows()
         ]
-        mol.build()
+        mol.build(**kwargs)
         return mol
 
     def write_xyz(self, *args, **kwargs):
