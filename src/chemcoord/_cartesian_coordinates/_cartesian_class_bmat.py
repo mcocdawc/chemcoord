@@ -358,6 +358,8 @@ class CartesianBmat(CartesianCore):
         return cs
 
     def B_traj_step(self, end: Self, N: int, coords: primitives) -> Self:
+        # TODO: make sure additional_coords are getting passed along correctly.
+        # could account for messed up 1st step when you add too many
         current_struct = self.copy()
 
         x_current = np.array(self.loc[:, ["x", "y", "z"]]).flatten()
@@ -383,6 +385,7 @@ class CartesianBmat(CartesianCore):
 
         B = current_struct.get_Wilson_B(coordinates=coords)
         delta_x = lstsq(B, delta_c)[0]
+        # print(delta_x)
         # invB = pinv(B)
 
         x_current = x_current + (delta_x / N)
