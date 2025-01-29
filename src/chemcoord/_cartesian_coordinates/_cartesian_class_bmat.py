@@ -8,7 +8,7 @@ from sortedcontainers import SortedSet
 from typing_extensions import TypeAlias, Union
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
-from chemcoord._utilities.typing import Matrix, Tensor3D, Vector
+from chemcoord._utilities.typing import Matrix, Vector
 
 primitives: TypeAlias = SortedSet[
     Union[tuple[int, int], tuple[int, int, int], tuple[int, int, int, int]]
@@ -16,7 +16,7 @@ primitives: TypeAlias = SortedSet[
 
 
 class CartesianBmat(CartesianCore):
-    def get_primitive_coords(self) -> primitives:
+    def get_primitive_coords(self, use_lookup: bool = False) -> primitives:
         """
         Generate set of redundant internal coordinates for the system.
 
@@ -28,79 +28,92 @@ class CartesianBmat(CartesianCore):
             coordinates (SortedSet[tuple]): default None, SortedSet of primitive
                 coordinates to use in the calculation. If None, calculates using the
                 get_primitive_coords method
+            use_lookup (bool): default False, if True, uses a lookup table for bond
+                determination when generating primitive internal coordinates
 
         Returns:
             SortedSet[tuple]: SortedSet of redundant internal coordinates
         """
 
         # the key prioritizes length, then sorts lexicographically
-        prims = SortedSet(key=lambda x: (len(x), x))
+        primitive_coordinates = SortedSet(key=lambda x: (len(x), x))
 
-        bonds = self.get_bonds()
+        bonds = self.get_bonds(use_lookup=use_lookup)
 
         for atom1, atom2 in combinations(range(len(bonds)), 2):
+            # bond distance
             if atom2 in bonds[atom1]:
-                prims.add((atom1, atom2))
+                primitive_coordinates.add((atom1, atom2))
 
+                # angle
                 for atom0 in bonds[atom1] - {atom2}:
-                    prims.add((atom0, atom1, atom2))
+                    primitive_coordinates.add((atom0, atom1, atom2))
 
+                    # dihedral
                     for atom00 in bonds[atom0] - {atom1, atom2}:
-                        prims.add((atom00, atom0, atom1, atom2))
+                        primitive_coordinates.add((atom00, atom0, atom1, atom2))
 
+                # angle
                 for atom3 in bonds[atom2] - {atom1}:
-                    prims.add((atom1, atom2, atom3))
+                    primitive_coordinates.add((atom1, atom2, atom3))
 
+                    # dihedral
                     for atom4 in bonds[atom3] - {atom1, atom2}:
-                        prims.add((atom1, atom2, atom3, atom4))
+                        primitive_coordinates.add((atom1, atom2, atom3, atom4))
 
         # get rid of reversed duplicates
-        for item in prims:
+        for item in primitive_coordinates:
             rev = tuple(reversed(item))
-            if rev in prims:
-                prims.remove(rev)
+            if rev in primitive_coordinates:
+                primitive_coordinates.remove(rev)
 
-        return prims
+        return primitive_coordinates
 
-    def get_Wilson_B(self, coordinates: Union[primitives, None] = None) -> Matrix:
+    def get_Wilson_B(
+        self,
+        internal_coordinates: Union[primitives, None] = None,
+        use_lookup: bool = False,
+    ) -> Matrix:
         """
         Generate Wilson's B matrix for the current structure.
 
         Args:
-            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
-                coordinates to use in the calculation. If None, calculates using the
-                get_primitive_coords method
+            internal_coordinates (SortedSet[tuple]): default None, SortedSet of
+                primitive internal coordinates to use in the calculation. If None,
+                calculates using the get_primitive_coords method
+            use_lookup (bool): default False, if True, uses a lookup table for bond
+                determination when generating primitive internal coordinates
 
         Returns:
             NDArray[float64]: Wilson's B matrix
         """
 
         # get primitive coordinates
-        if coordinates is None:
-            coordinates = self.get_primitive_coords()
+        if internal_coordinates is None:
+            internal_coordinates = self.get_primitive_coords(use_lookup=use_lookup)
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
-        internal_coord_arr = np.array(
-            [
-                np.append(np.resize(coord, 4), np.array(len(coord)))
-                for coord in coordinates
-            ]
-        )
+        internal_coord_arr = np.empty((len(internal_coordinates), 5), dtype=int)
+        for i, coordinate in enumerate(internal_coordinates):
+            for j, index in enumerate(coordinate):
+                internal_coord_arr[i, j] = index
+            # label to differentiate bond distances, angles, and dihedrals
+            internal_coord_arr[i, 4] = len(coordinate)
 
         return self.jit_get_Wilson_B(position_arr, internal_coord_arr, len(self))
 
     @staticmethod
     @njit(parallel=True, cache=True)
     def jit_get_Wilson_B(
-        position_arr: Tensor3D, internal_coord_arr: Matrix, n_atoms: int
+        position_arr: Matrix, internal_coord_arr: Matrix, n_atoms: int
     ) -> Matrix:
         """
         Jit-compiled Wilson's B matrix generator.
 
         Args:
-            position_arr (Tensor3D): array of cartesian coordinate locations of the
-                atoms in the Cartesian object.
+            position_arr (Matrix): array of cartesian coordinate locations of the
+                atoms in the Cartesian
             internal_coord_arr (Matrix): array of internal coordinates, followed by the
                 length of the coordinate. If the coordinate is not a dihedral, there are
                 unused numbers in the 4th, or 3rd and 4th, places to ensure a
@@ -112,7 +125,7 @@ class CartesianBmat(CartesianCore):
         """
 
         # initialize B matrix
-        B_mat = np.zeros((len(internal_coord_arr), 3 * n_atoms))
+        B_matrix = np.zeros((len(internal_coord_arr), 3 * n_atoms))
 
         for i in prange(len(internal_coord_arr)):
             # separate cases for distances, angles, and dihedrals
@@ -124,32 +137,28 @@ class CartesianBmat(CartesianCore):
             # distances
             if coord[-1] == 2:
                 # get positions of participating atoms
-                pos = position_arr[coord[:2]]
+                positions = position_arr[coord[:2]]
 
                 # derivatives are just components of unit vector along distance
-
-                u = pos[0] - pos[1]
+                u = positions[0] - positions[1]
 
                 normedu = u / norm(u)
                 # for each cartesian coordinate
                 for j in range(3):
-                    B_mat[i, j + 3 * coord[0]] = normedu[j]
-                    B_mat[i, j + 3 * coord[1]] = -normedu[j]
+                    B_matrix[i, j + 3 * coord[0]] = normedu[j]
+                    B_matrix[i, j + 3 * coord[1]] = -normedu[j]
 
             # angles
             elif coord[-1] == 3:
                 # get positions of participating atoms
-                pos = position_arr[coord[:3]]
+                positions = position_arr[coord[:3]]
 
                 # vectors making up the angle
-                u = pos[0] - pos[1]
-                v = pos[2] - pos[1]
+                u = positions[0] - positions[1]
+                v = positions[2] - positions[1]
 
                 normedu = u / norm(u)
                 normedv = v / norm(v)
-
-                # for testing if we are using the right angle definitions
-                # print(f"{coord}: {np.arccos(np.dot(normedu,normedv))}")
 
                 w = cross(u, v)
 
@@ -164,21 +173,21 @@ class CartesianBmat(CartesianCore):
                 normedw = w / norm(w)
 
                 for j in range(3):
-                    B_mat[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / norm(u)
-                    B_mat[i, j + 3 * coord[1]] = -(
+                    B_matrix[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / norm(u)
+                    B_matrix[i, j + 3 * coord[1]] = -(
                         cross(normedu, normedw)[j] / norm(u)
                     ) - (cross(normedw, normedv)[j] / norm(v))
-                    B_mat[i, j + 3 * coord[2]] = cross(normedw, normedv)[j] / norm(v)
+                    B_matrix[i, j + 3 * coord[2]] = cross(normedw, normedv)[j] / norm(v)
 
             # dihedrals
             else:
                 # get positions of participating atoms
-                pos = position_arr[coord[:4]]
+                positions = position_arr[coord[:4]]
 
                 # vectors making up dihedral
-                u = pos[0] - pos[1]
-                w = pos[2] - pos[1]
-                v = pos[3] - pos[2]
+                u = positions[0] - positions[1]
+                w = positions[2] - positions[1]
+                v = positions[3] - positions[2]
 
                 normedu = u / norm(u)
                 normedw = w / norm(w)
@@ -195,32 +204,32 @@ class CartesianBmat(CartesianCore):
                 # catching cases where certain dihedrals are undefined
                 if (sinu, sinv) == (0, 0):
                     for j in range(3):
-                        B_mat[i, j + 3 * coord[0]] = float("nan")
-                        B_mat[i, j + 3 * coord[1]] = float("nan")
-                        B_mat[i, j + 3 * coord[2]] = float("nan")
-                        B_mat[i, j + 3 * coord[3]] = float("nan")
+                        B_matrix[i, j + 3 * coord[0]] = float("nan")
+                        B_matrix[i, j + 3 * coord[1]] = float("nan")
+                        B_matrix[i, j + 3 * coord[2]] = float("nan")
+                        B_matrix[i, j + 3 * coord[3]] = float("nan")
                 elif sinv == 0:
                     for j in range(3):
-                        B_mat[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
+                        B_matrix[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
                             norm(u) * (sinu**2)
                         )
-                        B_mat[i, j + 3 * coord[1]] = float("nan")
-                        B_mat[i, j + 3 * coord[2]] = float("nan")
-                        B_mat[i, j + 3 * coord[3]] = float("nan")
+                        B_matrix[i, j + 3 * coord[1]] = float("nan")
+                        B_matrix[i, j + 3 * coord[2]] = float("nan")
+                        B_matrix[i, j + 3 * coord[3]] = float("nan")
                 elif sinu == 0:
                     for j in range(3):
-                        B_mat[i, j + 3 * coord[0]] = float("nan")
-                        B_mat[i, j + 3 * coord[1]] = float("nan")
-                        B_mat[i, j + 3 * coord[2]] = float("nan")
-                        B_mat[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
+                        B_matrix[i, j + 3 * coord[0]] = float("nan")
+                        B_matrix[i, j + 3 * coord[1]] = float("nan")
+                        B_matrix[i, j + 3 * coord[2]] = float("nan")
+                        B_matrix[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
                             norm(v) * (sinv**2)
                         )
                 else:
                     for j in range(3):
-                        B_mat[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
+                        B_matrix[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
                             norm(u) * (sinu**2)
                         )
-                        B_mat[i, j + 3 * coord[1]] = -cross(normedu, normedw)[j] / (
+                        B_matrix[i, j + 3 * coord[1]] = -cross(normedu, normedw)[j] / (
                             norm(u) * (sinu**2)
                         ) + (
                             (
@@ -232,7 +241,7 @@ class CartesianBmat(CartesianCore):
                                 / (norm(w) * (sinv**2))
                             )
                         )
-                        B_mat[i, j + 3 * coord[2]] = cross(normedv, normedw)[j] / (
+                        B_matrix[i, j + 3 * coord[2]] = cross(normedv, normedw)[j] / (
                             norm(v) * (sinv**2)
                         ) - (
                             (
@@ -244,97 +253,101 @@ class CartesianBmat(CartesianCore):
                                 / (norm(w) * (sinv**2))
                             )
                         )
-                        B_mat[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
+                        B_matrix[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
                             norm(v) * (sinv**2)
                         )
 
-        return B_mat
+        return B_matrix
 
-    def x_to_c(self, coordinates: Union[primitives, None] = None) -> Vector:
+    def x_to_c(
+        self,
+        internal_coordinates: Union[primitives, None] = None,
+        use_lookup: bool = False,
+    ) -> Vector:
         """
         Conversion between cartesian coordinates and internal coordinates
 
         Args:
-            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
-                coordinates to convert to. If None, calculates them using the
+            internal_coordinates (SortedSet[tuple]): default None, SortedSet of
+                primitive coordinates to convert to. If None, calculates them using the
                 get_primitive_coords method
+            use_lookup (bool): default False, if True, uses a lookup table for bond
+                determination when generating primitive internal coordinates
 
         Returns:
             Vector[float64]: array of internal coordinate values
         """
         # get primitive coordinates
-        if coordinates is None:
-            coordinates = self.get_primitive_coords()
+        if internal_coordinates is None:
+            internal_coordinates = self.get_primitive_coords(use_lookup=use_lookup)
 
-        internal_coord_arr = np.array(
-            [
-                np.append(np.resize(coord, 4), np.array(len(coord)))
-                for coord in coordinates
-            ]
-        )
+        position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
-        pos_arr = np.array(self.loc[:, ["x", "y", "z"]])
+        internal_coord_arr = np.empty((len(internal_coordinates), 5), dtype=int)
+        for i, coordinate in enumerate(internal_coordinates):
+            for j, index in enumerate(coordinate):
+                internal_coord_arr[i, j] = index
+            internal_coord_arr[i, 4] = len(coordinate)
 
-        return self.jit_x_to_c(pos_arr, internal_coord_arr)
+        return self.jit_x_to_c(position_arr, internal_coord_arr)
 
     @staticmethod
     @njit(parallel=True, cache=True)
-    def jit_x_to_c(pos_arr: Tensor3D, coord_arr: Matrix) -> Vector:
+    def jit_x_to_c(position_arr: Matrix, internal_coord_arr: Matrix) -> Vector:
         """
         Jit-compiled conversion between cartesian coordinates and internal coordinates
 
         Args:
-            pos_arr (Tensor3D): array of cartesian coordinate locations of the atoms
-                associated with each internal coordinate. If the coordinate is not a
-                dihedral, there are unused coordinates in the 4th, or 3rd and 4th,
-                places
-            coord_arr (Matrix): array of internal coordinates, followed by the length
-                of the coordinate. If the coordinate is not a dihedral, there are unused
-                numbers in the 4th, or 3rd and 4th, places to ensure a rectangular array
+            position_arr (Matrix): array of cartesian coordinate locations of the
+                atoms in the Cartesian
+            internal_coord_arr (Matrix): array of internal coordinates, followed by the
+                length of the coordinate. If the coordinate is not a dihedral, there are
+                unused numbers in the 4th, or 3rd and 4th, places to ensure a
+                rectangular array
 
         Returns:
             Vector[float64]: array of internal coordinate values
         """
-        cs = np.empty(len(coord_arr))
+        internal_coordinates = np.empty(len(internal_coord_arr))
 
-        for i in prange(len(coord_arr)):
+        for i in prange(len(internal_coord_arr)):
             # get ith internal coordinate
-            coord = coord_arr[i]
+            coord = internal_coord_arr[i]
 
             # separate cases for distances, angles, and dihedrals
 
             # distances
             if coord[-1] == 2:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:2]]
+                positions = position_arr[coord[:2]]
 
                 # derivatives are just components of unit vector along distance
-                u = pos[1] - pos[0]
-                cs[i] = norm(u)
+                u = positions[1] - positions[0]
+                internal_coordinates[i] = norm(u)
 
             # angles
             elif coord[-1] == 3:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:3]]
+                positions = position_arr[coord[:3]]
 
                 # vectors making up the angle
-                u = pos[0] - pos[1]
-                v = pos[2] - pos[1]
+                u = positions[0] - positions[1]
+                v = positions[2] - positions[1]
 
                 normedu = u / norm(u)
                 normedv = v / norm(v)
 
-                cs[i] = np.arccos(np.dot(normedu, normedv))
+                internal_coordinates[i] = np.arccos(np.dot(normedu, normedv))
 
             # dihedrals
             else:
                 # get positions of participating atoms
-                pos = pos_arr[coord[:4]]
+                positions = position_arr[coord[:4]]
 
                 # vectors making up dihedral
-                u = pos[1] - pos[0]
-                w = pos[2] - pos[1]
-                v = pos[3] - pos[2]
+                u = positions[1] - positions[0]
+                w = positions[2] - positions[1]
+                v = positions[3] - positions[2]
 
                 normedu = u / norm(u)
                 normedw = w / norm(w)
@@ -349,8 +362,8 @@ class CartesianBmat(CartesianCore):
                 )
 
                 if uw != 1 and wv != 1:
-                    cs[i] = np.arctan2(y, x)
+                    internal_coordinates[i] = np.arctan2(y, x)
                 else:
-                    cs[i] = float("nan")
+                    internal_coordinates[i] = float("nan")
 
-        return cs
+        return internal_coordinates
