@@ -11,7 +11,7 @@ i.e. the type is mostly useful to document intent to the developer.
 
 import os
 from collections.abc import Sequence
-from typing import Any, Dict, Tuple, TypeVar, Union
+from typing import Any, Dict, NewType, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -57,3 +57,9 @@ KwargDict: TypeAlias = Dict[str, Any]
 ArithmeticOther = Union[
     float, np.floating, Sequence, Sequence[Sequence], Vector, Matrix
 ]
+
+
+AtomIdx = NewType("AtomIdx", int)
+# AtomIdx: TypeAlias = int
+
+Real: TypeAlias = float | np.floating

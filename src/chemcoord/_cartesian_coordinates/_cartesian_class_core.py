@@ -1,9 +1,9 @@
-import collections
 import copy
 import itertools
-from collections.abc import Sequence
+from collections import Counter, defaultdict
+from collections.abc import Iterable, Mapping, Sequence
 from itertools import product
-from typing import Any, Union
+from typing import Any, Union, cast
 
 import numba as nb
 import numpy as np
@@ -19,7 +19,15 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
 )
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._decorators import njit
-from chemcoord._utilities.typing import ArithmeticOther, Axes, Matrix, Vector
+from chemcoord._utilities.typing import (
+    ArithmeticOther,
+    AtomIdx,
+    Axes,
+    Matrix,
+    Real,
+    Tensor3D,
+    Vector,
+)
 from chemcoord.configuration import settings
 from chemcoord.exceptions import PhysicalMeaning
 
@@ -335,22 +343,26 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     def _update_bond_dict(
         self,
-        fragment_indices,
-        positions,
-        bond_radii,
-        bond_dict=None,
-        self_bonding_allowed=False,
-        convert_index=None,
-    ):
+        fragment_indices: Sequence[AtomIdx],
+        positions: Matrix[np.floating],
+        bond_radii: Vector[np.floating],
+        bond_dict: defaultdict[AtomIdx, set[AtomIdx]] | None = None,
+        self_bonding_allowed: bool = False,
+        convert_index: Mapping[AtomIdx, AtomIdx] | None = None,
+    ) -> defaultdict[AtomIdx, set[AtomIdx]]:
         """If bond_dict is provided, this function is not side effect free
-        bond_dict has to be a collections.defaultdict(set)
+        bond_dict has to be a defaultdict(set)
         """
-        assert isinstance(bond_dict, collections.defaultdict) or bond_dict is None
+        assert isinstance(bond_dict, defaultdict) or bond_dict is None
         fragment_indices = list(fragment_indices)
         if convert_index is None:
-            convert_index = dict(enumerate(fragment_indices))
+            convert_index = dict(
+                cast(Iterable[tuple[AtomIdx, AtomIdx]], enumerate(fragment_indices))
+            )
         if bond_dict is None:
-            bond_dict = collections.defaultdict(set)
+            bond_dict = defaultdict(set)
+        else:
+            bond_dict = bond_dict.copy()
 
         frag_pos = positions[fragment_indices, :]
         frag_bond_radii = bond_radii[fragment_indices]
@@ -358,25 +370,30 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         bond_array = self._jit_give_bond_array(
             frag_pos, frag_bond_radii, self_bonding_allowed=self_bonding_allowed
         )
-        a, b = bond_array.nonzero()
-        a, b = [convert_index[i] for i in a], [convert_index[i] for i in b]
+        a, b = [[convert_index[i] for i in a] for a in bond_array.nonzero()]
         for row, index in enumerate(a):
-            # bond_dict is a collections.defaultdict(set)
             bond_dict[index].add(b[row])
         return bond_dict
 
-    def _divide_et_impera(self, n_atoms_per_set=500, offset=3):
+    def _divide_et_impera(
+        self, n_atoms_per_set: int = 500, offset: float = 3.0
+    ) -> Tensor3D[set[AtomIdx]]:  # type: ignore[type-var]
         coords = ["x", "y", "z"]
         sorted_series = dict(zip(coords, [self[axis].sort_values() for axis in coords]))
 
-        def ceil(x):
+        def ceil(x: Real) -> int:
             return int(np.ceil(x))
 
         n_sets = len(self) / n_atoms_per_set
         n_sets_along_axis = ceil(n_sets ** (1 / 3))
         n_atoms_per_set_along_axis = ceil(len(self) / n_sets_along_axis)
 
-        def give_index(series, i, n_atoms_per_set_along_axis, offset=offset):
+        def give_index(
+            series: pd.Series,
+            i: int,
+            n_atoms_per_set_along_axis: int,
+            offset: float = offset,
+        ) -> set[AtomIdx]:
             N = n_atoms_per_set_along_axis
             try:
                 min_value, max_value = series.iloc[[i * N, (i + 1) * N]]
@@ -385,11 +402,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             selection = series.between(min_value - offset, max_value + offset)
             return set(series[selection].index)
 
-        indices_at_axis = {axis: {} for axis in coords}
-        for axis, i in product(coords, range(n_sets_along_axis)):
-            indices_at_axis[axis][i] = give_index(
-                sorted_series[axis], i, n_atoms_per_set_along_axis
-            )
+        indices_at_axis = {
+            axis: {
+                i: give_index(sorted_series[axis], i, n_atoms_per_set_along_axis)
+                for i in range(n_sets_along_axis)
+            }
+            for axis in coords
+        }
 
         array_of_fragments = np.full([n_sets_along_axis] * 3, None, dtype="O")
         for i, j, k in product(*[range(x) for x in array_of_fragments.shape]):
@@ -403,13 +422,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     def get_bonds(
         self,
-        self_bonding_allowed=False,
-        offset=3,
-        modified_properties=None,
-        use_lookup=False,
-        set_lookup=True,
-        atomic_radius_data=None,
-    ):
+        self_bonding_allowed: bool = False,
+        offset: float = 3.0,
+        modified_properties: Mapping[AtomIdx, float] | None = None,
+        use_lookup: bool = False,
+        set_lookup: bool = True,
+        atomic_radius_data: str | None = None,
+    ) -> dict[AtomIdx, set[AtomIdx]]:
         """Return a dictionary representing the bonds.
 
         .. warning:: This function is **not sideeffect free**, since it
@@ -442,6 +461,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
                 For global changes use the constants module.
             offset (float):
+                The offset used to determine the overlap between bins in the
+                divide et impera function that is used to avoid the quadratic scaling
+                when calculating pair-wise distances.
             use_lookup (bool):
             set_lookup (bool):
             self_bonding_allowed (bool):
@@ -458,7 +480,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if atomic_radius_data is None:
             atomic_radius_data = settings["defaults"]["atomic_radius_data"]
 
-        def complete_calculation():
+        def complete_calculation() -> dict[AtomIdx, set[AtomIdx]]:
             old_index = self.index
             self.index = range(len(self))
             fragments = self._divide_et_impera(offset=offset)
@@ -468,7 +490,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             if modified_properties is not None:
                 bond_radii.update(Series(modified_properties))
             bond_radii = bond_radii.values
-            bond_dict = collections.defaultdict(set)
+            bond_dict: defaultdict[AtomIdx, set[AtomIdx]] = defaultdict(set)
             for i, j, k in product(*[range(x) for x in fragments.shape]):
                 # The following call is not side effect free and changes
                 # bond_dict
@@ -485,16 +507,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
             self.index = old_index
             rename = dict(enumerate(self.index))
-            bond_dict = {
-                rename[key]: {rename[i] for i in bond_dict[key]} for key in bond_dict
+            return {
+                AtomIdx(rename[key]): {AtomIdx(rename[i]) for i in bond_dict[key]}
+                for key in bond_dict
             }
-            return bond_dict
 
         if use_lookup:
-            try:
-                bond_dict = self._metadata["bond_dict"]
-            except KeyError:
-                bond_dict = complete_calculation()
+            bond_dict = self._metadata.get("bond_dict", complete_calculation())
         else:
             bond_dict = complete_calculation()
 
@@ -502,7 +521,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             self._metadata["bond_dict"] = bond_dict
         return bond_dict
 
-    def _give_val_sorted_bond_dict(self, use_lookup):
+    def _give_val_sorted_bond_dict(self, use_lookup: bool):
         def complete_calculation():
             bond_dict = self.get_bonds(use_lookup=use_lookup)
             valency = dict(zip(self.index, self.add_data("valency")["valency"]))
@@ -1255,10 +1274,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             env_index.remove(i)
             atoms = self.loc[env_index, "atom"]
-            environment = frozenset(collections.Counter(atoms).most_common())
+            environment = frozenset(Counter(atoms).most_common())
             return (self.loc[i, "atom"], environment)
 
-        chemical_environments = collections.defaultdict(set)
+        chemical_environments = defaultdict(set)
         for i in self.index:
             chemical_environments[get_chem_env(self, i, n_sphere)].add(i)
         return dict(chemical_environments)
