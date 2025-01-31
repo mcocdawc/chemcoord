@@ -538,34 +538,35 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self._metadata["val_bond_dict"] = val_bond_dict
         return val_bond_dict
 
-    # TODO add overload for give_only_index=Literal[True] ...
-
     @overload
     def get_coordination_sphere(
         self,
         index_of_atom: AtomIdx,
-        n_sphere: int = 1,
+        *,
+        n_sphere: float = ...,
         give_only_index: Literal[False] = False,
-        only_surface: bool = True,
-        exclude: set[AtomIdx] | None = None,
-        use_lookup: bool | None = None,
+        only_surface: bool = ...,
+        exclude: set[AtomIdx] | None = ...,
+        use_lookup: bool | None = ...,
     ) -> Self: ...
 
     @overload
     def get_coordination_sphere(
         self,
         index_of_atom: AtomIdx,
-        n_sphere: int = 1,
-        give_only_index: Literal[True] = False,
-        only_surface: bool = True,
-        exclude: set[AtomIdx] | None = None,
-        use_lookup: bool | None = None,
+        *,
+        n_sphere: float = ...,
+        give_only_index: Literal[True],
+        only_surface: bool = ...,
+        exclude: set[AtomIdx] | None = ...,
+        use_lookup: bool | None = ...,
     ) -> set[AtomIdx]: ...
 
     def get_coordination_sphere(
         self,
         index_of_atom: AtomIdx,
-        n_sphere: int = 1,
+        *,
+        n_sphere: float = 1,
         give_only_index: bool = False,
         only_surface: bool = True,
         exclude: set[AtomIdx] | None = None,
@@ -577,9 +578,11 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         Args:
             index_of_atom (int):
+            n_sphere (float): Determines the number of the coordination sphere.
+                Is just a float to allow infinity as input;
+                in this case it returns all connected atoms.
             give_only_index (bool): If ``True`` a set of indices is
                 returned. Otherwise a new Cartesian instance.
-            n_sphere (int): Determines the number of the coordination sphere.
             only_surface (bool): Return only the surface of the coordination
                 sphere.
             exclude (set): A set of indices that should be ignored
@@ -596,7 +599,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         exclude = set() if exclude is None else exclude
         bond_dict = self.get_bonds(use_lookup=use_lookup)
         i = index_of_atom
-        if n_sphere != 0:
+        if (n_sphere < 0) or (n_sphere < float("inf") and n_sphere != int(n_sphere)):
+            raise ValueError(
+                "n_sphere must be a non-negative integer or infinity, but is "
+                f"{n_sphere}."
+            )
+        if n_sphere > 0:
             visited = set([i]) | exclude
             try:
                 tmp_bond_dict = {j: (bond_dict[j] - visited) for j in bond_dict[i]}
@@ -675,7 +683,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def cut_sphere(
         self,
         radius: Real = 15.0,
-        origin: AtomIdx | Sequence[Real] | None = None,
+        origin: Vector[np.floating] | AtomIdx | Sequence[Real] | None = None,
         outside_sliced: bool = True,
         preserve_bonds: bool = False,
     ) -> Self:
@@ -715,7 +723,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         a: float = 20.0,
         b: float | None = None,
         c: float | None = None,
-        origin: AtomIdx | Sequence[Real] | None = None,
+        origin: AtomIdx | Vector[np.floating] | Sequence[Real] | None = None,
         outside_sliced: bool = True,
         preserve_bonds: bool = False,
     ) -> Self:
@@ -738,7 +746,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if origin is None:
             origin = np.zeros(3)
         elif pd.api.types.is_list_like(origin):
-            origin = np.array(origin, dtype="f8")
+            origin = np.asarray(origin, dtype="f8")
         else:
             origin = self.loc[origin, ["x", "y", "z"]]
         b = a if b is None else b
@@ -856,9 +864,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     def get_dihedral_degrees(
         self,
-        indices: Sequence[
-            tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx] | Sequence[AtomIdx]
-        ],
+        indices: Matrix[np.integer]
+        | Sequence[tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx] | Sequence[AtomIdx]],
         start_row: int = 0,
     ) -> Vector[np.float64]:
         """Return the dihedrals between given atoms.
@@ -920,9 +927,19 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return to_add + sign * dihedrals
 
     # TODO add overload
+    @overload
+    def fragmentate(
+        self, give_only_index: Literal[False] = False, use_lookup: bool | None = ...
+    ) -> list[Self]: ...
+
+    @overload
+    def fragmentate(
+        self, give_only_index: Literal[True], use_lookup: bool | None = ...
+    ) -> list[set[AtomIdx]]: ...
+
     def fragmentate(
         self, give_only_index: bool = False, use_lookup: bool | None = None
-    ) -> list[Self]:
+    ) -> list[Self] | list[set[AtomIdx]]:
         """Get the indices of non bonded parts in the molecule.
 
         Args:
@@ -1048,12 +1065,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if use_lookup is None:
             use_lookup = settings["defaults"]["use_lookup"]
 
-        if pd.api.types.is_list_like(fragments):
-            for fragment in fragments:
-                try:
-                    index_of_all_fragments |= fragment.index
-                except NameError:
-                    index_of_all_fragments = fragment.index
+        if isinstance(fragments, Sequence):
+            index_of_all_fragments = fragments[0].index
+            for fragment in fragments[1:]:
+                index_of_all_fragments |= fragment.index
         else:
             index_of_all_fragments = fragments.index
         missing_part = self.loc[self.index.difference(index_of_all_fragments)]
@@ -1104,8 +1119,11 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
         d = D[i, j]
-        i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
-        return i, j, d
+        return (
+            AtomIdx(dict(enumerate(self.index))[int(i)]),
+            AtomIdx(dict(enumerate(other.index))[j]),
+            d,
+        )
 
     # TODO introduce data class
     def get_inertia(self):
