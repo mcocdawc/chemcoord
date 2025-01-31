@@ -1030,7 +1030,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         else:
             return self.loc[fragment_index, :]
 
-    def get_without(self, fragments, use_lookup=None):
+    def get_without(
+        self, fragments: Self | Sequence[Self], use_lookup: bool | None = None
+    ) -> list[Self]:
         """Return self without the specified fragments.
 
         Args:
@@ -1060,7 +1062,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     @staticmethod
     @njit
-    def _jit_pairwise_distances(pos1, pos2):
+    def _jit_pairwise_distances(
+        pos1: Matrix[np.floating], pos2: Matrix[np.floating]
+    ) -> Matrix[np.float64]:
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.
 
@@ -1076,7 +1080,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 D[i, j] = np.sqrt(((pos1[i] - pos2[j]) ** 2).sum())
         return D
 
-    def get_shortest_distance(self, other):
+    def get_shortest_distance(self, other: Self) -> tuple[AtomIdx, AtomIdx, float]:
         """Calculate the shortest distance between self and other
 
         Args:
@@ -1103,6 +1107,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
         return i, j, d
 
+    # TODO introduce data class
     def get_inertia(self):
         """Calculate the inertia tensor and transforms along
         rotation axes.
@@ -1245,7 +1250,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.sort_values(by="distance", inplace=True)
         return new
 
-    def change_numbering(self, rename_dict, inplace=False):
+    # TODO add overload
+    def change_numbering(
+        self, rename_dict: dict[AtomIdx, AtomIdx], inplace: bool = False
+    ):
         """Return the reindexed version of Cartesian.
 
         Args:
@@ -1260,7 +1268,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if not inplace:
             return output
 
-    def partition_chem_env(self, n_sphere=4, use_lookup=None):
+    def partition_chem_env(
+        self, n_sphere: int = 4, use_lookup: bool | None = None
+    ) -> dict[tuple[str, frozenset[tuple[str, int]]], set[AtomIdx]]:
         """This function partitions the molecule into subsets of the
         same chemical environment.
 
@@ -1326,7 +1336,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             chemical_environments[get_chem_env(self, i, n_sphere)].add(i)
         return dict(chemical_environments)
 
-    def align(self, other, mass_weight=False):
+    def align(self, other: Self, mass_weight: bool = False) -> tuple[Self, Self]:
         """Align two Cartesians.
 
         Minimize the RMSD (root mean squared deviation) between
@@ -1356,7 +1366,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         m2 = m1.get_align_transf(m2, mass_weight, centered=True) @ m2
         return m1, m2
 
-    def get_align_transf(self, other, mass_weight=False, centered=False):
+    def get_align_transf(
+        self, other: Self, mass_weight: bool = False, centered: bool = False
+    ) -> Matrix[np.float64]:
         """Return the rotation matrix that aligns other onto self.
 
         Minimize the RMSD (root mean squared deviation) between
@@ -1394,7 +1406,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         return xyz_functions.get_kabsch_rotation(pos1, pos2, mass)
 
-    def reindex_similar(self, other, n_sphere=4):
+    def reindex_similar(self, other: Self, n_sphere: int = 4) -> Self:
         """Reindex ``other`` to be similarly indexed as ``self``.
 
         Returns a reindexed copy of ``other`` that minimizes the
