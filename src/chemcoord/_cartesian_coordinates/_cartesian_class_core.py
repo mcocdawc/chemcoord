@@ -789,7 +789,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         Calculates the distance between the atoms with
         indices ``i`` and ``b``.
-        The indices can be given in three ways:
+        The indices can be given in two ways:
 
         * As list of lists: ``[[i1, b1], [i2, b2]...]``
         * As :class:`pd.DataFrame` where ``i`` is taken from the index and
@@ -816,13 +816,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def get_angle_degrees(
         self,
         indices: Sequence[tuple[AtomIdx, AtomIdx, AtomIdx] | Sequence[AtomIdx]]
-        | DataFrame,  # noqa: E501
+        | DataFrame,
     ) -> Vector[np.float64]:
         """Return the angles between given atoms.
 
         Calculates the angle in degrees between the atoms with
         indices ``i, b, a``.
-        The indices can be given in three ways:
+        The indices can be given in two ways:
 
         * As list of lists: ``[[i1, b1, a1], [i2, b2, a2]...]``
         * As :class:`pd.DataFrame` where ``i`` is taken from the index and
@@ -854,14 +854,19 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         dot_product[dot_product < -1] = -1
         return np.degrees(np.arccos(dot_product))
 
-    def get_dihedral_degrees(self, indices, start_row=0):
+    def get_dihedral_degrees(
+        self,
+        indices: Sequence[
+            tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx] | Sequence[AtomIdx]
+        ],
+        start_row: int = 0,
+    ) -> Vector[np.float64]:
         """Return the dihedrals between given atoms.
 
         Calculates the dihedral angle in degrees between the atoms with
         indices ``i, b, a, d``.
-        The indices can be given in three ways:
+        The indices can be given in two ways:
 
-        * As simple list ``[i, b, a, d]``
         * As list of lists: ``[[i1, b1, a1, d1], [i2, b2, a2, d2]...]``
         * As :class:`pandas.DataFrame` where ``i`` is taken from the index and
           ``b``, ``a`` and ``d``from the respective columns
@@ -912,10 +917,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         to_add = np.full(length, 0, dtype="float64")
         sign[where_to_modify] = -1
         to_add[where_to_modify] = 360
-        dihedrals = to_add + sign * dihedrals
-        return dihedrals
+        return to_add + sign * dihedrals
 
-    def fragmentate(self, give_only_index=False, use_lookup=None):
+    # TODO add overload
+    def fragmentate(
+        self, give_only_index: bool = False, use_lookup: bool | None = None
+    ) -> list[Self]:
         """Get the indices of non bonded parts in the molecule.
 
         Args:
@@ -962,7 +969,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 fragments.append(fragment)
         return fragments
 
-    def restrict_bond_dict(self, bond_dict):
+    def restrict_bond_dict(
+        self, bond_dict: Mapping[AtomIdx, set[AtomIdx]]
+    ) -> dict[AtomIdx, set[AtomIdx]]:
         """Restrict a bond dictionary to self.
 
         Args:
@@ -974,7 +983,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         return {j: bond_dict[j] & set(self.index) for j in self.index}
 
-    def get_fragment(self, list_of_indextuples, give_only_index=False, use_lookup=None):
+    # TODO Add overload for give_only_index
+    def get_fragment(
+        self,
+        list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
+        give_only_index: bool = False,
+        use_lookup: bool | None = None,
+    ) -> Self | set[AtomIdx]:
         """Get the indices of the atoms in a fragment.
 
         The list_of_indextuples contains all bondings from the
