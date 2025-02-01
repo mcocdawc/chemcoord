@@ -288,8 +288,10 @@ def test_coordination_sphere():
     }
     expctd[6] = set()
 
-    for i_atom, connected_atoms in expctd.items():
-        assert connected_atoms == set(molecule.get_coordination_sphere(7, i_atom).index)
+    for n_sphere, connected_atoms in expctd.items():
+        assert connected_atoms == set(
+            molecule.get_coordination_sphere(7, n_sphere=n_sphere).index
+        )
 
 
 def test_cut_sphere():

@@ -378,7 +378,7 @@ class CartesianGetZmat(CartesianCore):
                     for new_d in tmp_bond_dict:
                         if new_d in visited:
                             continue
-                        angle = self.get_angle_degrees([b, a, new_d])[0]
+                        angle = self.get_angle_degrees([[b, a, new_d]])[0]
                         if 5 < angle < 175:
                             found = True
                             c_table.loc[i, "d"] = new_d
@@ -395,7 +395,7 @@ class CartesianGetZmat(CartesianCore):
                     k = 0
                     while not found and k < len(molecule):
                         new_d = molecule.index[k]
-                        angle = self.get_angle_degrees([b, a, new_d])[0]
+                        angle = self.get_angle_degrees([[b, a, new_d]])[0]
                         if 5 < angle < 175:
                             found = True
                             c_table.loc[i, "d"] = new_d
