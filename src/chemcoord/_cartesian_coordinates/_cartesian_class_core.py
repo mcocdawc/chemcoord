@@ -1118,14 +1118,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         pos2 = other.loc[:, coords].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
-        d = D[i, j]
-        return (
-            AtomIdx(dict(enumerate(self.index))[int(i)]),
-            AtomIdx(dict(enumerate(other.index))[j]),
-            d,
-        )
+        d = float(D[i, j])
+        return AtomIdx(self.index[i]), AtomIdx(other.index[j]), d
 
-    # TODO introduce data class
     def get_inertia(self):
         """Calculate the inertia tensor and transforms along
         rotation axes.
@@ -1449,7 +1444,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             Cartesian: Reindexed version of other
         """
 
-        def make_subset_similar(m1, subset1, m2, subset2, index_dct):
+        def make_subset_similar(
+            m1: Self,
+            subset1: set[AtomIdx],
+            m2: Self,
+            subset2: set[AtomIdx],
+            index_dct: dict[AtomIdx, AtomIdx],
+        ) -> None:
             """Changes index_dct INPLACE"""
             coords = ["x", "y", "z"]
             index1 = list(subset1)
@@ -1478,7 +1479,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                     else:
                         index_dct[m2_i] = m1_i
                         found = True
-            return index_dct
 
         molecule1 = self.copy()
         molecule2 = other.copy()
@@ -1486,14 +1486,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         partition1 = molecule1.partition_chem_env(n_sphere)
         partition2 = molecule2.partition_chem_env(n_sphere)
 
-        index_dct = {}
+        index_dct: dict[AtomIdx, AtomIdx] = {}
         for key in partition1:
             message = (
                 "You have chemically different molecules, regarding "
                 "the topology of their connectivity."
             )
             assert len(partition1[key]) == len(partition2[key]), message
-            index_dct = make_subset_similar(
+            make_subset_similar(
                 molecule1, partition1[key], molecule2, partition2[key], index_dct
             )
         molecule2.index = [index_dct[i] for i in molecule2.index]
