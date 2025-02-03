@@ -936,7 +936,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         to_add[where_to_modify] = 360
         return to_add + sign * dihedrals
 
-    # TODO add overload
     @overload
     def fragmentate(
         self,
@@ -1012,7 +1011,22 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         return {j: bond_dict[j] & set(self.index) for j in self.index}
 
-    # TODO Add overload for give_only_index
+    @overload
+    def get_fragment(
+        self,
+        list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
+        give_only_index: Literal[False] = False,
+        use_lookup: Union[bool, None] = None,
+    ) -> Self: ...
+
+    @overload
+    def get_fragment(
+        self,
+        list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
+        give_only_index: Literal[True],
+        use_lookup: Union[bool, None] = None,
+    ) -> set[AtomIdx]: ...
+
     def get_fragment(
         self,
         list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
@@ -1277,10 +1291,23 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.sort_values(by="distance", inplace=True)
         return new
 
-    # TODO add overload
+    @overload
+    def change_numbering(
+        self,
+        rename_dict: dict[AtomIdx, AtomIdx],
+        inplace: Literal[False] = False,
+    ) -> Self: ...
+
+    @overload
+    def change_numbering(
+        self,
+        rename_dict: dict[AtomIdx, AtomIdx],
+        inplace: Literal[True],
+    ) -> None: ...
+
     def change_numbering(
         self, rename_dict: dict[AtomIdx, AtomIdx], inplace: bool = False
-    ):
+    ) -> Union[Self, None]:
         """Return the reindexed version of Cartesian.
 
         Args:
@@ -1294,6 +1321,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         output.index = new_index
         if not inplace:
             return output
+        else:
+            return None
 
     def partition_chem_env(
         self, n_sphere: int = 4, use_lookup: Union[bool, None] = None
