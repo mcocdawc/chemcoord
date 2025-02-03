@@ -60,7 +60,6 @@ ArithmeticOther = Union[
 
 
 AtomIdx = NewType("AtomIdx", int)
-# AtomIdx: TypeAlias = int
 
-Real: TypeAlias = float | np.floating
-Integral: TypeAlias = int | np.integer
+Real: TypeAlias = Union[float, np.floating]
+Integral: TypeAlias = Union[int, np.integer]
