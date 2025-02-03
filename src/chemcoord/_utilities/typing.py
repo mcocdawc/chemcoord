@@ -63,3 +63,6 @@ AtomIdx = NewType("AtomIdx", int)
 
 Real: TypeAlias = Union[float, np.floating]
 Integral: TypeAlias = Union[int, np.integer]
+
+#: A type for generic functions/classes without any constraints.
+T = TypeVar("T")

@@ -1,7 +1,7 @@
 import copy
 import itertools
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from itertools import product
 from typing import Any, Literal, Union, cast, overload
 
@@ -25,6 +25,7 @@ from chemcoord._utilities.typing import (
     Axes,
     Matrix,
     Real,
+    T,
     Tensor3D,
     Vector,
 )
@@ -294,12 +295,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         cols = ["x", "y", "z"]
         out = self.copy()
 
-        def get_subs_f(*args):
-            def subs_function(x):
+        def get_subs_f(*args: Any) -> Callable[[T], T | float]:
+            def subs_function(x: T) -> T | float:
                 if hasattr(x, "subs"):
                     x = x.subs(*args)
                     try:
-                        x = float(x)
+                        # We try to convert the expression to a float and return it,
+                        # when failing. Hence, we can ignore the following type error.
+                        return float(x)  # type: ignore[arg-type]
                     except TypeError:
                         pass
                 return x
@@ -519,7 +522,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def _give_val_sorted_bond_dict(
         self, use_lookup: bool
     ) -> dict[AtomIdx, SortedSet[AtomIdx]]:
-        def complete_calculation():
+        def complete_calculation() -> dict[AtomIdx, SortedSet[AtomIdx]]:
             bond_dict = self.get_bonds(use_lookup=use_lookup)
             valency = dict(zip(self.index, self.add_data("valency")["valency"]))
             val_bond_dict = {
@@ -680,6 +683,16 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         molecule = self.loc[included_atoms_set, :]
         return molecule
 
+    def _get_origin(
+        self, origin: Union[Vector[np.floating], AtomIdx, Sequence[Real], None]
+    ) -> Vector:
+        if origin is None:
+            return np.zeros(3)
+        elif pd.api.types.is_list_like(origin):
+            return np.asarray(origin, dtype="f8")
+        else:
+            return self.loc[origin, ["x", "y", "z"]].values
+
     def cut_sphere(
         self,
         radius: Real = 15.0,
@@ -700,12 +713,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             Cartesian:
         """
-        if origin is None:
-            origin = np.zeros(3)
-        elif pd.api.types.is_list_like(origin):
-            origin = np.asarray(origin, dtype="f8")
-        else:
-            origin = self.loc[origin, ["x", "y", "z"]]
+        origin = self._get_origin(origin)
 
         molecule = self.get_distance_to(origin)
         if outside_sliced:
@@ -743,12 +751,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             Cartesian:
         """
-        if origin is None:
-            origin = np.zeros(3)
-        elif pd.api.types.is_list_like(origin):
-            origin = np.asarray(origin, dtype="f8")
-        else:
-            origin = self.loc[origin, ["x", "y", "z"]]
+        origin = self._get_origin(origin)
         b = a if b is None else b
         c = a if c is None else c
 
@@ -1149,7 +1152,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         d = float(D[i, j])
         return AtomIdx(self.index[i]), AtomIdx(other.index[j]), d
 
-    def get_inertia(self):
+    def get_inertia(self) -> dict[str, Any]:
         """Calculate the inertia tensor and transforms along
         rotation axes.
 
@@ -1187,7 +1190,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             ``diag_inertia_tensor``.
         """
 
-        def calculate_inertia_tensor(molecule):
+        def calculate_inertia_tensor(molecule: Self) -> tuple[Matrix, Matrix, Matrix]:
             masses = molecule.loc[:, "mass"].values
             pos = molecule.loc[:, ["x", "y", "z"]].values
             inertia = np.sum(
@@ -1216,7 +1219,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             "inertia_tensor": inertia,
         }
 
-    def basistransform(self, new_basis, old_basis=None, orthonormalize=True):
+    def basistransform(
+        self,
+        new_basis: Matrix,
+        old_basis: Union[Matrix, None] = None,
+        orthonormalize: bool = True,
+    ) -> Self:
         """Transform the frame to a new basis.
 
         This function transforms the cartesian coordinates from an
@@ -1245,12 +1253,17 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new_basis = xyz_functions.orthonormalize_righthanded(new_basis)
             is_rotation_matrix = True
 
+        # We know that `new_basis @ Self` is of type Self, mypy does not know that,
+        # because of the overlapping resolution with `__matmul__` of numpy.
+        # We have to explicitly cast it to Self.
         if is_rotation_matrix:
-            return new_basis.T @ old_basis @ self
+            return cast(Self, new_basis.T @ old_basis @ self)
         else:
-            return np.linalg.inv(new_basis) @ old_basis @ self
+            return cast(Self, np.linalg.inv(new_basis) @ old_basis @ self)
 
-    def _get_positions(self, indices):
+    def _get_positions(
+        self, indices: Vector[np.integer] | Sequence[int]
+    ) -> Matrix[np.float64]:
         old_index = self.index
         self.index = range(len(self))
         rename = {j: i for i, j in enumerate(old_index)}
@@ -1268,14 +1281,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self.index = old_index
         return out
 
-    def get_distance_to(self, origin=None, other_atoms=None, sort=False):
+    def get_distance_to(
+        self,
+        origin: Union[Vector[np.floating], AtomIdx, Sequence[Real], None] = None,
+        other_atoms: Union[Collection[int], None] = None,
+        sort: bool = False,
+    ) -> Self:
         """Return a Cartesian with a column for the distance from origin."""
-        if origin is None:
-            origin = np.zeros(3)
-        elif pd.api.types.is_list_like(origin):
-            origin = np.array(origin, dtype="f8")
-        else:
-            origin = self.loc[origin, ["x", "y", "z"]]
+        origin = self._get_origin(origin)
 
         if other_atoms is None:
             other_atoms = self.index
@@ -1374,7 +1387,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if use_lookup is None:
             use_lookup = settings["defaults"]["use_lookup"]
 
-        def get_chem_env(self, i, n_sphere):
+        def get_chem_env(
+            self: Self, i: AtomIdx, n_sphere: float
+        ) -> tuple[str, frozenset[tuple[str, int]]]:
             env_index = self.get_coordination_sphere(
                 i,
                 n_sphere=n_sphere,
