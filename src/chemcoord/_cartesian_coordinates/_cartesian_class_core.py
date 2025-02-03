@@ -295,8 +295,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         cols = ["x", "y", "z"]
         out = self.copy()
 
-        def get_subs_f(*args: Any) -> Callable[[T], T | float]:
-            def subs_function(x: T) -> T | float:
+        def get_subs_f(*args: Any) -> Callable[[T], Union[T, float]]:
+            def subs_function(x: T) -> Union[T, float]:
                 if hasattr(x, "subs"):
                     x = x.subs(*args)
                     try:
