@@ -1262,7 +1262,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             return cast(Self, np.linalg.inv(new_basis) @ old_basis @ self)
 
     def _get_positions(
-        self, indices: Vector[np.integer] | Sequence[int]
+        self, indices: Union[Vector[np.integer], Sequence[int]]
     ) -> Matrix[np.float64]:
         old_index = self.index
         self.index = range(len(self))
