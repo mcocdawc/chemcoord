@@ -445,6 +445,7 @@ class CartesianBmat(CartesianCore):
 
         # for each subdivision,
         for i in range(N):
-            path.append(path[i].B_traj_step(end, N - i, coords))
+            new_struct = path[i].B_traj_step(end, N - i, coords)
+            path.append(path[i].align(new_struct)[1])
 
         return path
