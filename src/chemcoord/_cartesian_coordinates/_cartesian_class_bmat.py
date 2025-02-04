@@ -102,7 +102,11 @@ class CartesianBmat(CartesianCore):
             internal_coord_arr[i, 4] = len(coordinate)
 
         return self.jit_get_Wilson_B(
-            position_arr, internal_coord_arr, len(self), self.jit_angle_deriv
+            position_arr,
+            internal_coord_arr,
+            len(self),
+            self.jit_angle_deriv,
+            self.jit_dihedral_deriv,
         )
 
     @staticmethod
