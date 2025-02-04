@@ -513,7 +513,7 @@ class CartesianBmat(CartesianCore):
 
     @staticmethod
     @njit(cache=True)
-    def jit_angle_deriv(positions):
+    def jit_angle_deriv(positions: Matrix) -> Matrix:
         # vectors making up the angle
         u = positions[0] - positions[1]
         v = positions[2] - positions[1]
