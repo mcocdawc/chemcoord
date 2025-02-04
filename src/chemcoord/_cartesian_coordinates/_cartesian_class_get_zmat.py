@@ -3,7 +3,7 @@ from collections import OrderedDict
 from collections.abc import Sequence
 from functools import partial
 from itertools import permutations
-from typing import Mapping, Self, Union
+from typing import Callable, Literal, Mapping, Self, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
-from chemcoord._utilities.typing import AtomIdx
+from chemcoord._utilities.typing import AtomIdx, Tensor4D
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (
     ERR_CODE_OK,
@@ -250,25 +250,22 @@ class CartesianGetZmat(CartesianCore):
             # so the lookup may be used now.
             use_lookup = True
 
-        def prepend_missing_parts_of_molecule(fragment_list):
+        def prepend_missing_parts_of_molecule(
+            fragment_list: Sequence[Union[Self, tuple[Self, DataFrame]]],
+        ) -> list[Union[Self, tuple[Self, DataFrame]]]:
+            full_index: set[AtomIdx] = set()
             for fragment in fragment_list:
-                if pd.api.types.is_list_like(fragment):
-                    try:
-                        full_index = set(full_index).union(fragment[0].index)
-                    except NameError:
-                        full_index = fragment[0].index
+                if isinstance(fragment, tuple):
+                    full_index = set(full_index).union(fragment[0].index)
                 else:
-                    try:
-                        full_index = set(full_index).union(fragment.index)
-                    except NameError:
-                        full_index = fragment.index
+                    full_index = set(full_index).union(fragment.index)
 
             if not self.index.difference(full_index).empty:
                 missing_part = self.get_without(
                     self.loc[full_index], use_lookup=use_lookup
                 )
-                fragment_list = missing_part + fragment_list
-            return fragment_list
+                fragment_list = missing_part + list(fragment_list)
+            return list(fragment_list)
 
         fragments = prepend_missing_parts_of_molecule(fragments)
 
@@ -281,10 +278,10 @@ class CartesianGetZmat(CartesianCore):
             fragment = fragments[0]
             full_table = fragment._get_frag_constr_table(use_lookup=use_lookup)
 
-        for fragment in fragments[1:]:
+        for specified in fragments[1:]:
             finished_part = self.loc[full_table.index]
-            if pd.api.types.is_list_like(fragment):
-                fragment, references = fragment  # noqa: PLW2901
+            if isinstance(specified, tuple):
+                fragment, references = specified  # noqa: PLW2901
                 if len(references) < min(3, len(fragment)):
                     raise ValueError(
                         "If you specify references for a "
@@ -295,6 +292,7 @@ class CartesianGetZmat(CartesianCore):
                     predefined_table=references, use_lookup=use_lookup
                 )
             else:
+                fragment = specified
                 i, b = fragment.get_shortest_distance(finished_part)[:2]
                 constr_table = fragment._get_frag_constr_table(
                     start_atom=i, use_lookup=use_lookup
@@ -349,9 +347,8 @@ class CartesianGetZmat(CartesianCore):
         c_table = construction_table
         angles = self.get_angle_degrees(c_table.iloc[3:, :].values)
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
-        rename = dict(enumerate(c_table.index[3:]))
-        problem_index = [rename[i] for i in problem_index]
-        return problem_index
+        rename = c_table.index[3:]
+        return [rename[i] for i in problem_index]
 
     def correct_dihedral(
         self, construction_table: DataFrame, use_lookup: Union[bool, None] = None
@@ -573,7 +570,11 @@ class CartesianGetZmat(CartesianCore):
         )
         return zmatrix
 
-    def get_zmat(self, construction_table=None, use_lookup=None) -> Zmat:
+    def get_zmat(
+        self,
+        construction_table: Union[DataFrame, None] = None,
+        use_lookup: Union[bool, None] = None,
+    ) -> Zmat:
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
@@ -649,7 +650,19 @@ class CartesianGetZmat(CartesianCore):
             c_table = construction_table
         return self._build_zmat(c_table)
 
-    def get_grad_zmat(self, construction_table, as_function=True):
+    @overload
+    def get_grad_zmat(
+        self, construction_table: DataFrame, as_function: Literal[True] = True
+    ) -> Callable[[Self], Zmat]: ...
+
+    @overload
+    def get_grad_zmat(
+        self, construction_table: DataFrame, as_function: Literal[False]
+    ) -> Tensor4D: ...
+
+    def get_grad_zmat(
+        self, construction_table: DataFrame, as_function: bool = True
+    ) -> Union[Tensor4D, Callable[[Self], Zmat]]:
         r"""Return the gradient for the transformation to a Zmatrix.
 
         If ``as_function`` is True, a function is returned that can be directly
@@ -763,7 +776,7 @@ class CartesianGetZmat(CartesianCore):
         else:
             return grad_C
 
-    def to_zmat(self, *args, **kwargs):
+    def to_zmat(self, *args, **kwargs) -> Zmat:
         """Deprecated, use :meth:`~Cartesian.get_zmat`"""
         message = "Will be removed in the future. Please use give_zmat."
         with warnings.catch_warnings():
