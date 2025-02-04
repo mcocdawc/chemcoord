@@ -1,11 +1,15 @@
 import warnings
 from collections import OrderedDict
+from collections.abc import Sequence
 from functools import partial
 from itertools import permutations
+from typing import Mapping, Self, Union
 
 import numpy as np
 import pandas as pd
 from numba.core.errors import NumbaPerformanceWarning
+from pandas import DataFrame
+from sortedcontainers import SortedSet
 
 import chemcoord._cartesian_coordinates._cart_transformation as transformation
 import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
@@ -13,6 +17,7 @@ import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
+from chemcoord._utilities.typing import AtomIdx
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (
     ERR_CODE_OK,
@@ -25,7 +30,7 @@ from chemcoord.exceptions import (
 
 class CartesianGetZmat(CartesianCore):
     @staticmethod
-    def _check_construction_table(construction_table):
+    def _check_construction_table(construction_table: DataFrame) -> None:
         """Checks if a construction table uses valid references.
         Raises an exception (UndefinedCoordinateSystem) otherwise.
         """
@@ -50,8 +55,12 @@ class CartesianGetZmat(CartesianCore):
                     raise UndefinedCoordinateSystem(give_message(i=i))
 
     def _get_frag_constr_table(
-        self, start_atom=None, predefined_table=None, use_lookup=None, bond_dict=None
-    ):
+        self,
+        start_atom: Union[AtomIdx, None] = None,
+        predefined_table: Union[DataFrame, None] = None,
+        use_lookup: Union[bool, None] = None,
+        bond_dict: Union[Mapping[AtomIdx, SortedSet[AtomIdx]], None] = None,
+    ) -> DataFrame:
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
@@ -112,7 +121,7 @@ class CartesianGetZmat(CartesianCore):
             )
             _modify_priority(work_bond_dict, user_defined)
         else:
-            parent, work_bond_dict = {}, {}
+            parent, work_bond_dict = OrderedDict(), OrderedDict()
 
         while work_bond_dict:
             new_work_bond_dict = OrderedDict()
@@ -164,8 +173,13 @@ class CartesianGetZmat(CartesianCore):
         return output
 
     def get_construction_table(
-        self, fragment_list=None, use_lookup=None, perform_checks=True
-    ):
+        self,
+        fragment_list: Union[
+            Sequence[Union[Self, tuple[Self, DataFrame]]], None
+        ] = None,
+        use_lookup: Union[bool, None] = None,
+        perform_checks: bool = True,
+    ) -> DataFrame:
         """Create a construction table for a Zmatrix.
 
         A construction table is basically a Zmatrix without the values
@@ -224,7 +238,9 @@ class CartesianGetZmat(CartesianCore):
         if use_lookup is None:
             use_lookup = settings["defaults"]["use_lookup"]
 
-        if fragment_list is None:
+        if fragment_list is not None:
+            fragments = fragment_list
+        else:
             self.get_bonds(use_lookup=use_lookup)
             self._give_val_sorted_bond_dict(use_lookup=use_lookup)
             fragments = sorted(
@@ -233,8 +249,6 @@ class CartesianGetZmat(CartesianCore):
             # During function execution the bonding situation does not change,
             # so the lookup may be used now.
             use_lookup = True
-        else:
-            fragments = fragment_list
 
         def prepend_missing_parts_of_molecule(fragment_list):
             for fragment in fragment_list:
@@ -320,7 +334,7 @@ class CartesianGetZmat(CartesianCore):
             c_table = self.correct_absolute_refs(c_table)
         return c_table
 
-    def check_dihedral(self, construction_table):
+    def check_dihedral(self, construction_table: DataFrame) -> list[AtomIdx]:
         """Checks, if the dihedral defining atom is colinear.
 
         Checks for each index starting from the third row of the
@@ -339,7 +353,9 @@ class CartesianGetZmat(CartesianCore):
         problem_index = [rename[i] for i in problem_index]
         return problem_index
 
-    def correct_dihedral(self, construction_table, use_lookup=None):
+    def correct_dihedral(
+        self, construction_table: DataFrame, use_lookup: Union[bool, None] = None
+    ) -> DataFrame:
         """Reindexe the dihedral defining atom if linear reference is used.
 
         Uses :meth:`~Cartesian.check_dihedral` to obtain the problematic
@@ -408,7 +424,7 @@ class CartesianGetZmat(CartesianCore):
                         raise UndefinedCoordinateSystem(message(i))
         return c_table
 
-    def _has_valid_abs_ref(self, i, construction_table):
+    def _has_valid_abs_ref(self, i: AtomIdx, construction_table: DataFrame) -> bool:
         """Checks, if ``i`` uses valid absolute references.
 
         Checks for each index from first to third row of the
@@ -444,7 +460,7 @@ class CartesianGetZmat(CartesianCore):
             np.allclose(K, zero) or np.allclose(v1, zero) or np.allclose(v2, zero)
         )
 
-    def check_absolute_refs(self, construction_table):
+    def check_absolute_refs(self, construction_table: DataFrame) -> list[AtomIdx]:
         """Checks first three rows of ``construction_table`` for linear references
 
         Checks for each index from first to third row of the
@@ -461,12 +477,9 @@ class CartesianGetZmat(CartesianCore):
             list: A list of problematic indices.
         """
         c_table = construction_table
-        problem_index = [
-            i for i in c_table.index[:3] if not self._has_valid_abs_ref(i, c_table)
-        ]
-        return problem_index
+        return [i for i in c_table.index[:3] if not self._has_valid_abs_ref(i, c_table)]
 
-    def correct_absolute_refs(self, construction_table):
+    def correct_absolute_refs(self, construction_table: DataFrame) -> DataFrame:
         """Reindexe construction_table if linear reference in first three rows
         present.
 
@@ -519,7 +532,7 @@ class CartesianGetZmat(CartesianCore):
             C[[1, 2], :] = np.rad2deg(C[[1, 2], :])
             return C.T
 
-    def _build_zmat(self, construction_table):
+    def _build_zmat(self, construction_table: DataFrame) -> Zmat:
         """Create the Zmatrix from a construction table.
 
         Args:
@@ -560,7 +573,7 @@ class CartesianGetZmat(CartesianCore):
         )
         return zmatrix
 
-    def get_zmat(self, construction_table=None, use_lookup=None):
+    def get_zmat(self, construction_table=None, use_lookup=None) -> Zmat:
         """Transform to internal coordinates.
 
         Transforming to internal coordinates involves basically three
