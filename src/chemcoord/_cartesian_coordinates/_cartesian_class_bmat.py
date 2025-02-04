@@ -105,10 +105,14 @@ class CartesianBmat(CartesianCore):
             position_arr, internal_coord_arr, len(self), self.jit_angle_deriv
         )
 
-    '''@staticmethod
+    @staticmethod
     @njit(parallel=True, cache=True)
     def jit_get_Wilson_B(
-        position_arr: Matrix, internal_coord_arr: Matrix, n_atoms: int
+        position_arr: Matrix,
+        internal_coord_arr: Matrix,
+        n_atoms: int,
+        angle_deriv: Callable,
+        dihedral_deriv: Callable,
     ) -> Matrix:
         """
         Jit-compiled Wilson's B matrix generator.
@@ -146,7 +150,7 @@ class CartesianBmat(CartesianCore):
 
                 normedu = u / norm(u)
                 # for each cartesian coordinate
-                for j in range(3):
+                for j in prange(3):
                     B_matrix[i, j + 3 * coord[0]] = normedu[j]
                     B_matrix[i, j + 3 * coord[1]] = -normedu[j]
 
@@ -155,111 +159,206 @@ class CartesianBmat(CartesianCore):
                 # get positions of participating atoms
                 positions = position_arr[coord[:3]]
 
-                # vectors making up the angle
-                u = positions[0] - positions[1]
-                v = positions[2] - positions[1]
+                angle_derivs = angle_deriv(positions)
 
-                normedu = u / norm(u)
-                normedv = v / norm(v)
-
-                w = cross(u, v)
-
-                # if they were parallel
-                if np.isclose(w, np.array([0, 0, 0])).all():
-                    w = cross(u, np.array([1, -1, 1]))
-
-                # if u and [1, -1, 1] were parallel
-                if np.isclose(w, np.array([0, 0, 0])).all():
-                    w = cross(u, np.array([-1, 1, 1]))
-
-                normedw = w / norm(w)
-
-                for j in range(3):
-                    B_matrix[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / norm(u)
-                    B_matrix[i, j + 3 * coord[1]] = -(
-                        cross(normedu, normedw)[j] / norm(u)
-                    ) - (cross(normedw, normedv)[j] / norm(v))
-                    B_matrix[i, j + 3 * coord[2]] = cross(normedw, normedv)[j] / norm(v)
+                for j in prange(3):
+                    B_matrix[i, j + 3 * coord[0]] = angle_derivs[0, j]
+                    B_matrix[i, j + 3 * coord[1]] = angle_derivs[1, j]
+                    B_matrix[i, j + 3 * coord[2]] = angle_derivs[2, j]
 
             # dihedrals
             else:
                 # get positions of participating atoms
                 positions = position_arr[coord[:4]]
 
-                # vectors making up dihedral
-                u = positions[0] - positions[1]
-                w = positions[2] - positions[1]
-                v = positions[3] - positions[2]
+                dihedral_derivs = dihedral_deriv(positions)
 
-                normedu = u / norm(u)
-                normedw = w / norm(w)
-                normedv = v / norm(v)
+                for j in prange(3):
+                    B_matrix[i, j + 3 * coord[0]] = dihedral_derivs[0, j]
+                    B_matrix[i, j + 3 * coord[1]] = dihedral_derivs[1, j]
+                    B_matrix[i, j + 3 * coord[2]] = dihedral_derivs[2, j]
+                    B_matrix[i, j + 3 * coord[3]] = dihedral_derivs[3, j]
 
-                cosu = np.dot(normedu, normedw)
-                # note this could be 0 if undefined dihedral
-                sinu = np.sqrt(1 - (np.dot(normedu, normedw)) ** 2)
+        return B_matrix
 
-                cosv = -np.dot(normedv, normedw)
-                # note this could be 0 if undefined dihedral
-                sinv = np.sqrt(1 - (np.dot(normedv, normedw)) ** 2)
+    @staticmethod
+    @njit(cache=True)
+    def jit_angle_deriv(positions: Matrix) -> Matrix:
+        # vectors making up the angle
+        u = positions[0] - positions[1]
+        v = positions[2] - positions[1]
 
-                # catching cases where certain dihedrals are undefined
-                if (sinu, sinv) == (0, 0):
-                    for j in range(3):
-                        B_matrix[i, j + 3 * coord[0]] = float("nan")
-                        B_matrix[i, j + 3 * coord[1]] = float("nan")
-                        B_matrix[i, j + 3 * coord[2]] = float("nan")
-                        B_matrix[i, j + 3 * coord[3]] = float("nan")
-                elif sinv == 0:
-                    for j in range(3):
-                        B_matrix[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
-                            norm(u) * (sinu**2)
-                        )
-                        B_matrix[i, j + 3 * coord[1]] = float("nan")
-                        B_matrix[i, j + 3 * coord[2]] = float("nan")
-                        B_matrix[i, j + 3 * coord[3]] = float("nan")
-                elif sinu == 0:
-                    for j in range(3):
-                        B_matrix[i, j + 3 * coord[0]] = float("nan")
-                        B_matrix[i, j + 3 * coord[1]] = float("nan")
-                        B_matrix[i, j + 3 * coord[2]] = float("nan")
-                        B_matrix[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
-                            norm(v) * (sinv**2)
-                        )
-                else:
-                    for j in range(3):
-                        B_matrix[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
-                            norm(u) * (sinu**2)
-                        )
-                        B_matrix[i, j + 3 * coord[1]] = -cross(normedu, normedw)[j] / (
-                            norm(u) * (sinu**2)
-                        ) + (
+        normedu = u / norm(u)
+        normedv = v / norm(v)
+
+        w = cross(u, v)
+
+        # if they were parallel
+        if np.isclose(w, np.array([0, 0, 0])).all():
+            w = cross(u, np.array([1, -1, 1]))
+
+        # if u and [1, -1, 1] were parallel
+        if np.isclose(w, np.array([0, 0, 0])).all():
+            w = cross(u, np.array([-1, 1, 1]))
+
+        normedw = w / norm(w)
+        return np.array(
+            [
+                [
+                    cross(normedu, normedw)[0] / norm(u),
+                    cross(normedu, normedw)[1] / norm(u),
+                    cross(normedu, normedw)[2] / norm(u),
+                ],
+                [
+                    -(cross(normedu, normedw)[0] / norm(u))
+                    - (cross(normedw, normedv)[0] / norm(v)),
+                    -(cross(normedu, normedw)[1] / norm(u))
+                    - (cross(normedw, normedv)[1] / norm(v)),
+                    -(cross(normedu, normedw)[2] / norm(u))
+                    - (cross(normedw, normedv)[2] / norm(v)),
+                ],
+                [
+                    cross(normedw, normedv)[0] / norm(v),
+                    cross(normedw, normedv)[1] / norm(v),
+                    cross(normedw, normedv)[2] / norm(v),
+                ],
+            ]
+        )
+
+    @staticmethod
+    @njit(cache=True)
+    def jit_dihedral_deriv(positions: Matrix) -> Matrix:
+        # vectors making up dihedral
+        u = positions[0] - positions[1]
+        w = positions[2] - positions[1]
+        v = positions[3] - positions[2]
+
+        normedu = u / norm(u)
+        normedw = w / norm(w)
+        normedv = v / norm(v)
+
+        cosu = np.dot(normedu, normedw)
+        # note this could be 0 if undefined dihedral
+        sinu = np.sqrt(1 - (np.dot(normedu, normedw)) ** 2)
+
+        cosv = -np.dot(normedv, normedw)
+        # note this could be 0 if undefined dihedral
+        sinv = np.sqrt(1 - (np.dot(normedv, normedw)) ** 2)
+
+        # catching cases where certain dihedrals are undefined
+        if (sinu, sinv) == (0, 0):
+            return np.full((4, 3), float("nan"))
+        elif sinv == 0:
+            return np.array(
+                [
+                    [
+                        cross(normedu, normedw)[0] / (norm(u) * (sinu**2)),
+                        cross(normedu, normedw)[1] / (norm(u) * (sinu**2)),
+                        cross(normedu, normedw)[2] / (norm(u) * (sinu**2)),
+                    ],
+                    np.full(3, float("nan")),
+                    np.full(3, float("nan")),
+                    np.full(3, float("nan")),
+                ]
+            )
+        elif sinu == 0:
+            return np.array(
+                [
+                    np.full(3, float("nan")),
+                    np.full(3, float("nan")),
+                    np.full(3, float("nan")),
+                    [
+                        -cross(normedv, normedw)[0] / (norm(v) * (sinv**2)),
+                        -cross(normedv, normedw)[1] / (norm(v) * (sinv**2)),
+                        -cross(normedv, normedw)[2] / (norm(v) * (sinv**2)),
+                    ],
+                ]
+            )
+        else:
+            return np.array(
+                [
+                    [
+                        cross(normedu, normedw)[0] / (norm(u) * (sinu**2)),
+                        cross(normedu, normedw)[1] / (norm(u) * (sinu**2)),
+                        cross(normedu, normedw)[2] / (norm(u) * (sinu**2)),
+                    ],
+                    [
+                        -cross(normedu, normedw)[0] / (norm(u) * (sinu**2))
+                        + (
                             (
-                                (cross(normedu, normedw)[j] * cosu)
+                                (cross(normedu, normedw)[0] * cosu)
                                 / (norm(w) * (sinu**2))
                             )
                             - (
-                                (cross(normedv, normedw)[j] * cosv)
+                                (cross(normedv, normedw)[0] * cosv)
                                 / (norm(w) * (sinv**2))
                             )
-                        )
-                        B_matrix[i, j + 3 * coord[2]] = cross(normedv, normedw)[j] / (
-                            norm(v) * (sinv**2)
-                        ) - (
+                        ),
+                        -cross(normedu, normedw)[1] / (norm(u) * (sinu**2))
+                        + (
                             (
-                                (cross(normedu, normedw)[j] * cosu)
+                                (cross(normedu, normedw)[1] * cosu)
                                 / (norm(w) * (sinu**2))
                             )
                             - (
-                                (cross(normedv, normedw)[j] * cosv)
+                                (cross(normedv, normedw)[1] * cosv)
                                 / (norm(w) * (sinv**2))
                             )
-                        )
-                        B_matrix[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
-                            norm(v) * (sinv**2)
-                        )
-
-        return B_matrix'''
+                        ),
+                        -cross(normedu, normedw)[2] / (norm(u) * (sinu**2))
+                        + (
+                            (
+                                (cross(normedu, normedw)[2] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
+                            - (
+                                (cross(normedv, normedw)[2] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                    ],
+                    [
+                        cross(normedv, normedw)[0] / (norm(v) * (sinv**2))
+                        - (
+                            (
+                                (cross(normedu, normedw)[0] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
+                            - (
+                                (cross(normedv, normedw)[0] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                        cross(normedv, normedw)[1] / (norm(v) * (sinv**2))
+                        - (
+                            (
+                                (cross(normedu, normedw)[1] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
+                            - (
+                                (cross(normedv, normedw)[1] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                        cross(normedv, normedw)[2] / (norm(v) * (sinv**2))
+                        - (
+                            (
+                                (cross(normedu, normedw)[2] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
+                            - (
+                                (cross(normedv, normedw)[2] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                    ],
+                    [
+                        -cross(normedv, normedw)[0] / (norm(v) * (sinv**2)),
+                        -cross(normedv, normedw)[1] / (norm(v) * (sinv**2)),
+                        -cross(normedv, normedw)[2] / (norm(v) * (sinv**2)),
+                    ],
+                ]
+            )
 
     def x_to_c(
         self,
@@ -369,188 +468,3 @@ class CartesianBmat(CartesianCore):
                     internal_coordinates[i] = float("nan")
 
         return internal_coordinates
-
-    # NOTE: This is to test function compartmentalization.
-    @staticmethod
-    @njit(parallel=True, cache=True)
-    def jit_get_Wilson_B(
-        position_arr: Matrix,
-        internal_coord_arr: Matrix,
-        n_atoms: int,
-        angle_deriv: Callable,
-    ) -> Matrix:
-        """
-        Jit-compiled Wilson's B matrix generator.
-
-        Args:
-            position_arr (Matrix): array of cartesian coordinate locations of the
-                atoms in the Cartesian
-            internal_coord_arr (Matrix): array of internal coordinates, followed by the
-                length of the coordinate. If the coordinate is not a dihedral, there are
-                unused numbers in the 4th, or 3rd and 4th, places to ensure a
-                rectangular array
-            n_atoms (int): the number of atoms in the system, used to get matrix size
-
-        Returns:
-            Matrix[float64]: Wilson's B matrix
-        """
-
-        # initialize B matrix
-        B_matrix = np.zeros((len(internal_coord_arr), 3 * n_atoms))
-
-        for i in prange(len(internal_coord_arr)):
-            # separate cases for distances, angles, and dihedrals
-            # procedure from J. Chem. Phys. 117, 9160 (2002); https://doi.org/10.1063/1.1515483
-
-            # get ith internal coordinate
-            coord = internal_coord_arr[i]
-
-            # distances
-            if coord[-1] == 2:
-                # get positions of participating atoms
-                positions = position_arr[coord[:2]]
-
-                # derivatives are just components of unit vector along distance
-                u = positions[0] - positions[1]
-
-                normedu = u / norm(u)
-                # for each cartesian coordinate
-                for j in prange(3):
-                    B_matrix[i, j + 3 * coord[0]] = normedu[j]
-                    B_matrix[i, j + 3 * coord[1]] = -normedu[j]
-
-            # angles
-            elif coord[-1] == 3:
-                # get positions of participating atoms
-                positions = position_arr[coord[:3]]
-
-                angle_derivs = angle_deriv(positions)
-
-                for j in prange(3):
-                    B_matrix[i, j + 3 * coord[0]] = angle_derivs[0, j]
-                    B_matrix[i, j + 3 * coord[1]] = angle_derivs[1, j]
-                    B_matrix[i, j + 3 * coord[2]] = angle_derivs[2, j]
-
-            # dihedrals
-            else:
-                # get positions of participating atoms
-                positions = position_arr[coord[:4]]
-
-                # vectors making up dihedral
-                u = positions[0] - positions[1]
-                w = positions[2] - positions[1]
-                v = positions[3] - positions[2]
-
-                normedu = u / norm(u)
-                normedw = w / norm(w)
-                normedv = v / norm(v)
-
-                cosu = np.dot(normedu, normedw)
-                # note this could be 0 if undefined dihedral
-                sinu = np.sqrt(1 - (np.dot(normedu, normedw)) ** 2)
-
-                cosv = -np.dot(normedv, normedw)
-                # note this could be 0 if undefined dihedral
-                sinv = np.sqrt(1 - (np.dot(normedv, normedw)) ** 2)
-
-                # catching cases where certain dihedrals are undefined
-                if (sinu, sinv) == (0, 0):
-                    for j in prange(3):
-                        B_matrix[i, j + 3 * coord[0]] = float("nan")
-                        B_matrix[i, j + 3 * coord[1]] = float("nan")
-                        B_matrix[i, j + 3 * coord[2]] = float("nan")
-                        B_matrix[i, j + 3 * coord[3]] = float("nan")
-                elif sinv == 0:
-                    for j in prange(3):
-                        B_matrix[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
-                            norm(u) * (sinu**2)
-                        )
-                        B_matrix[i, j + 3 * coord[1]] = float("nan")
-                        B_matrix[i, j + 3 * coord[2]] = float("nan")
-                        B_matrix[i, j + 3 * coord[3]] = float("nan")
-                elif sinu == 0:
-                    for j in prange(3):
-                        B_matrix[i, j + 3 * coord[0]] = float("nan")
-                        B_matrix[i, j + 3 * coord[1]] = float("nan")
-                        B_matrix[i, j + 3 * coord[2]] = float("nan")
-                        B_matrix[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
-                            norm(v) * (sinv**2)
-                        )
-                else:
-                    for j in prange(3):
-                        B_matrix[i, j + 3 * coord[0]] = cross(normedu, normedw)[j] / (
-                            norm(u) * (sinu**2)
-                        )
-                        B_matrix[i, j + 3 * coord[1]] = -cross(normedu, normedw)[j] / (
-                            norm(u) * (sinu**2)
-                        ) + (
-                            (
-                                (cross(normedu, normedw)[j] * cosu)
-                                / (norm(w) * (sinu**2))
-                            )
-                            - (
-                                (cross(normedv, normedw)[j] * cosv)
-                                / (norm(w) * (sinv**2))
-                            )
-                        )
-                        B_matrix[i, j + 3 * coord[2]] = cross(normedv, normedw)[j] / (
-                            norm(v) * (sinv**2)
-                        ) - (
-                            (
-                                (cross(normedu, normedw)[j] * cosu)
-                                / (norm(w) * (sinu**2))
-                            )
-                            - (
-                                (cross(normedv, normedw)[j] * cosv)
-                                / (norm(w) * (sinv**2))
-                            )
-                        )
-                        B_matrix[i, j + 3 * coord[3]] = -cross(normedv, normedw)[j] / (
-                            norm(v) * (sinv**2)
-                        )
-
-        return B_matrix
-
-    @staticmethod
-    @njit(cache=True)
-    def jit_angle_deriv(positions: Matrix) -> Matrix:
-        # vectors making up the angle
-        u = positions[0] - positions[1]
-        v = positions[2] - positions[1]
-
-        normedu = u / norm(u)
-        normedv = v / norm(v)
-
-        w = cross(u, v)
-
-        # if they were parallel
-        if np.isclose(w, np.array([0, 0, 0])).all():
-            w = cross(u, np.array([1, -1, 1]))
-
-        # if u and [1, -1, 1] were parallel
-        if np.isclose(w, np.array([0, 0, 0])).all():
-            w = cross(u, np.array([-1, 1, 1]))
-
-        normedw = w / norm(w)
-        return np.array(
-            [
-                [
-                    cross(normedu, normedw)[0] / norm(u),
-                    cross(normedu, normedw)[1] / norm(u),
-                    cross(normedu, normedw)[2] / norm(u),
-                ],
-                [
-                    -(cross(normedu, normedw)[0] / norm(u))
-                    - (cross(normedw, normedv)[0] / norm(v)),
-                    -(cross(normedu, normedw)[1] / norm(u))
-                    - (cross(normedw, normedv)[1] / norm(v)),
-                    -(cross(normedu, normedw)[2] / norm(u))
-                    - (cross(normedw, normedv)[2] / norm(v)),
-                ],
-                [
-                    cross(normedw, normedv)[0] / norm(v),
-                    cross(normedw, normedv)[1] / norm(v),
-                    cross(normedw, normedv)[2] / norm(v),
-                ],
-            ]
-        )
