@@ -255,124 +255,112 @@ class CartesianBmat(CartesianCore):
         elif sinv == 0:
             return np.array(
                 [
-                    np.array(
-                        [
-                            cross(normedu, normedw)[0] / (norm(u) * (sinu**2)),
-                            cross(normedu, normedw)[1] / (norm(u) * (sinu**2)),
-                            cross(normedu, normedw)[2] / (norm(u) * (sinu**2)),
-                        ]
-                    ),
-                    np.full(3, float("nan")),
-                    np.full(3, float("nan")),
-                    np.full(3, float("nan")),
+                    [
+                        cross(normedu, normedw)[0] / (norm(u) * (sinu**2)),
+                        cross(normedu, normedw)[1] / (norm(u) * (sinu**2)),
+                        cross(normedu, normedw)[2] / (norm(u) * (sinu**2)),
+                    ],
+                    [float("nan"), float("nan"), float("nan")],
+                    [float("nan"), float("nan"), float("nan")],
+                    [float("nan"), float("nan"), float("nan")],
                 ]
             )
         elif sinu == 0:
             return np.array(
                 [
-                    np.full(3, float("nan")),
-                    np.full(3, float("nan")),
-                    np.full(3, float("nan")),
-                    np.array(
-                        [
-                            -cross(normedv, normedw)[0] / (norm(v) * (sinv**2)),
-                            -cross(normedv, normedw)[1] / (norm(v) * (sinv**2)),
-                            -cross(normedv, normedw)[2] / (norm(v) * (sinv**2)),
-                        ]
-                    ),
+                    [float("nan"), float("nan"), float("nan")],
+                    [float("nan"), float("nan"), float("nan")],
+                    [float("nan"), float("nan"), float("nan")],
+                    [
+                        -cross(normedv, normedw)[0] / (norm(v) * (sinv**2)),
+                        -cross(normedv, normedw)[1] / (norm(v) * (sinv**2)),
+                        -cross(normedv, normedw)[2] / (norm(v) * (sinv**2)),
+                    ],
                 ]
             )
         else:
             return np.array(
                 [
-                    np.array(
-                        [
-                            cross(normedu, normedw)[0] / (norm(u) * (sinu**2)),
-                            cross(normedu, normedw)[1] / (norm(u) * (sinu**2)),
-                            cross(normedu, normedw)[2] / (norm(u) * (sinu**2)),
-                        ]
-                    ),
-                    np.array(
-                        [
-                            -cross(normedu, normedw)[0] / (norm(u) * (sinu**2))
-                            + (
-                                (
-                                    (cross(normedu, normedw)[0] * cosu)
-                                    / (norm(w) * (sinu**2))
-                                )
-                                - (
-                                    (cross(normedv, normedw)[0] * cosv)
-                                    / (norm(w) * (sinv**2))
-                                )
-                            ),
-                            -cross(normedu, normedw)[1] / (norm(u) * (sinu**2))
-                            + (
-                                (
-                                    (cross(normedu, normedw)[1] * cosu)
-                                    / (norm(w) * (sinu**2))
-                                )
-                                - (
-                                    (cross(normedv, normedw)[1] * cosv)
-                                    / (norm(w) * (sinv**2))
-                                )
-                            ),
-                            -cross(normedu, normedw)[2] / (norm(u) * (sinu**2))
-                            + (
-                                (
-                                    (cross(normedu, normedw)[2] * cosu)
-                                    / (norm(w) * (sinu**2))
-                                )
-                                - (
-                                    (cross(normedv, normedw)[2] * cosv)
-                                    / (norm(w) * (sinv**2))
-                                )
-                            ),
-                        ]
-                    ),
-                    np.array(
-                        [
-                            cross(normedv, normedw)[0] / (norm(v) * (sinv**2))
+                    [
+                        cross(normedu, normedw)[0] / (norm(u) * (sinu**2)),
+                        cross(normedu, normedw)[1] / (norm(u) * (sinu**2)),
+                        cross(normedu, normedw)[2] / (norm(u) * (sinu**2)),
+                    ],
+                    [
+                        -cross(normedu, normedw)[0] / (norm(u) * (sinu**2))
+                        + (
+                            (
+                                (cross(normedu, normedw)[0] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
                             - (
-                                (
-                                    (cross(normedu, normedw)[0] * cosu)
-                                    / (norm(w) * (sinu**2))
-                                )
-                                - (
-                                    (cross(normedv, normedw)[0] * cosv)
-                                    / (norm(w) * (sinv**2))
-                                )
-                            ),
-                            cross(normedv, normedw)[1] / (norm(v) * (sinv**2))
+                                (cross(normedv, normedw)[0] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                        -cross(normedu, normedw)[1] / (norm(u) * (sinu**2))
+                        + (
+                            (
+                                (cross(normedu, normedw)[1] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
                             - (
-                                (
-                                    (cross(normedu, normedw)[1] * cosu)
-                                    / (norm(w) * (sinu**2))
-                                )
-                                - (
-                                    (cross(normedv, normedw)[1] * cosv)
-                                    / (norm(w) * (sinv**2))
-                                )
-                            ),
-                            cross(normedv, normedw)[2] / (norm(v) * (sinv**2))
+                                (cross(normedv, normedw)[1] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                        -cross(normedu, normedw)[2] / (norm(u) * (sinu**2))
+                        + (
+                            (
+                                (cross(normedu, normedw)[2] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
                             - (
-                                (
-                                    (cross(normedu, normedw)[2] * cosu)
-                                    / (norm(w) * (sinu**2))
-                                )
-                                - (
-                                    (cross(normedv, normedw)[2] * cosv)
-                                    / (norm(w) * (sinv**2))
-                                )
-                            ),
-                        ]
-                    ),
-                    np.array(
-                        [
-                            -cross(normedv, normedw)[0] / (norm(v) * (sinv**2)),
-                            -cross(normedv, normedw)[1] / (norm(v) * (sinv**2)),
-                            -cross(normedv, normedw)[2] / (norm(v) * (sinv**2)),
-                        ]
-                    ),
+                                (cross(normedv, normedw)[2] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                    ],
+                    [
+                        cross(normedv, normedw)[0] / (norm(v) * (sinv**2))
+                        - (
+                            (
+                                (cross(normedu, normedw)[0] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
+                            - (
+                                (cross(normedv, normedw)[0] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                        cross(normedv, normedw)[1] / (norm(v) * (sinv**2))
+                        - (
+                            (
+                                (cross(normedu, normedw)[1] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
+                            - (
+                                (cross(normedv, normedw)[1] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                        cross(normedv, normedw)[2] / (norm(v) * (sinv**2))
+                        - (
+                            (
+                                (cross(normedu, normedw)[2] * cosu)
+                                / (norm(w) * (sinu**2))
+                            )
+                            - (
+                                (cross(normedv, normedw)[2] * cosv)
+                                / (norm(w) * (sinv**2))
+                            )
+                        ),
+                    ],
+                    [
+                        -cross(normedv, normedw)[0] / (norm(v) * (sinv**2)),
+                        -cross(normedv, normedw)[1] / (norm(v) * (sinv**2)),
+                        -cross(normedv, normedw)[2] / (norm(v) * (sinv**2)),
+                    ],
                 ]
             )
 
