@@ -101,7 +101,9 @@ class CartesianBmat(CartesianCore):
             # label to differentiate bond distances, angles, and dihedrals
             internal_coord_arr[i, 4] = len(coordinate)
 
-        return self.jit_get_Wilson_B(position_arr, internal_coord_arr, len(self))
+        return self.jit_get_Wilson_B(
+            position_arr, internal_coord_arr, len(self), self.jit_angle_deriv
+        )
 
     '''@staticmethod
     @njit(parallel=True, cache=True)
