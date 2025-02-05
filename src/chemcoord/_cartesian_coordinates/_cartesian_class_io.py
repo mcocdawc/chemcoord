@@ -147,13 +147,13 @@ class CartesianIO(CartesianCore, GenericIO):
 
     def to_xyz(
         self,
-        buf=None,
-        sort_index=True,
-        index=False,
-        header=False,
-        float_format="{:.6f}".format,
-        overwrite=True,
-    ):
+        buf: Union[WriteBuffer[str], PathLike, None] = None,
+        sort_index: bool = True,
+        index: bool = False,
+        header: Union[bool, SequenceNotStr[str]] = True,
+        float_format: FloatFormatType = "{:.6f}".format,
+        overwrite: bool = True,
+    ) -> Union[str, None]:
         """Write xyz-file
 
         Args:
@@ -163,6 +163,7 @@ class CartesianIO(CartesianCore, GenericIO):
             sort_index (bool): If sort_index is true, the
                 :class:`~chemcoord.Cartesian`
                 is sorted by the index before writing.
+            index (bool): Whether to print index (row) labels.
             float_format (one-parameter function): Formatter function
                 to apply to column’s elements if they are floats.
                 The result of this function must be a unicode string.
