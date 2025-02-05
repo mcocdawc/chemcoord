@@ -50,7 +50,7 @@ Tensor7D = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
 Tensor = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
 
 #: Type annotation for pathlike objects.
-PathLike: TypeAlias = Union[str, os.PathLike]
+PathLike: TypeAlias = Union[str, os.PathLike[str]]
 #: Type annotation for dictionaries holding keyword arguments.
 KwargDict: TypeAlias = Dict[str, Any]
 

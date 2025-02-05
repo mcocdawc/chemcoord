@@ -5,15 +5,27 @@ import subprocess
 import tempfile
 import warnings
 from collections import defaultdict
+from collections.abc import Hashable
 from functools import partial
 from threading import Thread
+from typing import Union
 
 import numpy as np
 import pandas as pd
+from pandas._typing import (
+    Axes,
+    FloatFormatType,
+    FormattersType,
+    SequenceNotStr,
+    WriteBuffer,
+)
 
 from chemcoord import constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._generic_classes.generic_IO import GenericIO
+from chemcoord._utilities.typing import (
+    PathLike,
+)
 from chemcoord.configuration import settings
 
 
@@ -31,13 +43,13 @@ class CartesianIO(CartesianCore, GenericIO):
     written xyz-file.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self._frame.__repr__()
 
-    def _repr_html_(self):  # noqa: PLW3201
+    def _repr_html_(self) -> str:  # noqa: PLW3201
         new = self._sympy_formatter()
 
-        def insert_before_substring(insert_txt, substr, txt):
+        def insert_before_substring(insert_txt: str, substr, txt: str) -> str:
             "Under the assumption that substr only appears once."
             return (insert_txt + substr).join(txt.split(substr))
 
@@ -47,35 +59,35 @@ class CartesianIO(CartesianCore, GenericIO):
 
     def to_string(
         self,
-        buf=None,
-        columns=None,
-        col_space=None,
-        header=True,
-        index=True,
-        na_rep="NaN",
-        formatters=None,
-        float_format=None,
-        sparsify=None,
-        index_names=True,
-        justify=None,
-        line_width=None,
-        max_rows=None,
-        max_cols=None,
-        show_dimensions=False,
-    ):
+        buf: Union[WriteBuffer[str], PathLike, None] = None,
+        columns: Union[Axes, None] = None,
+        col_space: Union[int, list[int], dict[Hashable, int], None] = None,
+        header: Union[bool, SequenceNotStr[str]] = True,
+        index: bool = True,
+        na_rep: str = "NaN",
+        formatters: Union[FormattersType, None] = None,
+        float_format: Union[FloatFormatType, None] = None,
+        sparsify: Union[bool, None] = None,
+        index_names: bool = True,
+        justify: Union[str, None] = None,
+        line_width: Union[int, None] = None,
+        max_rows: Union[int, None] = None,
+        max_cols: Union[int, None] = None,
+        show_dimensions: bool = False,
+    ) -> Union[str, None]:
         """Render a DataFrame to a console-friendly tabular output.
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.
         """
-        return self._frame.to_string(
-            buf=buf,
-            columns=columns,
+        return self._frame.to_string(  # type: ignore[misc]
+            buf=buf,  # type: ignore[arg-type]
+            columns=columns,  # type: ignore[arg-type]
             col_space=col_space,
-            header=header,
+            header=header,  # type: ignore[arg-type]
             index=index,
             na_rep=na_rep,
             formatters=formatters,
-            float_format=float_format,
+            float_format=float_format,  # type: ignore[arg-type]
             sparsify=sparsify,
             index_names=index_names,
             justify=justify,
@@ -87,25 +99,25 @@ class CartesianIO(CartesianCore, GenericIO):
 
     def to_latex(
         self,
-        buf=None,
-        columns=None,
-        col_space=None,
-        header=True,
-        index=True,
-        na_rep="NaN",
-        formatters=None,
-        float_format=None,
-        sparsify=None,
-        index_names=True,
-        bold_rows=True,
-        column_format=None,
-        longtable=None,
-        escape=None,
-        encoding=None,
-        decimal=".",
-        multicolumn=None,
-        multicolumn_format=None,
-        multirow=None,
+        buf: Union[WriteBuffer[str], PathLike, None] = None,
+        columns: Union[Axes, None] = None,
+        col_space: Union[int, list[int], dict[Hashable, int], None] = None,
+        header: Union[bool, SequenceNotStr[str]] = True,
+        index: bool = True,
+        na_rep: str = "NaN",
+        formatters: Union[FormattersType, None] = None,
+        float_format: Union[FloatFormatType, None] = None,
+        sparsify: Union[bool, None] = None,
+        index_names: bool = True,
+        bold_rows: bool = True,
+        column_format: Union[str, None] = None,
+        longtable: Union[bool, None] = None,
+        escape: Union[bool, None] = None,
+        encoding: Union[str, None] = None,
+        decimal: str = ".",
+        multicolumn: Union[bool, None] = None,
+        multicolumn_format: Union[str, None] = None,
+        multirow: Union[bool, None] = None,
     ):
         """Render a DataFrame to a tabular environment table.
 
@@ -113,7 +125,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Requires ``\\usepackage{booktabs}``.
         Wrapper around the :meth:`pandas.DataFrame.to_latex` method.
         """
-        return self._frame.to_latex(
+        return self._frame.to_latex(  # type: ignore[misc,call-overload]
             buf=buf,
             columns=columns,
             col_space=col_space,
