@@ -9,10 +9,11 @@ from collections.abc import Hashable
 from functools import partial
 from threading import Thread
 from types import ModuleType
-from typing import Union, overload
+from typing import Any, Union, overload
 
 import numpy as np
 import pandas as pd
+from typing_extensions import Self
 
 from chemcoord import constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
@@ -22,6 +23,7 @@ from chemcoord._utilities.typing import (
     FloatFormatType,
     FormattersType,
     PathLike,
+    ReadBuffer,
     SequenceNotStr,
     WriteBuffer,
 )
@@ -66,26 +68,6 @@ class CartesianIO(CartesianCore, GenericIO):
     @overload
     def to_string(
         self,
-        buf: Union[WriteBuffer[str], PathLike] = ...,
-        columns: Union[Axes, None] = ...,
-        col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
-        index: bool = ...,
-        na_rep: str = ...,
-        formatters: Union[FormattersType, None] = ...,
-        float_format: Union[FloatFormatType, None] = ...,
-        sparsify: Union[bool, None] = ...,
-        index_names: bool = ...,
-        justify: Union[str, None] = ...,
-        line_width: Union[int, None] = ...,
-        max_rows: Union[int, None] = ...,
-        max_cols: Union[int, None] = ...,
-        show_dimensions: bool = ...,
-    ) -> None: ...
-
-    @overload
-    def to_string(
-        self,
         buf: None = None,
         columns: Union[Axes, None] = ...,
         col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
@@ -102,6 +84,26 @@ class CartesianIO(CartesianCore, GenericIO):
         max_cols: Union[int, None] = ...,
         show_dimensions: bool = ...,
     ) -> str: ...
+
+    @overload
+    def to_string(
+        self,
+        buf: Union[WriteBuffer[str], PathLike] = ...,
+        columns: Union[Axes, None] = ...,
+        col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
+        header: Union[bool, SequenceNotStr[str]] = ...,
+        index: bool = ...,
+        na_rep: str = ...,
+        formatters: Union[FormattersType, None] = ...,
+        float_format: Union[FloatFormatType, None] = ...,
+        sparsify: Union[bool, None] = ...,
+        index_names: bool = ...,
+        justify: Union[str, None] = ...,
+        line_width: Union[int, None] = ...,
+        max_rows: Union[int, None] = ...,
+        max_cols: Union[int, None] = ...,
+        show_dimensions: bool = ...,
+    ) -> None: ...
 
     def to_string(
         self,
@@ -146,30 +148,6 @@ class CartesianIO(CartesianCore, GenericIO):
     @overload
     def to_latex(
         self,
-        buf: Union[WriteBuffer[str], PathLike] = ...,
-        columns: Union[Axes, None] = ...,
-        col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
-        index: bool = ...,
-        na_rep: str = ...,
-        formatters: Union[FormattersType, None] = ...,
-        float_format: Union[FloatFormatType, None] = ...,
-        sparsify: Union[bool, None] = ...,
-        index_names: bool = ...,
-        bold_rows: bool = ...,
-        column_format: Union[str, None] = ...,
-        longtable: Union[bool, None] = ...,
-        escape: Union[bool, None] = ...,
-        encoding: Union[str, None] = ...,
-        decimal: str = ...,
-        multicolumn: Union[bool, None] = ...,
-        multicolumn_format: Union[str, None] = ...,
-        multirow: Union[bool, None] = ...,
-    ) -> None: ...
-
-    @overload
-    def to_latex(
-        self,
         buf: None = None,
         columns: Union[Axes, None] = ...,
         col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
@@ -190,6 +168,30 @@ class CartesianIO(CartesianCore, GenericIO):
         multicolumn_format: Union[str, None] = ...,
         multirow: Union[bool, None] = ...,
     ) -> str: ...
+
+    @overload
+    def to_latex(
+        self,
+        buf: Union[WriteBuffer[str], PathLike] = ...,
+        columns: Union[Axes, None] = ...,
+        col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
+        header: Union[bool, SequenceNotStr[str]] = ...,
+        index: bool = ...,
+        na_rep: str = ...,
+        formatters: Union[FormattersType, None] = ...,
+        float_format: Union[FloatFormatType, None] = ...,
+        sparsify: Union[bool, None] = ...,
+        index_names: bool = ...,
+        bold_rows: bool = ...,
+        column_format: Union[str, None] = ...,
+        longtable: Union[bool, None] = ...,
+        escape: Union[bool, None] = ...,
+        encoding: Union[str, None] = ...,
+        decimal: str = ...,
+        multicolumn: Union[bool, None] = ...,
+        multicolumn_format: Union[str, None] = ...,
+        multirow: Union[bool, None] = ...,
+    ) -> None: ...
 
     def to_latex(
         self,
@@ -244,6 +246,17 @@ class CartesianIO(CartesianCore, GenericIO):
     @overload
     def to_xyz(
         self,
+        buf: None = None,
+        sort_index: bool = ...,
+        index: bool = ...,
+        header: Union[bool, SequenceNotStr[str]] = ...,
+        float_format: FloatFormatType = ...,
+        overwrite: bool = ...,
+    ) -> str: ...
+
+    @overload
+    def to_xyz(
+        self,
         buf: PathLike = ...,
         sort_index: bool = ...,
         index: bool = ...,
@@ -251,17 +264,6 @@ class CartesianIO(CartesianCore, GenericIO):
         float_format: FloatFormatType = ...,
         overwrite: bool = ...,
     ) -> None: ...
-
-    @overload
-    def to_xyz(
-        self,
-        buf: None = ...,
-        sort_index: bool = ...,
-        index: bool = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
-        float_format: FloatFormatType = ...,
-        overwrite: bool = ...,
-    ) -> str: ...
 
     def to_xyz(
         self,
@@ -343,6 +345,26 @@ class CartesianIO(CartesianCore, GenericIO):
             mol.build(**kwargs)
             return mol
 
+        @classmethod
+        def from_pyscf(cls, mol: Mole) -> Self:
+            """Create an instance of the own class from a PySCF molecule
+
+            .. note:: This method may lose information during the transformation.
+                The :class:`pyscf.gto.mole.Mole` class containss more information
+                than the :class:`Cartesian` class, such as charge, spin multipicity,
+                or basis set.
+
+            Args:
+                mol (:class:`pyscf.gto.mole.Mole`):
+
+            Returns:
+                Cartesian:
+            """
+            return cls.set_atom_coords(
+                atoms=mol.elements,
+                coords=mol.atom_coords(unit="Angstrom"),
+            )
+
     def write_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`"""
         message = "Will be removed in the future. Please use to_xyz()."
@@ -352,7 +374,14 @@ class CartesianIO(CartesianCore, GenericIO):
         return self.to_xyz(*args, **kwargs)
 
     @classmethod
-    def read_xyz(cls, buf, start_index=0, get_bonds=True, nrows=None, engine=None):
+    def read_xyz(
+        cls,
+        buf: Union[ReadBuffer[str], PathLike],
+        start_index: int = 0,
+        get_bonds: bool = True,
+        nrows: Union[int, None] = None,
+        engine: Union[str, None] = None,
+    ) -> Self:
         """Read a file of coordinate information.
 
         Reads xyz-files.
@@ -371,7 +400,7 @@ class CartesianIO(CartesianCore, GenericIO):
             get_bonds (bool):
             nrows (int): Number of rows of file to read.
                 Note that the first two rows are implicitly excluded.
-            engine (str): Wrapper for argument of :func:`pandas.read_csv`.
+            engine (str): Wrapper for the same argument of :func:`pandas.read_csv`.
 
         Returns:
             Cartesian:
@@ -397,22 +426,14 @@ class CartesianIO(CartesianCore, GenericIO):
             molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
 
-    @classmethod
-    def from_pyscf(cls, mol):
-        """Create an instance of the own class from a PySCF molecule
+    @overload
+    def to_cjson(self, buf: None = None, **kwargs) -> dict[str, Any]: ...
+    @overload
+    def to_cjson(self, buf: PathLike = ..., **kwargs) -> None: ...
 
-        Args:
-            mol (:class:`pyscf.gto.Mole`):
-
-        Returns:
-            Cartesian:
-        """
-        return cls.set_atom_coords(
-            atoms=mol.elements,
-            coords=mol.atom_coords(unit="Angstrom"),
-        )
-
-    def to_cjson(self, buf=None, **kwargs):
+    def to_cjson(
+        self, buf: Union[PathLike, None] = None, **kwargs
+    ) -> Union[dict[str, Any], None]:
         """Write a cjson file or return dictionary.
 
         The cjson format is specified
@@ -429,7 +450,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             dict:
         """
-        cjson_dict = {"chemical json": 0}
+        cjson_dict: dict[str, Any] = {"chemical json": 0}
 
         cjson_dict["atoms"] = {}
 
@@ -453,14 +474,15 @@ class CartesianIO(CartesianCore, GenericIO):
         cjson_dict["bonds"] = {"connections": {}}
         cjson_dict["bonds"]["connections"]["index"] = bonds
 
-        if buf is not None:
+        if buf is None:
+            return cjson_dict
+        else:
             with open(buf, mode="w") as f:
                 f.write(json.dumps(cjson_dict, **kwargs))
-        else:
-            return cjson_dict
+            return None
 
     @classmethod
-    def read_cjson(cls, buf):
+    def read_cjson(cls, buf: Union[dict[str, Any], PathLike]) -> Self:
         """Read a cjson file or a dictionary.
 
         The cjson format is specified
@@ -509,10 +531,17 @@ class CartesianIO(CartesianCore, GenericIO):
         except KeyError:
             pass
 
-        out = cls(atoms=elements, coords=coords, _metadata=_metadata, metadata=metadata)
-        return out
+        # This is a mixin, so some attributes are not defined.
+        return cls(
+            atoms=elements,  # type: ignore[call-arg]
+            coords=coords,
+            _metadata=_metadata,
+            metadata=metadata,
+        )
 
-    def view(self, viewer=None, use_curr_dir=False):
+    def view(
+        self, viewer: Union[PathLike, None] = None, use_curr_dir: bool = False
+    ) -> None:
         """View your molecule.
 
         .. note:: This function writes a temporary file and opens it with

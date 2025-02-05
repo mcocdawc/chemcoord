@@ -20,6 +20,7 @@ from pandas._typing import (  # noqa: F401
     Axes,
     FloatFormatType,
     FormattersType,
+    ReadBuffer,
     SequenceNotStr,
     WriteBuffer,
 )
