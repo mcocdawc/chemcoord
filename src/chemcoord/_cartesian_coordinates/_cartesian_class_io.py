@@ -8,6 +8,7 @@ from collections import defaultdict
 from collections.abc import Hashable
 from functools import partial
 from threading import Thread
+from types import ModuleType
 from typing import Union, overload
 
 import numpy as np
@@ -25,6 +26,13 @@ from chemcoord._utilities.typing import (
     WriteBuffer,
 )
 from chemcoord.configuration import settings
+
+pyscf: Union[ModuleType, None] = None
+try:
+    import pyscf  # type: ignore[no-redef]
+    from pyscf.gto.mole import Mole
+except ImportError:
+    pass
 
 
 class CartesianIO(CartesianCore, GenericIO):
@@ -312,26 +320,28 @@ class CartesianIO(CartesianCore, GenericIO):
         else:
             return output
 
-    def to_pyscf(self, **kwargs):
-        """Convert to a PySCF molecule.
+    if pyscf is not None:
 
-        .. note:: The `pyscf library <https://sunqm.github.io/pyscf/>`_ is imported
-            locally in this function and will raise an ``ImportError`` exception,
-            if it is not installed.
+        def to_pyscf(self, **kwargs) -> Mole:
+            """Convert to a PySCF molecule.
 
-        The kwargs are passed to the :meth:`pyscf.gto.Mole.build` method.
+            .. note:: This method is only available, if the `pyscf library
+                <https://sunqm.github.io/pyscf/>`_ is installed.
 
-        Returns:
-            pyscf.gto.Mole:
-        """
-        from pyscf.gto import Mole  # noqa: PLC0415
+            The kwargs are passed to the constructor of :class:`pyscf.gto.mole.Mole`.
 
-        mol = Mole()
-        mol.atom = [
-            [row[1].iloc[0], tuple(row[1].iloc[1:4])] for row in self._frame.iterrows()
-        ]
-        mol.build(**kwargs)
-        return mol
+            Returns:
+                pyscf.gto.mole.Mole:
+            """
+            assert pyscf is not None, "pyscf is not installed"
+
+            mol = Mole()
+            mol.atom = [
+                [row[1].iloc[0], tuple(row[1].iloc[1:4])]
+                for row in self._frame.iterrows()
+            ]
+            mol.build(**kwargs)
+            return mol
 
     def write_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`"""
