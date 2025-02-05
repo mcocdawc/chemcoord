@@ -36,6 +36,12 @@ try:
     from pyscf.gto.mole import Mole
 except ImportError:
     pass
+ase: Union[ModuleType, None] = None
+try:
+    import ase  # type: ignore[no-redef]
+    from ase.atoms import Atoms as AseAtoms
+except ImportError:
+    pass
 
 
 class CartesianIO(CartesianCore, GenericIO):
@@ -579,42 +585,46 @@ class CartesianIO(CartesianCore, GenericIO):
             atoms=[el.value for el in molecule.species], coords=molecule.cart_coords
         )
 
-    def get_ase_atoms(self):
-        """Create an Atoms instance of the ase library
+    if ase is not None:
 
-        .. warning:: The `ase library <https://wiki.fysik.dtu.dk/ase/>`_
-            is imported locally in this function and will raise
-            an ``ImportError`` exception, if it is not installed.
+        def get_ase_atoms(self) -> AseAtoms:
+            """Create an Atoms instance of the ase library
 
-        Args:
-            None
+            .. note:: This method is only available,
+                if the `ase library <https://wiki.fysik.dtu.dk/ase/>`_
+                is installed.
 
-        Returns:
-            :class:`ase.atoms.Atoms`:
-        """
-        from ase import Atoms  # noqa: PLC0415
+            Args:
+                None
 
-        return Atoms("".join(self["atom"]), self.loc[:, ["x", "y", "z"]])
+            Returns:
+                :class:`ase.atoms.Atoms`:
+            """
+            return AseAtoms("".join(self["atom"]), self.loc[:, ["x", "y", "z"]])
 
-    @classmethod
-    def from_ase_atoms(cls, atoms):
-        """Create an instance of the own class from an ase molecule
+        @classmethod
+        def from_ase_atoms(cls, atoms: AseAtoms) -> Self:
+            """Create an instance of the own class from an ase molecule
 
-        Args:
-            molecule (:class:`ase.atoms.Atoms`):
+            .. note:: This method is only available,
+                if the `ase library <https://wiki.fysik.dtu.dk/ase/>`_
+                is installed.
 
-        Returns:
-            Cartesian:
-        """
-        return cls(atoms=atoms.get_chemical_symbols(), coords=atoms.positions)
+            Args:
+                molecule (:class:`ase.atoms.Atoms`):
+
+            Returns:
+                Cartesian:
+            """
+            return cls(atoms=atoms.get_chemical_symbols(), coords=atoms.positions)  # type: ignore[call-arg]
 
     if pyscf is not None:
 
         def to_pyscf(self, **kwargs) -> Mole:
             """Convert to a PySCF molecule.
 
-            .. note:: This method is only available, if the `pyscf library
-                <https://sunqm.github.io/pyscf/>`_ is installed.
+            .. note:: This method is only available,
+                if the `pyscf library <https://sunqm.github.io/pyscf/>`_ is installed.
 
             The kwargs are passed to the constructor of :class:`pyscf.gto.mole.Mole`.
 
@@ -635,7 +645,10 @@ class CartesianIO(CartesianCore, GenericIO):
         def from_pyscf(cls, mol: Mole) -> Self:
             """Create an instance of the own class from a PySCF molecule
 
-            .. note:: This method may lose information during the transformation.
+            .. note:: This method is only available,
+                if the `pyscf library <https://sunqm.github.io/pyscf/>`_ is installed.
+
+            .. warning:: This method may lose information during the transformation.
                 The :class:`pyscf.gto.mole.Mole` class containss more information
                 than the :class:`Cartesian` class, such as charge, spin multipicity,
                 or basis set.
