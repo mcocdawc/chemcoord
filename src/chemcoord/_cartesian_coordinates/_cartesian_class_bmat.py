@@ -446,6 +446,8 @@ class CartesianBmat(CartesianCore):
         # for each subdivision,
         for i in range(N):
             new_struct = path[i].B_traj_step(end, N - i, coords)
+            # TODO: figure out whether to match rotation to start, end,
+            # or previous struct
             path.append(path[i].align(new_struct)[1])
 
         return path
