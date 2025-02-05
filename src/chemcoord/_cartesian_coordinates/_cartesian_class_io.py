@@ -12,19 +12,17 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from pandas._typing import (
-    Axes,
-    FloatFormatType,
-    FormattersType,
-    SequenceNotStr,
-    WriteBuffer,
-)
 
 from chemcoord import constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord._utilities.typing import (
+    Axes,
+    FloatFormatType,
+    FormattersType,
     PathLike,
+    SequenceNotStr,
+    WriteBuffer,
 )
 from chemcoord.configuration import settings
 

@@ -16,7 +16,13 @@ from typing import Any, Dict, NewType, Tuple, TypeVar, Union
 import numpy as np
 
 # Reexpose some pandas types
-from pandas._typing import Axes  # noqa: F401
+from pandas._typing import (  # noqa: F401
+    Axes,
+    FloatFormatType,
+    FormattersType,
+    SequenceNotStr,
+    WriteBuffer,
+)
 from typing_extensions import TypeAlias
 
 # We want the dtype to behave covariant, i.e. if a
