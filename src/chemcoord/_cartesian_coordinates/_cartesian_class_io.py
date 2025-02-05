@@ -13,6 +13,7 @@ from typing import Any, Union, overload
 
 import numpy as np
 import pandas as pd
+from pymatgen.core.structure import Molecule as PyMatGenMolecule
 from typing_extensions import Self
 
 from chemcoord import constants
@@ -322,49 +323,6 @@ class CartesianIO(CartesianCore, GenericIO):
         else:
             return output
 
-    if pyscf is not None:
-
-        def to_pyscf(self, **kwargs) -> Mole:
-            """Convert to a PySCF molecule.
-
-            .. note:: This method is only available, if the `pyscf library
-                <https://sunqm.github.io/pyscf/>`_ is installed.
-
-            The kwargs are passed to the constructor of :class:`pyscf.gto.mole.Mole`.
-
-            Returns:
-                pyscf.gto.mole.Mole:
-            """
-            assert pyscf is not None, "pyscf is not installed"
-
-            mol = Mole()
-            mol.atom = [
-                [row[1].iloc[0], tuple(row[1].iloc[1:4])]
-                for row in self._frame.iterrows()
-            ]
-            mol.build(**kwargs)
-            return mol
-
-        @classmethod
-        def from_pyscf(cls, mol: Mole) -> Self:
-            """Create an instance of the own class from a PySCF molecule
-
-            .. note:: This method may lose information during the transformation.
-                The :class:`pyscf.gto.mole.Mole` class containss more information
-                than the :class:`Cartesian` class, such as charge, spin multipicity,
-                or basis set.
-
-            Args:
-                mol (:class:`pyscf.gto.mole.Mole`):
-
-            Returns:
-                Cartesian:
-            """
-            return cls.set_atom_coords(
-                atoms=mol.elements,
-                coords=mol.atom_coords(unit="Angstrom"),
-            )
-
     def write_xyz(self, *args, **kwargs):
         """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`"""
         message = "Will be removed in the future. Please use to_xyz()."
@@ -590,12 +548,11 @@ class CartesianIO(CartesianCore, GenericIO):
 
         Thread(target=open_file, args=(i,)).start()
 
-    def get_pymatgen_molecule(self):
+    def get_pymatgen_molecule(self) -> PyMatGenMolecule:
         """Create a Molecule instance of the pymatgen library
 
-        .. warning:: The `pymatgen library <http://pymatgen.org>`_ is imported
-            locally in this function and will raise
-            an ``ImportError`` exception, if it is not installed.
+        .. note:: This method is only available, if the
+            `pymatgen library <http://pymatgen.org>`_ is installed.
 
         Args:
             None
@@ -603,12 +560,13 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             :class:`pymatgen.core.structure.Molecule`:
         """
-        from pymatgen.core import Molecule  # noqa: PLC0415
 
-        return Molecule(self["atom"].values, self.loc[:, ["x", "y", "z"]].values)
+        return PyMatGenMolecule(
+            self["atom"].values, self.loc[:, ["x", "y", "z"]].values
+        )
 
     @classmethod
-    def from_pymatgen_molecule(cls, molecule):
+    def from_pymatgen_molecule(cls, molecule: PyMatGenMolecule) -> Self:
         """Create an instance of the own class from a pymatgen molecule
 
         Args:
@@ -649,3 +607,46 @@ class CartesianIO(CartesianCore, GenericIO):
             Cartesian:
         """
         return cls(atoms=atoms.get_chemical_symbols(), coords=atoms.positions)
+
+    if pyscf is not None:
+
+        def to_pyscf(self, **kwargs) -> Mole:
+            """Convert to a PySCF molecule.
+
+            .. note:: This method is only available, if the `pyscf library
+                <https://sunqm.github.io/pyscf/>`_ is installed.
+
+            The kwargs are passed to the constructor of :class:`pyscf.gto.mole.Mole`.
+
+            Returns:
+                pyscf.gto.mole.Mole:
+            """
+            assert pyscf is not None, "pyscf is not installed"
+
+            mol = Mole()
+            mol.atom = [
+                [row[1].iloc[0], tuple(row[1].iloc[1:4])]
+                for row in self._frame.iterrows()
+            ]
+            mol.build(**kwargs)
+            return mol
+
+        @classmethod
+        def from_pyscf(cls, mol: Mole) -> Self:
+            """Create an instance of the own class from a PySCF molecule
+
+            .. note:: This method may lose information during the transformation.
+                The :class:`pyscf.gto.mole.Mole` class containss more information
+                than the :class:`Cartesian` class, such as charge, spin multipicity,
+                or basis set.
+
+            Args:
+                mol (:class:`pyscf.gto.mole.Mole`):
+
+            Returns:
+                Cartesian:
+            """
+            return cls.set_atom_coords(
+                atoms=mol.elements,
+                coords=mol.atom_coords(unit="Angstrom"),
+            )
