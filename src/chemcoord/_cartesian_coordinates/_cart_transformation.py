@@ -4,11 +4,19 @@ from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
-from chemcoord._cartesian_coordinates.xyz_functions import (
-    _jit_normalize,
-)
 from chemcoord._utilities._decorators import njit
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
+
+
+def normalize(vector):
+    """Normalizes a vector"""
+    return vector / np.linalg.norm(vector)
+
+
+@njit
+def _jit_normalize(vector):
+    """Normalizes a vector"""
+    return vector / np.linalg.norm(vector)
 
 
 def _stub_get_ref_pos(X, indices):  # noqa: ARG001
