@@ -24,7 +24,7 @@ from chemcoord.configuration import settings
 
 
 def view(
-    molecule: Cartesian,
+    molecule: Union[Cartesian, Sequence[Cartesian]],
     viewer: Union[PathLike, None] = None,
     use_curr_dir: bool = False,
 ) -> None:
@@ -47,21 +47,17 @@ def view(
         None:
     """
     viewer = settings["defaults"]["viewer"]
-    if hasattr(molecule, "view"):
+    if isinstance(molecule, Cartesian):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
-    else:
-        if pd.api.types.is_list_like(molecule):
-            cartesian_list = molecule
-        else:
-            raise ValueError("Argument is neither list nor Cartesian.")
+    elif isinstance(molecule, Sequence):
+        cartesian_list = molecule
         if use_curr_dir:
             TEMP_DIR = os.path.curdir
         else:
             TEMP_DIR = tempfile.gettempdir()
 
         def give_filename(i):
-            filename = "ChemCoord_list_" + str(i) + ".molden"
-            return os.path.join(TEMP_DIR, filename)
+            return os.path.join(TEMP_DIR, f"ChemCoord_list_{i}.molden")
 
         i = 1
         while os.path.exists(give_filename(i)):
@@ -82,6 +78,8 @@ def view(
                     os.remove(give_filename(i))
 
         Thread(target=open_file, args=(i,)).start()
+    else:
+        raise ValueError("Argument is neither list nor Cartesian.")
 
 
 @overload
@@ -146,8 +144,9 @@ def to_molden(
     ).format
 
     values = len(cartesian_list) * "1\n"
-    energy = [str(m.metadata.get("energy", 1)) for m in cartesian_list]
-    energy = "\n".join(energy) + "\n"
+    energy = (
+        "\n".join([str(m.metadata.get("energy", 1)) for m in cartesian_list]) + "\n"
+    )
 
     header = give_header(energy=energy, max_force=values, rms_force=values)
 
