@@ -5,16 +5,17 @@ from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
 from chemcoord._utilities._decorators import njit
+from chemcoord._utilities.typing import Vector
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
-def normalize(vector):
+def normalize(vector: Vector[np.floating]) -> Vector[np.float64]:
     """Normalizes a vector"""
     return vector / np.linalg.norm(vector)
 
 
 @njit
-def _jit_normalize(vector):
+def _jit_normalize(vector: Vector[np.floating]) -> Vector[np.float64]:
     """Normalizes a vector"""
     return vector / np.linalg.norm(vector)
 
