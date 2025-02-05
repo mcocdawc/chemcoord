@@ -3,13 +3,14 @@ from collections import OrderedDict
 from collections.abc import Sequence
 from functools import partial
 from itertools import permutations
-from typing import Callable, Literal, Mapping, Self, Union, overload
+from typing import Callable, Literal, Mapping, Union, overload
 
 import numpy as np
 import pandas as pd
 from numba.core.errors import NumbaPerformanceWarning
 from pandas import DataFrame
 from sortedcontainers import SortedSet
+from typing_extensions import Self
 
 import chemcoord._cartesian_coordinates._cart_transformation as transformation
 import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
