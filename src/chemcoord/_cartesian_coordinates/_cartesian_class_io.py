@@ -260,7 +260,7 @@ class CartesianIO(CartesianCore, GenericIO):
         buf: Union[PathLike, None] = None,
         sort_index: bool = True,
         index: bool = False,
-        header: Union[bool, SequenceNotStr[str]] = True,
+        header: Union[bool, SequenceNotStr[str]] = False,
         float_format: FloatFormatType = "{:.6f}".format,
         overwrite: bool = True,
     ) -> Union[str, None]:
