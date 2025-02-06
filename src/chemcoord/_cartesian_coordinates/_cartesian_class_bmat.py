@@ -480,10 +480,10 @@ class CartesianBmat(CartesianCore):
 
         x_current = np.array(self.loc[:, ["x", "y", "z"]]).flatten()
 
-        c_current = self.x_to_c(coordinates=coords)
+        c_current = self.x_to_c(internal_coordinates=coords)
         # this could be made faster by not recalculating this at every step, just
         # storing it in the main loop and passing it to this function
-        c2 = end.x_to_c(coordinates=coords)
+        c2 = end.x_to_c(internal_coordinates=coords)
 
         # difference between current point and final point in internal coordinates
         delta_c = c2 - c_current
