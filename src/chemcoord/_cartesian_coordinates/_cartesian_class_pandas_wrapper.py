@@ -1,9 +1,14 @@
 import copy
+from typing import Self
+
+import pandas as pd
+from attrs import define
 
 import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
 
 
+@define(init=False)
 class PandasWrapper:
     """This class provides wrappers for :class:`pandas.DataFrame` methods.
 
@@ -23,15 +28,17 @@ class PandasWrapper:
         which are passed on when doing slices...
     """
 
-    def __len__(self):
+    _frame: pd.DataFrame
+
+    def __len__(self) -> int:
         return self.shape[0]
 
     @property
-    def empty(self):
+    def empty(self) -> bool:
         return self._frame.empty
 
     @property
-    def loc(self):
+    def loc(self) -> indexers._Loc[Self]:
         """Label based indexing
 
         The indexing behaves like Indexing and Selecting data in
@@ -65,7 +72,7 @@ class PandasWrapper:
         return indexers._Loc(self)
 
     @property
-    def iloc(self):
+    def iloc(self) -> indexers._ILoc:
         """Label based indexing
 
         The indexing behaves like Indexing and Selecting data in

@@ -1,21 +1,56 @@
 import warnings
+from collections.abc import Sequence, Set
+from typing import Generic, Protocol, Self, TypeAlias, TypeVar, Union, overload
+
+from attrs import define
+from pandas import DataFrame, Series
 
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 
 
-class _generic_Indexer:
-    def __init__(self, molecule):
-        self.molecule = molecule
+@define(init=False)
+class Molecule(Protocol):
+    _frame: DataFrame
+
+    def _return_appropiate_type(
+        self, selected: Union[Series, DataFrame]
+    ) -> Union[Self, Series, DataFrame]: ...
+
+
+T = TypeVar("T", bound=Molecule)
+
+
+@define
+class _generic_Indexer(Generic[T]):
+    molecule: T
+
+
+IntIdx: TypeAlias = Union[int, Set[int], Sequence[int], slice]
+StrIdx: TypeAlias = Union[str, Set[str], Sequence[str], slice]
 
 
 class _Loc(_generic_Indexer):
-    def __getitem__(self, key):
+    @overload
+    def __getitem__(self, key: tuple[IntIdx, str]) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self, key: tuple[IntIdx, Union[Set[str], Sequence[str], slice]]
+    ) -> Union[T, DataFrame]: ...
+
+    @overload
+    def __getitem__(self, key: IntIdx) -> T: ...
+
+    def __getitem__(
+        self, key: Union[IntIdx, tuple[IntIdx, StrIdx]]
+    ) -> Union[T, Series, DataFrame]:
         if isinstance(key, tuple):
             selected = self.molecule._frame.loc[
                 _set_caster(key[0]), _set_caster(key[1])
             ]
         else:
             selected = self.molecule._frame.loc[_set_caster(key)]
+
         try:
             return self.molecule._return_appropiate_type(selected)
         except AttributeError:
