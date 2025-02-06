@@ -1,11 +1,13 @@
 import copy
-from typing import Self
+from typing import Self, Union
 
 import pandas as pd
 from attrs import define
+from pandas.core.indexes.base import Index
 
 import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
+from chemcoord.typing import SequenceNotStr
 
 
 @define(init=False)
@@ -139,7 +141,7 @@ class PandasWrapper(indexers.Molecule):
         return object.__getattribute__(self, name)
 
     @property
-    def index(self):
+    def index(self) -> Index:
         """Returns the index.
 
         Assigning a value to it changes the index.
@@ -147,7 +149,7 @@ class PandasWrapper(indexers.Molecule):
         return self._frame.index
 
     @index.setter
-    def index(self, value):
+    def index(self, value: Union[Index, SequenceNotStr]) -> None:
         self._frame.index = value
 
     @property

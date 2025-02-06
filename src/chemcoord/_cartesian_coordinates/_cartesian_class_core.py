@@ -1,14 +1,16 @@
 import copy
 import itertools
 from collections import Counter, defaultdict
-from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from itertools import product
 from typing import Any, Literal, Union, cast, overload
 
 import numba as nb
 import numpy as np
 import pandas as pd
+from ordered_set import OrderedSet
 from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
 from pandas.core.series import Series
 from sortedcontainers import SortedSet
 from typing_extensions import Self
@@ -29,6 +31,7 @@ from chemcoord.typing import (
     Integral,
     Matrix,
     Real,
+    SequenceNotStr,
     T,
     Tensor3D,
     Vector,
@@ -486,7 +489,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         def complete_calculation() -> dict[AtomIdx, set[AtomIdx]]:
             old_index = self.index
-            self.index = range(len(self))
+            self.index = range(len(self))  # type: ignore[assignment]
             fragments = self._divide_et_impera(offset=offset)
             positions = np.array(self.loc[:, ["x", "y", "z"]], order="F")
             data = self.add_data([atomic_radius_data, "valency"])
@@ -838,7 +841,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def get_angle_degrees(
         self,
         indices: Union[
-            Sequence[Union[tuple[AtomIdx, AtomIdx, AtomIdx], Sequence[AtomIdx]]],
+            Matrix,
+            Sequence[Union[tuple[Integral, Integral, Integral], Sequence[Integral]]],
             DataFrame,
         ],
     ) -> Vector[np.float64]:
@@ -979,7 +983,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if use_lookup is None:
             use_lookup = settings["defaults"]["use_lookup"]
 
-        fragments = []
+        fragments: Union[list[set[AtomIdx]], list[Self]] = []
         pending = set(self.index)
         self.get_bonds(use_lookup=use_lookup)
 
@@ -993,7 +997,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             pending = pending - index
             if give_only_index:
-                fragments.append(index)
+                fragments.append(index)  # type: ignore[arg-type]
             else:
                 fragment = self.loc[index]
                 fragment._metadata["bond_dict"] = fragment.restrict_bond_dict(
@@ -1005,7 +1009,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                     )
                 except KeyError:
                     pass
-                fragments.append(fragment)
+                fragments.append(fragment)  # type: ignore[arg-type]
         return fragments
 
     def restrict_bond_dict(
@@ -1105,14 +1109,15 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             use_lookup = settings["defaults"]["use_lookup"]
 
         if isinstance(fragments, Sequence):
-            index_of_all_fragments = fragments[0].index
+            index_of_all_fragments = OrderedSet(fragments[0].index)
             for fragment in fragments[1:]:
-                index_of_all_fragments |= fragment.index
+                index_of_all_fragments |= OrderedSet(fragment.index)
         else:
-            index_of_all_fragments = fragments.index
-        missing_part = self.loc[self.index.difference(index_of_all_fragments)]
-        missing_part = missing_part.fragmentate(use_lookup=use_lookup)
-        return sorted(missing_part, key=len, reverse=True)
+            index_of_all_fragments = fragments.index  # type: ignore[assignment]
+        missing_part = self.loc[OrderedSet(self.index) - index_of_all_fragments]
+        return sorted(
+            missing_part.fragmentate(use_lookup=use_lookup), key=len, reverse=True
+        )
 
     @staticmethod
     @njit
@@ -1157,8 +1162,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         pos2 = other.loc[:, coords].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
-        d = float(D[i, j])
-        return AtomIdx(self.index[i]), AtomIdx(other.index[j]), d
+        return AtomIdx(self.index[i]), AtomIdx(other.index[j]), float(D[i, j])  # type: ignore[call-overload]
 
     def get_inertia(self) -> dict[str, Any]:
         """Calculate the inertia tensor and transforms along
@@ -1273,7 +1277,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self, indices: Union[Vector[np.integer], Sequence[int]]
     ) -> Matrix[np.float64]:
         old_index = self.index
-        self.index = range(len(self))
+        self.index = range(len(self))  # type: ignore[assignment]
         rename = {j: i for i, j in enumerate(old_index)}
 
         pos = self.loc[:, ["x", "y", "z"]].values.astype("f8")
@@ -1292,7 +1296,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def get_distance_to(
         self,
         origin: Union[Vector[np.floating], AtomIdx, Sequence[Real], None] = None,
-        other_atoms: Union[Collection[int], None] = None,
+        other_atoms: Union[Index, SequenceNotStr[int], None] = None,
         sort: bool = False,
     ) -> Self:
         """Return a Cartesian with a column for the distance from origin."""
