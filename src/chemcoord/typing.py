@@ -24,6 +24,8 @@ from pandas._typing import (  # noqa: F401
     SequenceNotStr,
     WriteBuffer,
 )
+from pandas.core.frame import DataFrame  # noqa: F401
+from pandas.core.series import Series  # noqa: F401
 from typing_extensions import TypeAlias
 
 # We want the dtype to behave covariant, i.e. if a
