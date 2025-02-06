@@ -1,3 +1,5 @@
+# type: ignore[return]
+
 import math as m
 import os
 import subprocess
@@ -9,7 +11,10 @@ import numpy as np
 import pandas as pd
 import sympy
 from numba import njit
+from typing_extensions import Optional, Union
 
+from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
+from chemcoord._utilities.typing import Vector
 from chemcoord.configuration import settings
 
 
@@ -68,6 +73,47 @@ def view(molecule, viewer=None, use_curr_dir=False):
                     os.remove(give_filename(i))
 
         Thread(target=open_file, args=(i,)).start()
+
+
+# ignoring mypy as mypy does not consider implicit None returns as
+# returning None
+def to_xyz_trajectory(
+    cartesian_list: Vector[Cartesian],
+    buf: Union[str, None] = None,
+    overwrite: bool = True,
+    float_format="{:.6f}".format,
+) -> Optional[str]:
+    """Write a list of Cartesians into an xyz file.
+
+    .. note:: Since it permamently writes a file, this function
+        is strictly speaking **not sideeffect free**.
+        The list to be written is of course not changed.
+
+    Args:
+        cartesian_list (list):
+        buf (str): StringIO-like, optional buffer to write to
+        overwrite (bool): May overwrite existing files.
+        float_format (one-parameter function): Formatter function
+            to apply to column’s elements if they are floats.
+            The result of this function must be a unicode string.
+
+    Returns:
+        formatted : string (or unicode, depending on data and options)
+    """
+
+    output = ""
+    for struct in cartesian_list:
+        output += struct.to_xyz(float_format=float_format) + "\n"
+
+    if buf is not None:
+        if overwrite:
+            with open(buf, mode="w") as f:
+                f.write(output)
+        else:
+            with open(buf, mode="x") as f:
+                f.write(output)
+    else:
+        return output
 
 
 def to_molden(

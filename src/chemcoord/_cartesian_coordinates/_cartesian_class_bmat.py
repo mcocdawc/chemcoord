@@ -473,7 +473,13 @@ class CartesianBmat(CartesianCore):
 
         return internal_coordinates
 
-    def B_traj_step(self, end: Self, N: int, coords: primitives) -> Self:
+    def B_traj_step(
+        self,
+        end: Self,
+        N: int,
+        coords: primitives,
+        rcond: Union[float, None] = None,
+    ) -> Self:
         # TODO: make sure additional_coords are getting passed along correctly.
         # could account for messed up 1st step when you add too many
         current_struct = self.copy()
@@ -500,7 +506,7 @@ class CartesianBmat(CartesianCore):
         ]
 
         B = current_struct.get_Wilson_B(coordinates=coords)
-        delta_x = lstsq(B, delta_c)[0]
+        delta_x = lstsq(B, delta_c, rcond=rcond)[0]
         # print(delta_x)
         # invB = pinv(B)
 
@@ -518,6 +524,7 @@ class CartesianBmat(CartesianCore):
         end: Self,
         N: int,
         additional_coords: Union[primitives, None] = None,
+        rcond: Union[float, None] = None,
     ) -> list[Self]:
         """
         Create a trajectory between two structures.
@@ -533,6 +540,7 @@ class CartesianBmat(CartesianCore):
             N (int): number of subdivisions
             additional_coords (SortedSet[tuple]): SortedSet of additional primitive
                 coordinates to use in the calculation of the trajectory.
+            rcond (float): ...
 
         Returns:
             list[Cartesian]: pathway between self and end
@@ -561,7 +569,7 @@ class CartesianBmat(CartesianCore):
 
         # for each subdivision,
         for i in range(N):
-            new_struct = path[i].B_traj_step(end, N - i, coords)
+            new_struct = path[i].B_traj_step(end, N - i, coords, rcond=rcond)
             # TODO: figure out whether to match rotation to start, end,
             # or previous struct
             path.append(path[i].align(new_struct)[1])
