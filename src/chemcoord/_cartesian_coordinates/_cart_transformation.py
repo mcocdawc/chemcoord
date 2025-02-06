@@ -5,7 +5,7 @@ from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
 from chemcoord._utilities._decorators import njit
-from chemcoord._utilities.typing import Vector
+from chemcoord._utilities.typing import Matrix, Vector
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
@@ -1151,7 +1151,7 @@ def get_T(X, c_table, j):
 
 
 @njit
-def get_C(X, c_table):
+def get_C(X: Matrix[np.floating], c_table) -> tuple[int, Matrix[np.float64]]:
     C = np.empty((3, c_table.shape[1]))
 
     for j in range(C.shape[1]):

@@ -8,6 +8,7 @@ from typing import Callable, Literal, Mapping, Union, overload
 import numpy as np
 import pandas as pd
 from numba.core.errors import NumbaPerformanceWarning
+from numpy import float64
 from pandas import DataFrame
 from sortedcontainers import SortedSet
 from typing_extensions import Self
@@ -18,7 +19,7 @@ import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
-from chemcoord._utilities.typing import AtomIdx, Tensor4D
+from chemcoord._utilities.typing import AtomIdx, Matrix, Tensor4D, Vector
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (
     ERR_CODE_OK,
@@ -504,18 +505,21 @@ class CartesianGetZmat(CartesianCore):
                     c_table.iloc[row, row:] = next(order_of_refs)[row:3]
         return c_table
 
-    def _calculate_zmat_values(self, construction_table):
-        c_table = construction_table
-        if not isinstance(c_table, pd.DataFrame):
-            if isinstance(c_table, pd.Series):
-                c_table = pd.DataFrame(c_table).T
-            else:
-                c_table = np.array(c_table)
-                if len(c_table.shape) == 1:
-                    c_table = c_table[None, :]
-                c_table = pd.DataFrame(
-                    data=c_table[:, 1:], index=c_table[:, 0], columns=["b", "a", "d"]
-                )
+    def _calculate_zmat_values(
+        self,
+        construction_table: Union[DataFrame, pd.Series, Matrix, Vector],
+    ) -> Matrix[float64]:
+        if isinstance(construction_table, pd.DataFrame):
+            c_table = construction_table
+        elif isinstance(construction_table, pd.Series):
+            c_table = pd.DataFrame(construction_table).T
+        else:
+            tmp_arr = np.asarray(construction_table)
+            if len(tmp_arr.shape) == 1:
+                tmp_arr = tmp_arr[None, :]
+            c_table = pd.DataFrame(
+                data=tmp_arr[:, 1:], index=tmp_arr[:, 0], columns=["b", "a", "d"]
+            )
 
         c_table = replace_without_warn(c_table, constants.int_label).astype("i8")
         c_table.index = c_table.index.astype("i8")
@@ -526,9 +530,10 @@ class CartesianGetZmat(CartesianCore):
         c_table = c_table.values.T
 
         err, C = transformation.get_C(X, c_table)
-        if err == ERR_CODE_OK:
-            C[[1, 2], :] = np.rad2deg(C[[1, 2], :])
-            return C.T
+        if err != ERR_CODE_OK:
+            raise ValueError
+        C[[1, 2], :] = np.rad2deg(C[[1, 2], :])
+        return C.T
 
     def _build_zmat(self, construction_table: DataFrame) -> Zmat:
         """Create the Zmatrix from a construction table.
@@ -777,7 +782,7 @@ class CartesianGetZmat(CartesianCore):
         else:
             return grad_C
 
-    def to_zmat(self, *args, **kwargs) -> Zmat:
+    def to_zmat(self, *args, **kwargs) -> Zmat:  # type: ignore[no-untyped-def]
         """Deprecated, use :meth:`~Cartesian.get_zmat`"""
         message = "Will be removed in the future. Please use give_zmat."
         with warnings.catch_warnings():
@@ -786,29 +791,7 @@ class CartesianGetZmat(CartesianCore):
         return self.get_zmat(*args, **kwargs)
 
 
-def _modify_priority(bond_dict, user_defined):
-    def move_to_start(dct, key):
-        "Due to PY27 compatibility"
-        keys = dct.keys()
-        if key in keys and key != keys[0]:
-            root = dct._OrderedDict__root
-            first = root[1]
-            link = dct._OrderedDict__map[key]
-            link_prev, link_next, _ = link
-            link_prev[1] = link_next
-            link_next[0] = link_prev
-            link[0] = root
-            link[1] = first
-            root[1] = first[0] = link
-        else:
-            raise KeyError
-
+def _modify_priority(bond_dict: OrderedDict, user_defined: Sequence) -> None:
     for j in reversed(user_defined):
-        try:
-            try:
-                bond_dict.move_to_end(j, last=False)
-            except AttributeError:
-                # No move_to_end method in python 2.x
-                move_to_start(bond_dict, j)
-        except KeyError:
-            pass
+        if j in bond_dict:
+            bond_dict.move_to_end(j, last=False)
