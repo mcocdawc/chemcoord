@@ -8,7 +8,7 @@ from pandas.core.indexes.base import Index
 from pandas.core.series import Series
 
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
-from chemcoord.typing import SequenceNotStr, Vector
+from chemcoord.typing import Integral, SequenceNotStr, Vector
 
 
 @define(init=False)
@@ -28,7 +28,9 @@ class _generic_Indexer(Generic[T]):
     molecule: T
 
 
-IntIdx: TypeAlias = Union[int, Set[int], Vector, SequenceNotStr[int], slice]
+IntIdx: TypeAlias = Union[
+    Integral, Set[Integral], Vector, SequenceNotStr[Integral], slice
+]
 StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str], slice]
 
 

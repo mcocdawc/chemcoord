@@ -1,7 +1,7 @@
 import copy
 import itertools
 from collections import Counter, defaultdict
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from itertools import product
 from typing import Any, Literal, Union, cast, overload
 
@@ -1296,7 +1296,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def get_distance_to(
         self,
         origin: Union[Vector[np.floating], AtomIdx, Sequence[Real], None] = None,
-        other_atoms: Union[Index, SequenceNotStr[int], None] = None,
+        other_atoms: Union[Index, SequenceNotStr[int], Set[int], None] = None,
         sort: bool = False,
     ) -> Self:
         """Return a Cartesian with a column for the distance from origin."""
@@ -1343,7 +1343,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         output = self if inplace else self.copy()
         new_index = [rename_dict.get(key, key) for key in self.index]
-        output.index = new_index
+        output.index = new_index  # type: ignore[assignment]
         if not inplace:
             return output
         else:
@@ -1412,7 +1412,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             env_index.remove(i)
             atoms = self.loc[env_index, "atom"]
             environment = frozenset(Counter(atoms).most_common())
-            return (self.loc[i, "atom"], environment)
+            return (cast(str, self.loc[i, "atom"]), environment)
 
         chemical_environments = defaultdict(set)
         for i in self.index:
@@ -1526,7 +1526,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             index1 = list(subset1)
             for m1_i in index1:
                 dist_m2_to_m1_i = m2.get_distance_to(
-                    m1.loc[m1_i, coords], subset2, sort=True
+                    m1.loc[m1_i, coords].values, subset2, sort=True
                 )
 
                 m2_i = dist_m2_to_m1_i.index[0]
@@ -1566,5 +1566,5 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             make_subset_similar(
                 molecule1, partition1[key], molecule2, partition2[key], index_dct
             )
-        molecule2.index = [index_dct[i] for i in molecule2.index]
+        molecule2.index = [index_dct[i] for i in molecule2.index]  # type: ignore[assignment]
         return molecule2.loc[molecule1.index]
