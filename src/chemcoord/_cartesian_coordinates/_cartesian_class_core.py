@@ -690,15 +690,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return molecule
 
     def _get_origin(
-        self, origin: Union[Vector[np.floating], int, Sequence[Real], None]
+        self, origin: Union[Vector[np.floating], Series, int, Sequence[Real], None]
     ) -> Vector:
         if origin is None:
             return np.zeros(3)
-        elif isinstance(origin, Sequence):
-            return np.asarray(origin, dtype="f8")
-        else:
-            assert isinstance(origin, int)
+        elif isinstance(origin, (int, np.integer)):
             return self.loc[origin, ["x", "y", "z"]].values
+        else:
+            return np.asarray(origin, dtype="f8")
 
     def cut_sphere(
         self,
@@ -803,7 +802,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def get_bond_lengths(
         self,
         indices: Union[
-            Sequence[Union[tuple[Integral, Integral], Sequence[Integral]]], DataFrame
+            Matrix,
+            Sequence[Union[tuple[Integral, Integral], Sequence[Integral]]],
+            DataFrame,
         ],
     ) -> Vector[np.float64]:
         """Return the distances between given atoms.

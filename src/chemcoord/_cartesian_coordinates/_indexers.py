@@ -34,21 +34,29 @@ StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str], slice]
 
 class _Loc(_generic_Indexer, Generic[T]):
     @overload
-    def __getitem__(self, key: tuple[IntIdx, str]) -> Series: ...
+    def __getitem__(self, key: tuple[Union[Index, IntIdx, Series], str]) -> Series: ...
 
     @overload
     def __getitem__(
-        self, key: tuple[IntIdx, Union[Set[str], SequenceNotStr[str]]]
+        self,
+        key: tuple[
+            Union[Index, IntIdx, Series], Union[Series, Set[str], SequenceNotStr[str]]
+        ],
     ) -> Union[T, DataFrame]: ...
 
     @overload
-    def __getitem__(self, key: tuple[IntIdx, slice]) -> T: ...
+    def __getitem__(self, key: tuple[Union[IntIdx, Index, Series], slice]) -> T: ...
     @overload
-    def __getitem__(self, key: IntIdx) -> T: ...
+    def __getitem__(self, key: Union[Index, IntIdx, Series]) -> T: ...
 
     def __getitem__(
         self,
-        key: Union[IntIdx, Series, Index, tuple[Union[Series, IntIdx, Index], StrIdx]],
+        key: Union[
+            IntIdx,
+            Series,
+            Index,
+            tuple[Union[Series, IntIdx, Index], Union[Series, StrIdx]],
+        ],
     ) -> Union[T, DataFrame, Series]:
         if isinstance(key, tuple):
             selected = self.molecule._frame.loc[
