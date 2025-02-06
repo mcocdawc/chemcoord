@@ -19,7 +19,8 @@ from typing_extensions import Self
 from chemcoord import constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._generic_classes.generic_IO import GenericIO
-from chemcoord._utilities.typing import (
+from chemcoord.configuration import settings
+from chemcoord.typing import (
     Axes,
     FloatFormatType,
     FormattersType,
@@ -28,7 +29,6 @@ from chemcoord._utilities.typing import (
     SequenceNotStr,
     WriteBuffer,
 )
-from chemcoord.configuration import settings
 
 pyscf: Union[ModuleType, None] = None
 try:

@@ -5,8 +5,8 @@ from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
 from chemcoord._utilities._decorators import njit
-from chemcoord._utilities.typing import Matrix, Vector
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
+from chemcoord.typing import Matrix, Vector
 
 
 def normalize(vector: Vector[np.floating]) -> Vector[np.float64]:
