@@ -19,8 +19,8 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._decorators import njit
-from chemcoord._utilities.typing import Matrix, PathLike, Real, Tensor4D, Vector
 from chemcoord.configuration import settings
+from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 
 
 def view(

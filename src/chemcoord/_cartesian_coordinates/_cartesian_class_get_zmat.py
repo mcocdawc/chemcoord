@@ -19,7 +19,6 @@ import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
-from chemcoord._utilities.typing import AtomIdx, Matrix, Tensor4D, Vector
 from chemcoord.configuration import settings
 from chemcoord.exceptions import (
     ERR_CODE_OK,
@@ -28,6 +27,7 @@ from chemcoord.exceptions import (
     InvalidReference,
     UndefinedCoordinateSystem,
 )
+from chemcoord.typing import AtomIdx, Matrix, Tensor4D, Vector
 
 
 class CartesianGetZmat(CartesianCore):
