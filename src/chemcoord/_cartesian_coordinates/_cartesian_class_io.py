@@ -64,7 +64,7 @@ class CartesianIO(CartesianCore, GenericIO):
     def _repr_html_(self) -> str:  # noqa: PLW3201
         new = self._sympy_formatter()
 
-        def insert_before_substring(insert_txt: str, substr, txt: str) -> str:
+        def insert_before_substring(insert_txt: str, substr: str, txt: str) -> str:
             "Under the assumption that substr only appears once."
             return (insert_txt + substr).join(txt.split(substr))
 
@@ -329,7 +329,7 @@ class CartesianIO(CartesianCore, GenericIO):
         else:
             return output
 
-    def write_xyz(self, *args, **kwargs):
+    def write_xyz(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         """Deprecated, use :meth:`~chemcoord.Cartesian.to_xyz`"""
         message = "Will be removed in the future. Please use to_xyz()."
         with warnings.catch_warnings():
@@ -391,12 +391,12 @@ class CartesianIO(CartesianCore, GenericIO):
         return molecule
 
     @overload
-    def to_cjson(self, buf: None = None, **kwargs) -> dict[str, Any]: ...
+    def to_cjson(self, buf: None = None, **kwargs: Any) -> dict[str, Any]: ...
     @overload
-    def to_cjson(self, buf: PathLike = ..., **kwargs) -> None: ...
+    def to_cjson(self, buf: PathLike = ..., **kwargs: Any) -> None: ...
 
     def to_cjson(
-        self, buf: Union[PathLike, None] = None, **kwargs
+        self, buf: Union[PathLike, None] = None, **kwargs: Any
     ) -> Union[dict[str, Any], None]:
         """Write a cjson file or return dictionary.
 
@@ -531,16 +531,15 @@ class CartesianIO(CartesianCore, GenericIO):
         else:
             TEMP_DIR = tempfile.gettempdir()
 
-        def give_filename(i):
-            filename = "ChemCoord_" + str(i) + ".xyz"
-            return os.path.join(TEMP_DIR, filename)
+        def give_filename(i: int) -> str:
+            return os.path.join(TEMP_DIR, f"ChemCoord_{i}.xyz")
 
         i = 1
         while os.path.exists(give_filename(i)):
             i = i + 1
         self.to_xyz(give_filename(i))
 
-        def open_file(i):
+        def open_file(i: int) -> None:
             """Open file and close after being finished."""
             try:
                 subprocess.check_call([viewer, give_filename(i)])
@@ -566,7 +565,6 @@ class CartesianIO(CartesianCore, GenericIO):
         Returns:
             :class:`pymatgen.core.structure.Molecule`:
         """
-
         return PyMatGenMolecule(
             self["atom"].values, self.loc[:, ["x", "y", "z"]].values
         )
@@ -620,7 +618,7 @@ class CartesianIO(CartesianCore, GenericIO):
 
     if pyscf is not None:
 
-        def to_pyscf(self, **kwargs) -> Mole:
+        def to_pyscf(self, **kwargs: Any) -> Mole:
             """Convert to a PySCF molecule.
 
             .. note:: This method is only available,
@@ -649,7 +647,7 @@ class CartesianIO(CartesianCore, GenericIO):
                 if the `pyscf library <https://sunqm.github.io/pyscf/>`_ is installed.
 
             .. warning:: This method may lose information during the transformation.
-                The :class:`pyscf.gto.mole.Mole` class containss more information
+                The :class:`pyscf.gto.mole.Mole` class contains more information
                 than the :class:`Cartesian` class, such as charge, spin multipicity,
                 or basis set.
 
