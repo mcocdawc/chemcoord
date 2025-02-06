@@ -11,7 +11,7 @@ class AsymmetricUnitCartesian(Cartesian):
     and contains only one member of each symmetry equivalence class.
     """
 
-    def get_cartesian(self):
+    def get_cartesian(self) -> Cartesian:
         """Return a :class:`~Cartesian` where all
         members of a symmetry equivalence class are inserted back in.
 
