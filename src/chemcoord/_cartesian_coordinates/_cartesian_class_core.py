@@ -8,7 +8,8 @@ from typing import Any, Literal, Union, cast, overload
 import numba as nb
 import numpy as np
 import pandas as pd
-from pandas import DataFrame, Series
+from pandas.core.frame import DataFrame
+from pandas.core.series import Series
 from sortedcontainers import SortedSet
 from typing_extensions import Self
 
@@ -25,6 +26,7 @@ from chemcoord.typing import (
     ArithmeticOther,
     AtomIdx,
     Axes,
+    Integral,
     Matrix,
     Real,
     T,
@@ -198,7 +200,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new = self.copy()
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
+            new.loc[:, coords] = (
+                self.loc[:, coords].values / other.loc[:, coords].values
+            )
         elif isinstance(other, DataFrame):
             new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
         else:
@@ -206,7 +210,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords] / other
+            new.loc[:, coords] = self.loc[:, coords].values / other
         return new
 
     def __rtruediv__(self, other: Union[Self, ArithmeticOther]) -> Self:
@@ -214,7 +218,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new = self.copy()
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
+            new.loc[:, coords] = (
+                other.loc[:, coords].values / self.loc[:, coords].values
+            )
         elif isinstance(other, DataFrame):
             new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
         else:
@@ -222,7 +228,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = other / self.loc[:, coords]
+            new.loc[:, coords] = other / self.loc[:, coords].values
         return new
 
     def __pow__(self, other: Union[Self, ArithmeticOther]) -> Self:
@@ -394,9 +400,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         ) -> set[AtomIdx]:
             N = n_atoms_per_set_along_axis
             try:
-                min_value, max_value = series.iloc[[i * N, (i + 1) * N]]
+                min_value, max_value = series.iloc[[i * N, (i + 1) * N]]  # type: ignore[call-overload]
             except IndexError:
-                min_value, max_value = series.iloc[[i * N, -1]]
+                min_value, max_value = series.iloc[[i * N, -1]]  # type: ignore[call-overload]
             selection = series.between(min_value - offset, max_value + offset)
             return set(series[selection].index)
 
@@ -684,13 +690,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return molecule
 
     def _get_origin(
-        self, origin: Union[Vector[np.floating], AtomIdx, Sequence[Real], None]
+        self, origin: Union[Vector[np.floating], int, Sequence[Real], None]
     ) -> Vector:
         if origin is None:
             return np.zeros(3)
-        elif pd.api.types.is_list_like(origin):
+        elif isinstance(origin, Sequence):
             return np.asarray(origin, dtype="f8")
         else:
+            assert isinstance(origin, int)
             return self.loc[origin, ["x", "y", "z"]].values
 
     def cut_sphere(
@@ -796,7 +803,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def get_bond_lengths(
         self,
         indices: Union[
-            Sequence[Union[tuple[AtomIdx, AtomIdx], Sequence[AtomIdx]]], DataFrame
+            Sequence[Union[tuple[Integral, Integral], Sequence[Integral]]], DataFrame
         ],
     ) -> Vector[np.float64]:
         """Return the distances between given atoms.

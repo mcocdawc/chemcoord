@@ -1,11 +1,14 @@
 import warnings
-from collections.abc import Sequence, Set
-from typing import Generic, Protocol, Self, TypeAlias, TypeVar, Union
+from collections.abc import Set
+from typing import Generic, Protocol, Self, TypeAlias, TypeVar, Union, overload
 
 from attrs import define
+from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
+from pandas.core.series import Series
 
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
-from chemcoord.typing import DataFrame, Series, Vector
+from chemcoord.typing import SequenceNotStr, Vector
 
 
 @define(init=False)
@@ -25,23 +28,28 @@ class _generic_Indexer(Generic[T]):
     molecule: T
 
 
-IntIdx: TypeAlias = Union[int, Set[int], Vector, Sequence[int], slice]
-StrIdx: TypeAlias = Union[str, Set[str], Sequence[str], slice]
+IntIdx: TypeAlias = Union[int, Set[int], Vector, SequenceNotStr[int], slice]
+StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str], slice]
 
 
 class _Loc(_generic_Indexer, Generic[T]):
-    # @overload
-    # def __getitem__(self, key: tuple[IntIdx, str]) -> Series: ...
+    @overload
+    def __getitem__(self, key: tuple[IntIdx, str]) -> Series: ...
 
-    # @overload
-    # def __getitem__(
-    #     self, key: tuple[IntIdx, Union[Set[str], Sequence[str], slice]]
-    # ) -> Union[T, DataFrame]: ...
+    @overload
+    def __getitem__(
+        self, key: tuple[IntIdx, Union[Set[str], SequenceNotStr[str]]]
+    ) -> Union[T, DataFrame]: ...
 
-    # @overload
-    # def __getitem__(self, key: IntIdx) -> T: ...
+    @overload
+    def __getitem__(self, key: tuple[IntIdx, slice]) -> T: ...
+    @overload
+    def __getitem__(self, key: IntIdx) -> T: ...
 
-    def __getitem__(self, key: Union[IntIdx, tuple[IntIdx, StrIdx]]) -> DataFrame:
+    def __getitem__(
+        self,
+        key: Union[IntIdx, Series, Index, tuple[Union[Series, IntIdx, Index], StrIdx]],
+    ) -> Union[T, DataFrame, Series]:
         if isinstance(key, tuple):
             selected = self.molecule._frame.loc[
                 _set_caster(key[0]), _set_caster(key[1])

@@ -10,7 +10,7 @@ from typing import Callable, Union, overload
 import numpy as np
 import pandas as pd
 import sympy
-from pandas import DataFrame
+from pandas.core.frame import DataFrame
 
 from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from numba.core.errors import NumbaPerformanceWarning
 from numpy import float64
-from pandas import DataFrame
+from pandas.core.frame import DataFrame
 from sortedcontainers import SortedSet
 from typing_extensions import Self
 
