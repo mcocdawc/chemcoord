@@ -5,7 +5,7 @@ from numba import njit, prange
 from numpy import cross
 from numpy.linalg import lstsq, norm
 from sortedcontainers import SortedSet
-from typing_extensions import Self, Callable, TypeAlias, Union
+from typing_extensions import Callable, Self, TypeAlias, Union
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._utilities.typing import Matrix, Vector
