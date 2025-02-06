@@ -505,7 +505,7 @@ class CartesianBmat(CartesianCore):
             for i in range(len(delta_c))
         ]
 
-        B = current_struct.get_Wilson_B(coordinates=coords)
+        B = current_struct.get_Wilson_B(internal_coordinates=coords)
         delta_x = lstsq(B, delta_c, rcond=rcond)[0]
         # print(delta_x)
         # invB = pinv(B)

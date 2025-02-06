@@ -13,7 +13,6 @@ import sympy
 from numba import njit
 from typing_extensions import Optional, Union
 
-from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord._utilities.typing import Vector
 from chemcoord.configuration import settings
 
@@ -78,7 +77,7 @@ def view(molecule, viewer=None, use_curr_dir=False):
 # ignoring mypy as mypy does not consider implicit None returns as
 # returning None
 def to_xyz_trajectory(
-    cartesian_list: Vector[Cartesian],
+    cartesian_list: Vector,
     buf: Union[str, None] = None,
     overwrite: bool = True,
     float_format="{:.6f}".format,
