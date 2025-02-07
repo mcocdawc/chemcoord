@@ -254,9 +254,13 @@ def isclose(
         :class:`numpy.ndarray`: Boolean array.
     """
     coords = ["x", "y", "z"]
+    # The pandas documentation says about the arguments to all(axis=...)
+    #   None : reduce all axes, return a scalar
+    # https://pandas.pydata.org/docs/reference/api/pandas.Series.all.html
+    # but the stubs don't have it.
     if not (
         set(a.index) == set(b.index)
-        and (a.loc[:, "atom"] == b.loc[a.index, "atom"]).all(axis=None)
+        and (a.loc[:, "atom"] == b.loc[a.index, "atom"]).all(axis=None)  # type: ignore[arg-type]
     ):
         message = "Can only compare molecules with the same atoms and labels"
         raise ValueError(message)

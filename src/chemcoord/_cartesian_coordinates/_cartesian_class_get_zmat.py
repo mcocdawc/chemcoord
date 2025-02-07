@@ -3,7 +3,7 @@ from collections import OrderedDict
 from collections.abc import Sequence
 from functools import partial
 from itertools import permutations
-from typing import Callable, Literal, Mapping, Union, overload
+from typing import Callable, Literal, Mapping, Union, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -61,7 +61,7 @@ class CartesianGetZmat(CartesianCore):
         start_atom: Union[AtomIdx, None] = None,
         predefined_table: Union[DataFrame, None] = None,
         use_lookup: Union[bool, None] = None,
-        bond_dict: Union[Mapping[AtomIdx, SortedSet[AtomIdx]], None] = None,
+        bond_dict: Union[Mapping[AtomIdx, SortedSet], None] = None,
     ) -> DataFrame:
         """Create a construction table for a Zmatrix.
 
@@ -371,19 +371,21 @@ class CartesianGetZmat(CartesianCore):
             use_lookup = settings["defaults"]["use_lookup"]
 
         problem_index = self.check_dihedral(construction_table)
-        bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        bond_dict = cast(
+            dict[int, SortedSet], self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        )
         c_table = construction_table.copy()
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
-            b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]
+            b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]  # type: ignore[list-item,index]
             try:
                 c_table.loc[i, "d"] = (
-                    bond_dict[a] - {b, a, problem_d} - set(c_table.index[loc_i:])
+                    bond_dict[a] - {b, a, problem_d} - set(c_table.index[loc_i:])  # type: ignore[index,misc]
                 )[0]
             except IndexError:
-                visited = set(c_table.index[loc_i:]) | {b, a, problem_d}
+                visited = set(c_table.index[loc_i:]) | {b, a, problem_d}  # type: ignore[misc]
                 tmp_bond_dict = OrderedDict(
-                    [(j, bond_dict[j] - visited) for j in bond_dict[problem_d]]
+                    [(j, bond_dict[j] - visited) for j in bond_dict[problem_d]]  # type: ignore[index]
                 )
                 found = False
                 while tmp_bond_dict and not found:
@@ -391,7 +393,7 @@ class CartesianGetZmat(CartesianCore):
                     for new_d in tmp_bond_dict:
                         if new_d in visited:
                             continue
-                        angle = self.get_angle_degrees([[b, a, new_d]])[0]
+                        angle = self.get_angle_degrees([[b, a, new_d]])[0]  # type: ignore[list-item]
                         if 5 < angle < 175:
                             found = True
                             c_table.loc[i, "d"] = new_d
@@ -401,14 +403,14 @@ class CartesianGetZmat(CartesianCore):
                                 new_tmp_bond_dict[j] = bond_dict[j] - visited
                     tmp_bond_dict = new_tmp_bond_dict
                 if not found:
-                    other_atoms = c_table.index[:loc_i].difference({b, a})
+                    other_atoms = c_table.index[:loc_i].difference([b, a])  # type: ignore[misc]
                     molecule = self.get_distance_to(
                         origin=i, sort=True, other_atoms=other_atoms
                     )
                     k = 0
                     while not found and k < len(molecule):
                         new_d = molecule.index[k]
-                        angle = self.get_angle_degrees([[b, a, new_d]])[0]
+                        angle = self.get_angle_degrees([[b, a, new_d]])[0]  # type: ignore[list-item]
                         if 5 < angle < 175:
                             found = True
                             c_table.loc[i, "d"] = new_d
@@ -442,14 +444,15 @@ class CartesianGetZmat(CartesianCore):
         abs_refs = constants.absolute_refs
         A = np.empty((3, 3))
         row = c_table.index.get_loc(i)
+        assert isinstance(row, int)
         if row > 2:
             message = "The index {i} is not from the first three, rows".format
             raise ValueError(message(i=i))
         for k in range(3):
             if k < row:
-                A[k] = self.loc[c_table.iloc[row, k], ["x", "y", "z"]]
+                A[k] = self.loc[c_table.iloc[row, k], ["x", "y", "z"]]  # type: ignore[index]
             else:
-                A[k] = abs_refs[c_table.iloc[row, k]]
+                A[k] = abs_refs[c_table.iloc[row, k]]  # type: ignore[index]
         v1, v2 = A[2] - A[1], A[1] - A[0]
         K = np.cross(v1, v2)
         zero = np.full(3, 0.0)
@@ -500,7 +503,7 @@ class CartesianGetZmat(CartesianCore):
                     finished = True
                 else:
                     row = c_table.index.get_loc(i)
-                    c_table.iloc[row, row:] = next(order_of_refs)[row:3]
+                    c_table.iloc[row, row:] = next(order_of_refs)[row:3]  # type: ignore[index,misc,assignment]
         return c_table
 
     def _calculate_zmat_values(
@@ -525,9 +528,8 @@ class CartesianGetZmat(CartesianCore):
         new_index = c_table.index.append(self.index.difference(c_table.index))
         X = self.loc[new_index, ["x", "y", "z"]].values.astype("f8").T
         c_table = c_table.replace(dict(zip(new_index, range(len(self)))))
-        c_table = c_table.values.T
 
-        err, C = transformation.get_C(X, c_table)
+        err, C = transformation.get_C(X, c_table.values.T)
         if err != ERR_CODE_OK:
             raise ValueError
         C[[1, 2], :] = np.rad2deg(C[[1, 2], :])

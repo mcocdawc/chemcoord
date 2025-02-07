@@ -528,9 +528,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             self._metadata["bond_dict"] = bond_dict
         return bond_dict
 
-    def _give_val_sorted_bond_dict(
-        self, use_lookup: bool
-    ) -> dict[AtomIdx, SortedSet[AtomIdx]]:
+    def _give_val_sorted_bond_dict(self, use_lookup: bool) -> dict[AtomIdx, SortedSet]:
         def complete_calculation() -> dict[AtomIdx, SortedSet[AtomIdx]]:
             bond_dict = self.get_bonds(use_lookup=use_lookup)
             valency = dict(zip(self.index, self.add_data("valency")["valency"]))

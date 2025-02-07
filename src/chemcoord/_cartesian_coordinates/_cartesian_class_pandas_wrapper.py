@@ -150,7 +150,7 @@ class PandasWrapper(indexers.Molecule):
 
     @index.setter
     def index(self, value: Union[Index, SequenceNotStr]) -> None:
-        self._frame.index = value
+        self._frame.index = value  # type: ignore[assignment]
 
     @property
     def columns(self):

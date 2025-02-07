@@ -307,7 +307,7 @@ class CartesianIO(CartesianCore, GenericIO):
             )
         else:
             molecule_string = self.loc[:, ["atom", "x", "y", "z"]].to_string(
-                header=header,
+                header=header,  # type: ignore[arg-type]
                 index=index,
                 float_format=float_format,  # type: ignore[arg-type]
             )
