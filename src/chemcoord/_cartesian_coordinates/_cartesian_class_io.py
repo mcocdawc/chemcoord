@@ -68,7 +68,7 @@ class CartesianIO(CartesianCore, GenericIO):
             "Under the assumption that substr only appears once."
             return (insert_txt + substr).join(txt.split(substr))
 
-        html_txt = new._frame._repr_html_()
+        html_txt = new._frame._repr_html_()  # type: ignore[operator]
         insert_txt = "<caption>{}</caption>\n".format(self.__class__.__name__)
         return insert_before_substring(insert_txt, "<thead>", html_txt)
 
