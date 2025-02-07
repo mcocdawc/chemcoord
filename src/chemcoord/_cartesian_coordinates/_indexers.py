@@ -11,9 +11,11 @@ from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 from chemcoord.typing import Integral, SequenceNotStr, Vector
 
 
-@define(init=False)
+# @define(init=False)
 class Molecule(Protocol):
     _frame: DataFrame
+    metadata: dict
+    _metadata: dict
 
     def _return_appropiate_type(
         self, selected: Union[Series, DataFrame]

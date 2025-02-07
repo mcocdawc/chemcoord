@@ -1444,7 +1444,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             m1 = (self - self.get_centroid()).sort_index()
             m2 = (other - other.get_centroid()).sort_index()
 
-        m2 = m1.get_align_transf(m2, mass_weight, centered=True) @ m2
+        m2 = cast(Self, m1.get_align_transf(m2, mass_weight, centered=True) @ m2)
         return m1, m2
 
     def get_align_transf(

@@ -1,16 +1,18 @@
 import copy
-from typing import Self, Union
+from collections.abc import Sequence
+from typing import Any, Literal, Self, Union, overload
 
-import pandas as pd
-from attrs import define
+from pandas._typing import IndexLabel
+from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
+from pandas.core.series import Series
 
 import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.typing import SequenceNotStr
 
 
-@define(init=False)
+# @define(init=True)
 class PandasWrapper(indexers.Molecule):
     """This class provides wrappers for :class:`pandas.DataFrame` methods.
 
@@ -30,7 +32,15 @@ class PandasWrapper(indexers.Molecule):
         which are passed on when doing slices...
     """
 
-    _frame: pd.DataFrame
+    def __init__(
+        self,
+        _frame: DataFrame,
+        metadata: Union[dict, None] = None,
+        _metadata: Union[dict, None] = None,
+    ) -> None:
+        self._frame = _frame
+        self.metadata = {} if metadata is None else metadata
+        self._metadata = {} if _metadata is None else _metadata
 
     def __len__(self) -> int:
         return self.shape[0]
@@ -111,7 +121,6 @@ class PandasWrapper(indexers.Molecule):
         if isinstance(key, tuple):
             selected = self._frame[key[0], key[1]]
         else:
-            # print(len(self), key)
             selected = self._frame[key]
         try:
             return self._return_appropiate_type(selected)
@@ -124,7 +133,7 @@ class PandasWrapper(indexers.Molecule):
         else:
             self._frame[key] = value
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         """
         After regular attribute access, try looking up the name
         This allows simpler access to columns for interactive use.
@@ -153,7 +162,7 @@ class PandasWrapper(indexers.Molecule):
         self._frame.index = value  # type: ignore[assignment]
 
     @property
-    def columns(self):
+    def columns(self) -> Index[str]:
         """Returns the columns.
 
         Assigning a value to it changes the columns.
@@ -161,30 +170,52 @@ class PandasWrapper(indexers.Molecule):
         return self._frame.columns
 
     @columns.setter
-    def columns(self, value):
+    def columns(self, value: Union[Index[str], SequenceNotStr[str]]) -> None:
         if not self._required_cols <= set(value):
             raise PhysicalMeaning(
                 "There are columns missing for a meaningful description of a molecule"
             )
-        self._frame.columns = value
+        self._frame.columns = value  # type: ignore[assignment]
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, int]:
         return self._frame.shape
 
     @property
-    def dtypes(self):
+    def dtypes(self) -> Series:
         return self._frame.dtypes
+
+    @overload
+    def sort_values(
+        self,
+        by: Union[str, Sequence[str]],
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = ...,
+        ascending: bool = ...,
+        inplace: Literal[False] = False,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = ...,
+        na_position: Literal["first", "last"] = ...,
+    ) -> Self: ...
+
+    @overload
+    def sort_values(
+        self,
+        by: Union[str, Sequence[str]],
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = ...,
+        ascending: bool = ...,
+        inplace: Literal[True] = ...,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = ...,
+        na_position: Literal["first", "last"] = ...,
+    ) -> None: ...
 
     def sort_values(
         self,
-        by,
-        axis=0,
-        ascending=True,
-        inplace=False,
-        kind="quicksort",
-        na_position="last",
-    ):
+        by: Union[str, Sequence[str]],
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = 0,
+        ascending: bool = True,
+        inplace: bool = False,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = "quicksort",
+        na_position: Literal["first", "last"] = "last",
+    ) -> Union[Self, None]:
         """Sort by the values along either axis
 
         Wrapper around the :meth:`pandas.DataFrame.sort_values` method.
@@ -198,9 +229,10 @@ class PandasWrapper(indexers.Molecule):
                 kind=kind,
                 na_position=na_position,
             )
+            return None
         else:
             new = self.__class__(
-                self._frame.sort_values(
+                _frame=self._frame.sort_values(
                     by,
                     axis=axis,
                     ascending=ascending,
@@ -213,16 +245,40 @@ class PandasWrapper(indexers.Molecule):
             new._metadata = copy.deepcopy(self._metadata)
             return new
 
+    @overload
     def sort_index(
         self,
-        axis=0,
-        level=None,
-        ascending=True,
-        inplace=False,
-        kind="quicksort",
-        na_position="last",
-        sort_remaining=True,
-    ):
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = ...,
+        level: Union[IndexLabel, None] = ...,
+        ascending: bool = ...,
+        inplace: Literal[False] = False,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = ...,
+        na_position: Literal["first", "last"] = ...,
+        sort_remaining: bool = ...,
+    ) -> Self: ...
+
+    @overload
+    def sort_index(
+        self,
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = ...,
+        level: Union[IndexLabel, None] = ...,
+        ascending: bool = ...,
+        inplace: Literal[True] = ...,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = ...,
+        na_position: Literal["first", "last"] = ...,
+        sort_remaining: bool = ...,
+    ) -> None: ...
+
+    def sort_index(
+        self,
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = 0,
+        level: Union[IndexLabel, None] = None,
+        ascending: bool = True,
+        inplace: bool = False,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = "quicksort",
+        na_position: Literal["first", "last"] = "last",
+        sort_remaining: bool = True,
+    ) -> Union[Self, None]:
         """Sort object by labels (along an axis)
 
         Wrapper around the :meth:`pandas.DataFrame.sort_index` method.
@@ -237,6 +293,7 @@ class PandasWrapper(indexers.Molecule):
                 na_position=na_position,
                 sort_remaining=sort_remaining,
             )
+            return None
         else:
             new = self.__class__(
                 self._frame.sort_index(
