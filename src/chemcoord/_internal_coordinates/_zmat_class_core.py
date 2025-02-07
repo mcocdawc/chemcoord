@@ -1,9 +1,13 @@
 import copy
 import warnings
+from collections.abc import Sequence
 from functools import partial
+from typing import Union
 
 import numpy as np
 import pandas as pd
+from pandas.core.frame import DataFrame
+from typing_extensions import Self
 
 import chemcoord._internal_coordinates._indexers as indexers
 import chemcoord._internal_coordinates._zmat_transformation as transformation
@@ -78,7 +82,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         fill_missing_keys_with_defaults(self._metadata)
 
-    def copy(self):
+    def copy(self) -> Self:
         molecule = self.__class__(
             self._frame, metadata=self.metadata, _metadata=self._metadata
         )
@@ -109,20 +113,20 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     @property
     @append_indexer_docstring
-    def loc(self):
+    def loc(self) -> indexers._Loc:
         """Label based indexing for obtaining elements."""
         return indexers._Loc(self)
 
     @property
     @append_indexer_docstring
-    def unsafe_loc(self):
+    def unsafe_loc(self) -> indexers._Unsafe_Loc:
         """Label based indexing for obtaining elements
         and assigning values unsafely.
         """
         return indexers._Unsafe_Loc(self)
 
     @property
-    def safe_loc(self):
+    def safe_loc(self) -> indexers._Safe_Loc:
         """Label based indexing for obtaining elements and assigning
         values safely.
 
@@ -135,13 +139,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     @property
     @append_indexer_docstring
-    def iloc(self):
+    def iloc(self) -> indexers._ILoc:
         """Integer position based indexing for obtaining elements."""
         return indexers._ILoc(self)
 
     @property
     @append_indexer_docstring
-    def unsafe_iloc(self):
+    def unsafe_iloc(self) -> indexers._Unsafe_ILoc:
         """Integer position based indexing for obtaining elements
         and assigning values unsafely.
         """
@@ -149,13 +153,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     @property
     @append_indexer_docstring
-    def safe_iloc(self):
+    def safe_iloc(self) -> indexers._Safe_ILoc:
         """Integer position based indexing for obtaining elements
         and assigning values safely.
         """
         return indexers._Safe_ILoc(self)
 
-    def _test_if_can_be_added(self, other):
+    def _test_if_can_be_added(self, other: Self) -> None:
         cols = ["atom", "b", "a", "d"]
         if not (
             (self.loc[:, cols] == other.loc[:, cols]).all(axis=None)
@@ -169,13 +173,10 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             raise PhysicalMeaning(message)
 
-    def __add__(self, other):
+    def __add__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = self.loc[:, coords] + other.loc[:, coords]
-        else:
-            result = self.loc[:, coords] + other
+        self._test_if_can_be_added(other)
+        result = self.loc[:, coords] + other.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -183,16 +184,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __radd__(self, other):
+    def __radd__(self, other: Self) -> Self:
         return self + other
 
-    def __sub__(self, other):
+    def __sub__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = self.loc[:, coords] - other.loc[:, coords]
-        else:
-            result = self.loc[:, coords] - other
+        self._test_if_can_be_added(other)
+        result = self.loc[:, coords] - other.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -200,13 +198,10 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = other.loc[:, coords] - self.loc[:, coords]
-        else:
-            result = other - self.loc[:, coords]
+        self._test_if_can_be_added(other)
+        result = other.loc[:, coords] - self.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -214,13 +209,10 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __mul__(self, other):
+    def __mul__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = self.loc[:, coords] * other.loc[:, coords]
-        else:
-            result = self.loc[:, coords] * other
+        self._test_if_can_be_added(other)
+        result = self.loc[:, coords] * other.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -228,16 +220,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Self) -> Self:
         return self * other
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = self.loc[:, coords] / other.loc[:, coords]
-        else:
-            result = self.loc[:, coords] / other
+        self._test_if_can_be_added(other)
+        result = self.loc[:, coords] / other.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -245,13 +234,10 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = other.loc[:, coords] / self.loc[:, coords]
-        else:
-            result = other / self.loc[:, coords]
+        self._test_if_can_be_added(other)
+        result = other.loc[:, coords] / self.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -259,22 +245,19 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __pow__(self, other):
-        coords = ["bond", "angle", "dihedral"]
-        new = self.copy()
-        if self.test_operators:
-            new.safe_loc[:, coords] = self.loc[:, coords] ** other
-        else:
-            new.unsafe_loc[:, coords] = self.loc[:, coords] ** other
-        return new
-
-    def __pos__(self):
+    def __pos__(self: Self) -> Self:
         return self.copy()
 
-    def __neg__(self):
-        return -1 * self
+    def __neg__(self: Self) -> Self:
+        coords = ["bond", "angle", "dihedral"]
+        new = self.copy()
+        if new.test_operators:
+            new.loc[:, coords] = -self.loc[:, coords]
+        else:
+            new.loc[:, coords] = -self.loc[:, coords]
+        return new
 
-    def __abs__(self):
+    def __abs__(self: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
         new = self.copy()
         if self.test_operators:
@@ -283,16 +266,16 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = abs(self.loc[:, coords])
         return new
 
-    def __eq__(self, other):
+    def __eq__(self, other: Self) -> DataFrame:  # type: ignore[override]
         self._test_if_can_be_added(other)
         return self._frame == other._frame
 
-    def __ne__(self, other):
+    def __ne__(self, other: Self) -> DataFrame:  # type: ignore[override]
         self._test_if_can_be_added(other)
         return self._frame != other._frame
 
     @staticmethod
-    def _cast_correct_types(frame):
+    def _cast_correct_types(frame: DataFrame) -> DataFrame:
         new = frame.copy()
         zmat_values = ["bond", "angle", "dihedral"]
         new.loc[:, zmat_values] = frame.loc[:, zmat_values].astype("f8")
@@ -300,7 +283,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype("i8")
         return new
 
-    def iupacify(self):
+    def iupacify(self) -> Self:
         r"""Give the IUPAC conform representation.
 
         Mathematically speaking the angles in a zmatrix are
@@ -330,7 +313,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             Zmat: Zmatrix with accordingly changed angles and dihedrals.
         """
 
-        def convert_d(d):
+        def convert_d(d: float) -> float:
             r = d % 360
             return r - (r // 180) * 360
 
@@ -344,7 +327,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new.unsafe_loc[:, "dihedral"] = convert_d(new.loc[:, "dihedral"])
         return new
 
-    def minimize_dihedrals(self):
+    def minimize_dihedrals(self) -> Self:
         r"""Give a representation of the dihedral with minimized absolute value.
 
         Mathematically speaking the angles in a zmatrix are
@@ -389,7 +372,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         new = self.copy()
 
-        def convert_d(d):
+        def convert_d(d: float) -> float:
             r = d % 360
             return r - (r // 180) * 360
 
@@ -399,7 +382,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     # python 3.x is so much butter than 2.7
     # https://www.python.org/dev/peps/pep-3102/
     # def subs(self, *args, perform_checks=True):
-    def subs(self, *args, **kwargs):
+    def subs(self, *args, **kwargs) -> Self:
         """Substitute a symbolic expression in ``['bond', 'angle', 'dihedral']``
 
         This is a wrapper around the substitution mechanism of
@@ -468,7 +451,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 self._metadata["last_valid_cartesian"] = new_cartesian
         return out
 
-    def change_numbering(self, new_index=None):
+    def change_numbering(self, new_index: Union[Sequence, None] = None) -> Self:
         """Change numbering to a new index.
 
         Changes the numbering of index and all dependent numbering
