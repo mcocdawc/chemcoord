@@ -1,16 +1,28 @@
 import warnings
+from typing import Literal, Union, overload
 
 import pandas as pd
+from pandas._typing import ReadCsvBuffer
+from typing_extensions import Self
 
 import chemcoord.constants as constants
 from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord._internal_coordinates._zmat_class_core import ZmatCore
 from chemcoord.exceptions import InvalidReference, UndefinedCoordinateSystem
+from chemcoord.typing import (
+    FloatFormatType,
+    PathLike,
+    WriteBuffer,
+)
 
 
 class ZmatIO(ZmatCore, GenericIO):
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self._frame.__repr__()
+
+    #  def _abs_ref_formatter(
+    #      self, format_as: Literal["raw", "string", "latex"] = "string"
+    #  ) -> Self:
 
     def _abs_ref_formatter(self, format_as="string"):
         out = self.copy()
@@ -40,7 +52,7 @@ class ZmatIO(ZmatCore, GenericIO):
         insert_txt = "<caption>{}</caption>\n".format(self.__class__.__name__)
         return insert_before_substring(insert_txt, "<thead>", html_txt)
 
-    def _remove_upper_triangle(self):
+    def _remove_upper_triangle(self) -> Self:
         out = self.copy()
         out._frame = out._frame.astype(
             {k: str for k in ["b", "bond", "a", "angle", "d", "dihedral"]}
@@ -51,13 +63,12 @@ class ZmatIO(ZmatCore, GenericIO):
 
     def to_string(
         self,
-        buf=None,
-        format_abs_ref_as="string",
-        upper_triangle=True,
-        header=True,
-        index=True,
+        format_abs_ref_as: Literal["string", "latex", "raw"] = "string",
+        upper_triangle: bool = True,
+        header: bool = True,
+        index: bool = True,
         **kwargs,
-    ):
+    ) -> str:
         """Render a DataFrame to a console-friendly tabular output.
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.
@@ -67,7 +78,7 @@ class ZmatIO(ZmatCore, GenericIO):
         if not upper_triangle:
             out = out._remove_upper_triangle()
 
-        content = out._frame.to_string(buf=buf, header=header, index=index, **kwargs)
+        content = out._frame.to_string(buf=None, header=header, index=index, **kwargs)
         if not index and not header:
             # NOTE(the following might be removed in the future
             # introduced because of formatting bug in pandas
@@ -76,7 +87,28 @@ class ZmatIO(ZmatCore, GenericIO):
             content = space + content
         return content
 
-    def to_latex(self, buf=None, upper_triangle=True, **kwargs):
+    @overload
+    def to_latex(
+        self,
+        buf: None = None,
+        upper_triangle: bool = ...,
+        **kwargs,
+    ) -> str: ...
+
+    @overload
+    def to_latex(
+        self,
+        buf: Union[WriteBuffer[str], PathLike] = ...,
+        upper_triangle: bool = ...,
+        **kwargs,
+    ) -> None: ...
+
+    def to_latex(
+        self,
+        buf: Union[WriteBuffer[str], PathLike, None] = None,
+        upper_triangle: bool = True,
+        **kwargs,
+    ) -> Union[str, None]:
         """Render a DataFrame to a tabular environment table.
 
         You can splice this into a LaTeX document.
@@ -90,7 +122,9 @@ class ZmatIO(ZmatCore, GenericIO):
         return out._frame.to_latex(buf=buf, **kwargs)
 
     @classmethod
-    def read_zmat(cls, inputfile, implicit_index=True):
+    def read_zmat(
+        cls, inputfile: Union[ReadCsvBuffer[str], PathLike], implicit_index: bool = True
+    ) -> Self:
         """Reads a zmat file.
 
         Lines beginning with ``#`` are ignored.
@@ -107,7 +141,7 @@ class ZmatIO(ZmatCore, GenericIO):
         cols = ["atom", "b", "bond", "a", "angle", "d", "dihedral"]
         if implicit_index:
             zmat_frame = pd.read_csv(inputfile, comment="#", sep=r"\s+", names=cols)
-            zmat_frame.index = range(1, len(zmat_frame) + 1)
+            zmat_frame.index = range(1, len(zmat_frame) + 1)  # type: ignore[assignment]
         else:
             zmat_frame = pd.read_csv(
                 inputfile, comment="#", sep=r"\s+", names=["temp_index"] + cols
@@ -147,13 +181,13 @@ class ZmatIO(ZmatCore, GenericIO):
 
     def to_zmat(
         self,
-        buf=None,
-        upper_triangle=True,
-        implicit_index=True,
-        float_format="{:.6f}".format,
-        overwrite=True,
-        header=False,
-    ):
+        buf: Union[PathLike, None] = None,
+        upper_triangle: bool = True,
+        implicit_index: bool = True,
+        float_format: FloatFormatType = "{:.6f}".format,
+        overwrite: bool = True,
+        header: bool = False,
+    ) -> Union[str, None]:
         """Write zmat-file
 
         Args:
@@ -183,12 +217,9 @@ class ZmatIO(ZmatCore, GenericIO):
         )
 
         if buf is not None:
-            if overwrite:
-                with open(buf, mode="w") as f:
-                    f.write(output)
-            else:
-                with open(buf, mode="x") as f:
-                    f.write(output)
+            with open(buf, mode="w" if overwrite else "x") as f:
+                f.write(output)
+            return None
         else:
             return output
 
