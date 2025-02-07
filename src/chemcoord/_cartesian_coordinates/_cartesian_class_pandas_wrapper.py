@@ -1,10 +1,20 @@
 import copy
+from collections.abc import Sequence
+from typing import Any, Literal, Union, overload
+
+from pandas._typing import IndexLabel
+from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
+from pandas.core.series import Series
+from typing_extensions import Self
 
 import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
+from chemcoord.typing import SequenceNotStr
 
 
-class PandasWrapper:
+# @define(init=True)
+class PandasWrapper(indexers.Molecule):
     """This class provides wrappers for :class:`pandas.DataFrame` methods.
 
     It has the same behaviour as the :class:`~pandas.DataFrame`
@@ -23,15 +33,25 @@ class PandasWrapper:
         which are passed on when doing slices...
     """
 
-    def __len__(self):
+    def __init__(
+        self,
+        _frame: DataFrame,
+        metadata: Union[dict, None] = None,
+        _metadata: Union[dict, None] = None,
+    ) -> None:
+        self._frame = _frame
+        self.metadata = {} if metadata is None else metadata
+        self._metadata = {} if _metadata is None else _metadata
+
+    def __len__(self) -> int:
         return self.shape[0]
 
     @property
-    def empty(self):
+    def empty(self) -> bool:
         return self._frame.empty
 
     @property
-    def loc(self):
+    def loc(self) -> indexers._Loc[Self]:
         """Label based indexing
 
         The indexing behaves like Indexing and Selecting data in
@@ -65,7 +85,7 @@ class PandasWrapper:
         return indexers._Loc(self)
 
     @property
-    def iloc(self):
+    def iloc(self) -> indexers._ILoc:
         """Label based indexing
 
         The indexing behaves like Indexing and Selecting data in
@@ -102,7 +122,6 @@ class PandasWrapper:
         if isinstance(key, tuple):
             selected = self._frame[key[0], key[1]]
         else:
-            # print(len(self), key)
             selected = self._frame[key]
         try:
             return self._return_appropiate_type(selected)
@@ -115,7 +134,7 @@ class PandasWrapper:
         else:
             self._frame[key] = value
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         """
         After regular attribute access, try looking up the name
         This allows simpler access to columns for interactive use.
@@ -132,7 +151,7 @@ class PandasWrapper:
         return object.__getattribute__(self, name)
 
     @property
-    def index(self):
+    def index(self) -> Index:
         """Returns the index.
 
         Assigning a value to it changes the index.
@@ -140,11 +159,11 @@ class PandasWrapper:
         return self._frame.index
 
     @index.setter
-    def index(self, value):
-        self._frame.index = value
+    def index(self, value: Union[Index, SequenceNotStr]) -> None:
+        self._frame.index = value  # type: ignore[assignment]
 
     @property
-    def columns(self):
+    def columns(self) -> Index:
         """Returns the columns.
 
         Assigning a value to it changes the columns.
@@ -152,30 +171,52 @@ class PandasWrapper:
         return self._frame.columns
 
     @columns.setter
-    def columns(self, value):
+    def columns(self, value: Union[Index, SequenceNotStr[str]]) -> None:
         if not self._required_cols <= set(value):
             raise PhysicalMeaning(
                 "There are columns missing for a meaningful description of a molecule"
             )
-        self._frame.columns = value
+        self._frame.columns = value  # type: ignore[assignment]
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, int]:
         return self._frame.shape
 
     @property
-    def dtypes(self):
+    def dtypes(self) -> Series:
         return self._frame.dtypes
+
+    @overload
+    def sort_values(
+        self,
+        by: Union[str, Sequence[str]],
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = ...,
+        ascending: bool = ...,
+        inplace: Literal[False] = False,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = ...,
+        na_position: Literal["first", "last"] = ...,
+    ) -> Self: ...
+
+    @overload
+    def sort_values(
+        self,
+        by: Union[str, Sequence[str]],
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = ...,
+        ascending: bool = ...,
+        inplace: Literal[True] = ...,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = ...,
+        na_position: Literal["first", "last"] = ...,
+    ) -> None: ...
 
     def sort_values(
         self,
-        by,
-        axis=0,
-        ascending=True,
-        inplace=False,
-        kind="quicksort",
-        na_position="last",
-    ):
+        by: Union[str, Sequence[str]],
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = 0,
+        ascending: bool = True,
+        inplace: bool = False,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = "quicksort",
+        na_position: Literal["first", "last"] = "last",
+    ) -> Union[Self, None]:
         """Sort by the values along either axis
 
         Wrapper around the :meth:`pandas.DataFrame.sort_values` method.
@@ -189,9 +230,10 @@ class PandasWrapper:
                 kind=kind,
                 na_position=na_position,
             )
+            return None
         else:
             new = self.__class__(
-                self._frame.sort_values(
+                _frame=self._frame.sort_values(
                     by,
                     axis=axis,
                     ascending=ascending,
@@ -204,16 +246,40 @@ class PandasWrapper:
             new._metadata = copy.deepcopy(self._metadata)
             return new
 
+    @overload
     def sort_index(
         self,
-        axis=0,
-        level=None,
-        ascending=True,
-        inplace=False,
-        kind="quicksort",
-        na_position="last",
-        sort_remaining=True,
-    ):
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = ...,
+        level: Union[IndexLabel, None] = ...,
+        ascending: bool = ...,
+        inplace: Literal[False] = False,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = ...,
+        na_position: Literal["first", "last"] = ...,
+        sort_remaining: bool = ...,
+    ) -> Self: ...
+
+    @overload
+    def sort_index(
+        self,
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = ...,
+        level: Union[IndexLabel, None] = ...,
+        ascending: bool = ...,
+        inplace: Literal[True] = ...,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = ...,
+        na_position: Literal["first", "last"] = ...,
+        sort_remaining: bool = ...,
+    ) -> None: ...
+
+    def sort_index(
+        self,
+        axis: Union[Literal["index", 0], Literal["columns", 1]] = 0,
+        level: Union[IndexLabel, None] = None,
+        ascending: bool = True,
+        inplace: bool = False,
+        kind: Literal["quicksort", "mergesort", "heapsort", "stable"] = "quicksort",
+        na_position: Literal["first", "last"] = "last",
+        sort_remaining: bool = True,
+    ) -> Union[Self, None]:
         """Sort object by labels (along an axis)
 
         Wrapper around the :meth:`pandas.DataFrame.sort_index` method.
@@ -228,6 +294,7 @@ class PandasWrapper:
                 na_position=na_position,
                 sort_remaining=sort_remaining,
             )
+            return None
         else:
             new = self.__class__(
                 self._frame.sort_index(

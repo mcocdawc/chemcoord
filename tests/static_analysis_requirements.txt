@@ -9,5 +9,6 @@ pytest-cov
 
 types-simplejson
 ase-stubs
+pandas-stubs
 
 pyscf

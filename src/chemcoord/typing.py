@@ -61,15 +61,15 @@ PathLike: TypeAlias = Union[str, os.PathLike[str]]
 #: Type annotation for dictionaries holding keyword arguments.
 KwargDict: TypeAlias = Dict[str, Any]
 
-ArithmeticOther = Union[
-    float, np.floating, Sequence, Sequence[Sequence], Vector, Matrix
-]
-
 
 AtomIdx = NewType("AtomIdx", int)
 
 Real: TypeAlias = Union[float, np.floating]
 Integral: TypeAlias = Union[int, np.integer]
+
+
+ArithmeticOther = Union[Real, Sequence, Sequence[Sequence], Vector, Matrix]
+
 
 #: A type for generic functions/classes without any constraints.
 T = TypeVar("T")

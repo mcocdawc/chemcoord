@@ -3,14 +3,14 @@ import os
 import subprocess
 import tempfile
 import warnings
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from threading import Thread
 from typing import Callable, Union, overload
 
 import numpy as np
 import pandas as pd
 import sympy
-from pandas import DataFrame
+from pandas.core.frame import DataFrame
 
 from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
@@ -254,9 +254,13 @@ def isclose(
         :class:`numpy.ndarray`: Boolean array.
     """
     coords = ["x", "y", "z"]
+    # The pandas documentation says about the arguments to all(axis=...)
+    #   None : reduce all axes, return a scalar
+    # https://pandas.pydata.org/docs/reference/api/pandas.Series.all.html
+    # but the stubs don't have it.
     if not (
         set(a.index) == set(b.index)
-        and (a.loc[:, "atom"] == b.loc[a.index, "atom"]).all(axis=None)
+        and (a.loc[:, "atom"] == b.loc[a.index, "atom"]).all(axis=None)  # type: ignore[arg-type]
     ):
         message = "Can only compare molecules with the same atoms and labels"
         raise ValueError(message)
@@ -301,7 +305,7 @@ def allclose(
 def concat(
     cartesians: Sequence[Cartesian],
     ignore_index: bool = False,
-    keys: Union[Sequence, None] = None,
+    keys: Union[Iterable, None] = None,
 ) -> Cartesian:
     """Join list of cartesians into one molecule.
 
@@ -312,13 +316,9 @@ def concat(
     Args:
         cartesians (sequence): A sequence of :class:`~chemcoord.Cartesian`
             to be concatenated.
-        ignore_index (sequence, bool, int): If it is a boolean, it
+        ignore_index (bool): It
             behaves like in the description of
             :meth:`pandas.DataFrame.append`.
-            If it is a sequence, it becomes the new index.
-            If it is an integer,
-            ``range(ignore_index, ignore_index + len(new))``
-            becomes the new index.
         keys (sequence): If multiple levels passed, should contain tuples.
             Construct hierarchical index using the passed keys as
             the outermost level
@@ -327,18 +327,12 @@ def concat(
         Cartesian:
     """
     frames = [molecule._frame for molecule in cartesians]
-    new = pd.concat(frames, ignore_index=ignore_index, keys=keys, verify_integrity=True)
-
-    if type(ignore_index) is bool:
+    if keys is None:
+        new = pd.concat(frames, ignore_index=ignore_index, verify_integrity=True)
+    else:
         new = pd.concat(
             frames, ignore_index=ignore_index, keys=keys, verify_integrity=True
         )
-    else:
-        new = pd.concat(frames, ignore_index=True, keys=keys, verify_integrity=True)
-        if type(ignore_index) is int:
-            new.index = range(ignore_index, ignore_index + len(new))
-        else:
-            new.index = ignore_index
     return cartesians[0].__class__(new)
 
 
