@@ -99,12 +99,10 @@ class CartesianGetZmat(CartesianCore):
 
         if predefined_table is not None:
             self._check_construction_table(predefined_table)
-            construction_table = predefined_table.copy()
-
-            i = construction_table.index[0]
-            order_of_def = list(construction_table.index)
-            user_defined = list(construction_table.index)
-            construction_table = construction_table.to_dict(orient="index")
+            i = predefined_table.index[0]
+            order_of_def = list(predefined_table.index)
+            user_defined = list(predefined_table.index)
+            construction_table = predefined_table.to_dict(orient="index")
         else:
             if start_atom is None:
                 molecule = self.get_distance_to(self.get_centroid())
@@ -258,11 +256,11 @@ class CartesianGetZmat(CartesianCore):
             full_index: set[AtomIdx] = set()
             for fragment in fragment_list:
                 if isinstance(fragment, tuple):
-                    full_index = set(full_index).union(fragment[0].index)
+                    full_index = full_index | set(fragment[0].index)
                 else:
-                    full_index = set(full_index).union(fragment.index)
+                    full_index = full_index | set(fragment.index)
 
-            if not self.index.difference(full_index).empty:
+            if set(self.index) - set(full_index):
                 missing_part = self.get_without(
                     self.loc[full_index], use_lookup=use_lookup
                 )
@@ -313,10 +311,10 @@ class CartesianGetZmat(CartesianCore):
                             a = full_table.index[2]
                             d = full_table.index[1]
                         else:
-                            a = full_table.loc[b, "b"]
+                            a = full_table.loc[b, "b"]  # type: ignore[assignment]
                             d = full_table.index[2]
                     else:
-                        a, d = full_table.loc[b, ["b", "a"]]
+                        a, d = full_table.loc[b, ["b", "a"]]  # type: ignore[assignment,index]
 
                 if len(constr_table) >= 1:
                     constr_table.iloc[0, :] = b, a, d
