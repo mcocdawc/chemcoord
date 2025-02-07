@@ -1,7 +1,9 @@
 import numpy as np
 import sympy
 
+from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
+from chemcoord.typing import Tensor4D
 
 
 class DummyManipulation:
@@ -97,7 +99,7 @@ class PureInternalMovement:
         self.cls.pure_internal_mov = self.old_value
 
 
-def apply_grad_cartesian_tensor(grad_X, zmat_dist):
+def apply_grad_cartesian_tensor(grad_X: Tensor4D, zmat_dist: Zmat) -> Cartesian:
     """Apply the gradient for transformation to cartesian space onto zmat_dist.
 
     Args:

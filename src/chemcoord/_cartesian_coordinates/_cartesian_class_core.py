@@ -692,11 +692,11 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     def _get_origin(
         self, origin: Union[Vector[np.floating], Series, int, Sequence[Real], None]
-    ) -> Vector:
+    ) -> Vector[np.float64]:
         if origin is None:
             return np.zeros(3)
         elif isinstance(origin, (int, np.integer)):
-            return self.loc[origin, ["x", "y", "z"]].values
+            return cast(Vector[np.float64], self.loc[origin, ["x", "y", "z"]].values)
         else:
             return np.asarray(origin, dtype="f8")
 
@@ -1524,7 +1524,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             index1 = list(subset1)
             for m1_i in index1:
                 dist_m2_to_m1_i = m2.get_distance_to(
-                    m1.loc[m1_i, coords].values, subset2, sort=True
+                    cast(Vector[np.float64], m1.loc[m1_i, coords].values),
+                    subset2,
+                    sort=True,
                 )
 
                 m2_i = dist_m2_to_m1_i.index[0]
