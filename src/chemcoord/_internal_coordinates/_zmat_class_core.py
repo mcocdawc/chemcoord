@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import copy
 import warnings
 from collections.abc import Sequence
 from functools import partial
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import pandas as pd
@@ -22,6 +24,9 @@ from chemcoord.exceptions import (
     InvalidReference,
     PhysicalMeaning,
 )
+
+if TYPE_CHECKING:
+    from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 
 append_indexer_docstring = _decorators.Appender(
     """In the case of obtaining elements, the indexing behaves like
@@ -629,7 +634,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             zmat = zmat._insert_dummy_zmat(exception, inplace=False)
             return zmat._remove_dummies(inplace=False)
 
-    def get_cartesian(self):
+    def get_cartesian(self) -> Cartesian:
         """Return the molecule in cartesian coordinates.
 
         Raises an :class:`~exceptions.InvalidReference` exception,
@@ -677,8 +682,9 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             raise InvalidReference(
                 i=i, b=b, a=a, d=d, already_built_cartesian=cartesian
             )
-        elif err == ERR_CODE_OK:
-            return create_cartesian(positions, row + 1)
+        elif err != ERR_CODE_OK:
+            raise ValueError("Unknown error")
+        return create_cartesian(positions, row + 1)
 
     def get_grad_cartesian(
         self, as_function=True, chain=True, drop_auto_dummies=True, pure_internal=None
