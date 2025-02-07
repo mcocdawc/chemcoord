@@ -314,12 +314,12 @@ class CartesianGetZmat(CartesianCore):
                             a = full_table.loc[b, "b"]  # type: ignore[assignment]
                             d = full_table.index[2]
                     else:
-                        a, d = full_table.loc[b, ["b", "a"]]  # type: ignore[assignment,index]
+                        a, d = full_table.loc[b, ["b", "a"]]  # type: ignore[assignment,index,list-item]
 
                 if len(constr_table) >= 1:
-                    constr_table.iloc[0, :] = b, a, d
+                    constr_table.iloc[0, :] = b, a, d  # type: ignore[assignment]
                 if len(constr_table) >= 2:
-                    constr_table.iloc[1, [1, 2]] = b, a
+                    constr_table.iloc[1, [1, 2]] = b, a  # type: ignore[assignment]
                 if len(constr_table) >= 3:
                     constr_table.iloc[2, 2] = b
 
