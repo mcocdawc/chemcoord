@@ -4,7 +4,7 @@ import copy
 import warnings
 from collections.abc import Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Callable, Literal, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -25,6 +25,7 @@ from chemcoord.exceptions import (
     InvalidReference,
     PhysicalMeaning,
 )
+from chemcoord.typing import Tensor4D
 
 if TYPE_CHECKING:
     from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
@@ -690,9 +691,31 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             raise ValueError("Unknown error")
         return create_cartesian(positions, row + 1)
 
+    @overload
     def get_grad_cartesian(
-        self, as_function=True, chain=True, drop_auto_dummies=True, pure_internal=None
-    ):
+        self,
+        as_function: Literal[True] = True,
+        chain: bool = ...,
+        drop_auto_dummies: bool = ...,
+        pure_internal: Union[bool, None] = ...,
+    ) -> Callable[[Self], Cartesian]: ...
+
+    @overload
+    def get_grad_cartesian(
+        self,
+        as_function: Literal[False] = ...,
+        chain: bool = ...,
+        drop_auto_dummies: bool = ...,
+        pure_internal: Union[bool, None] = ...,
+    ) -> Tensor4D: ...
+
+    def get_grad_cartesian(
+        self,
+        as_function: bool = True,
+        chain: bool = True,
+        drop_auto_dummies: bool = True,
+        pure_internal: Union[bool, None] = None,
+    ) -> Union[Tensor4D, Callable[[Self], Cartesian]]:
         r"""Return the gradient for the transformation to a Cartesian.
 
         If ``as_function`` is True, a function is returned that can be directly
