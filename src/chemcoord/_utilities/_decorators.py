@@ -10,6 +10,8 @@ import numba as nb
 # # module http://matplotlib.org/users/license.html
 #
 
+Function = TypeVar("Function", bound=Callable)
+
 
 class Substitution:
     """
@@ -94,7 +96,7 @@ class Appender:
             self.addendum = addendum
         self.join = join
 
-    def __call__(self, func):
+    def __call__(self, func: Function) -> Function:
         func.__doc__ = func.__doc__ if func.__doc__ else ""
         self.addendum = self.addendum if self.addendum else ""
         docitems = [func.__doc__, self.addendum]
@@ -107,9 +109,6 @@ def indent(text, indents=1):
         return ""
     jointext = "".join(["\n"] + ["    "] * indents)
     return jointext.join(text.split("\n"))
-
-
-Function = TypeVar("Function", bound=Callable)
 
 
 @overload

@@ -32,7 +32,7 @@ class _generic_Indexer(Generic[T]):
 
 
 IntIdx: TypeAlias = Union[Integral, Set[Integral], Vector, SequenceNotStr[Integral]]
-StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str], slice]
+StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str]]
 
 
 class _Loc(_generic_Indexer, Generic[T]):
@@ -64,7 +64,7 @@ class _Loc(_generic_Indexer, Generic[T]):
             slice,
             Series,
             Index,
-            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx]],
+            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx, slice]],
         ],
     ) -> Union[T, DataFrame, Series]:
         if isinstance(key, tuple):
@@ -86,7 +86,7 @@ class _Loc(_generic_Indexer, Generic[T]):
             slice,
             Series,
             Index,
-            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx]],
+            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx, slice]],
         ],
         value,
     ) -> None:

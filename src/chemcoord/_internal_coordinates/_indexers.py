@@ -1,14 +1,18 @@
 import warnings
 from abc import abstractmethod
-from typing import Generic, TypeVar, Union
+from collections.abc import Set
+from typing import Generic, TypeVar, Union, overload
 
 from attrs import define
 from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
 from pandas.core.series import Series
+from typing_extensions import TypeAlias
 
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 from chemcoord.exceptions import InvalidReference
+from chemcoord.typing import Integral, SequenceNotStr, Vector
 
 # Unlike the Cartesian, the Zmatrix does never return a Zmatrix upon indexing.
 # This is because removing a row sometimes results in an undefined Z-matrix
@@ -20,6 +24,9 @@ from chemcoord.exceptions import InvalidReference
 
 T = TypeVar("T", bound=GenericCore)
 
+IntIdx: TypeAlias = Union[Integral, Set[Integral], Vector, SequenceNotStr[Integral]]
+StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str]]
+
 
 @define
 class _generic_Indexer(Generic[T]):
@@ -29,7 +36,36 @@ class _generic_Indexer(Generic[T]):
     @abstractmethod
     def _get_idxer(cls) -> str: ...
 
-    def __getitem__(self, key) -> Union[Series, DataFrame]:
+
+class _Loc(_generic_Indexer):
+    @classmethod
+    def _get_idxer(cls) -> str:
+        return "loc"
+
+    @overload
+    def __getitem__(
+        self, key: tuple[Union[Index, IntIdx, slice, Series], str]
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Union[Index, IntIdx, slice, Series],
+            Union[Series, Set[str], SequenceNotStr[str], slice],
+        ],
+    ) -> DataFrame: ...
+
+    def __getitem__(
+        self,
+        key: Union[
+            IntIdx,
+            slice,
+            Series,
+            Index,
+            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx, slice]],
+        ],
+    ) -> Union[Series, DataFrame]:
         indexer = getattr(self.molecule._frame, self._get_idxer())
         if isinstance(key, tuple):
             selected = indexer[key[0], key[1]]
@@ -38,16 +74,26 @@ class _generic_Indexer(Generic[T]):
         return selected
 
 
-class _Loc(_generic_Indexer):
-    @classmethod
-    def _get_idxer(cls) -> str:
-        return "loc"
-
-
 class _ILoc(_generic_Indexer):
     @classmethod
     def _get_idxer(cls) -> str:
         return "iloc"
+
+    def __getitem__(
+        self,
+        key: Union[
+            IntIdx,
+            slice,
+            Series,
+            tuple[Union[Series, IntIdx, slice], Union[Series, IntIdx, slice]],
+        ],
+    ) -> Union[Series, DataFrame]:
+        indexer = getattr(self.molecule._frame, self._get_idxer())
+        if isinstance(key, tuple):
+            selected = indexer[key[0], key[1]]
+        else:
+            selected = indexer[key]
+        return selected
 
 
 class _Unsafe_base:
