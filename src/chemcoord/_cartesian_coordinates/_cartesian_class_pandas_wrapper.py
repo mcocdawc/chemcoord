@@ -1,11 +1,12 @@
 import copy
 from collections.abc import Sequence
-from typing import Any, Literal, Self, Union, overload
+from typing import Any, Literal, Union, overload
 
 from pandas._typing import IndexLabel
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
 from pandas.core.series import Series
+from typing_extensions import Self
 
 import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
@@ -162,7 +163,7 @@ class PandasWrapper(indexers.Molecule):
         self._frame.index = value  # type: ignore[assignment]
 
     @property
-    def columns(self) -> Index[str]:
+    def columns(self) -> Index:
         """Returns the columns.
 
         Assigning a value to it changes the columns.
@@ -170,7 +171,7 @@ class PandasWrapper(indexers.Molecule):
         return self._frame.columns
 
     @columns.setter
-    def columns(self, value: Union[Index[str], SequenceNotStr[str]]) -> None:
+    def columns(self, value: Union[Index, SequenceNotStr[str]]) -> None:
         if not self._required_cols <= set(value):
             raise PhysicalMeaning(
                 "There are columns missing for a meaningful description of a molecule"

@@ -19,6 +19,7 @@ INSTALL_REQUIRES = [
     "pymatgen",
     "typing_extensions",
     "ordered-set",
+    "attrs",
 ]
 KEYWORDS = [
     "chemcoord",

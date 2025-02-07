@@ -11,7 +11,6 @@ from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 from chemcoord.typing import Integral, SequenceNotStr, Vector
 
 
-# @define(init=False)
 class Molecule(Protocol):
     _frame: DataFrame
     metadata: dict
