@@ -87,6 +87,12 @@ class _Loc(_generic_Indexer):
         ],
     ) -> Series: ...
 
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[Integral, str],
+    ) -> Union[float, str]: ...
+
     def __getitem__(
         self,
         key: Union[
@@ -112,7 +118,7 @@ class _Loc(_generic_Indexer):
                 Union[str, Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
             ],
         ],
-    ) -> Union[Series, DataFrame]:
+    ) -> Union[Series, DataFrame, float, str]:
         indexer = getattr(self.molecule._frame, self._get_idxer())
         if isinstance(key, tuple):
             selected = indexer[key[0], key[1]]
@@ -175,6 +181,12 @@ class _ILoc(_generic_Indexer):
         ],
     ) -> Series: ...
 
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[Integral, Integral],
+    ) -> Union[float, str]: ...
+
     def __getitem__(
         self,
         key: Union[
@@ -208,7 +220,7 @@ class _ILoc(_generic_Indexer):
                 ],
             ],
         ],
-    ) -> Union[Series, DataFrame]:
+    ) -> Union[Series, DataFrame, float, str]:
         indexer = getattr(self.molecule._frame, self._get_idxer())
         if isinstance(key, tuple):
             selected = indexer[key[0], key[1]]
