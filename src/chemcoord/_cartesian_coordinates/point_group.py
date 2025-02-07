@@ -1,3 +1,9 @@
+from collections.abc import Sequence
+
+from pymatgen.core.operations import SymmOp
+from pymatgen.symmetry.analyzer import generate_full_symmops
+
+
 class PointGroupOperations(list):
     """Defines a point group as sequence of symmetry operations.
 
@@ -11,16 +17,16 @@ class PointGroupOperations(list):
             operations.
     """
 
-    def __init__(self, sch_symbol, operations, tolerance=0.1):
-        from pymatgen.symmetry.analyzer import generate_full_symmops  # noqa: PLC0415
-
+    def __init__(
+        self, sch_symbol: str, operations: Sequence[SymmOp], tolerance: float = 0.1
+    ) -> None:
         self.sch_symbol = sch_symbol
         super(PointGroupOperations, self).__init__(
             [op.rotation_matrix for op in generate_full_symmops(operations, tolerance)]
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.sch_symbol
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()

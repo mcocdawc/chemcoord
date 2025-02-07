@@ -63,6 +63,7 @@
       ~Cartesian.replace
       ~Cartesian.reset_index
       ~Cartesian.restrict_bond_dict
+      ~Cartesian.set_atom_coords
       ~Cartesian.set_index
       ~Cartesian.sort_index
       ~Cartesian.sort_values

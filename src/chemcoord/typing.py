@@ -16,7 +16,14 @@ from typing import Any, Dict, NewType, Tuple, TypeVar, Union
 import numpy as np
 
 # Reexpose some pandas types
-from pandas._typing import Axes  # noqa: F401
+from pandas._typing import (  # noqa: F401
+    Axes,
+    FloatFormatType,
+    FormattersType,
+    ReadBuffer,
+    SequenceNotStr,
+    WriteBuffer,
+)
 from typing_extensions import TypeAlias
 
 # We want the dtype to behave covariant, i.e. if a
@@ -50,7 +57,7 @@ Tensor7D = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
 Tensor = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
 
 #: Type annotation for pathlike objects.
-PathLike: TypeAlias = Union[str, os.PathLike]
+PathLike: TypeAlias = Union[str, os.PathLike[str]]
 #: Type annotation for dictionaries holding keyword arguments.
 KwargDict: TypeAlias = Dict[str, Any]
 

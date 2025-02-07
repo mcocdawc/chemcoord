@@ -64,6 +64,7 @@
       ~AsymmetricUnitCartesian.replace
       ~AsymmetricUnitCartesian.reset_index
       ~AsymmetricUnitCartesian.restrict_bond_dict
+      ~AsymmetricUnitCartesian.set_atom_coords
       ~AsymmetricUnitCartesian.set_index
       ~AsymmetricUnitCartesian.sort_index
       ~AsymmetricUnitCartesian.sort_values

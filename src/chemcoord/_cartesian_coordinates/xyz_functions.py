@@ -3,17 +3,31 @@ import os
 import subprocess
 import tempfile
 import warnings
+from collections.abc import Sequence
 from threading import Thread
+from typing import Callable, Union, overload
 
 import numpy as np
 import pandas as pd
 import sympy
+from pandas import DataFrame
 
+from chemcoord._cartesian_coordinates._cart_transformation import (
+    _jit_normalize,
+    normalize,
+)
+from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
+from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
+from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 
 
-def view(molecule, viewer=None, use_curr_dir=False):
+def view(
+    molecule: Union[Cartesian, Sequence[Cartesian]],
+    viewer: Union[PathLike, None] = None,
+    use_curr_dir: bool = False,
+) -> None:
     """View your molecule or list of molecules.
 
     .. note:: This function writes a temporary file and opens it with
@@ -33,21 +47,17 @@ def view(molecule, viewer=None, use_curr_dir=False):
         None:
     """
     viewer = settings["defaults"]["viewer"]
-    if hasattr(molecule, "view"):
+    if isinstance(molecule, Cartesian):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
-    else:
-        if pd.api.types.is_list_like(molecule):
-            cartesian_list = molecule
-        else:
-            raise ValueError("Argument is neither list nor Cartesian.")
+    elif isinstance(molecule, Sequence):
+        cartesian_list = molecule
         if use_curr_dir:
             TEMP_DIR = os.path.curdir
         else:
             TEMP_DIR = tempfile.gettempdir()
 
-        def give_filename(i):
-            filename = "ChemCoord_list_" + str(i) + ".molden"
-            return os.path.join(TEMP_DIR, filename)
+        def give_filename(i: int) -> str:
+            return os.path.join(TEMP_DIR, f"ChemCoord_list_{i}.molden")
 
         i = 1
         while os.path.exists(give_filename(i)):
@@ -55,9 +65,10 @@ def view(molecule, viewer=None, use_curr_dir=False):
 
         to_molden(cartesian_list, buf=give_filename(i))
 
-        def open_file(i):
+        def open_file(i: int) -> None:
             """Open file and close after being finished."""
             try:
+                assert viewer is not None
                 subprocess.check_call([viewer, give_filename(i)])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
@@ -68,15 +79,37 @@ def view(molecule, viewer=None, use_curr_dir=False):
                     os.remove(give_filename(i))
 
         Thread(target=open_file, args=(i,)).start()
+    else:
+        raise ValueError("Argument is neither list nor Cartesian.")
+
+
+@overload
+def to_molden(
+    cartesian_list: Sequence[Cartesian],
+    buf: None = None,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> str: ...
+
+
+@overload
+def to_molden(
+    cartesian_list: Sequence[Cartesian],
+    buf: PathLike,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> None: ...
 
 
 def to_molden(
-    cartesian_list,
-    buf=None,
-    sort_index=True,
-    overwrite=True,
-    float_format="{:.6f}".format,
-):
+    cartesian_list: Sequence[Cartesian],
+    buf: Union[PathLike, None] = None,
+    sort_index: bool = True,
+    overwrite: bool = True,
+    float_format: Callable[[float], str] = "{:.6f}".format,
+) -> Union[str, None]:
     """Write a list of Cartesians into a molden file.
 
     .. note:: Since it permamently writes a file, this function
@@ -112,8 +145,9 @@ def to_molden(
     ).format
 
     values = len(cartesian_list) * "1\n"
-    energy = [str(m.metadata.get("energy", 1)) for m in cartesian_list]
-    energy = "\n".join(energy) + "\n"
+    energy = (
+        "\n".join([str(m.metadata.get("energy", 1)) for m in cartesian_list]) + "\n"
+    )
 
     header = give_header(energy=energy, max_force=values, rms_force=values)
 
@@ -130,11 +164,12 @@ def to_molden(
         else:
             with open(buf, mode="x") as f:
                 f.write(output)
+        return None
     else:
         return output
 
 
-def write_molden(*args, **kwargs):
+def write_molden(*args, **kwargs):  # type: ignore[no-untyped-def]
     """Deprecated, use :func:`~chemcoord.xyz_functions.to_molden`"""
     message = "Will be removed in the future. Please use to_molden()."
     with warnings.catch_warnings():
@@ -143,7 +178,9 @@ def write_molden(*args, **kwargs):
     return to_molden(*args, **kwargs)
 
 
-def read_molden(inputfile, start_index=0, get_bonds=True):
+def read_molden(
+    inputfile: PathLike, start_index: int = 0, get_bonds: bool = True
+) -> list[Cartesian]:
     """Read a molden file.
 
     Args:
@@ -153,10 +190,6 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
-    from chemcoord._cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
-        Cartesian,
-    )
-
     with open(inputfile, "r") as f:
         found = False
         while not found:
@@ -197,7 +230,13 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     return cartesians
 
 
-def isclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
+def isclose(
+    a: Cartesian,
+    b: Cartesian,
+    align: bool = False,
+    rtol: float = 1.0e-5,
+    atol: float = 1.0e-8,
+) -> DataFrame:
     """Compare two molecules for numerical equality.
 
     Args:
@@ -233,7 +272,13 @@ def isclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
     return out
 
 
-def allclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
+def allclose(
+    a: Cartesian,
+    b: Cartesian,
+    align: bool = False,
+    rtol: float = 1.0e-5,
+    atol: float = 1.0e-8,
+) -> bool:
     """Compare two molecules for numerical equality.
 
     Args:
@@ -253,7 +298,11 @@ def allclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
     return isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None)
 
 
-def concat(cartesians, ignore_index=False, keys=None):
+def concat(
+    cartesians: Sequence[Cartesian],
+    ignore_index: bool = False,
+    keys: Union[Sequence, None] = None,
+) -> Cartesian:
     """Join list of cartesians into one molecule.
 
     Wrapper around the :func:`pandas.concat` function.
@@ -293,20 +342,7 @@ def concat(cartesians, ignore_index=False, keys=None):
     return cartesians[0].__class__(new)
 
 
-def normalize(vector):
-    """Normalizes a vector"""
-    normed_vector = vector / np.linalg.norm(vector)
-    return normed_vector
-
-
-@njit
-def _jit_normalize(vector):
-    """Normalizes a vector"""
-    normed_vector = vector / np.linalg.norm(vector)
-    return normed_vector
-
-
-def get_rotation_matrix(axis, angle):
+def get_rotation_matrix(axis: Sequence[float], angle: float) -> Matrix[np.float64]:
     """Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
@@ -320,15 +356,16 @@ def get_rotation_matrix(axis, angle):
     Returns:
         Rotation matrix (np.array):
     """
-    axis = normalize(np.array(axis))
-    if not (np.array([1, 1, 1]).shape) == (3,):
+    vaxis = normalize(np.asarray(axis))
+    if not (vaxis.shape) == (3,):
         raise ValueError("axis.shape has to be 3")
-    angle = float(angle)
-    return _jit_get_rotation_matrix(axis, angle)
+    return _jit_get_rotation_matrix(vaxis, angle)
 
 
 @njit
-def _jit_get_rotation_matrix(axis, angle):
+def _jit_get_rotation_matrix(
+    axis: Vector[np.float64], angle: Real
+) -> Matrix[np.float64]:
     """Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
@@ -358,7 +395,7 @@ def _jit_get_rotation_matrix(axis, angle):
     return rot_matrix
 
 
-def orthonormalize_righthanded(basis):
+def orthonormalize_righthanded(basis: Matrix[np.floating]) -> Matrix[np.float64]:
     """Orthonormalizes righthandedly a given 3D basis.
 
     This functions returns a right handed orthonormalize_righthandedd basis.
@@ -386,7 +423,11 @@ def orthonormalize_righthanded(basis):
     return np.array([e1, e2, e3]).T
 
 
-def get_kabsch_rotation(Q, P, weights=None):
+def get_kabsch_rotation(
+    Q: Matrix[np.floating],
+    P: Matrix[np.floating],
+    weights: Union[Vector[np.floating], None] = None,
+) -> Matrix[np.float64]:
     """Calculate the optimal rotation from ``P`` unto ``Q``.
 
     Using the Kabsch algorithm the optimal rotation matrix
@@ -416,7 +457,9 @@ def get_kabsch_rotation(Q, P, weights=None):
     return W @ np.diag([1.0, 1.0, d]) @ V.T
 
 
-def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
+def apply_grad_zmat_tensor(
+    grad_C: Tensor4D, construction_table: DataFrame, cart_dist: Cartesian
+) -> Zmat:
     """Apply the gradient for transformation to Zmatrix space onto cart_dist.
 
     Args:
@@ -434,7 +477,6 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     if (construction_table.index != cart_dist.index).any():
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
-    from chemcoord._internal_coordinates.zmat_class_main import Zmat  # noqa: PLC0415
 
     dtypes = [
         ("atom", str),

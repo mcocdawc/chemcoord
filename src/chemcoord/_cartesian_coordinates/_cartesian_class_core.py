@@ -19,7 +19,9 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
 )
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._decorators import njit
-from chemcoord._utilities.typing import (
+from chemcoord.configuration import settings
+from chemcoord.exceptions import PhysicalMeaning
+from chemcoord.typing import (
     ArithmeticOther,
     AtomIdx,
     Axes,
@@ -29,8 +31,6 @@ from chemcoord._utilities.typing import (
     Tensor3D,
     Vector,
 )
-from chemcoord.configuration import settings
-from chemcoord.exceptions import PhysicalMeaning
 
 
 class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641

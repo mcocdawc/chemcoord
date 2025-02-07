@@ -4,11 +4,20 @@ from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
-from chemcoord._cartesian_coordinates.xyz_functions import (
-    _jit_normalize,
-)
 from chemcoord._utilities._decorators import njit
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
+from chemcoord.typing import Matrix, Vector
+
+
+def normalize(vector: Vector[np.floating]) -> Vector[np.float64]:
+    """Normalizes a vector"""
+    return vector / np.linalg.norm(vector)
+
+
+@njit
+def _jit_normalize(vector: Vector[np.floating]) -> Vector[np.float64]:
+    """Normalizes a vector"""
+    return vector / np.linalg.norm(vector)
 
 
 def _stub_get_ref_pos(X, indices):  # noqa: ARG001
@@ -1142,7 +1151,7 @@ def get_T(X, c_table, j):
 
 
 @njit
-def get_C(X, c_table):
+def get_C(X: Matrix[np.floating], c_table) -> tuple[int, Matrix[np.float64]]:
     C = np.empty((3, c_table.shape[1]))
 
     for j in range(C.shape[1]):
