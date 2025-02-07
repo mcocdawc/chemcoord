@@ -44,26 +44,73 @@ class _Loc(_generic_Indexer):
 
     @overload
     def __getitem__(
-        self, key: tuple[Union[Index, IntIdx, slice, Series], str]
+        self,
+        key: Integral,
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: Union[
+            Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+        ],
+    ) -> DataFrame: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Union[
+                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+            ],
+            Union[Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
+        ],
+    ) -> DataFrame: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Union[
+                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+            ],
+            str,
+        ],
     ) -> Series: ...
 
     @overload
     def __getitem__(
         self,
         key: tuple[
-            Union[Index, IntIdx, slice, Series],
-            Union[Series, Set[str], SequenceNotStr[str], slice],
+            Integral,
+            Union[Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
         ],
     ) -> DataFrame: ...
 
     def __getitem__(
         self,
         key: Union[
-            IntIdx,
-            slice,
-            Series,
-            Index,
-            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx, slice]],
+            Union[
+                Integral,
+                Index,
+                Set[Integral],
+                Vector,
+                SequenceNotStr[Integral],
+                slice,
+                Series,
+            ],
+            tuple[
+                Union[
+                    Integral,
+                    Index,
+                    Set[Integral],
+                    Vector,
+                    SequenceNotStr[Integral],
+                    slice,
+                    Series,
+                ],
+                Union[str, Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
+            ],
         ],
     ) -> Union[Series, DataFrame]:
         indexer = getattr(self.molecule._frame, self._get_idxer())
@@ -78,6 +125,20 @@ class _ILoc(_generic_Indexer):
     @classmethod
     def _get_idxer(cls) -> str:
         return "iloc"
+
+    @overload
+    def __getitem__(
+        self, key: tuple[Union[Series, IntIdx, slice], Integral]
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Union[IntIdx, slice, Series],
+            Union[Set[Integral], Vector, SequenceNotStr[Integral], Series, slice],
+        ],
+    ) -> DataFrame: ...
 
     def __getitem__(
         self,
