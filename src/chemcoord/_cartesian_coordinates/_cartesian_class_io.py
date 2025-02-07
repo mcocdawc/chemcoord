@@ -9,10 +9,11 @@ from collections.abc import Hashable
 from functools import partial
 from threading import Thread
 from types import ModuleType
-from typing import Any, Union, overload
+from typing import Any, Literal, Union, overload
 
 import numpy as np
 import pandas as pd
+from pandas._typing import ReadCsvBuffer
 from pymatgen.core.structure import Molecule as PyMatGenMolecule
 from typing_extensions import Self
 
@@ -25,7 +26,6 @@ from chemcoord.typing import (
     FloatFormatType,
     FormattersType,
     PathLike,
-    ReadBuffer,
     SequenceNotStr,
     WriteBuffer,
 )
@@ -303,11 +303,13 @@ class CartesianIO(CartesianCore, GenericIO):
             molecule_string = (
                 self.loc[:, ["atom", "x", "y", "z"]]
                 .sort_index()
-                .to_string(header=header, index=index, float_format=float_format)
+                .to_string(header=header, index=index, float_format=float_format)  # type: ignore[arg-type]
             )
         else:
             molecule_string = self.loc[:, ["atom", "x", "y", "z"]].to_string(
-                header=header, index=index, float_format=float_format
+                header=header,
+                index=index,
+                float_format=float_format,  # type: ignore[arg-type]
             )
 
         # NOTE the following might be removed in the future
@@ -340,11 +342,11 @@ class CartesianIO(CartesianCore, GenericIO):
     @classmethod
     def read_xyz(
         cls,
-        buf: Union[ReadBuffer[str], PathLike],
+        buf: Union[ReadCsvBuffer[str], PathLike],
         start_index: int = 0,
         get_bonds: bool = True,
         nrows: Union[int, None] = None,
-        engine: Union[str, None] = None,
+        engine: Union[Literal["c", "python", "pyarrow", "python-fwf"], None] = None,
     ) -> Self:
         """Read a file of coordinate information.
 
@@ -384,7 +386,7 @@ class CartesianIO(CartesianCore, GenericIO):
         frame["atom"] = frame["atom"].apply(lambda x: remove_digits(x).capitalize())
 
         molecule = cls(frame)
-        molecule.index = range(start_index, start_index + len(molecule))
+        molecule.index = range(start_index, start_index + len(molecule))  # type: ignore[assignment]
 
         if get_bonds:
             molecule.get_bonds(use_lookup=False, set_lookup=True)
@@ -566,7 +568,8 @@ class CartesianIO(CartesianCore, GenericIO):
             :class:`pymatgen.core.structure.Molecule`:
         """
         return PyMatGenMolecule(
-            self["atom"].values, self.loc[:, ["x", "y", "z"]].values
+            self["atom"].values,
+            self.loc[:, ["x", "y", "z"]].values,  # type: ignore[arg-type]
         )
 
     @classmethod
