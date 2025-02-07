@@ -501,7 +501,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         out = self.copy()
         out.unsafe_loc[:, ["b", "a", "d"]] = c_table
-        out._frame.index = new_index
+        out._frame.index = new_index  # type: ignore[assignment]
         return out
 
     def _insert_dummy_cart(self, exception, last_valid_cartesian=None):

@@ -1,6 +1,7 @@
 import warnings
+from abc import abstractmethod
 from collections.abc import Set
-from typing import Generic, Protocol, TypeVar, Union, overload
+from typing import Generic, TypeVar, Union, overload
 
 from attrs import define
 from pandas.core.frame import DataFrame
@@ -8,15 +9,15 @@ from pandas.core.indexes.base import Index
 from pandas.core.series import Series
 from typing_extensions import Self, TypeAlias
 
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 from chemcoord.typing import Integral, SequenceNotStr, Vector
 
 
-class Molecule(Protocol):
-    _frame: DataFrame
-    metadata: dict
-    _metadata: dict
-
+# The Cartesian should know if to return a Cartesian, Series or DataFrame
+# after indexing. Force this with an abstract method.
+class Molecule(GenericCore):
+    @abstractmethod
     def _return_appropiate_type(
         self, selected: Union[Series, DataFrame]
     ) -> Union[Self, Series, DataFrame]: ...
@@ -127,7 +128,10 @@ class _ILoc(_generic_Indexer, Generic[T]):
     @overload
     def __getitem__(
         self,
-        key: tuple[Union[IntIdx, slice, Series], Union[IntIdx, Series]],
+        key: tuple[
+            Union[IntIdx, slice, Series],
+            Union[Set[Integral], Vector, SequenceNotStr[Integral], Series],
+        ],
     ) -> Union[T, DataFrame]: ...
 
     @overload

@@ -1,12 +1,26 @@
 import warnings
+from typing import Generic, TypeVar
 
+from attrs import define
+
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 from chemcoord.exceptions import InvalidReference
 
+# Unlike the Cartesian, the Zmatrix does never return a Zmatrix upon indexing.
+# This is because removing a row sometimes results in an undefined Z-matrix
+# and I want to guarantee that the user does not accidentally
+# think they have a valid Z-matrix, while they actually don't.
+# Compare this situation with the corresponding use of `GenericCore` for `Cartesian`.
+# There a Union[Self, Series, DataFrame] is returned, while here only a
+# Union[Series, DataFrame] is returned.
 
-class _generic_Indexer:
-    def __init__(self, molecule):
-        self.molecule = molecule
+T = TypeVar("T", bound=GenericCore)
+
+
+@define
+class _generic_Indexer(Generic[T]):
+    molecule: T
 
     def __getitem__(self, key):
         indexer = getattr(self.molecule._frame, self.indexer)
@@ -18,11 +32,11 @@ class _generic_Indexer:
 
 
 class _Loc(_generic_Indexer):
-    indexer = "loc"
+    indexer: str = "loc"
 
 
 class _ILoc(_generic_Indexer):
-    indexer = "iloc"
+    indexer: str = "iloc"
 
 
 class _Unsafe_base:
