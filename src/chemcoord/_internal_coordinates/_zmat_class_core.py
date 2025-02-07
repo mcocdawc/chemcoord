@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Union
 import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
+from pandas.core.series import Series
 from typing_extensions import Self
 
 import chemcoord._internal_coordinates._indexers as indexers
@@ -214,10 +215,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __mul__(self, other: Self) -> Self:
+    def __mul__(self, other: Union[Self, float]) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        self._test_if_can_be_added(other)
-        result = self.loc[:, coords] * other.loc[:, coords]
+        if isinstance(other, self.__class__):
+            self._test_if_can_be_added(other)
+            result = self.loc[:, coords] * other.loc[:, coords]
+        elif isinstance(other, float):
+            result = self.loc[:, coords] * other
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -225,13 +229,16 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rmul__(self, other: Self) -> Self:
+    def __rmul__(self, other: Union[Self, float]) -> Self:
         return self * other
 
-    def __truediv__(self, other: Self) -> Self:
+    def __truediv__(self, other: Union[Self, float]) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        self._test_if_can_be_added(other)
-        result = self.loc[:, coords] / other.loc[:, coords]
+        if isinstance(other, self.__class__):
+            self._test_if_can_be_added(other)
+            result = self.loc[:, coords] / other.loc[:, coords]
+        elif isinstance(other, float):
+            result = self.loc[:, coords] / other
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -239,10 +246,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rtruediv__(self, other: Self) -> Self:
+    def __rtruediv__(self, other: Union[Self, float]) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        self._test_if_can_be_added(other)
-        result = other.loc[:, coords] / self.loc[:, coords]
+        if isinstance(other, self.__class__):
+            self._test_if_can_be_added(other)
+            result = other.loc[:, coords] / self.loc[:, coords]
+        elif isinstance(other, float):
+            result = other / self.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -250,17 +260,11 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __pos__(self: Self) -> Self:
+    def __pos__(self):
         return self.copy()
 
-    def __neg__(self: Self) -> Self:
-        coords = ["bond", "angle", "dihedral"]
-        new = self.copy()
-        if new.test_operators:
-            new.loc[:, coords] = -self.loc[:, coords]
-        else:
-            new.loc[:, coords] = -self.loc[:, coords]
-        return new
+    def __neg__(self):
+        return -1 * self
 
     def __abs__(self: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
@@ -318,7 +322,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             Zmat: Zmatrix with accordingly changed angles and dihedrals.
         """
 
-        def convert_d(d: float) -> float:
+        def convert_d(d: Series) -> Series:
             r = d % 360
             return r - (r // 180) * 360
 
@@ -377,7 +381,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         new = self.copy()
 
-        def convert_d(d: float) -> float:
+        def convert_d(d: Series) -> Series:
             r = d % 360
             return r - (r // 180) * 360
 
