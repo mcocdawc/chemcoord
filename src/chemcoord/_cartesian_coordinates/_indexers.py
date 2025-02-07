@@ -30,36 +30,40 @@ class _generic_Indexer(Generic[T]):
     molecule: T
 
 
-IntIdx: TypeAlias = Union[
-    Integral, Set[Integral], Vector, SequenceNotStr[Integral], slice
-]
+IntIdx: TypeAlias = Union[Integral, Set[Integral], Vector, SequenceNotStr[Integral]]
 StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str], slice]
 
 
 class _Loc(_generic_Indexer, Generic[T]):
     @overload
-    def __getitem__(self, key: tuple[Union[Index, IntIdx, Series], str]) -> Series: ...
+    def __getitem__(
+        self, key: tuple[Union[Index, IntIdx, slice, Series], str]
+    ) -> Series: ...
 
     @overload
     def __getitem__(
         self,
         key: tuple[
-            Union[Index, IntIdx, Series], Union[Series, Set[str], SequenceNotStr[str]]
+            Union[Index, IntIdx, slice, Series],
+            Union[Series, Set[str], SequenceNotStr[str]],
         ],
     ) -> Union[T, DataFrame]: ...
 
     @overload
-    def __getitem__(self, key: tuple[Union[IntIdx, Index, Series], slice]) -> T: ...
+    def __getitem__(
+        self, key: tuple[Union[IntIdx, slice, Index, Series], slice]
+    ) -> T: ...
     @overload
-    def __getitem__(self, key: Union[Index, IntIdx, Series]) -> T: ...
+    def __getitem__(self, key: Union[Index, IntIdx, slice, Series]) -> T: ...
 
     def __getitem__(
         self,
         key: Union[
             IntIdx,
+            slice,
             Series,
             Index,
-            tuple[Union[Series, IntIdx, Index], Union[Series, StrIdx]],
+            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx]],
         ],
     ) -> Union[T, DataFrame, Series]:
         if isinstance(key, tuple):
@@ -74,7 +78,17 @@ class _Loc(_generic_Indexer, Generic[T]):
         except AttributeError:
             return selected
 
-    def __setitem__(self, key, value):
+    def __setitem__(
+        self,
+        key: Union[
+            IntIdx,
+            slice,
+            Series,
+            Index,
+            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx]],
+        ],
+        value,
+    ) -> None:
         df = self.molecule._frame
         try:
             with warnings.catch_warnings():
@@ -104,8 +118,32 @@ class _Loc(_generic_Indexer, Generic[T]):
                 raise TypeError("Assignment not supported.")
 
 
-class _ILoc(_generic_Indexer):
-    def __getitem__(self, key):
+class _ILoc(_generic_Indexer, Generic[T]):
+    @overload
+    def __getitem__(
+        self, key: tuple[Union[Series, IntIdx, slice], Integral]
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[Union[IntIdx, slice, Series], Union[IntIdx, Series]],
+    ) -> Union[T, DataFrame]: ...
+
+    @overload
+    def __getitem__(self, key: tuple[Union[IntIdx, slice, Series], slice]) -> T: ...
+    @overload
+    def __getitem__(self, key: Union[IntIdx, slice, Series]) -> T: ...
+
+    def __getitem__(
+        self,
+        key: Union[
+            IntIdx,
+            slice,
+            Series,
+            tuple[Union[Series, IntIdx, slice], Union[Series, IntIdx, slice]],
+        ],
+    ) -> Union[T, DataFrame, Series]:
         if isinstance(key, tuple):
             selected = self.molecule._frame.iloc[
                 _set_caster(key[0]), _set_caster(key[1])
@@ -117,7 +155,16 @@ class _ILoc(_generic_Indexer):
         except AttributeError:
             return selected
 
-    def __setitem__(self, key, value):
+    def __setitem__(
+        self,
+        key: Union[
+            IntIdx,
+            slice,
+            Series,
+            tuple[Union[Series, IntIdx, slice], Union[Series, IntIdx, slice]],
+        ],
+        value,
+    ) -> None:
         df = self.molecule._frame
         try:
             with warnings.catch_warnings():
