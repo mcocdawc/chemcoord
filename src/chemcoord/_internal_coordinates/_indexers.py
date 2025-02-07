@@ -1,7 +1,10 @@
 import warnings
-from typing import Generic, TypeVar
+from abc import abstractmethod
+from typing import Generic, TypeVar, Union
 
 from attrs import define
+from pandas.core.frame import DataFrame
+from pandas.core.series import Series
 
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
@@ -22,8 +25,12 @@ T = TypeVar("T", bound=GenericCore)
 class _generic_Indexer(Generic[T]):
     molecule: T
 
-    def __getitem__(self, key):
-        indexer = getattr(self.molecule._frame, self.indexer)
+    @classmethod
+    @abstractmethod
+    def _get_idxer(cls) -> str: ...
+
+    def __getitem__(self, key) -> Union[Series, DataFrame]:
+        indexer = getattr(self.molecule._frame, self._get_idxer())
         if isinstance(key, tuple):
             selected = indexer[key[0], key[1]]
         else:
@@ -32,11 +39,15 @@ class _generic_Indexer(Generic[T]):
 
 
 class _Loc(_generic_Indexer):
-    indexer: str = "loc"
+    @classmethod
+    def _get_idxer(cls) -> str:
+        return "loc"
 
 
 class _ILoc(_generic_Indexer):
-    indexer: str = "iloc"
+    @classmethod
+    def _get_idxer(cls) -> str:
+        return "iloc"
 
 
 class _Unsafe_base:
@@ -44,7 +55,7 @@ class _Unsafe_base:
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", category=FutureWarning)
-                indexer = getattr(self.molecule._frame, self.indexer)
+                indexer = getattr(self.molecule._frame, self._get_idxer())
                 if isinstance(key, tuple):
                     indexer[key[0], key[1]] = value
                 else:
@@ -64,7 +75,7 @@ class _Unsafe_base:
                     )
                 else:
                     self.molecule._frame = self.molecule._frame.astype({key[1]: "O"})
-                indexer = getattr(self.molecule._frame, self.indexer)
+                indexer = getattr(self.molecule._frame, self._get_idxer())
                 indexer[key[0], key[1]] = value
             else:
                 raise TypeError("Assignment not supported.")
@@ -85,7 +96,7 @@ class _SafeBase:
         else:
             molecule = self.molecule.copy()
 
-        indexer = getattr(molecule, f"unsafe_{self.indexer}")
+        indexer = getattr(molecule, f"unsafe_{self._get_idxer()}")
         indexer[key] = value
 
         try:
