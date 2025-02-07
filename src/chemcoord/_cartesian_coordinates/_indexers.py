@@ -1,11 +1,12 @@
 import warnings
 from collections.abc import Set
-from typing import Generic, Protocol, Self, TypeAlias, TypeVar, Union, overload
+from typing import Generic, Protocol, TypeAlias, TypeVar, Union, overload
 
 from attrs import define
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
 from pandas.core.series import Series
+from typing_extensions import Self
 
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 from chemcoord.typing import Integral, SequenceNotStr, Vector
