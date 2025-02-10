@@ -39,50 +39,9 @@ from chemcoord.typing import (
 
 
 class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
-    _required_cols = frozenset({"atom", "x", "y", "z"})
-
     # Look into the numpy manual for description of __array_priority__:
     # https://docs.scipy.org/doc/numpy-1.12.0/reference/arrays.classes.html
     __array_priority__ = 15.0
-
-    # overwrites existing method
-    def __init__(
-        self,
-        frame: DataFrame,
-        metadata: Union[dict, None] = None,
-        _metadata: Union[dict, None] = None,
-    ) -> None:
-        """How to initialize a Cartesian instance.
-
-        Args:
-            frame (pd.DataFrame): A Dataframe with at least the
-                columns ``['atom', 'x', 'y', 'z']``.
-                Where ``'atom'`` is a string for the elementsymbol.
-            atoms (sequence): A list of strings. (Elementsymbols)
-            coords (sequence): A ``n_atoms * 3`` array containg the positions
-                of the atoms. Note that atoms and coords are mutually exclusive
-                to frame. Besides atoms and coords have to be both either None
-                or not None.
-
-        Returns:
-            Cartesian: A new cartesian instance.
-        """
-        if not isinstance(frame, DataFrame):
-            raise TypeError("frame has to be a pandas DataFrame")
-        if not self._required_cols <= set(frame.columns):
-            raise PhysicalMeaning(
-                "There are columns missing for a meaningful description of a molecule"
-            )
-        self._frame = frame.copy()
-        if metadata is None:
-            self.metadata = {}
-        else:
-            self.metadata = metadata.copy()
-
-        if _metadata is None:
-            self._metadata = {}
-        else:
-            self._metadata = copy.deepcopy(_metadata)
 
     @classmethod
     def set_atom_coords(

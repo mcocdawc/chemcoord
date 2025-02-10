@@ -13,7 +13,6 @@ from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.typing import SequenceNotStr
 
 
-# @define(init=True)
 class PandasWrapper(indexers.Molecule):
     """This class provides wrappers for :class:`pandas.DataFrame` methods.
 
@@ -33,15 +32,23 @@ class PandasWrapper(indexers.Molecule):
         which are passed on when doing slices...
     """
 
+    _required_cols = frozenset({"atom", "x", "y", "z"})
+
     def __init__(
         self,
-        _frame: DataFrame,
+        frame: DataFrame,
         metadata: Union[dict, None] = None,
         _metadata: Union[dict, None] = None,
     ) -> None:
-        self._frame = _frame
-        self.metadata = {} if metadata is None else metadata
-        self._metadata = {} if _metadata is None else _metadata
+        if not isinstance(frame, DataFrame):
+            raise TypeError("frame has to be a pandas DataFrame")
+        if not self._required_cols <= set(frame.columns):
+            raise PhysicalMeaning(
+                "There are columns missing for a meaningful description of a molecule"
+            )
+        self._frame = frame.copy()
+        self.metadata = {} if metadata is None else metadata.copy()
+        self._metadata = {} if _metadata is None else copy.deepcopy(_metadata)
 
     def __len__(self) -> int:
         return self.shape[0]
@@ -233,7 +240,7 @@ class PandasWrapper(indexers.Molecule):
             return None
         else:
             new = self.__class__(
-                _frame=self._frame.sort_values(
+                frame=self._frame.sort_values(
                     by,
                     axis=axis,
                     ascending=ascending,
