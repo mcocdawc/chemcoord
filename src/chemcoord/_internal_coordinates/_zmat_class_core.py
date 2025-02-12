@@ -4,7 +4,7 @@ import copy
 import warnings
 from collections.abc import Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Literal, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -102,21 +102,23 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             selected = self._frame[key]
         return selected
 
-    def __getattr__(self, name: str):
-        """
-        After regular attribute access, try looking up the name
-        This allows simpler access to columns for interactive use.
-        """
-        # Note: obj.x will always call obj.__getattribute__('x') prior to
-        # calling obj.__getattr__('x').
+    if not TYPE_CHECKING:
 
-        if name.startswith("__"):
-            # See here, why we do this
-            # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
-            raise AttributeError()
-        if name in self._frame.columns:
-            return self[name]
-        return object.__getattribute__(self, name)
+        def __getattr__(self, name: str) -> Any:
+            """
+            After regular attribute access, try looking up the name
+            This allows simpler access to columns for interactive use.
+            """
+            # Note: obj.x will always call obj.__getattribute__('x') prior to
+            # calling obj.__getattr__('x').
+
+            if name.startswith("__"):
+                # See here, why we do this
+                # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
+                raise AttributeError()
+            if name in self._frame.columns:
+                return self[name]
+            return object.__getattribute__(self, name)
 
     @property
     @append_indexer_docstring
