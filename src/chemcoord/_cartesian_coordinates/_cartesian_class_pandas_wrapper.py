@@ -1,6 +1,6 @@
 import copy
 from collections.abc import Sequence
-from typing import Any, Literal, Union, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, Union, overload
 
 from pandas._typing import IndexLabel
 from pandas.core.frame import DataFrame
@@ -10,7 +10,9 @@ from typing_extensions import Self
 
 import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
-from chemcoord.typing import SequenceNotStr
+from chemcoord.typing import Matrix, SequenceNotStr
+
+COORDS: Final = ["x", "y", "z"]
 
 
 class PandasWrapper(indexers.Molecule):
@@ -141,21 +143,49 @@ class PandasWrapper(indexers.Molecule):
         else:
             self._frame[key] = value
 
-    def __getattr__(self, name: str) -> Any:
-        """
-        After regular attribute access, try looking up the name
-        This allows simpler access to columns for interactive use.
-        """
-        # Note: obj.x will always call obj.__getattribute__('x') prior to
-        # calling obj.__getattr__('x').
+    if not TYPE_CHECKING:
 
-        if name.startswith("__"):
-            # See here, why we do this
-            # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
-            raise AttributeError()
-        if name in self._frame.columns:
-            return self[name]
-        return object.__getattribute__(self, name)
+        def __getattr__(self, name: str) -> Any:
+            """
+            After regular attribute access, try looking up the name
+            This allows simpler access to columns for interactive use.
+            """
+            # Note: obj.x will always call obj.__getattribute__('x') prior to
+            # calling obj.__getattr__('x').
+
+            if name.startswith("__"):
+                # See here, why we do this
+                # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
+                raise AttributeError()
+            if name in self._frame.columns:
+                return self[name]
+            return object.__getattribute__(self, name)
+
+    # manually implement the attribute access for the columns
+    # atom, x, y, z statically
+    @property
+    def atom(self) -> Series:
+        return self.loc[:, "atom"]
+
+    @property
+    def x(self) -> Series:
+        return self.loc[:, "x"]
+
+    @property
+    def y(self) -> Series:
+        return self.loc[:, "y"]
+
+    @property
+    def z(self) -> Series:
+        return self.loc[:, "z"]
+
+    @property
+    def values(self) -> Matrix:
+        """Returns the values.
+
+        Assigning a value to it changes the index.
+        """
+        return self._frame.values
 
     @property
     def index(self) -> Index:

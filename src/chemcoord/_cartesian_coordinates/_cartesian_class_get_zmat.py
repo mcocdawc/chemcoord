@@ -17,6 +17,9 @@ import chemcoord._cartesian_coordinates._cart_transformation as transformation
 import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
+from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
+    COORDS,
+)
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
 from chemcoord.configuration import settings
@@ -450,7 +453,7 @@ class CartesianGetZmat(CartesianCore):
             raise ValueError(message(i=i))
         for k in range(3):
             if k < row:
-                A[k] = self.loc[c_table.iloc[row, k], ["x", "y", "z"]]  # type: ignore[index]
+                A[k] = self.loc[c_table.iloc[row, k], COORDS]  # type: ignore[index]
             else:
                 A[k] = abs_refs[c_table.iloc[row, k]]  # type: ignore[index]
         v1, v2 = A[2] - A[1], A[1] - A[0]
@@ -526,7 +529,7 @@ class CartesianGetZmat(CartesianCore):
         c_table.index = c_table.index.astype("i8")
 
         new_index = c_table.index.append(self.index.difference(c_table.index))
-        X = self.loc[new_index, ["x", "y", "z"]].values.astype("f8").T
+        X = self.loc[new_index, COORDS].values.astype("f8").T
         c_table = c_table.replace(dict(zip(new_index, range(len(self)))))
 
         err, C = transformation.get_C(X, c_table.values.T)
@@ -759,7 +762,7 @@ class CartesianGetZmat(CartesianCore):
             .replace({k: v for v, k in enumerate(c_table.index)})
             .values.T
         )
-        X = self.loc[:, ["x", "y", "z"]].values.T
+        X = self.loc[:, COORDS].values.T
         if X.dtype == np.dtype("i8"):
             X = X.astype("f8")
 
