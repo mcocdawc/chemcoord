@@ -203,6 +203,22 @@ class PandasWrapper(indexers.Molecule):
     def dtypes(self) -> Series:
         return self._frame.dtypes
 
+    @property
+    def atom(self) -> Series:
+        return self.loc[:, "atom"]
+
+    @property
+    def x(self) -> Series:
+        return self.loc[:, "x"]
+
+    @property
+    def y(self) -> Series:
+        return self.loc[:, "y"]
+
+    @property
+    def z(self) -> Series:
+        return self.loc[:, "z"]
+
     @overload
     def sort_values(
         self,
