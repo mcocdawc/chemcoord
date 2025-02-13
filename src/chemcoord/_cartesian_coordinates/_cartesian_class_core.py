@@ -3,7 +3,7 @@ import itertools
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from itertools import product
-from typing import Any, Literal, Union, cast, overload
+from typing import Any, Final, Literal, Union, cast, overload
 
 import numba as nb
 import numpy as np
@@ -37,6 +37,8 @@ from chemcoord.typing import (
     Vector,
 )
 
+COORDS: Final = ["x", "y", "z"]
+
 
 class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     # Look into the numpy manual for description of __array_priority__:
@@ -53,7 +55,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         dtypes = [("atom", str), ("x", float), ("y", float), ("z", float)]
         frame = DataFrame(np.empty(len(atoms), dtype=dtypes), index=index)
         frame["atom"] = atoms
-        frame.loc[:, ["x", "y", "z"]] = coords
+        frame.loc[:, COORDS] = coords
         return cls(frame)
 
     def _return_appropiate_type(
@@ -88,115 +90,108 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             raise PhysicalMeaning(message)
 
     def __add__(self, other: Union[Self, ArithmeticOther]) -> Self:
-        coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] + other.loc[:, COORDS]
         elif isinstance(other, DataFrame):
-            new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] + other.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords] + other
+            new.loc[:, COORDS] = self.loc[:, COORDS] + other
         return new
 
     def __radd__(self, other: Union[Self, ArithmeticOther]) -> Self:
         return self.__add__(other)
 
     def __sub__(self, other: Union[Self, ArithmeticOther]) -> Self:
-        coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] - other.loc[:, COORDS]
         elif isinstance(other, DataFrame):
-            new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] - other.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords] - other
+            new.loc[:, COORDS] = self.loc[:, COORDS] - other
         return new
 
     def __rsub__(self, other: Union[Self, ArithmeticOther]) -> Self:
-        coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
+            new.loc[:, COORDS] = other.loc[:, COORDS] - self.loc[:, COORDS]
         elif isinstance(other, DataFrame):
-            new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
+            new.loc[:, COORDS] = other.loc[:, COORDS] - self.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = other - self.loc[:, coords]
+            new.loc[:, COORDS] = other - self.loc[:, COORDS]
         return new
 
     def __mul__(self, other: Union[Self, ArithmeticOther]) -> Self:
-        coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] * other.loc[:, COORDS]
         elif isinstance(other, DataFrame):
-            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] * other.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords] * other
+            new.loc[:, COORDS] = self.loc[:, COORDS] * other
         return new
 
     def __rmul__(self, other: Union[Self, ArithmeticOther]) -> Self:
         return self.__mul__(other)
 
     def __truediv__(self, other: Union[Self, ArithmeticOther]) -> Self:
-        coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = (
-                self.loc[:, coords].values / other.loc[:, coords].values
+            new.loc[:, COORDS] = (
+                self.loc[:, COORDS].values / other.loc[:, COORDS].values
             )
         elif isinstance(other, DataFrame):
-            new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] / other.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords].values / other
+            new.loc[:, COORDS] = self.loc[:, COORDS].values / other
         return new
 
     def __rtruediv__(self, other: Union[Self, ArithmeticOther]) -> Self:
-        coords = ["x", "y", "z"]
         new = self.copy()
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = (
-                other.loc[:, coords].values / self.loc[:, coords].values
+            new.loc[:, COORDS] = (
+                other.loc[:, COORDS].values / self.loc[:, COORDS].values
             )
         elif isinstance(other, DataFrame):
-            new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
+            new.loc[:, COORDS] = other.loc[:, COORDS] / self.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = other / self.loc[:, coords].values
+            new.loc[:, COORDS] = other / self.loc[:, COORDS].values
         return new
 
     def __pow__(self, other: Union[Self, ArithmeticOther]) -> Self:
-        coords = ["x", "y", "z"]
         new = self.copy()
-        new.loc[:, coords] = self.loc[:, coords] ** other
+        new.loc[:, COORDS] = self.loc[:, COORDS] ** other
         return new
 
     def __pos__(self) -> Self:
@@ -206,9 +201,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return -1 * self.copy()
 
     def __abs__(self) -> Self:
-        coords = ["x", "y", "z"]
         new = self.copy()
-        new.loc[:, coords] = abs(new.loc[:, coords])
+        new.loc[:, COORDS] = abs(new.loc[:, COORDS])
         return new
 
     def __matmul__(self, other: Matrix) -> Self:
@@ -218,9 +212,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     #   Signatures of "__rmatmul__" of "CartesianCore" and "__matmul__" of
     #   "ndarray[tuple[int, ...], dtype[Any]]" are unsafely overlapping
     def __rmatmul__(self, other: Matrix) -> Self:  # type: ignore[misc]
-        coords = ["x", "y", "z"]
         new = self.copy()
-        new.loc[:, coords] = (np.dot(other, new.loc[:, coords].T)).T
+        new.loc[:, COORDS] = (np.dot(other, new.loc[:, COORDS].values.T)).T
         return new
 
     # Somehow the base class `object` expects the return type to be `bool``
@@ -260,7 +253,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             If all resulting sympy expressions in a column are numbers,
             the column is recasted to 64bit float.
         """
-        cols = ["x", "y", "z"]
         out = self.copy()
 
         def get_subs_f(*args: Any) -> Callable[[T], Union[T, float]]:
@@ -277,7 +269,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
             return subs_function
 
-        for col in cols:
+        for col in COORDS:
             if out.loc[:, col].dtype is np.dtype("O"):
                 out.loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
@@ -344,8 +336,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def _divide_et_impera(
         self, n_atoms_per_set: int = 500, offset: float = 3.0
     ) -> Tensor3D[set[AtomIdx]]:  # type: ignore[type-var]
-        coords = ["x", "y", "z"]
-        sorted_series = dict(zip(coords, [self[axis].sort_values() for axis in coords]))
+        sorted_series = dict(zip(COORDS, [self[axis].sort_values() for axis in COORDS]))
 
         def ceil(x: Real) -> int:
             return int(np.ceil(x))
@@ -373,7 +364,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 i: give_index(sorted_series[axis], i, n_atoms_per_set_along_axis)
                 for i in range(n_sets_along_axis)
             }
-            for axis in coords
+            for axis in COORDS
         }
 
         array_of_fragments = np.full([n_sets_along_axis] * 3, None, dtype="O")
@@ -450,7 +441,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             old_index = self.index
             self.index = range(len(self))  # type: ignore[assignment]
             fragments = self._divide_et_impera(offset=offset)
-            positions = np.array(self.loc[:, ["x", "y", "z"]], order="F")
+            positions = np.array(self.loc[:, COORDS], order="F")
             data = self.add_data([atomic_radius_data, "valency"])
             bond_radii = data[atomic_radius_data]
             if modified_properties is not None:
@@ -655,7 +646,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if origin is None:
             return np.zeros(3)
         elif isinstance(origin, (int, np.integer)):
-            return cast(Vector[np.float64], self.loc[origin, ["x", "y", "z"]].values)
+            return cast(Vector[np.float64], self.loc[origin, COORDS].values)
         else:
             return np.asarray(origin, dtype="f8")
 
@@ -722,7 +713,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         c = a if c is None else c
 
         sides = np.array([a, b, c])
-        pos = self.loc[:, ["x", "y", "z"]]
+        pos = self.loc[:, COORDS].values
         if outside_sliced:
             molecule = self[((pos - origin) / (sides / 2)).max(axis=1) < 1.0]
         else:
@@ -741,7 +732,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             :class:`numpy.ndarray`:
         """
-        return np.mean(self.loc[:, ["x", "y", "z"]], axis=0)
+        return np.mean(self.loc[:, COORDS].values, axis=0)
 
     def get_barycenter(self) -> Vector[np.float64]:
         """Return the mass weighted average location.
@@ -756,7 +747,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             mass = self["mass"].values
         except KeyError:
             mass = self.add_data("mass")["mass"].values
-        pos = self.loc[:, ["x", "y", "z"]].values
+        pos = self.loc[:, COORDS].values
         return (pos * mass[:, None]).sum(axis=0) / self.get_total_mass()
 
     def get_bond_lengths(
@@ -783,16 +774,15 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
-        coords = ["x", "y", "z"]
         if isinstance(indices, DataFrame):
-            i_pos = self.loc[indices.index, coords].values
-            b_pos = self.loc[indices.loc[:, "b"], coords].values
+            i_pos = self.loc[indices.index, COORDS].values
+            b_pos = self.loc[indices.loc[:, "b"], COORDS].values
         else:
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], coords].values
-            b_pos = self.loc[indices[:, 1], coords].values
+            i_pos = self.loc[indices[:, 0], COORDS].values
+            b_pos = self.loc[indices[:, 1], COORDS].values
         return np.linalg.norm(i_pos - b_pos, axis=1)
 
     def get_angle_degrees(
@@ -819,18 +809,17 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
-        coords = ["x", "y", "z"]
         if isinstance(indices, DataFrame):
-            i_pos = self.loc[indices.index, coords].values
-            b_pos = self.loc[indices.loc[:, "b"], coords].values
-            a_pos = self.loc[indices.loc[:, "a"], coords].values
+            i_pos = self.loc[indices.index, COORDS].values
+            b_pos = self.loc[indices.loc[:, "b"], COORDS].values
+            a_pos = self.loc[indices.loc[:, "a"], COORDS].values
         else:
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], coords].values
-            b_pos = self.loc[indices[:, 1], coords].values
-            a_pos = self.loc[indices[:, 2], coords].values
+            i_pos = self.loc[indices[:, 0], COORDS].values
+            b_pos = self.loc[indices[:, 1], COORDS].values
+            a_pos = self.loc[indices[:, 2], COORDS].values
 
         BI, BA = i_pos - b_pos, a_pos - b_pos
         bi, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (BI, BA)]
@@ -867,20 +856,19 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
-        coords = ["x", "y", "z"]
         if isinstance(indices, DataFrame):
-            i_pos = self.loc[indices.index, coords].values
-            b_pos = self.loc[indices.loc[:, "b"], coords].values
-            a_pos = self.loc[indices.loc[:, "a"], coords].values
-            d_pos = self.loc[indices.loc[:, "d"], coords].values
+            i_pos = self.loc[indices.index, COORDS].values
+            b_pos = self.loc[indices.loc[:, "b"], COORDS].values
+            a_pos = self.loc[indices.loc[:, "a"], COORDS].values
+            d_pos = self.loc[indices.loc[:, "d"], COORDS].values
         else:
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], coords].values
-            b_pos = self.loc[indices[:, 1], coords].values
-            a_pos = self.loc[indices[:, 2], coords].values
-            d_pos = self.loc[indices[:, 3], coords].values
+            i_pos = self.loc[indices[:, 0], COORDS].values
+            b_pos = self.loc[indices[:, 1], COORDS].values
+            a_pos = self.loc[indices[:, 2], COORDS].values
+            d_pos = self.loc[indices[:, 3], COORDS].values
 
         IB = b_pos - i_pos
         BA = a_pos - b_pos
@@ -1114,9 +1102,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             ``d``:
             The distance between self and other. (float)
         """
-        coords = ["x", "y", "z"]
-        pos1 = self.loc[:, coords].values
-        pos2 = other.loc[:, coords].values
+        pos1 = self.loc[:, COORDS].values
+        pos2 = other.loc[:, COORDS].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
         return AtomIdx(self.index[i]), AtomIdx(other.index[j]), float(D[i, j])  # type: ignore[call-overload]
@@ -1161,7 +1148,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         def calculate_inertia_tensor(molecule: Self) -> tuple[Matrix, Matrix, Matrix]:
             masses = molecule.loc[:, "mass"].values
-            pos = molecule.loc[:, ["x", "y", "z"]].values
+            pos = molecule.loc[:, COORDS].values
             inertia = np.sum(
                 masses[:, None, None]
                 * (
@@ -1237,7 +1224,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self.index = range(len(self))  # type: ignore[assignment]
         rename = {j: i for i, j in enumerate(old_index)}
 
-        pos = self.loc[:, ["x", "y", "z"]].values.astype("f8")
+        pos = self.loc[:, COORDS].values.astype("f8")
         out = np.empty((len(indices), 3))
         indices = np.array([rename.get(i, i) for i in indices], dtype="i8")
 
@@ -1265,10 +1252,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new = self.loc[other_atoms, :].copy()
         norm = np.linalg.norm
         try:
-            new["distance"] = norm((new - origin).loc[:, ["x", "y", "z"]], axis=1)
+            new["distance"] = norm((new - origin).loc[:, COORDS].values, axis=1)
         except AttributeError:
             # Happens if molecule consists of only one atom
-            new["distance"] = norm((new - origin).loc[:, ["x", "y", "z"]])
+            new["distance"] = norm((new - origin).loc[:, COORDS].values)
         if sort:
             new.sort_values(by="distance", inplace=True)
         return new
@@ -1440,8 +1427,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             m1 = self
             m2 = other
 
-        pos1 = m1.loc[:, ["x", "y", "z"]].values
-        pos2 = m2.loc[m1.index, ["x", "y", "z"]].values
+        pos1 = m1.loc[:, COORDS].values
+        pos2 = m2.loc[m1.index, COORDS].values
         mass = m1.add_data("mass").loc[:, "mass"].values if mass_weight else None
 
         return xyz_functions.get_kabsch_rotation(pos1, pos2, mass)
@@ -1479,24 +1466,23 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             index_dct: dict[AtomIdx, AtomIdx],
         ) -> None:
             """Changes index_dct INPLACE"""
-            coords = ["x", "y", "z"]
             index1 = list(subset1)
             for m1_i in index1:
                 dist_m2_to_m1_i = m2.get_distance_to(
-                    cast(Vector[np.float64], m1.loc[m1_i, coords].values),
+                    cast(Vector[np.float64], m1.loc[m1_i, COORDS].values),
                     subset2,
                     sort=True,
                 )
 
                 m2_i = dist_m2_to_m1_i.index[0]
                 dist_new = dist_m2_to_m1_i.loc[m2_i, "distance"]
-                m2_pos_i = dist_m2_to_m1_i.loc[m2_i, coords]
+                m2_pos_i = dist_m2_to_m1_i.loc[m2_i, COORDS]
 
                 counter = itertools.count()
                 found = False
                 while not found:
                     if m2_i in index_dct.keys():
-                        old_m1_pos = m1.loc[index_dct[m2_i], coords]
+                        old_m1_pos = m1.loc[index_dct[m2_i], COORDS]
                         if dist_new < np.linalg.norm(m2_pos_i - old_m1_pos):
                             index1.append(index_dct[m2_i])
                             index_dct[m2_i] = m1_i
@@ -1504,7 +1490,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                         else:
                             m2_i = dist_m2_to_m1_i.index[next(counter)]
                             dist_new = dist_m2_to_m1_i.loc[m2_i, "distance"]
-                            m2_pos_i = dist_m2_to_m1_i.loc[m2_i, coords]
+                            m2_pos_i = dist_m2_to_m1_i.loc[m2_i, COORDS]
                     else:
                         index_dct[m2_i] = m1_i
                         found = True

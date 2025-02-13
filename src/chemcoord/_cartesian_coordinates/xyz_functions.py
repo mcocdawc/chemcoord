@@ -16,6 +16,7 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
     normalize,
 )
+from chemcoord._cartesian_coordinates._cartesian_class_core import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._decorators import njit
@@ -253,7 +254,6 @@ def isclose(
     Returns:
         :class:`numpy.ndarray`: Boolean array.
     """
-    coords = ["x", "y", "z"]
     # The pandas documentation says about the arguments to all(axis=...)
     #   None : reduce all axes, return a scalar
     # https://pandas.pydata.org/docs/reference/api/pandas.Series.all.html
@@ -268,11 +268,11 @@ def isclose(
     if align:
         a = a.get_inertia()["transformed_Cartesian"]
         b = b.get_inertia()["transformed_Cartesian"]
-    A, B = a.loc[:, coords], b.loc[a.index, coords]
+    A, B = a.loc[:, COORDS].values, b.loc[a.index, COORDS].values
 
-    out = pd.DataFrame(index=a.index, columns=["atom"] + coords, dtype=bool)
+    out = pd.DataFrame(index=a.index, columns=["atom"] + COORDS, dtype=bool)
     out.loc[:, "atom"] = True
-    out.loc[:, coords] = np.isclose(A, B, rtol=rtol, atol=atol)
+    out.loc[:, COORDS] = np.isclose(A, B, rtol=rtol, atol=atol)
     return out
 
 
@@ -486,7 +486,7 @@ def apply_grad_zmat_tensor(
         np.empty(len(construction_table), dtype=dtypes), index=cart_dist.index
     )
 
-    X_dist = cart_dist.loc[:, ["x", "y", "z"]].values.T
+    X_dist = cart_dist.loc[:, COORDS].values.T
     C_dist = np.tensordot(grad_C, X_dist, axes=([3, 2], [0, 1])).T
     if C_dist.dtype == np.dtype("i8"):
         C_dist = C_dist.astype("f8")

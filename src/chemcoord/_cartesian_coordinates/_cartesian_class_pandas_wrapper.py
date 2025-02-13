@@ -10,7 +10,7 @@ from typing_extensions import Self
 
 import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
-from chemcoord.typing import SequenceNotStr
+from chemcoord.typing import Matrix, SequenceNotStr
 
 
 class PandasWrapper(indexers.Molecule):
@@ -158,6 +158,14 @@ class PandasWrapper(indexers.Molecule):
             if name in self._frame.columns:
                 return self[name]
             return object.__getattribute__(self, name)
+
+    @property
+    def values(self) -> Matrix:
+        """Returns the values.
+
+        Assigning a value to it changes the index.
+        """
+        return self._frame.values
 
     @property
     def index(self) -> Index:
