@@ -248,9 +248,7 @@ def test_get_bonds():
     }
     assert (
         molecule.get_bonds(
-            modified_properties={
-                k: 0.0 for k in molecule[molecule["atom"] == "C"].index
-            }
+            modified_properties={k: 0.0 for k in molecule[molecule.atom == "C"].index}
         )
         == modified_expected
     )

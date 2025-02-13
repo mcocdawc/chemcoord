@@ -120,6 +120,36 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 return self[name]
             return object.__getattribute__(self, name)
 
+    # manually implement the attribute access for the columns
+    # atom, b, a, d, bond, angle, dihedral statically
+    @property
+    def atom(self) -> Series:
+        return self.loc[:, "atom"]
+
+    @property
+    def b(self) -> Series:
+        return self.loc[:, "b"]
+
+    @property
+    def a(self) -> Series:
+        return self.loc[:, "a"]
+
+    @property
+    def d(self) -> Series:
+        return self.loc[:, "d"]
+
+    @property
+    def bond(self) -> Series:
+        return self.loc[:, "bond"]
+
+    @property
+    def angle(self) -> Series:
+        return self.loc[:, "angle"]
+
+    @property
+    def dihedral(self) -> Series:
+        return self.loc[:, "dihedral"]
+
     @property
     @append_indexer_docstring
     def loc(self) -> indexers._Loc:
