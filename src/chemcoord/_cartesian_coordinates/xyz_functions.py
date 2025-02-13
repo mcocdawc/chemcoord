@@ -1,5 +1,3 @@
-# type: ignore[return]
-
 import math as m
 import os
 import subprocess
@@ -11,7 +9,7 @@ import numpy as np
 import pandas as pd
 import sympy
 from numba import njit
-from typing_extensions import Optional, Union
+from typing_extensions import Union
 
 from chemcoord._utilities.typing import Vector
 from chemcoord.configuration import settings
@@ -81,7 +79,7 @@ def to_xyz_trajectory(
     buf: Union[str, None] = None,
     overwrite: bool = True,
     float_format="{:.6f}".format,
-) -> Optional[str]:
+) -> Union[str, None]:
     """Write a list of Cartesians into an xyz file.
 
     .. note:: Since it permamently writes a file, this function
@@ -108,9 +106,12 @@ def to_xyz_trajectory(
         if overwrite:
             with open(buf, mode="w") as f:
                 f.write(output)
+            return None
+
         else:
             with open(buf, mode="x") as f:
                 f.write(output)
+            return None
     else:
         return output
 

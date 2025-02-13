@@ -251,8 +251,10 @@ class CartesianBmat(CartesianCore):
 
         # catching cases where certain dihedrals are undefined
         if (sinu, sinv) == (0, 0):
+            print("yikes!")
             return np.full((4, 3), float("nan"))
         elif sinv == 0:
+            print("yikes!")
             return np.array(
                 [
                     [
@@ -266,6 +268,7 @@ class CartesianBmat(CartesianCore):
                 ]
             )
         elif sinu == 0:
+            print("yikes!")
             return np.array(
                 [
                     [float("nan"), float("nan"), float("nan")],
@@ -426,7 +429,6 @@ class CartesianBmat(CartesianCore):
                 # get positions of participating atoms
                 positions = position_arr[coord[:2]]
 
-                # derivatives are just components of unit vector along distance
                 u = positions[1] - positions[0]
                 internal_coordinates[i] = norm(u)
 
@@ -454,6 +456,8 @@ class CartesianBmat(CartesianCore):
                 w = positions[2] - positions[1]
                 v = positions[3] - positions[2]
 
+                # TODO: use cc's renormalize
+
                 normedu = u / norm(u)
                 normedw = w / norm(w)
                 normedv = v / norm(v)
@@ -461,14 +465,19 @@ class CartesianBmat(CartesianCore):
                 uw = np.dot(normedu, normedw)
                 wv = np.dot(normedw, normedv)
 
-                x = -np.dot(cross(normedu, normedw), cross(normedv, normedw))
+                # TODO: replace with @
+                """x = -np.dot(cross(normedu, normedw), cross(normedv, normedw))
                 y = np.dot(
                     cross(cross(normedu, normedw), normedw), cross(normedv, normedw)
-                )
+                )"""
+
+                x = cross(cross(normedu, normedw), cross(normedw, normedv)) @ normedw
+                y = cross(normedu, normedw) @ cross(normedw, normedv)
 
                 if uw != 1 and wv != 1:
-                    internal_coordinates[i] = np.arctan2(y, x)
+                    internal_coordinates[i] = np.arctan2(x, y)
                 else:
+                    print("yikes!")
                     internal_coordinates[i] = float("nan")
 
         return internal_coordinates
@@ -496,18 +505,29 @@ class CartesianBmat(CartesianCore):
 
         # TODO: change this to use the modulus function already written in here
         # check to make sure it takes the shorter dihedral and angle
-        delta_c = [
+        """delta_c = np.array([
             delta_c[i]
             if (np.abs(delta_c[i]) < np.pi or len(coords[i]) == 2)
             else -(2 * np.pi - delta_c[i])
             if delta_c[i] > 0
             else (2 * np.pi + delta_c[i])
             for i in range(len(delta_c))
-        ]
+        ])"""
+
+        delta_c = np.array(
+            [
+                delta_c[i]
+                if len(coords[i]) != 4
+                else (delta_c[i] % (2 * np.pi))
+                - ((delta_c[i] % (2 * np.pi)) // np.pi) * (2 * np.pi)
+                for i in range(len(delta_c))
+            ]
+        )
 
         B = current_struct.get_Wilson_B(internal_coordinates=coords)
+        # TEST: replacing division of delta_x by N with division of delta_c by N
+        # RESULT: this obviously does not matter, and can mess up the lstsq for large N
         delta_x = lstsq(B, delta_c, rcond=rcond)[0]
-        # print(delta_x)
         # invB = pinv(B)
 
         x_current = x_current + (delta_x / N)
@@ -565,13 +585,32 @@ class CartesianBmat(CartesianCore):
             | SortedSet(additional_coords, key=lambda x: (len(x), x))
         )
 
-        path = [self]
+        # TEST: meeting in the middle
+        path_1 = [self]
+        # path_2 = [end]
+        # TODO: interpolate rotation
+
+        # rotation_matrix = self.get_align_transf(end)
 
         # for each subdivision,
         for i in range(N):
-            new_struct = path[i].B_traj_step(end, N - i, coords, rcond=rcond)
+            new_struct = path_1[i].B_traj_step(end, N - i, coords, rcond=rcond)
             # TODO: figure out whether to match rotation to start, end,
             # or previous struct
-            path.append(path[i].align(new_struct)[1])
+            # path_1.append(((i / N) * rotation_matrix) @ new_struct)
+            path_1.append(new_struct)
+
+        """for i in range(N - (N // 2)):
+            new_struct = path_2[i].B_traj_step(path_1[-1], N - i, coords, rcond=rcond)
+            # TODO: figure out whether to match rotation to start, end,
+            # or previous struct
+            path_2.append((((i / N)) * rotation_matrix) @ new_struct)"""
+
+        # path_2 = list(reversed(path_2))
+        path = path_1  # + path_2
 
         return path
+
+
+# move before class
+def _jit_angle_deriv(): ...
