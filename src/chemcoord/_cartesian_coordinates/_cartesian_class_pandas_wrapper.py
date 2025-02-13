@@ -1,6 +1,6 @@
 import copy
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Literal, Union, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, Union, overload
 
 from pandas._typing import IndexLabel
 from pandas.core.frame import DataFrame
@@ -11,6 +11,8 @@ from typing_extensions import Self
 import chemcoord._cartesian_coordinates._indexers as indexers
 from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.typing import Matrix, SequenceNotStr
+
+COORDS: Final = ["x", "y", "z"]
 
 
 class PandasWrapper(indexers.Molecule):

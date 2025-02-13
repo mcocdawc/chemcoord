@@ -3,7 +3,7 @@ import itertools
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from itertools import product
-from typing import Any, Final, Literal, Union, cast, overload
+from typing import Any, Literal, Union, cast, overload
 
 import numba as nb
 import numpy as np
@@ -18,6 +18,7 @@ from typing_extensions import Self
 import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
+    COORDS,
     PandasWrapper,
 )
 from chemcoord._generic_classes.generic_core import GenericCore
@@ -36,8 +37,6 @@ from chemcoord.typing import (
     Tensor3D,
     Vector,
 )
-
-COORDS: Final = ["x", "y", "z"]
 
 
 class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641

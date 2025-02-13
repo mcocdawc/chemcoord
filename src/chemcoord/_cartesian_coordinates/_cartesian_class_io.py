@@ -19,6 +19,9 @@ from typing_extensions import Self
 
 from chemcoord import constants
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
+from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
+    COORDS,
+)
 from chemcoord._generic_classes.generic_IO import GenericIO
 from chemcoord.configuration import settings
 from chemcoord.typing import (
@@ -427,7 +430,7 @@ class CartesianIO(CartesianCore, GenericIO):
         ]
 
         cjson_dict["atoms"]["coords"] = {}
-        coords = self.loc[:, ["x", "y", "z"]].values.reshape(len(self) * 3)
+        coords = self.loc[:, COORDS].values.reshape(len(self) * 3)
         cjson_dict["atoms"]["coords"]["3d"] = [float(x) for x in coords]
 
         bonds = []
@@ -569,7 +572,7 @@ class CartesianIO(CartesianCore, GenericIO):
         """
         return PyMatGenMolecule(
             self["atom"].values,
-            self.loc[:, ["x", "y", "z"]].values,  # type: ignore[arg-type]
+            self.loc[:, COORDS].values,  # type: ignore[arg-type]
         )
 
     @classmethod
@@ -601,7 +604,7 @@ class CartesianIO(CartesianCore, GenericIO):
             Returns:
                 :class:`ase.atoms.Atoms`:
             """
-            return AseAtoms("".join(self["atom"]), self.loc[:, ["x", "y", "z"]].values)
+            return AseAtoms("".join(self["atom"]), self.loc[:, COORDS].values)
 
         @classmethod
         def from_ase_atoms(cls, atoms: AseAtoms) -> Self:

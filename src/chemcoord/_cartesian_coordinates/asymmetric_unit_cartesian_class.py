@@ -1,5 +1,6 @@
 import pandas as pd
 
+from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 
 
@@ -21,7 +22,6 @@ class AsymmetricUnitCartesian(Cartesian):
         Returns:
             Cartesian: A new cartesian instance.
         """
-        coords = ["x", "y", "z"]
         eq_sets = self._metadata["eq"]["eq_sets"]
         sym_ops = self._metadata["eq"]["sym_ops"]
         frame = pd.DataFrame(
@@ -32,8 +32,8 @@ class AsymmetricUnitCartesian(Cartesian):
         frame["atom"] = pd.Series(
             {i: self.loc[k, "atom"] for k, v in eq_sets.items() for i in v}
         )
-        frame.loc[self.index, coords] = self.loc[:, coords].values
+        frame.loc[self.index, COORDS] = self.loc[:, COORDS].values
         for i in eq_sets:
             for j in eq_sets[i]:
-                frame.loc[j, coords] = sym_ops[i][j] @ frame.loc[i, coords]
+                frame.loc[j, COORDS] = sym_ops[i][j] @ frame.loc[i, COORDS]
         return Cartesian(frame)
