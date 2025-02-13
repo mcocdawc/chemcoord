@@ -601,7 +601,7 @@ class CartesianIO(CartesianCore, GenericIO):
             Returns:
                 :class:`ase.atoms.Atoms`:
             """
-            return AseAtoms("".join(self["atom"]), self.loc[:, ["x", "y", "z"]])
+            return AseAtoms("".join(self["atom"]), self.loc[:, ["x", "y", "z"]].values)
 
         @classmethod
         def from_ase_atoms(cls, atoms: AseAtoms) -> Self:
