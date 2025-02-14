@@ -5,14 +5,14 @@
 
 .. autoclass:: AsymmetricUnitCartesian
 
-   
+
    .. automethod:: __init__
 
-   
+
    .. rubric:: Methods
 
    .. autosummary::
-   
+
       ~AsymmetricUnitCartesian.__init__
       ~AsymmetricUnitCartesian.add_data
       ~AsymmetricUnitCartesian.align
@@ -30,6 +30,8 @@
       ~AsymmetricUnitCartesian.fragmentate
       ~AsymmetricUnitCartesian.from_ase_atoms
       ~AsymmetricUnitCartesian.from_pymatgen_molecule
+      ~AsymmetricUnitCartesian.get_B_traj
+      ~AsymmetricUnitCartesian.get_Wilson_B
       ~AsymmetricUnitCartesian.from_pyscf
       ~AsymmetricUnitCartesian.get_align_transf
       ~AsymmetricUnitCartesian.get_angle_degrees
@@ -50,6 +52,7 @@
       ~AsymmetricUnitCartesian.get_grad_zmat
       ~AsymmetricUnitCartesian.get_inertia
       ~AsymmetricUnitCartesian.get_pointgroup
+      ~AsymmetricUnitCartesian.get_primitive_coords
       ~AsymmetricUnitCartesian.get_pymatgen_molecule
       ~AsymmetricUnitCartesian.get_shortest_distance
       ~AsymmetricUnitCartesian.get_total_mass
@@ -57,6 +60,8 @@
       ~AsymmetricUnitCartesian.get_zmat
       ~AsymmetricUnitCartesian.has_same_sumformula
       ~AsymmetricUnitCartesian.insert
+      ~AsymmetricUnitCartesian.jit_get_Wilson_B
+      ~AsymmetricUnitCartesian.jit_x_to_c
       ~AsymmetricUnitCartesian.partition_chem_env
       ~AsymmetricUnitCartesian.read_cjson
       ~AsymmetricUnitCartesian.read_xyz
@@ -78,15 +83,16 @@
       ~AsymmetricUnitCartesian.to_zmat
       ~AsymmetricUnitCartesian.view
       ~AsymmetricUnitCartesian.write_xyz
-   
-   
+      ~AsymmetricUnitCartesian.x_to_c
 
-   
-   
+
+
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
+
       ~AsymmetricUnitCartesian.columns
       ~AsymmetricUnitCartesian.dtypes
       ~AsymmetricUnitCartesian.empty
@@ -94,5 +100,4 @@
       ~AsymmetricUnitCartesian.index
       ~AsymmetricUnitCartesian.loc
       ~AsymmetricUnitCartesian.shape
-   
-   
+
