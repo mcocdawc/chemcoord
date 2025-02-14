@@ -69,6 +69,48 @@ class CartesianBmat(CartesianCore):
 
         return primitive_coordinates
 
+    def new_primitive_coords(self, use_lookup: bool = False) -> primitives:
+        """
+        Generate set of redundant internal coordinates for the system.
+
+        Stored in a sortedcontainers.SortedSet to maintain order while
+        being able to use Python's union operator. Sorted by length of
+        coordinate, then by standard order based on the atoms' indices.
+
+        Args:
+            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
+                coordinates to use in the calculation. If None, calculates using the
+                get_primitive_coords method
+            use_lookup (bool): default False, if True, uses a lookup table for bond
+                determination when generating primitive internal coordinates
+
+        Returns:
+            SortedSet[tuple]: SortedSet of redundant internal coordinates
+        """
+        # the key prioritizes length, then sorts lexicographically
+        primitive_coordinates = SortedSet(key=lambda x: (len(x), x))
+
+        bonds = self.get_bonds(use_lookup=use_lookup)
+
+        def canonicalize(*args: int) -> tuple[int, ...]:
+            if args[0] < args[-1]:
+                return tuple(args)
+            else:
+                return tuple(reversed(args))
+
+        # TODO early returns (purely for  performance))
+        for atom1 in self.index:
+            for atom2 in bonds[atom1]:
+                primitive_coordinates.add(canonicalize(atom1, atom2))
+                for atom3 in bonds[atom2] - {atom1}:
+                    primitive_coordinates.add(canonicalize(atom1, atom2, atom3))
+                    for atom4 in bonds[atom3] - {atom1, atom2}:
+                        primitive_coordinates.add(
+                            canonicalize(atom1, atom2, atom3, atom4)
+                        )
+
+        return primitive_coordinates
+
     def get_Wilson_B(
         self,
         internal_coordinates: Union[primitives, None] = None,
