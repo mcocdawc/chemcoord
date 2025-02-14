@@ -5,7 +5,6 @@ from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from itertools import product
 from typing import Any, Literal, Union, cast, overload
 
-import numba as nb
 import numpy as np
 import pandas as pd
 from ordered_set import OrderedSet
@@ -283,12 +282,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         pos: Matrix[np.floating],
         bond_radii: Vector[np.floating],
         self_bonding_allowed: bool = False,
-    ) -> Matrix[np.float64]:
+    ) -> Matrix[np.bool_]:
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
         """
         n = pos.shape[0]
-        bond_array = np.empty((n, n), dtype=nb.boolean)
+        bond_array = np.empty((n, n), dtype=np.bool_)
 
         for i in range(n):
             for j in range(i, n):
@@ -478,7 +477,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return bond_dict
 
     def _give_val_sorted_bond_dict(self, use_lookup: bool) -> dict[AtomIdx, SortedSet]:
-        def complete_calculation() -> dict[AtomIdx, SortedSet[AtomIdx]]:
+        def complete_calculation() -> dict[AtomIdx, SortedSet]:
             bond_dict = self.get_bonds(use_lookup=use_lookup)
             valency = dict(zip(self.index, self.add_data("valency")["valency"]))
             val_bond_dict = {

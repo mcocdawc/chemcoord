@@ -1,5 +1,6 @@
 import numba as nb
 import numpy as np
+from numba.core.types import f8
 from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
@@ -1097,7 +1098,7 @@ def get_grad_B(X, c_table, j):
     return grad_B
 
 
-@njit(nb.f8[:](nb.f8[:]))
+@njit(f8[:](f8[:]))
 def get_S_inv(v):
     x, y, z = v
     r = np.linalg.norm(v)
@@ -1108,7 +1109,7 @@ def get_S_inv(v):
     return np.array([r, alpha, delta])
 
 
-@njit(nb.f8[:, :](nb.f8[:]))
+@njit(f8[:, :](f8[:]))
 def get_grad_S_inv(v):
     x, y, z = v
     grad_S_inv = np.zeros((3, 3))
