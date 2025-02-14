@@ -1,95 +1,72 @@
-import collections
 import copy
 import itertools
+from collections import Counter, defaultdict
+from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from itertools import product
+from typing import Any, Literal, Union, cast, overload
 
-import numba as nb
 import numpy as np
 import pandas as pd
-from numba import njit
+from ordered_set import OrderedSet
+from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
+from pandas.core.series import Series
 from sortedcontainers import SortedSet
+from typing_extensions import Self
 
 import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
+    COORDS,
     PandasWrapper,
 )
 from chemcoord._generic_classes.generic_core import GenericCore
+from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
-from chemcoord.exceptions import IllegalArgumentCombination, PhysicalMeaning
+from chemcoord.exceptions import PhysicalMeaning
+from chemcoord.typing import (
+    ArithmeticOther,
+    AtomIdx,
+    Axes,
+    Integral,
+    Matrix,
+    Real,
+    SequenceNotStr,
+    T,
+    Tensor3D,
+    Vector,
+)
 
 
 class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
-    _required_cols = frozenset({"atom", "x", "y", "z"})
-
     # Look into the numpy manual for description of __array_priority__:
     # https://docs.scipy.org/doc/numpy-1.12.0/reference/arrays.classes.html
     __array_priority__ = 15.0
 
-    # overwrites existing method
-    def __init__(
-        self,
-        frame=None,
-        atoms=None,
-        coords=None,
-        index=None,
-        metadata=None,
-        _metadata=None,
-    ):
-        """How to initialize a Cartesian instance.
+    @classmethod
+    def set_atom_coords(
+        cls,
+        atoms: Sequence[str],
+        coords: Matrix,
+        index: Union[Axes, None] = None,
+    ) -> Self:
+        dtypes = [("atom", str), ("x", float), ("y", float), ("z", float)]
+        frame = DataFrame(np.empty(len(atoms), dtype=dtypes), index=index)
+        frame["atom"] = atoms
+        frame.loc[:, COORDS] = coords
+        return cls(frame)
 
-        Args:
-            frame (pd.DataFrame): A Dataframe with at least the
-                columns ``['atom', 'x', 'y', 'z']``.
-                Where ``'atom'`` is a string for the elementsymbol.
-            atoms (sequence): A list of strings. (Elementsymbols)
-            coords (sequence): A ``n_atoms * 3`` array containg the positions
-                of the atoms. Note that atoms and coords are mutually exclusive
-                to frame. Besides atoms and coords have to be both either None
-                or not None.
-
-        Returns:
-            Cartesian: A new cartesian instance.
-        """
-        if bool(atoms is None and coords is None) == bool(
-            atoms is not None and coords is not None
-        ):
-            message = "atoms and coords have to be both None or not None"
-            raise IllegalArgumentCombination(message)
-        elif frame is None and atoms is None and coords is None:
-            message = "Either frame or atoms and coords have to be not None"
-            raise IllegalArgumentCombination(message)
-        elif atoms is not None and coords is not None:
-            dtypes = [("atom", str), ("x", float), ("y", float), ("z", float)]
-            frame = pd.DataFrame(np.empty(len(atoms), dtype=dtypes), index=index)
-            frame["atom"] = atoms
-            frame.loc[:, ["x", "y", "z"]] = coords
-        elif not isinstance(frame, pd.DataFrame):
-            raise ValueError("Need a pd.DataFrame as input")
-        if not self._required_cols <= set(frame.columns):
-            raise PhysicalMeaning(
-                "There are columns missing for a meaningful description of a molecule"
-            )
-        self._frame = frame.copy()
-        if metadata is None:
-            self.metadata = {}
-        else:
-            self.metadata = metadata.copy()
-
-        if _metadata is None:
-            self._metadata = {}
-        else:
-            self._metadata = copy.deepcopy(_metadata)
-
-    def _return_appropiate_type(self, selected):
-        if isinstance(selected, pd.Series):
-            frame = pd.DataFrame(selected).T
+    def _return_appropiate_type(
+        self, selected: Union[Series, DataFrame]
+    ) -> Union[Self, Series, DataFrame]:
+        if isinstance(selected, Series):
+            frame = DataFrame(selected).T
             if self._required_cols <= set(frame.columns):
                 selected = frame.apply(pd.to_numeric, errors="ignore")
             else:
                 return selected
 
-        if isinstance(selected, pd.DataFrame) and self._required_cols <= set(
+        if isinstance(selected, DataFrame) and self._required_cols <= set(
             selected.columns
         ):
             molecule = self.__class__(selected)
@@ -99,7 +76,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         else:
             return selected
 
-    def _test_if_can_be_added(self, other):
+    def _test_if_can_be_added(self, other: Self) -> None:
         if not (
             set(self.index) == set(other.index)
             and (self["atom"] == other.loc[self.index, "atom"]).all(axis=None)
@@ -110,148 +87,149 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             raise PhysicalMeaning(message)
 
-    def __add__(self, other):
-        coords = ["x", "y", "z"]
+    def __add__(self, other: Union[Self, ArithmeticOther]) -> Self:
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
-            new.loc[:, coords] = self.loc[:, coords] + other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] + other.loc[:, COORDS]
+        elif isinstance(other, DataFrame):
+            new.loc[:, COORDS] = self.loc[:, COORDS] + other.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords] + other
+            new.loc[:, COORDS] = self.loc[:, COORDS] + other
         return new
 
-    def __radd__(self, other):
+    def __radd__(self, other: Union[Self, ArithmeticOther]) -> Self:
         return self.__add__(other)
 
-    def __sub__(self, other):
-        coords = ["x", "y", "z"]
+    def __sub__(self, other: Union[Self, ArithmeticOther]) -> Self:
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
-            new.loc[:, coords] = self.loc[:, coords] - other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] - other.loc[:, COORDS]
+        elif isinstance(other, DataFrame):
+            new.loc[:, COORDS] = self.loc[:, COORDS] - other.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords] - other
+            new.loc[:, COORDS] = self.loc[:, COORDS] - other
         return new
 
-    def __rsub__(self, other):
-        coords = ["x", "y", "z"]
+    def __rsub__(self, other: Union[Self, ArithmeticOther]) -> Self:
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
-            new.loc[:, coords] = other.loc[:, coords] - self.loc[:, coords]
+            new.loc[:, COORDS] = other.loc[:, COORDS] - self.loc[:, COORDS]
+        elif isinstance(other, DataFrame):
+            new.loc[:, COORDS] = other.loc[:, COORDS] - self.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = other - self.loc[:, coords]
+            new.loc[:, COORDS] = other - self.loc[:, COORDS]
         return new
 
-    def __mul__(self, other):
-        coords = ["x", "y", "z"]
+    def __mul__(self, other: Union[Self, ArithmeticOther]) -> Self:
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
-            new.loc[:, coords] = self.loc[:, coords] * other.loc[:, coords]
+            new.loc[:, COORDS] = self.loc[:, COORDS] * other.loc[:, COORDS]
+        elif isinstance(other, DataFrame):
+            new.loc[:, COORDS] = self.loc[:, COORDS] * other.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords] * other
+            new.loc[:, COORDS] = self.loc[:, COORDS] * other
         return new
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Union[Self, ArithmeticOther]) -> Self:
         return self.__mul__(other)
 
-    def __truediv__(self, other):
-        coords = ["x", "y", "z"]
+    def __truediv__(self, other: Union[Self, ArithmeticOther]) -> Self:
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
-            new.loc[:, coords] = self.loc[:, coords] / other.loc[:, coords]
+            new.loc[:, COORDS] = (
+                self.loc[:, COORDS].values / other.loc[:, COORDS].values
+            )
+        elif isinstance(other, DataFrame):
+            new.loc[:, COORDS] = self.loc[:, COORDS] / other.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = self.loc[:, coords] / other
+            new.loc[:, COORDS] = self.loc[:, COORDS].values / other
         return new
 
-    def __rtruediv__(self, other):
-        coords = ["x", "y", "z"]
+    def __rtruediv__(self, other: Union[Self, ArithmeticOther]) -> Self:
         new = self.copy()
-        if isinstance(other, CartesianCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
-        elif isinstance(other, pd.DataFrame):
-            new.loc[:, coords] = other.loc[:, coords] / self.loc[:, coords]
+            new.loc[:, COORDS] = (
+                other.loc[:, COORDS].values / self.loc[:, COORDS].values
+            )
+        elif isinstance(other, DataFrame):
+            new.loc[:, COORDS] = other.loc[:, COORDS] / self.loc[:, COORDS]
         else:
             try:
                 other = np.array(other, dtype="f8")
             except TypeError:
                 pass
-            new.loc[:, coords] = other / self.loc[:, coords]
+            new.loc[:, COORDS] = other / self.loc[:, COORDS].values
         return new
 
-    def __pow__(self, other):
-        coords = ["x", "y", "z"]
+    def __pow__(self, other: Union[Self, ArithmeticOther]) -> Self:
         new = self.copy()
-        new.loc[:, coords] = self.loc[:, coords] ** other
+        new.loc[:, COORDS] = self.loc[:, COORDS] ** other
         return new
 
-    def __pos__(self):
+    def __pos__(self) -> Self:
         return self.copy()
 
-    def __neg__(self):
+    def __neg__(self) -> Self:
         return -1 * self.copy()
 
-    def __abs__(self):
-        coords = ["x", "y", "z"]
+    def __abs__(self) -> Self:
         new = self.copy()
-        new.loc[:, coords] = abs(new.loc[:, coords])
+        new.loc[:, COORDS] = abs(new.loc[:, COORDS])
         return new
 
-    def __matmul__(self, other):
+    def __matmul__(self, other: Matrix) -> Self:
         return NotImplemented
 
-    def __rmatmul__(self, other):
-        coords = ["x", "y", "z"]
+    # Here we get a type error, which is fine and expected. Ignore it.
+    #   Signatures of "__rmatmul__" of "CartesianCore" and "__matmul__" of
+    #   "ndarray[tuple[int, ...], dtype[Any]]" are unsafely overlapping
+    def __rmatmul__(self, other: Matrix) -> Self:  # type: ignore[misc]
         new = self.copy()
-        new.loc[:, coords] = (np.dot(other, new.loc[:, coords].T)).T
+        new.loc[:, COORDS] = (np.dot(other, new.loc[:, COORDS].values.T)).T
         return new
 
-    def __eq__(self, other):
+    # Somehow the base class `object` expects the return type to be `bool``
+    #  but the correct type hint is DataFrame.
+    # Ignore this override error.
+    def __eq__(self, other: Self) -> DataFrame:  # type: ignore[override]
         return self._frame == other._frame
 
-    def __ne__(self, other):
+    def __ne__(self, other: Self) -> DataFrame:  # type: ignore[override]
         return self._frame != other._frame
 
-    def copy(self):
+    def copy(self) -> Self:
         molecule = self.__class__(self._frame)
         molecule.metadata = self.metadata.copy()
         molecule._metadata = copy.deepcopy(self._metadata)
         return molecule
 
-    def subs(self, *args):
+    def subs(self, *args: Any) -> Self:
         """Substitute a symbolic expression in ``['x', 'y', 'z']``
 
         This is a wrapper around the substitution mechanism of
@@ -273,22 +251,23 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             If all resulting sympy expressions in a column are numbers,
             the column is recasted to 64bit float.
         """
-        cols = ["x", "y", "z"]
         out = self.copy()
 
-        def get_subs_f(*args):
-            def subs_function(x):
+        def get_subs_f(*args: Any) -> Callable[[T], Union[T, float]]:
+            def subs_function(x: T) -> Union[T, float]:
                 if hasattr(x, "subs"):
                     x = x.subs(*args)
                     try:
-                        x = float(x)
+                        # We try to convert the expression to a float and return it,
+                        # when failing. Hence, we can ignore the following type error.
+                        return float(x)  # type: ignore[arg-type]
                     except TypeError:
                         pass
                 return x
 
             return subs_function
 
-        for col in cols:
+        for col in COORDS:
             if out.loc[:, col].dtype is np.dtype("O"):
                 out.loc[:, col] = out.loc[:, col].map(get_subs_f(*args))
                 try:
@@ -298,13 +277,17 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return out
 
     @staticmethod
-    @njit(cache=True)
-    def _jit_give_bond_array(pos, bond_radii, self_bonding_allowed=False):
+    @njit
+    def _jit_give_bond_array(
+        pos: Matrix[np.floating],
+        bond_radii: Vector[np.floating],
+        self_bonding_allowed: bool = False,
+    ) -> Matrix[np.bool_]:
         """Calculate a boolean array where ``A[i,j] is True`` indicates a
         bond between the i-th and j-th atom.
         """
         n = pos.shape[0]
-        bond_array = np.empty((n, n), dtype=nb.boolean)
+        bond_array = np.empty((n, n), dtype=np.bool_)
 
         for i in range(n):
             for j in range(i, n):
@@ -321,22 +304,22 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     def _update_bond_dict(
         self,
-        fragment_indices,
-        positions,
-        bond_radii,
-        bond_dict=None,
-        self_bonding_allowed=False,
-        convert_index=None,
-    ):
+        fragment_indices: Sequence[AtomIdx],
+        positions: Matrix[np.floating],
+        bond_radii: Vector[np.floating],
+        bond_dict: defaultdict[AtomIdx, set[AtomIdx]],
+        self_bonding_allowed: bool = False,
+        convert_index: Union[Mapping[AtomIdx, AtomIdx], None] = None,
+    ) -> None:
         """If bond_dict is provided, this function is not side effect free
-        bond_dict has to be a collections.defaultdict(set)
+        bond_dict has to be a defaultdict(set)
         """
-        assert isinstance(bond_dict, collections.defaultdict) or bond_dict is None
+        assert isinstance(bond_dict, defaultdict) or bond_dict is None
         fragment_indices = list(fragment_indices)
         if convert_index is None:
-            convert_index = dict(enumerate(fragment_indices))
-        if bond_dict is None:
-            bond_dict = collections.defaultdict(set)
+            convert_index = dict(
+                cast(Iterable[tuple[AtomIdx, AtomIdx]], enumerate(fragment_indices))
+            )
 
         frag_pos = positions[fragment_indices, :]
         frag_bond_radii = bond_radii[fragment_indices]
@@ -344,38 +327,43 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         bond_array = self._jit_give_bond_array(
             frag_pos, frag_bond_radii, self_bonding_allowed=self_bonding_allowed
         )
-        a, b = bond_array.nonzero()
-        a, b = [convert_index[i] for i in a], [convert_index[i] for i in b]
+        a, b = [[convert_index[i] for i in a] for a in bond_array.nonzero()]
         for row, index in enumerate(a):
-            # bond_dict is a collections.defaultdict(set)
             bond_dict[index].add(b[row])
-        return bond_dict
 
-    def _divide_et_impera(self, n_atoms_per_set=500, offset=3):
-        coords = ["x", "y", "z"]
-        sorted_series = dict(zip(coords, [self[axis].sort_values() for axis in coords]))
+    def _divide_et_impera(
+        self, n_atoms_per_set: int = 500, offset: float = 3.0
+    ) -> Tensor3D[set[AtomIdx]]:  # type: ignore[type-var]
+        sorted_series = dict(zip(COORDS, [self[axis].sort_values() for axis in COORDS]))
 
-        def ceil(x):
+        def ceil(x: Real) -> int:
             return int(np.ceil(x))
 
         n_sets = len(self) / n_atoms_per_set
         n_sets_along_axis = ceil(n_sets ** (1 / 3))
         n_atoms_per_set_along_axis = ceil(len(self) / n_sets_along_axis)
 
-        def give_index(series, i, n_atoms_per_set_along_axis, offset=offset):
+        def give_index(
+            series: pd.Series,
+            i: int,
+            n_atoms_per_set_along_axis: int,
+            offset: float = offset,
+        ) -> set[AtomIdx]:
             N = n_atoms_per_set_along_axis
             try:
-                min_value, max_value = series.iloc[[i * N, (i + 1) * N]]
+                min_value, max_value = series.iloc[[i * N, (i + 1) * N]]  # type: ignore[call-overload]
             except IndexError:
-                min_value, max_value = series.iloc[[i * N, -1]]
+                min_value, max_value = series.iloc[[i * N, -1]]  # type: ignore[call-overload]
             selection = series.between(min_value - offset, max_value + offset)
             return set(series[selection].index)
 
-        indices_at_axis = {axis: {} for axis in coords}
-        for axis, i in product(coords, range(n_sets_along_axis)):
-            indices_at_axis[axis][i] = give_index(
-                sorted_series[axis], i, n_atoms_per_set_along_axis
-            )
+        indices_at_axis = {
+            axis: {
+                i: give_index(sorted_series[axis], i, n_atoms_per_set_along_axis)
+                for i in range(n_sets_along_axis)
+            }
+            for axis in COORDS
+        }
 
         array_of_fragments = np.full([n_sets_along_axis] * 3, None, dtype="O")
         for i, j, k in product(*[range(x) for x in array_of_fragments.shape]):
@@ -389,13 +377,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     def get_bonds(
         self,
-        self_bonding_allowed=False,
-        offset=3,
-        modified_properties=None,
-        use_lookup=False,
-        set_lookup=True,
-        atomic_radius_data=None,
-    ):
+        self_bonding_allowed: bool = False,
+        offset: float = 3.0,
+        modified_properties: Union[Mapping[AtomIdx, float], None] = None,
+        use_lookup: bool = False,
+        set_lookup: bool = True,
+        atomic_radius_data: Union[str, None] = None,
+    ) -> dict[AtomIdx, set[AtomIdx]]:
         """Return a dictionary representing the bonds.
 
         .. warning:: This function is **not sideeffect free**, since it
@@ -428,6 +416,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
                 For global changes use the constants module.
             offset (float):
+                The offset used to determine the overlap between bins in the
+                divide et impera function that is used to avoid the quadratic scaling
+                when calculating pair-wise distances.
             use_lookup (bool):
             set_lookup (bool):
             self_bonding_allowed (bool):
@@ -444,17 +435,17 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if atomic_radius_data is None:
             atomic_radius_data = settings["defaults"]["atomic_radius_data"]
 
-        def complete_calculation():
+        def complete_calculation() -> dict[AtomIdx, set[AtomIdx]]:
             old_index = self.index
-            self.index = range(len(self))
+            self.index = range(len(self))  # type: ignore[assignment]
             fragments = self._divide_et_impera(offset=offset)
-            positions = np.array(self.loc[:, ["x", "y", "z"]], order="F")
+            positions = np.array(self.loc[:, COORDS], order="F")
             data = self.add_data([atomic_radius_data, "valency"])
             bond_radii = data[atomic_radius_data]
             if modified_properties is not None:
-                bond_radii.update(pd.Series(modified_properties))
+                bond_radii.update(Series(modified_properties))
             bond_radii = bond_radii.values
-            bond_dict = collections.defaultdict(set)
+            bond_dict: defaultdict[AtomIdx, set[AtomIdx]] = defaultdict(set)
             for i, j, k in product(*[range(x) for x in fragments.shape]):
                 # The following call is not side effect free and changes
                 # bond_dict
@@ -467,20 +458,17 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 )
 
             for i in set(self.index) - set(bond_dict.keys()):
-                bond_dict[i] = {}
+                bond_dict[AtomIdx(i)] = set()
 
             self.index = old_index
-            rename = dict(enumerate(self.index))
-            bond_dict = {
-                rename[key]: {rename[i] for i in bond_dict[key]} for key in bond_dict
+            rename = self.index
+            return {
+                AtomIdx(rename[key]): {AtomIdx(rename[i]) for i in bond_dict[key]}
+                for key in bond_dict
             }
-            return bond_dict
 
         if use_lookup:
-            try:
-                bond_dict = self._metadata["bond_dict"]
-            except KeyError:
-                bond_dict = complete_calculation()
+            bond_dict = self._metadata.get("bond_dict", complete_calculation())
         else:
             bond_dict = complete_calculation()
 
@@ -488,8 +476,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             self._metadata["bond_dict"] = bond_dict
         return bond_dict
 
-    def _give_val_sorted_bond_dict(self, use_lookup):
-        def complete_calculation():
+    def _give_val_sorted_bond_dict(self, use_lookup: bool) -> dict[AtomIdx, SortedSet]:
+        def complete_calculation() -> dict[AtomIdx, SortedSet]:
             bond_dict = self.get_bonds(use_lookup=use_lookup)
             valency = dict(zip(self.index, self.add_data("valency")["valency"]))
             val_bond_dict = {
@@ -508,24 +496,51 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self._metadata["val_bond_dict"] = val_bond_dict
         return val_bond_dict
 
+    @overload
     def get_coordination_sphere(
         self,
-        index_of_atom,
-        n_sphere=1,
-        give_only_index=False,
-        only_surface=True,
-        exclude=None,
-        use_lookup=None,
-    ):
+        index_of_atom: AtomIdx,
+        *,
+        n_sphere: float = ...,
+        give_only_index: Literal[False] = False,
+        only_surface: bool = ...,
+        exclude: Union[set[AtomIdx], None] = ...,
+        use_lookup: Union[bool, None] = ...,
+    ) -> Self: ...
+
+    @overload
+    def get_coordination_sphere(
+        self,
+        index_of_atom: AtomIdx,
+        *,
+        n_sphere: float = ...,
+        give_only_index: Literal[True],
+        only_surface: bool = ...,
+        exclude: Union[set[AtomIdx], None] = ...,
+        use_lookup: Union[bool, None] = ...,
+    ) -> set[AtomIdx]: ...
+
+    def get_coordination_sphere(
+        self,
+        index_of_atom: AtomIdx,
+        *,
+        n_sphere: float = 1,
+        give_only_index: bool = False,
+        only_surface: bool = True,
+        exclude: Union[set[AtomIdx], None] = None,
+        use_lookup: Union[bool, None] = None,
+    ) -> Union[Self, set[AtomIdx]]:
         """Return a Cartesian of atoms in the n-th coordination sphere.
 
         Connected means that a path along covalent bonds exists.
 
         Args:
             index_of_atom (int):
+            n_sphere (float): Determines the number of the coordination sphere.
+                Is just a float to allow infinity as input;
+                in this case it returns all connected atoms.
             give_only_index (bool): If ``True`` a set of indices is
                 returned. Otherwise a new Cartesian instance.
-            n_sphere (int): Determines the number of the coordination sphere.
             only_surface (bool): Return only the surface of the coordination
                 sphere.
             exclude (set): A set of indices that should be ignored
@@ -542,7 +557,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         exclude = set() if exclude is None else exclude
         bond_dict = self.get_bonds(use_lookup=use_lookup)
         i = index_of_atom
-        if n_sphere != 0:
+        if (n_sphere < 0) or (n_sphere < float("inf") and n_sphere != int(n_sphere)):
+            raise ValueError(
+                "n_sphere must be a non-negative integer or infinity, but is "
+                f"{n_sphere}."
+            )
+        if n_sphere > 0:
             visited = set([i]) | exclude
             try:
                 tmp_bond_dict = {j: (bond_dict[j] - visited) for j in bond_dict[i]}
@@ -571,7 +591,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         else:
             return self.loc[index_out - exclude]
 
-    def _preserve_bonds(self, sliced_cartesian, use_lookup=None):
+    def _preserve_bonds(
+        self, sliced_cartesian: Self, use_lookup: Union[bool, None] = None
+    ) -> Self:
         """Is called after cutting geometric shapes.
 
         If you want to change the rules how bonds are preserved, when
@@ -598,7 +620,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             "The sliced Cartesian has to be a subset of the bigger frame"
         )
         bond_dic = self.get_bonds(use_lookup=use_lookup)
-        new_atoms = set([])
+        new_atoms: set[AtomIdx] = set([])
         for atom in included_atoms_set:
             new_atoms = new_atoms | bond_dic[atom]
         new_atoms = new_atoms - included_atoms_set
@@ -616,16 +638,29 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         molecule = self.loc[included_atoms_set, :]
         return molecule
 
+    def _get_origin(
+        self, origin: Union[Vector[np.floating], Series, int, Sequence[Real], None]
+    ) -> Vector[np.float64]:
+        if origin is None:
+            return np.zeros(3)
+        elif isinstance(origin, (int, np.integer)):
+            return cast(Vector[np.float64], self.loc[origin, COORDS].values)
+        else:
+            return np.asarray(origin, dtype="f8")
+
     def cut_sphere(
-        self, radius=15.0, origin=None, outside_sliced=True, preserve_bonds=False
-    ):
+        self,
+        radius: Real = 15.0,
+        origin: Union[Vector[np.floating], AtomIdx, Sequence[Real], None] = None,
+        outside_sliced: bool = True,
+        preserve_bonds: bool = False,
+    ) -> Self:
         """Cut a sphere specified by origin and radius.
 
         Args:
             radius (float):
-            origin (list): Please note that you can also pass an
-                integer. In this case it is interpreted as the
-                index of the atom which is taken as origin.
+            origin (list): By default it is :python:`[0.0, 0.0, 0.0]`,
+                you can pass an alternative position or a single atom index.
             outside_sliced (bool): Atoms outside/inside the sphere
                 are cut out.
             preserve_bonds (bool): Do not cut covalent bonds.
@@ -633,12 +668,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             Cartesian:
         """
-        if origin is None:
-            origin = np.zeros(3)
-        elif pd.api.types.is_list_like(origin):
-            origin = np.array(origin, dtype="f8")
-        else:
-            origin = self.loc[origin, ["x", "y", "z"]]
+        origin = self._get_origin(origin)
 
         molecule = self.get_distance_to(origin)
         if outside_sliced:
@@ -653,13 +683,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     def cut_cuboid(
         self,
-        a=20,
-        b=None,
-        c=None,
-        origin=None,
-        outside_sliced=True,
-        preserve_bonds=False,
-    ):
+        a: float = 20.0,
+        b: Union[float, None] = None,
+        c: Union[float, None] = None,
+        origin: Union[AtomIdx, Vector[np.floating], Sequence[Real], None] = None,
+        outside_sliced: bool = True,
+        preserve_bonds: bool = False,
+    ) -> Self:
         """Cut a cuboid specified by edge and radius.
 
         Args:
@@ -676,17 +706,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             Cartesian:
         """
-        if origin is None:
-            origin = np.zeros(3)
-        elif pd.api.types.is_list_like(origin):
-            origin = np.array(origin, dtype="f8")
-        else:
-            origin = self.loc[origin, ["x", "y", "z"]]
+        origin = self._get_origin(origin)
         b = a if b is None else b
         c = a if c is None else c
 
         sides = np.array([a, b, c])
-        pos = self.loc[:, ["x", "y", "z"]]
+        pos = self.loc[:, COORDS].values
         if outside_sliced:
             molecule = self[((pos - origin) / (sides / 2)).max(axis=1) < 1.0]
         else:
@@ -696,7 +721,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             molecule = self._preserve_bonds(molecule)
         return molecule
 
-    def get_centroid(self):
+    def get_centroid(self) -> Vector[np.float64]:
         """Return the average location.
 
         Args:
@@ -705,9 +730,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             :class:`numpy.ndarray`:
         """
-        return np.mean(self.loc[:, ["x", "y", "z"]], axis=0)
+        return np.mean(self.loc[:, COORDS].values, axis=0)
 
-    def get_barycenter(self):
+    def get_barycenter(self) -> Vector[np.float64]:
         """Return the mass weighted average location.
 
         Args:
@@ -720,47 +745,58 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             mass = self["mass"].values
         except KeyError:
             mass = self.add_data("mass")["mass"].values
-        pos = self.loc[:, ["x", "y", "z"]].values
+        pos = self.loc[:, COORDS].values
         return (pos * mass[:, None]).sum(axis=0) / self.get_total_mass()
 
-    def get_bond_lengths(self, indices):
+    def get_bond_lengths(
+        self,
+        indices: Union[
+            Matrix,
+            Sequence[Union[tuple[Integral, Integral], Sequence[Integral]]],
+            DataFrame,
+        ],
+    ) -> Vector[np.float64]:
         """Return the distances between given atoms.
 
         Calculates the distance between the atoms with
         indices ``i`` and ``b``.
-        The indices can be given in three ways:
+        The indices can be given in two ways:
 
-        * As simple list ``[i, b]``
         * As list of lists: ``[[i1, b1], [i2, b2]...]``
         * As :class:`pd.DataFrame` where ``i`` is taken from the index and
           ``b`` from the respective column ``'b'``.
 
         Args:
-            indices (list):
+            indices :
 
         Returns:
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
-        coords = ["x", "y", "z"]
-        if isinstance(indices, pd.DataFrame):
-            i_pos = self.loc[indices.index, coords].values
-            b_pos = self.loc[indices.loc[:, "b"], coords].values
+        if isinstance(indices, DataFrame):
+            i_pos = self.loc[indices.index, COORDS].values
+            b_pos = self.loc[indices.loc[:, "b"], COORDS].values
         else:
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], coords].values
-            b_pos = self.loc[indices[:, 1], coords].values
+            i_pos = self.loc[indices[:, 0], COORDS].values
+            b_pos = self.loc[indices[:, 1], COORDS].values
         return np.linalg.norm(i_pos - b_pos, axis=1)
 
-    def get_angle_degrees(self, indices):
+    def get_angle_degrees(
+        self,
+        indices: Union[
+            Matrix,
+            Sequence[Union[tuple[Integral, Integral, Integral], Sequence[Integral]]],
+            DataFrame,
+        ],
+    ) -> Vector[np.float64]:
         """Return the angles between given atoms.
 
         Calculates the angle in degrees between the atoms with
         indices ``i, b, a``.
-        The indices can be given in three ways:
+        The indices can be given in two ways:
 
-        * As simple list ``[i, b, a]``
         * As list of lists: ``[[i1, b1, a1], [i2, b2, a2]...]``
         * As :class:`pd.DataFrame` where ``i`` is taken from the index and
           ``b`` and ``a`` from the respective columns ``'b'`` and ``'a'``.
@@ -771,35 +807,42 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
-        coords = ["x", "y", "z"]
-        if isinstance(indices, pd.DataFrame):
-            i_pos = self.loc[indices.index, coords].values
-            b_pos = self.loc[indices.loc[:, "b"], coords].values
-            a_pos = self.loc[indices.loc[:, "a"], coords].values
+        if isinstance(indices, DataFrame):
+            i_pos = self.loc[indices.index, COORDS].values
+            b_pos = self.loc[indices.loc[:, "b"], COORDS].values
+            a_pos = self.loc[indices.loc[:, "a"], COORDS].values
         else:
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], coords].values
-            b_pos = self.loc[indices[:, 1], coords].values
-            a_pos = self.loc[indices[:, 2], coords].values
+            i_pos = self.loc[indices[:, 0], COORDS].values
+            b_pos = self.loc[indices[:, 1], COORDS].values
+            a_pos = self.loc[indices[:, 2], COORDS].values
 
         BI, BA = i_pos - b_pos, a_pos - b_pos
         bi, ba = [v / np.linalg.norm(v, axis=1)[:, None] for v in (BI, BA)]
         dot_product = np.sum(bi * ba, axis=1)
         dot_product[dot_product > 1] = 1
         dot_product[dot_product < -1] = -1
-        angles = np.degrees(np.arccos(dot_product))
-        return angles
+        return np.degrees(np.arccos(dot_product))
 
-    def get_dihedral_degrees(self, indices, start_row=0):
+    def get_dihedral_degrees(
+        self,
+        indices: Union[
+            Matrix[np.integer],
+            Sequence[
+                Union[tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx], Sequence[AtomIdx]]
+            ],
+            DataFrame,
+        ],
+        start_row: int = 0,
+    ) -> Vector[np.float64]:
         """Return the dihedrals between given atoms.
 
         Calculates the dihedral angle in degrees between the atoms with
         indices ``i, b, a, d``.
-        The indices can be given in three ways:
+        The indices can be given in two ways:
 
-        * As simple list ``[i, b, a, d]``
         * As list of lists: ``[[i1, b1, a1, d1], [i2, b2, a2, d2]...]``
         * As :class:`pandas.DataFrame` where ``i`` is taken from the index and
           ``b``, ``a`` and ``d``from the respective columns
@@ -811,20 +854,19 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             :class:`numpy.ndarray`: Vector of angles in degrees.
         """
-        coords = ["x", "y", "z"]
-        if isinstance(indices, pd.DataFrame):
-            i_pos = self.loc[indices.index, coords].values
-            b_pos = self.loc[indices.loc[:, "b"], coords].values
-            a_pos = self.loc[indices.loc[:, "a"], coords].values
-            d_pos = self.loc[indices.loc[:, "d"], coords].values
+        if isinstance(indices, DataFrame):
+            i_pos = self.loc[indices.index, COORDS].values
+            b_pos = self.loc[indices.loc[:, "b"], COORDS].values
+            a_pos = self.loc[indices.loc[:, "a"], COORDS].values
+            d_pos = self.loc[indices.loc[:, "d"], COORDS].values
         else:
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], coords].values
-            b_pos = self.loc[indices[:, 1], coords].values
-            a_pos = self.loc[indices[:, 2], coords].values
-            d_pos = self.loc[indices[:, 3], coords].values
+            i_pos = self.loc[indices[:, 0], COORDS].values
+            b_pos = self.loc[indices[:, 1], COORDS].values
+            a_pos = self.loc[indices[:, 2], COORDS].values
+            d_pos = self.loc[indices[:, 3], COORDS].values
 
         IB = b_pos - i_pos
         BA = a_pos - b_pos
@@ -850,10 +892,23 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         to_add = np.full(length, 0, dtype="float64")
         sign[where_to_modify] = -1
         to_add[where_to_modify] = 360
-        dihedrals = to_add + sign * dihedrals
-        return dihedrals
+        return to_add + sign * dihedrals
 
-    def fragmentate(self, give_only_index=False, use_lookup=None):
+    @overload
+    def fragmentate(
+        self,
+        give_only_index: Literal[False] = False,
+        use_lookup: Union[bool, None] = ...,
+    ) -> list[Self]: ...
+
+    @overload
+    def fragmentate(
+        self, give_only_index: Literal[True], use_lookup: Union[bool, None] = ...
+    ) -> list[set[AtomIdx]]: ...
+
+    def fragmentate(
+        self, give_only_index: bool = False, use_lookup: Union[bool, None] = None
+    ) -> Union[list[Self], list[set[AtomIdx]]]:
         """Get the indices of non bonded parts in the molecule.
 
         Args:
@@ -871,7 +926,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if use_lookup is None:
             use_lookup = settings["defaults"]["use_lookup"]
 
-        fragments = []
+        fragments: Union[list[set[AtomIdx]], list[Self]] = []
         pending = set(self.index)
         self.get_bonds(use_lookup=use_lookup)
 
@@ -885,7 +940,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             pending = pending - index
             if give_only_index:
-                fragments.append(index)
+                fragments.append(index)  # type: ignore[arg-type]
             else:
                 fragment = self.loc[index]
                 fragment._metadata["bond_dict"] = fragment.restrict_bond_dict(
@@ -897,10 +952,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                     )
                 except KeyError:
                     pass
-                fragments.append(fragment)
+                fragments.append(fragment)  # type: ignore[arg-type]
         return fragments
 
-    def restrict_bond_dict(self, bond_dict):
+    def restrict_bond_dict(
+        self, bond_dict: Mapping[AtomIdx, set[AtomIdx]]
+    ) -> dict[AtomIdx, set[AtomIdx]]:
         """Restrict a bond dictionary to self.
 
         Args:
@@ -912,7 +969,28 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         return {j: bond_dict[j] & set(self.index) for j in self.index}
 
-    def get_fragment(self, list_of_indextuples, give_only_index=False, use_lookup=None):
+    @overload
+    def get_fragment(
+        self,
+        list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
+        give_only_index: Literal[False] = False,
+        use_lookup: Union[bool, None] = None,
+    ) -> Self: ...
+
+    @overload
+    def get_fragment(
+        self,
+        list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
+        give_only_index: Literal[True],
+        use_lookup: Union[bool, None] = None,
+    ) -> set[AtomIdx]: ...
+
+    def get_fragment(
+        self,
+        list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
+        give_only_index: bool = False,
+        use_lookup: Union[bool, None] = None,
+    ) -> Union[Self, set[AtomIdx]]:
         """Get the indices of the atoms in a fragment.
 
         The list_of_indextuples contains all bondings from the
@@ -953,7 +1031,11 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         else:
             return self.loc[fragment_index, :]
 
-    def get_without(self, fragments, use_lookup=None):
+    def get_without(
+        self,
+        fragments: Union[Self, Sequence[Self]],
+        use_lookup: Union[bool, None] = None,
+    ) -> list[Self]:
         """Return self without the specified fragments.
 
         Args:
@@ -969,21 +1051,22 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if use_lookup is None:
             use_lookup = settings["defaults"]["use_lookup"]
 
-        if pd.api.types.is_list_like(fragments):
-            for fragment in fragments:
-                try:
-                    index_of_all_fragments |= fragment.index
-                except NameError:
-                    index_of_all_fragments = fragment.index
+        if isinstance(fragments, Sequence):
+            index_of_all_fragments = OrderedSet(fragments[0].index)
+            for fragment in fragments[1:]:
+                index_of_all_fragments |= OrderedSet(fragment.index)
         else:
-            index_of_all_fragments = fragments.index
-        missing_part = self.loc[self.index.difference(index_of_all_fragments)]
-        missing_part = missing_part.fragmentate(use_lookup=use_lookup)
-        return sorted(missing_part, key=len, reverse=True)
+            index_of_all_fragments = fragments.index  # type: ignore[assignment]
+        missing_part = self.loc[OrderedSet(self.index) - index_of_all_fragments]
+        return sorted(
+            missing_part.fragmentate(use_lookup=use_lookup), key=len, reverse=True
+        )
 
     @staticmethod
-    @njit(cache=True)
-    def _jit_pairwise_distances(pos1, pos2):
+    @njit
+    def _jit_pairwise_distances(
+        pos1: Matrix[np.floating], pos2: Matrix[np.floating]
+    ) -> Matrix[np.float64]:
         """Optimized function for calculating the distance between each pair
         of points in positions1 and positions2.
 
@@ -999,7 +1082,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 D[i, j] = np.sqrt(((pos1[i] - pos2[j]) ** 2).sum())
         return D
 
-    def get_shortest_distance(self, other):
+    def get_shortest_distance(self, other: Self) -> tuple[AtomIdx, AtomIdx, float]:
         """Calculate the shortest distance between self and other
 
         Args:
@@ -1017,16 +1100,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             ``d``:
             The distance between self and other. (float)
         """
-        coords = ["x", "y", "z"]
-        pos1 = self.loc[:, coords].values
-        pos2 = other.loc[:, coords].values
+        pos1 = self.loc[:, COORDS].values
+        pos2 = other.loc[:, COORDS].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
-        d = D[i, j]
-        i, j = dict(enumerate(self.index))[i], dict(enumerate(other.index))[j]
-        return i, j, d
+        return AtomIdx(self.index[i]), AtomIdx(other.index[j]), float(D[i, j])  # type: ignore[call-overload]
 
-    def get_inertia(self):
+    def get_inertia(self) -> dict[str, Any]:
         """Calculate the inertia tensor and transforms along
         rotation axes.
 
@@ -1064,9 +1144,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             ``diag_inertia_tensor``.
         """
 
-        def calculate_inertia_tensor(molecule):
+        def calculate_inertia_tensor(molecule: Self) -> tuple[Matrix, Matrix, Matrix]:
             masses = molecule.loc[:, "mass"].values
-            pos = molecule.loc[:, ["x", "y", "z"]].values
+            pos = molecule.loc[:, COORDS].values
             inertia = np.sum(
                 masses[:, None, None]
                 * (
@@ -1093,7 +1173,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             "inertia_tensor": inertia,
         }
 
-    def basistransform(self, new_basis, old_basis=None, orthonormalize=True):
+    def basistransform(
+        self,
+        new_basis: Matrix,
+        old_basis: Union[Matrix, None] = None,
+        orthonormalize: bool = True,
+    ) -> Self:
         """Transform the frame to a new basis.
 
         This function transforms the cartesian coordinates from an
@@ -1122,17 +1207,22 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new_basis = xyz_functions.orthonormalize_righthanded(new_basis)
             is_rotation_matrix = True
 
+        # We know that `new_basis @ Self` is of type Self, mypy does not know that,
+        # because of the overlapping resolution with `__matmul__` of numpy.
+        # We have to explicitly cast it to Self.
         if is_rotation_matrix:
-            return new_basis.T @ old_basis @ self
+            return cast(Self, new_basis.T @ old_basis @ self)
         else:
-            return np.linalg.inv(new_basis) @ old_basis @ self
+            return cast(Self, np.linalg.inv(new_basis) @ old_basis @ self)
 
-    def _get_positions(self, indices):
+    def _get_positions(
+        self, indices: Union[Vector[np.integer], Sequence[int]]
+    ) -> Matrix[np.float64]:
         old_index = self.index
-        self.index = range(len(self))
+        self.index = range(len(self))  # type: ignore[assignment]
         rename = {j: i for i, j in enumerate(old_index)}
 
-        pos = self.loc[:, ["x", "y", "z"]].values.astype("f8")
+        pos = self.loc[:, COORDS].values.astype("f8")
         out = np.empty((len(indices), 3))
         indices = np.array([rename.get(i, i) for i in indices], dtype="i8")
 
@@ -1145,14 +1235,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self.index = old_index
         return out
 
-    def get_distance_to(self, origin=None, other_atoms=None, sort=False):
+    def get_distance_to(
+        self,
+        origin: Union[Vector[np.floating], AtomIdx, Sequence[Real], None] = None,
+        other_atoms: Union[Index, SequenceNotStr[int], Set[int], None] = None,
+        sort: bool = False,
+    ) -> Self:
         """Return a Cartesian with a column for the distance from origin."""
-        if origin is None:
-            origin = np.zeros(3)
-        elif pd.api.types.is_list_like(origin):
-            origin = np.array(origin, dtype="f8")
-        else:
-            origin = self.loc[origin, ["x", "y", "z"]]
+        origin = self._get_origin(origin)
 
         if other_atoms is None:
             other_atoms = self.index
@@ -1160,15 +1250,31 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new = self.loc[other_atoms, :].copy()
         norm = np.linalg.norm
         try:
-            new["distance"] = norm((new - origin).loc[:, ["x", "y", "z"]], axis=1)
+            new["distance"] = norm((new - origin).loc[:, COORDS].values, axis=1)
         except AttributeError:
             # Happens if molecule consists of only one atom
-            new["distance"] = norm((new - origin).loc[:, ["x", "y", "z"]])
+            new["distance"] = norm((new - origin).loc[:, COORDS].values)
         if sort:
             new.sort_values(by="distance", inplace=True)
         return new
 
-    def change_numbering(self, rename_dict, inplace=False):
+    @overload
+    def change_numbering(
+        self,
+        rename_dict: dict[AtomIdx, AtomIdx],
+        inplace: Literal[False] = False,
+    ) -> Self: ...
+
+    @overload
+    def change_numbering(
+        self,
+        rename_dict: dict[AtomIdx, AtomIdx],
+        inplace: Literal[True],
+    ) -> None: ...
+
+    def change_numbering(
+        self, rename_dict: dict[AtomIdx, AtomIdx], inplace: bool = False
+    ) -> Union[Self, None]:
         """Return the reindexed version of Cartesian.
 
         Args:
@@ -1179,11 +1285,15 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         output = self if inplace else self.copy()
         new_index = [rename_dict.get(key, key) for key in self.index]
-        output.index = new_index
+        output.index = new_index  # type: ignore[assignment]
         if not inplace:
             return output
+        else:
+            return None
 
-    def partition_chem_env(self, n_sphere=4, use_lookup=None):
+    def partition_chem_env(
+        self, n_sphere: int = 4, use_lookup: Union[bool, None] = None
+    ) -> dict[tuple[str, frozenset[tuple[str, int]]], set[AtomIdx]]:
         """This function partitions the molecule into subsets of the
         same chemical environment.
 
@@ -1231,7 +1341,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         if use_lookup is None:
             use_lookup = settings["defaults"]["use_lookup"]
 
-        def get_chem_env(self, i, n_sphere):
+        def get_chem_env(
+            self: Self, i: AtomIdx, n_sphere: float
+        ) -> tuple[str, frozenset[tuple[str, int]]]:
             env_index = self.get_coordination_sphere(
                 i,
                 n_sphere=n_sphere,
@@ -1241,15 +1353,15 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             env_index.remove(i)
             atoms = self.loc[env_index, "atom"]
-            environment = frozenset(collections.Counter(atoms).most_common())
-            return (self.loc[i, "atom"], environment)
+            environment = frozenset(Counter(atoms).most_common())
+            return (cast(str, self.loc[i, "atom"]), environment)
 
-        chemical_environments = collections.defaultdict(set)
+        chemical_environments = defaultdict(set)
         for i in self.index:
             chemical_environments[get_chem_env(self, i, n_sphere)].add(i)
         return dict(chemical_environments)
 
-    def align(self, other, mass_weight=False):
+    def align(self, other: Self, mass_weight: bool = False) -> tuple[Self, Self]:
         """Align two Cartesians.
 
         Minimize the RMSD (root mean squared deviation) between
@@ -1276,10 +1388,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             m1 = (self - self.get_centroid()).sort_index()
             m2 = (other - other.get_centroid()).sort_index()
 
-        m2 = m1.get_align_transf(m2, mass_weight, centered=True) @ m2
+        m2 = cast(Self, m1.get_align_transf(m2, mass_weight, centered=True) @ m2)
         return m1, m2
 
-    def get_align_transf(self, other, mass_weight=False, centered=False):
+    def get_align_transf(
+        self, other: Self, mass_weight: bool = False, centered: bool = False
+    ) -> Matrix[np.float64]:
         """Return the rotation matrix that aligns other onto self.
 
         Minimize the RMSD (root mean squared deviation) between
@@ -1311,13 +1425,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             m1 = self
             m2 = other
 
-        pos1 = m1.loc[:, ["x", "y", "z"]].values
-        pos2 = m2.loc[m1.index, ["x", "y", "z"]].values
+        pos1 = m1.loc[:, COORDS].values
+        pos2 = m2.loc[m1.index, COORDS].values
         mass = m1.add_data("mass").loc[:, "mass"].values if mass_weight else None
 
         return xyz_functions.get_kabsch_rotation(pos1, pos2, mass)
 
-    def reindex_similar(self, other, n_sphere=4):
+    def reindex_similar(self, other: Self, n_sphere: int = 4) -> Self:
         """Reindex ``other`` to be similarly indexed as ``self``.
 
         Returns a reindexed copy of ``other`` that minimizes the
@@ -1342,24 +1456,31 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             Cartesian: Reindexed version of other
         """
 
-        def make_subset_similar(m1, subset1, m2, subset2, index_dct):
+        def make_subset_similar(
+            m1: Self,
+            subset1: set[AtomIdx],
+            m2: Self,
+            subset2: set[AtomIdx],
+            index_dct: dict[AtomIdx, AtomIdx],
+        ) -> None:
             """Changes index_dct INPLACE"""
-            coords = ["x", "y", "z"]
             index1 = list(subset1)
             for m1_i in index1:
                 dist_m2_to_m1_i = m2.get_distance_to(
-                    m1.loc[m1_i, coords], subset2, sort=True
+                    cast(Vector[np.float64], m1.loc[m1_i, COORDS].values),
+                    subset2,
+                    sort=True,
                 )
 
                 m2_i = dist_m2_to_m1_i.index[0]
                 dist_new = dist_m2_to_m1_i.loc[m2_i, "distance"]
-                m2_pos_i = dist_m2_to_m1_i.loc[m2_i, coords]
+                m2_pos_i = dist_m2_to_m1_i.loc[m2_i, COORDS]
 
                 counter = itertools.count()
                 found = False
                 while not found:
                     if m2_i in index_dct.keys():
-                        old_m1_pos = m1.loc[index_dct[m2_i], coords]
+                        old_m1_pos = m1.loc[index_dct[m2_i], COORDS]
                         if dist_new < np.linalg.norm(m2_pos_i - old_m1_pos):
                             index1.append(index_dct[m2_i])
                             index_dct[m2_i] = m1_i
@@ -1367,11 +1488,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                         else:
                             m2_i = dist_m2_to_m1_i.index[next(counter)]
                             dist_new = dist_m2_to_m1_i.loc[m2_i, "distance"]
-                            m2_pos_i = dist_m2_to_m1_i.loc[m2_i, coords]
+                            m2_pos_i = dist_m2_to_m1_i.loc[m2_i, COORDS]
                     else:
                         index_dct[m2_i] = m1_i
                         found = True
-            return index_dct
 
         molecule1 = self.copy()
         molecule2 = other.copy()
@@ -1379,15 +1499,15 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         partition1 = molecule1.partition_chem_env(n_sphere)
         partition2 = molecule2.partition_chem_env(n_sphere)
 
-        index_dct = {}
+        index_dct: dict[AtomIdx, AtomIdx] = {}
         for key in partition1:
             message = (
                 "You have chemically different molecules, regarding "
                 "the topology of their connectivity."
             )
             assert len(partition1[key]) == len(partition2[key]), message
-            index_dct = make_subset_similar(
+            make_subset_similar(
                 molecule1, partition1[key], molecule2, partition2[key], index_dct
             )
-        molecule2.index = [index_dct[i] for i in molecule2.index]
+        molecule2.index = [index_dct[i] for i in molecule2.index]  # type: ignore[assignment]
         return molecule2.loc[molecule1.index]

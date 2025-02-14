@@ -5,14 +5,14 @@
 
 .. autoclass:: Cartesian
 
-   
+
    .. automethod:: __init__
 
-   
+
    .. rubric:: Methods
 
    .. autosummary::
-   
+
       ~Cartesian.__init__
       ~Cartesian.add_data
       ~Cartesian.align
@@ -30,9 +30,9 @@
       ~Cartesian.fragmentate
       ~Cartesian.from_ase_atoms
       ~Cartesian.from_pymatgen_molecule
-      ~Cartesian.from_pyscf_molecule
       ~Cartesian.get_B_traj
       ~Cartesian.get_Wilson_B
+      ~Cartesian.from_pyscf
       ~Cartesian.get_align_transf
       ~Cartesian.get_angle_degrees
       ~Cartesian.get_ase_atoms
@@ -68,6 +68,7 @@
       ~Cartesian.replace
       ~Cartesian.reset_index
       ~Cartesian.restrict_bond_dict
+      ~Cartesian.set_atom_coords
       ~Cartesian.set_index
       ~Cartesian.sort_index
       ~Cartesian.sort_values
@@ -82,15 +83,15 @@
       ~Cartesian.view
       ~Cartesian.write_xyz
       ~Cartesian.x_to_c
-   
-   
 
-   
-   
+
+
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
+
       ~Cartesian.columns
       ~Cartesian.dtypes
       ~Cartesian.empty
@@ -98,5 +99,4 @@
       ~Cartesian.index
       ~Cartesian.loc
       ~Cartesian.shape
-   
-   
+

@@ -17,7 +17,9 @@ INSTALL_REQUIRES = [
     "sympy",
     "six",
     "pymatgen",
-    "typing-extensions",
+    "typing_extensions",
+    "ordered-set",
+    "attrs",
 ]
 KEYWORDS = [
     "chemcoord",
@@ -74,7 +76,7 @@ def setup_package():
         packages=find_packages("src"),
         package_dir={"": "src"},
         install_requires=INSTALL_REQUIRES,
-        python_requires=">=3.8,<3.14",
+        python_requires=">=3.8",
     )
 
 

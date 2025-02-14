@@ -1,15 +1,125 @@
 import warnings
+from abc import abstractmethod
+from collections.abc import Set
+from typing import Generic, TypeVar, Union, overload
 
+from attrs import define
+from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
+from pandas.core.series import Series
+from typing_extensions import TypeAlias
+
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
 from chemcoord.exceptions import InvalidReference
+from chemcoord.typing import Integral, SequenceNotStr, Vector
+
+# Unlike the Cartesian, the Zmatrix does never return a Zmatrix upon indexing.
+# This is because removing a row sometimes results in an undefined Z-matrix
+# and I want to guarantee that the user does not accidentally
+# think they have a valid Z-matrix, while they actually don't.
+# Compare this situation with the corresponding use of `GenericCore` for `Cartesian`.
+# There a Union[Self, Series, DataFrame] is returned, while here only a
+# Union[Series, DataFrame] is returned.
+
+T = TypeVar("T", bound=GenericCore)
+
+IntIdx: TypeAlias = Union[Integral, Set[Integral], Vector, SequenceNotStr[Integral]]
+StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str]]
 
 
-class _generic_Indexer(object):
-    def __init__(self, molecule):
-        self.molecule = molecule
+@define
+class _generic_Indexer(Generic[T]):
+    molecule: T
 
-    def __getitem__(self, key):
-        indexer = getattr(self.molecule._frame, self.indexer)
+    @classmethod
+    @abstractmethod
+    def _get_idxer(cls) -> str: ...
+
+
+class _Loc(_generic_Indexer):
+    @classmethod
+    def _get_idxer(cls) -> str:
+        return "loc"
+
+    @overload
+    def __getitem__(
+        self,
+        key: Integral,
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: Union[
+            Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+        ],
+    ) -> DataFrame: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Union[
+                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+            ],
+            Union[Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
+        ],
+    ) -> DataFrame: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Union[
+                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+            ],
+            str,
+        ],
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Integral,
+            Union[Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
+        ],
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[Integral, str],
+    ) -> Union[float, str]: ...
+
+    def __getitem__(
+        self,
+        key: Union[
+            Union[
+                Integral,
+                Index,
+                Set[Integral],
+                Vector,
+                SequenceNotStr[Integral],
+                slice,
+                Series,
+            ],
+            tuple[
+                Union[
+                    Integral,
+                    Index,
+                    Set[Integral],
+                    Vector,
+                    SequenceNotStr[Integral],
+                    slice,
+                    Series,
+                ],
+                Union[str, Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
+            ],
+        ],
+    ) -> Union[Series, DataFrame, float, str]:
+        indexer = getattr(self.molecule._frame, self._get_idxer())
         if isinstance(key, tuple):
             selected = indexer[key[0], key[1]]
         else:
@@ -17,12 +127,106 @@ class _generic_Indexer(object):
         return selected
 
 
-class _Loc(_generic_Indexer):
-    indexer = "loc"
-
-
 class _ILoc(_generic_Indexer):
-    indexer = "iloc"
+    @classmethod
+    def _get_idxer(cls) -> str:
+        return "iloc"
+
+    @overload
+    def __getitem__(
+        self,
+        key: Integral,
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: Union[
+            Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+        ],
+    ) -> DataFrame: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Union[
+                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+            ],
+            Union[
+                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+            ],
+        ],
+    ) -> DataFrame: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Union[
+                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+            ],
+            Integral,
+        ],
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Integral,
+            Union[
+                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
+            ],
+        ],
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[Integral, Integral],
+    ) -> Union[float, str]: ...
+
+    def __getitem__(
+        self,
+        key: Union[
+            Union[
+                Integral,
+                Index,
+                Set[Integral],
+                Vector,
+                SequenceNotStr[Integral],
+                slice,
+                Series,
+            ],
+            tuple[
+                Union[
+                    Integral,
+                    Index,
+                    Set[Integral],
+                    Vector,
+                    SequenceNotStr[Integral],
+                    slice,
+                    Series,
+                ],
+                Union[
+                    Integral,
+                    Index,
+                    Set[Integral],
+                    Vector,
+                    SequenceNotStr[Integral],
+                    slice,
+                    Series,
+                ],
+            ],
+        ],
+    ) -> Union[Series, DataFrame, float, str]:
+        indexer = getattr(self.molecule._frame, self._get_idxer())
+        if isinstance(key, tuple):
+            selected = indexer[key[0], key[1]]
+        else:
+            selected = indexer[key]
+        return selected
 
 
 class _Unsafe_base:
@@ -30,7 +234,7 @@ class _Unsafe_base:
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", category=FutureWarning)
-                indexer = getattr(self.molecule._frame, self.indexer)
+                indexer = getattr(self.molecule._frame, self._get_idxer())
                 if isinstance(key, tuple):
                     indexer[key[0], key[1]] = value
                 else:
@@ -50,7 +254,7 @@ class _Unsafe_base:
                     )
                 else:
                     self.molecule._frame = self.molecule._frame.astype({key[1]: "O"})
-                indexer = getattr(self.molecule._frame, self.indexer)
+                indexer = getattr(self.molecule._frame, self._get_idxer())
                 indexer[key[0], key[1]] = value
             else:
                 raise TypeError("Assignment not supported.")
@@ -71,7 +275,7 @@ class _SafeBase:
         else:
             molecule = self.molecule.copy()
 
-        indexer = getattr(molecule, f"unsafe_{self.indexer}")
+        indexer = getattr(molecule, f"unsafe_{self._get_idxer()}")
         indexer[key] = value
 
         try:

@@ -1,6 +1,6 @@
 import numba as nb
 import numpy as np
-from numba import njit, prange
+from numba import prange
 from numpy import cos, cross, sin
 from numpy.linalg import inv
 
@@ -10,10 +10,11 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
     get_grad_B,
     get_ref_pos,
 )
+from chemcoord._utilities._decorators import njit
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 
 
-@njit(cache=True)
+@njit
 def get_S(C, j):
     S = np.zeros(3)
     r, alpha, delta = C[:, j]
@@ -28,7 +29,7 @@ def get_S(C, j):
     return S
 
 
-@njit(cache=True)
+@njit
 def get_grad_S(C, j):
     grad_S = np.empty((3, 3), dtype=nb.f8)
     r, alpha, delta = C[:, j]
@@ -50,7 +51,7 @@ def get_grad_S(C, j):
     return grad_S
 
 
-@njit(cache=True)
+@njit
 def get_X(C, c_table):
     X = np.empty_like(C)
     n_atoms = X.shape[1]
@@ -62,7 +63,7 @@ def get_X(C, c_table):
     return (ERR_CODE_OK, j, X)  # pylint:disable=undefined-loop-variable
 
 
-@njit(cache=True)
+@njit
 def chain_grad(X, grad_X, C, c_table, j, l):
     """Chain the gradients.
 
@@ -114,7 +115,7 @@ def chain_grad(X, grad_X, C, c_table, j, l):
     return new_grad_X
 
 
-@njit(cache=True)
+@njit
 def get_grad_X(C, c_table, chain=True):
     n_atoms = C.shape[1]
     grad_X = np.zeros((3, n_atoms, n_atoms, 3))
@@ -127,14 +128,14 @@ def get_grad_X(C, c_table, chain=True):
     return grad_X
 
 
-@njit(cache=True)
+@njit
 def to_barycenter(X, masses):
     M = masses.sum()
     v = (X * masses).sum(axis=1).reshape((3, 1)) / M
     return X - v
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True)
 def remove_translation(grad_X, masses):
     clean_grad_X = np.empty_like(grad_X)
     n_atoms = grad_X.shape[1]
@@ -144,7 +145,7 @@ def remove_translation(grad_X, masses):
     return clean_grad_X
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True)
 def pure_internal_grad(X, grad_X, masses, theta):
     """Return a gradient for the transformation to X
     that only contains internal degrees of freedom

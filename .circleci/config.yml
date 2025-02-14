@@ -37,10 +37,6 @@ run_tests: &run_tests
           name: Running tests
           command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
       - run:
-          name: Upload coverage reports to Codecov
-          command: |
-            bash <(curl -s https://codecov.io/bash)
-      - run:
           name: Prepare documentation
           command: pip3 install -r docs/requirements.txt
       - run:
@@ -56,7 +52,6 @@ workflows:
       - py311
       - py311_analysis
       - py312
-      - py313
 
 jobs:
   py39:
@@ -85,11 +80,6 @@ jobs:
       - image: cimg/python:3.11
 
   py312:
-    <<: *run_tests
-    docker:
-      - image: cimg/python:3.12
-
-  py313:
     <<: *run_tests
     docker:
       - image: cimg/python:3.12
