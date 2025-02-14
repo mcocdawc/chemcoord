@@ -147,6 +147,7 @@ def test_primitive_coordinates():
         ]
     )
     assert len(expected.symmetric_difference(coords)) == 0
+    assert len(expected.symmetric_difference(molecule1.new_primitive_coords())) == 0
 
 
 def test_Wilson_B():
