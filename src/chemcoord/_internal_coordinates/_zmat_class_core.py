@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Sequence
 from functools import partial
 from numbers import Real
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -276,7 +276,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] / other.loc[:, coords]
         elif isinstance(other, Real):
-            result = self.loc[:, coords] / other
+            result = self.loc[:, coords].values / other
         else:
             raise TypeError(
                 "You can only multiply a ZMatrix with another ZMatrix or a number"
@@ -294,7 +294,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             self._test_if_can_be_added(other)
             result = other.loc[:, coords] / self.loc[:, coords]
         elif isinstance(other, Real):
-            result = other / self.loc[:, coords]
+            result = cast(DataFrame, other / self.loc[:, coords])
         else:
             raise TypeError(
                 "You can only multiply a ZMatrix with another ZMatrix or a number"
