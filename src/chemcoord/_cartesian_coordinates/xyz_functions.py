@@ -85,6 +85,73 @@ def view(
 
 
 @overload
+def to_xyz_trajectory(
+    cartesian_list: Sequence[Cartesian],
+    buf: None = None,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> str: ...
+
+
+@overload
+def to_xyz_trajectory(
+    cartesian_list: Sequence[Cartesian],
+    buf: PathLike,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> None: ...
+
+
+def to_xyz_trajectory(
+    cartesian_list: Sequence[Cartesian],
+    buf: Union[PathLike, None] = None,
+    sort_index: bool = True,
+    overwrite: bool = True,
+    float_format: Callable[[float], str] = "{:.6f}".format,
+) -> Union[str, None]:
+    """Write a list of Cartesians into an xyz file.
+
+    .. note:: Since it permamently writes a file, this function
+        is strictly speaking **not sideeffect free**.
+        The list to be written is of course not changed.
+
+    Args:
+        cartesian_list (list):
+        buf (str): StringIO-like, optional buffer to write to
+        sort_index (bool): If sort_index is true, the Cartesian
+            is sorted by the index before writing.
+        overwrite (bool): May overwrite existing files.
+        float_format (one-parameter function): Formatter function
+            to apply to column’s elements if they are floats.
+            The result of this function must be a unicode string.
+
+    Returns:
+        output : string (or unicode, depending on data and options)
+    """
+    if sort_index:
+        cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
+
+    output = ""
+    for struct in cartesian_list:
+        output += struct.to_xyz(float_format=float_format) + "\n"
+
+    if buf is not None:
+        if overwrite:
+            with open(buf, mode="w") as f:
+                f.write(output)
+            return None
+
+        else:
+            with open(buf, mode="x") as f:
+                f.write(output)
+            return None
+    else:
+        return output
+
+
+@overload
 def to_molden(
     cartesian_list: Sequence[Cartesian],
     buf: None = None,
