@@ -4,6 +4,7 @@ import copy
 import warnings
 from collections.abc import Sequence
 from functools import partial
+from numbers import Real
 from typing import TYPE_CHECKING, Any, Callable, Literal, Union, overload
 
 import numpy as np
@@ -248,13 +249,17 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __mul__(self, other: Union[Self, float]) -> Self:
+    def __mul__(self, other: Union[Self, Real]) -> Self:
         coords = ["bond", "angle", "dihedral"]
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] * other.loc[:, coords]
-        elif isinstance(other, float):
+        elif isinstance(other, Real):
             result = self.loc[:, coords] * other
+        else:
+            raise TypeError(
+                "You can only multiply a ZMatrix with another ZMatrix or a number"
+            )
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -262,16 +267,20 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rmul__(self, other: Union[Self, float]) -> Self:
+    def __rmul__(self, other: Union[Self, Real]) -> Self:
         return self * other
 
-    def __truediv__(self, other: Union[Self, float]) -> Self:
+    def __truediv__(self, other: Union[Self, Real]) -> Self:
         coords = ["bond", "angle", "dihedral"]
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] / other.loc[:, coords]
-        elif isinstance(other, float):
+        elif isinstance(other, Real):
             result = self.loc[:, coords] / other
+        else:
+            raise TypeError(
+                "You can only multiply a ZMatrix with another ZMatrix or a number"
+            )
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -279,13 +288,17 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rtruediv__(self, other: Union[Self, float]) -> Self:
+    def __rtruediv__(self, other: Union[Self, Real]) -> Self:
         coords = ["bond", "angle", "dihedral"]
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             result = other.loc[:, coords] / self.loc[:, coords]
-        elif isinstance(other, float):
+        elif isinstance(other, Real):
             result = other / self.loc[:, coords]
+        else:
+            raise TypeError(
+                "You can only multiply a ZMatrix with another ZMatrix or a number"
+            )
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -452,7 +465,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             Zmat: Zmatrix with substituted symbolic expressions.
             If all resulting sympy expressions in a column are numbers,
-            the column is recasted to 64bit float.
+            the column is recasted to float.
         """
         perform_checks = kwargs.pop("perform_checks", True)
         cols = ["bond", "angle", "dihedral"]
