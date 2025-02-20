@@ -74,3 +74,27 @@ def test_concat_with_zmats():
         ),
         znew.get_cartesian(),
     )
+
+
+def test_multiple_xyz():
+    output_path = os.path.join(STRUCTURES, "xyz_test.xyz")
+
+    path1 = os.path.join(STRUCTURES, "MIL53_small.xyz")
+    path2 = os.path.join(STRUCTURES, "nasty_cube.xyz")
+    path3 = os.path.join(STRUCTURES, "MeOH_Furan_end.xyz")
+    molecule1 = cc.Cartesian.read_xyz(path1)
+    molecule2 = cc.Cartesian.read_xyz(path2)
+    molecule3 = cc.Cartesian.read_xyz(path3)
+
+    cartesian_list = [molecule1, molecule2, molecule3]
+
+    cc._cartesian_coordinates.xyz_functions.multiple_to_xyz(cartesian_list, output_path)
+    test_cartesian_list = cc._cartesian_coordinates.xyz_functions.read_multiple_xyz(
+        output_path
+    )
+
+    for i in range(len(cartesian_list)):
+        assert allclose(
+            cartesian_list[i],
+            test_cartesian_list[i],
+        )
