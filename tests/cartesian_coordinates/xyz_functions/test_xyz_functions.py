@@ -93,7 +93,8 @@ def test_multiple_xyz():
         output_path
     )
 
-    assert allclose(
-        cc.xyz_functions.concat(cartesian_list),
-        cc.xyz_functions.concat(test_cartesian_list),
-    )
+    for i in range(len(cartesian_list)):
+        assert allclose(
+            cartesian_list[i],
+            test_cartesian_list[i],
+        )

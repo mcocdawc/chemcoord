@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import warnings
 from collections.abc import Iterable, Sequence
+from io import StringIO
 from threading import Thread
 from typing import Callable, Union, overload
 
@@ -158,16 +159,17 @@ def read_multiple_xyz(
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
     with open(inputfile, "r") as f:
+        strings = f.readlines()
         cartesians = []
         finished = False
-        molecule_len = 0
         current_line = 0
         while not finished:
-            molecule_len = int(f.readline())
-            f.seek(current_line)
+            molecule_len = int(strings[current_line])
             cartesians.append(
                 Cartesian.read_xyz(
-                    f,
+                    StringIO(
+                        "".join(strings[current_line : current_line + molecule_len + 2])
+                    ),
                     start_index=start_index,
                     get_bonds=get_bonds,
                     nrows=molecule_len,
@@ -175,10 +177,9 @@ def read_multiple_xyz(
                 )
             )
             current_line += 2 + molecule_len
-            if not f.readline():
+            if current_line == len(strings):
                 finished = True
-            else:
-                f.seek(current_line)
+
     return cartesians
 
 
