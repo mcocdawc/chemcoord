@@ -4,8 +4,9 @@ import subprocess
 import tempfile
 import warnings
 from collections.abc import Iterable, Sequence
+from pathlib import Path
 from threading import Thread
-from typing import Callable, Union, overload
+from typing import Callable, Literal, Union, assert_never, overload
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,7 @@ from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 def view(
     molecule: Union[Cartesian, Sequence[Cartesian]],
     viewer: Union[PathLike, None] = None,
+    list_viewer_file: Union[Literal["molden", "xyz"], None] = "molden",
     use_curr_dir: bool = False,
 ) -> None:
     """View your molecule or list of molecules.
@@ -47,37 +49,44 @@ def view(
     Returns:
         None:
     """
-    viewer = settings.defaults.viewer
+    if viewer is None:
+        viewer = settings.defaults.viewer
+    if list_viewer_file is None:
+        list_viewer_file = settings.defaults.list_viewer_file
     if isinstance(molecule, Cartesian):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
     elif isinstance(molecule, Sequence):
         cartesian_list = molecule
         if use_curr_dir:
-            TEMP_DIR = os.path.curdir
+            TEMP_DIR = Path(os.path.curdir)
         else:
-            TEMP_DIR = tempfile.gettempdir()
+            TEMP_DIR = Path(tempfile.gettempdir())
 
-        def give_filename(i: int) -> str:
-            return os.path.join(TEMP_DIR, f"ChemCoord_list_{i}.molden")
+        def give_filename(i: int, suffix: Literal["molden", "xyz"]) -> Path:
+            return TEMP_DIR / f"ChemCoord_list_{i}.{suffix}"
 
         i = 1
-        while os.path.exists(give_filename(i)):
+        while give_filename(i, list_viewer_file).exists():
             i = i + 1
 
-        to_molden(cartesian_list, buf=give_filename(i))
+        if list_viewer_file == "molden":
+            to_molden(cartesian_list, buf=give_filename(i, list_viewer_file))
+        elif list_viewer_file == "xyz":
+            to_xyz_trajectory(cartesian_list, buf=give_filename(i, list_viewer_file))
+        else:
+            assert_never("Invalid list_viewer_file.")
 
         def open_file(i: int) -> None:
             """Open file and close after being finished."""
             try:
-                assert viewer is not None
-                subprocess.check_call([viewer, give_filename(i)])
+                subprocess.check_call([viewer, give_filename(i, list_viewer_file)])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
             finally:
                 if use_curr_dir:
                     pass
                 else:
-                    os.remove(give_filename(i))
+                    give_filename(i, list_viewer_file).unlink()
 
         Thread(target=open_file, args=(i,)).start()
     else:
