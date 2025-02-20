@@ -161,8 +161,8 @@ def read_multiple_xyz(
         cartesians = []
         finished = False
         molecule_len = 0
+        current_line = 0
         while not finished:
-            current_line = f.tell()
             molecule_len = int(f.readline())
             f.seek(current_line)
             cartesians.append(
@@ -174,8 +174,11 @@ def read_multiple_xyz(
                     engine="python",
                 )
             )
+            current_line += 2 + molecule_len
             if not f.readline():
                 finished = True
+            else:
+                f.seek(current_line)
     return cartesians
 
 
