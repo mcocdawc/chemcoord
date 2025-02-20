@@ -85,7 +85,7 @@ def view(
 
 
 @overload
-def to_xyz_trajectory(
+def multiple_to_xyz(
     cartesian_list: Sequence[Cartesian],
     buf: None = None,
     sort_index: bool = ...,
@@ -95,7 +95,7 @@ def to_xyz_trajectory(
 
 
 @overload
-def to_xyz_trajectory(
+def multiple_to_xyz(
     cartesian_list: Sequence[Cartesian],
     buf: PathLike,
     sort_index: bool = ...,
@@ -104,7 +104,7 @@ def to_xyz_trajectory(
 ) -> None: ...
 
 
-def to_xyz_trajectory(
+def multiple_to_xyz(
     cartesian_list: Sequence[Cartesian],
     buf: Union[PathLike, None] = None,
     sort_index: bool = True,
@@ -138,17 +138,45 @@ def to_xyz_trajectory(
         output += struct.to_xyz(float_format=float_format) + "\n"
 
     if buf is not None:
-        if overwrite:
-            with open(buf, mode="w") as f:
-                f.write(output)
-            return None
-
-        else:
-            with open(buf, mode="x") as f:
-                f.write(output)
-            return None
+        with open(buf, mode="w" if overwrite else "x") as f:
+            f.write(output)
+        return None
     else:
         return output
+
+
+def read_multiple_xyz(
+    inputfile: PathLike, start_index: int = 0, get_bonds: bool = True
+) -> list[Cartesian]:
+    """Read a multiple-xyz file.
+
+    Args:
+        inputfile (str):
+        start_index (int):
+
+    Returns:
+        list: A list containing :class:`~chemcoord.Cartesian` is returned.
+    """
+    with open(inputfile, "r") as f:
+        cartesians = []
+        finished = False
+        molecule_len = 0
+        while not finished:
+            current_line = f.tell()
+            molecule_len = int(f.readline())
+            f.seek(current_line)
+            cartesians.append(
+                Cartesian.read_xyz(
+                    f,
+                    start_index=start_index,
+                    get_bonds=get_bonds,
+                    nrows=molecule_len,
+                    engine="python",
+                )
+            )
+            if not f.readline():
+                finished = True
+    return cartesians
 
 
 @overload
