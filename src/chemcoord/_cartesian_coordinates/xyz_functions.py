@@ -47,7 +47,7 @@ def view(
     Returns:
         None:
     """
-    viewer = settings["defaults"]["viewer"]
+    viewer = settings.defaults.viewer
     if isinstance(molecule, Cartesian):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
     elif isinstance(molecule, Sequence):

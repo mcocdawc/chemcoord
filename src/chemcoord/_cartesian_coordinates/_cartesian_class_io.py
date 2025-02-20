@@ -520,7 +520,7 @@ class CartesianIO(CartesianCore, GenericIO):
 
         Args:
             viewer (str): The external viewer to use. If it is None,
-                the default as specified in cc.settings['defaults']['viewer']
+                the default as specified in cc.settings.defaults.viewer
                 is used.
             use_curr_dir (bool): If True, the temporary file is written to
                 the current diretory. Otherwise it gets written to the
@@ -530,7 +530,7 @@ class CartesianIO(CartesianCore, GenericIO):
             None:
         """
         if viewer is None:
-            viewer = settings["defaults"]["viewer"]
+            viewer = settings.defaults.viewer
         if use_curr_dir:
             TEMP_DIR = os.path.curdir
         else:
