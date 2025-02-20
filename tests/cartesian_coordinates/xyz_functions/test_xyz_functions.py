@@ -88,9 +88,7 @@ def test_multiple_xyz():
 
     cartesian_list = [molecule1, molecule2, molecule3]
 
-    cc.Cartesian._cartesian_coordinates.xyz_functions.multiple_to_xyz(
-        cartesian_list, output_path
-    )
+    cc._cartesian_coordinates.xyz_functions.multiple_to_xyz(cartesian_list, output_path)
     test_cartesian_list = cc._cartesian_coordinates.xyz_functions.read_multiple_xyz(
         output_path
     )
