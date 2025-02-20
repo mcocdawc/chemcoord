@@ -20,6 +20,7 @@ INSTALL_REQUIRES = [
     "typing_extensions",
     "ordered-set",
     "attrs",
+    "cattrs",
 ]
 KEYWORDS = [
     "chemcoord",

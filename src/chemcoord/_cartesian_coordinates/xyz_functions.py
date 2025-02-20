@@ -28,7 +28,7 @@ from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 def view(
     molecule: Union[Cartesian, Sequence[Cartesian]],
     viewer: Union[PathLike, None] = None,
-    list_viewer_file: Union[Literal["molden", "xyz"], None] = "molden",
+    list_viewer_file: Union[Literal["molden", "xyz"], None] = None,
     use_curr_dir: bool = False,
 ) -> None:
     """View your molecule or list of molecules.
