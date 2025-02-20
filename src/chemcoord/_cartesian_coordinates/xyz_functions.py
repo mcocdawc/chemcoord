@@ -6,12 +6,13 @@ import warnings
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from threading import Thread
-from typing import Callable, Literal, Union, assert_never, overload
+from typing import Callable, Literal, Union, overload
 
 import numpy as np
 import pandas as pd
 import sympy
 from pandas.core.frame import DataFrame
+from typing_extensions import assert_never
 
 from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
