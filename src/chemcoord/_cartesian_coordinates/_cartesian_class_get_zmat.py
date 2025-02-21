@@ -1,9 +1,9 @@
 import warnings
 from collections import OrderedDict
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from functools import partial
 from itertools import permutations
-from typing import Callable, Literal, Mapping, Union, cast, overload
+from typing import Literal, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -61,10 +61,10 @@ class CartesianGetZmat(CartesianCore):
 
     def _get_frag_constr_table(
         self,
-        start_atom: Union[AtomIdx, None] = None,
-        predefined_table: Union[DataFrame, None] = None,
-        use_lookup: Union[bool, None] = None,
-        bond_dict: Union[Mapping[AtomIdx, SortedSet], None] = None,
+        start_atom: AtomIdx | None = None,
+        predefined_table: DataFrame | None = None,
+        use_lookup: bool | None = None,
+        bond_dict: Mapping[AtomIdx, SortedSet] | None = None,
     ) -> DataFrame:
         """Create a construction table for a Zmatrix.
 
@@ -146,21 +146,17 @@ class CartesianGetZmat(CartesianCore):
                                 a = (bond_dict[b] & set(order_of_def))[0]
                             try:
                                 d = parent[a]
-                                if d in set([b, a]):
+                                if d in {b, a}:
                                     message = "Don't make self references"
                                     raise UndefinedCoordinateSystem(message)
                             except (KeyError, UndefinedCoordinateSystem):
                                 try:
-                                    d = (
-                                        (bond_dict[a] & set(order_of_def)) - set([b, a])
-                                    )[0]
+                                    d = ((bond_dict[a] & set(order_of_def)) - {b, a})[0]
                                 except IndexError:
-                                    d = (
-                                        (bond_dict[b] & set(order_of_def)) - set([b, a])
-                                    )[0]
+                                    d = ((bond_dict[b] & set(order_of_def)) - {b, a})[0]
                             construction_table[i] = {"b": b, "a": a, "d": d}
                     else:
-                        a, d = [construction_table[b][k] for k in ["b", "a"]]
+                        a, d = (construction_table[b][k] for k in ["b", "a"])
                         construction_table[i] = {"b": b, "a": a, "d": d}
                     order_of_def.append(i)
 
@@ -177,10 +173,8 @@ class CartesianGetZmat(CartesianCore):
 
     def get_construction_table(
         self,
-        fragment_list: Union[
-            Sequence[Union[Self, tuple[Self, DataFrame]]], None
-        ] = None,
-        use_lookup: Union[bool, None] = None,
+        fragment_list: (Sequence[Self | tuple[Self, DataFrame]] | None) = None,
+        use_lookup: bool | None = None,
         perform_checks: bool = True,
     ) -> DataFrame:
         """Create a construction table for a Zmatrix.
@@ -254,8 +248,8 @@ class CartesianGetZmat(CartesianCore):
             use_lookup = True
 
         def prepend_missing_parts_of_molecule(
-            fragment_list: Sequence[Union[Self, tuple[Self, DataFrame]]],
-        ) -> list[Union[Self, tuple[Self, DataFrame]]]:
+            fragment_list: Sequence[Self | tuple[Self, DataFrame]],
+        ) -> list[Self | tuple[Self, DataFrame]]:
             full_index: set[AtomIdx] = set()
             for fragment in fragment_list:
                 if isinstance(fragment, tuple):
@@ -354,7 +348,7 @@ class CartesianGetZmat(CartesianCore):
         return [rename[i] for i in problem_index]
 
     def correct_dihedral(
-        self, construction_table: DataFrame, use_lookup: Union[bool, None] = None
+        self, construction_table: DataFrame, use_lookup: bool | None = None
     ) -> DataFrame:
         """Reindexe the dihedral defining atom if linear reference is used.
 
@@ -511,7 +505,7 @@ class CartesianGetZmat(CartesianCore):
 
     def _calculate_zmat_values(
         self,
-        construction_table: Union[DataFrame, pd.Series, Matrix, Vector],
+        construction_table: DataFrame | pd.Series | Matrix | Vector,
     ) -> Matrix[float64]:
         if isinstance(construction_table, pd.DataFrame):
             c_table = construction_table
@@ -581,8 +575,8 @@ class CartesianGetZmat(CartesianCore):
 
     def get_zmat(
         self,
-        construction_table: Union[DataFrame, None] = None,
-        use_lookup: Union[bool, None] = None,
+        construction_table: DataFrame | None = None,
+        use_lookup: bool | None = None,
     ) -> Zmat:
         """Transform to internal coordinates.
 
@@ -671,7 +665,7 @@ class CartesianGetZmat(CartesianCore):
 
     def get_grad_zmat(
         self, construction_table: DataFrame, as_function: bool = True
-    ) -> Union[Tensor4D, Callable[[Self], Zmat]]:
+    ) -> Tensor4D | Callable[[Self], Zmat]:
         r"""Return the gradient for the transformation to a Zmatrix.
 
         If ``as_function`` is True, a function is returned that can be directly

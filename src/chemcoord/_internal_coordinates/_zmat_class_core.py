@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import copy
 import warnings
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import partial
 from numbers import Real
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -249,7 +249,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __mul__(self, other: Union[Self, Real]) -> Self:
+    def __mul__(self, other: Self | Real) -> Self:
         coords = ["bond", "angle", "dihedral"]
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
@@ -267,10 +267,10 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rmul__(self, other: Union[Self, Real]) -> Self:
+    def __rmul__(self, other: Self | Real) -> Self:
         return self * other
 
-    def __truediv__(self, other: Union[Self, Real]) -> Self:
+    def __truediv__(self, other: Self | Real) -> Self:
         coords = ["bond", "angle", "dihedral"]
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
@@ -288,7 +288,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rtruediv__(self, other: Union[Self, Real]) -> Self:
+    def __rtruediv__(self, other: Self | Real) -> Self:
         coords = ["bond", "angle", "dihedral"]
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
@@ -506,7 +506,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 self._metadata["last_valid_cartesian"] = new_cartesian
         return out
 
-    def change_numbering(self, new_index: Union[Sequence, None] = None) -> Self:
+    def change_numbering(self, new_index: Sequence | None = None) -> Self:
         """Change numbering to a new index.
 
         Changes the numbering of index and all dependent numbering
@@ -669,7 +669,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         zmat_values = zmat.get_cartesian()._calculate_zmat_values(c_table)
         zmat.unsafe_loc[to_remove, ["bond", "angle", "dihedral"]] = zmat_values
         zmat._frame.drop([has_dummies[k]["dummy_d"] for k in to_remove], inplace=True)
-        warnings.warn("The dummy atoms {} were removed".format(to_remove), UserWarning)
+        warnings.warn(f"The dummy atoms {to_remove} were removed", UserWarning)
         for k in to_remove:
             zmat._metadata["has_dummies"].pop(k)
         if not inplace:
@@ -742,7 +742,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         as_function: Literal[True] = True,
         chain: bool = ...,
         drop_auto_dummies: bool = ...,
-        pure_internal: Union[bool, None] = ...,
+        pure_internal: bool | None = ...,
     ) -> Callable[[Self], Cartesian]: ...
 
     @overload
@@ -751,7 +751,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         as_function: Literal[False] = ...,
         chain: bool = ...,
         drop_auto_dummies: bool = ...,
-        pure_internal: Union[bool, None] = ...,
+        pure_internal: bool | None = ...,
     ) -> Tensor4D: ...
 
     def get_grad_cartesian(
@@ -759,8 +759,8 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         as_function: bool = True,
         chain: bool = True,
         drop_auto_dummies: bool = True,
-        pure_internal: Union[bool, None] = None,
-    ) -> Union[Tensor4D, Callable[[Self], Cartesian]]:
+        pure_internal: bool | None = None,
+    ) -> Tensor4D | Callable[[Self], Cartesian]:
         r"""Return the gradient for the transformation to a Cartesian.
 
         If ``as_function`` is True, a function is returned that can be directly

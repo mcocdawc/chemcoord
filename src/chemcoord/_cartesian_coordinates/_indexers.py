@@ -1,13 +1,13 @@
 import warnings
 from abc import abstractmethod
 from collections.abc import Set
-from typing import Generic, TypeVar, Union, overload
+from typing import Generic, TypeAlias, TypeVar, overload
 
 from attrs import define
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
 from pandas.core.series import Series
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self
 
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
@@ -19,8 +19,8 @@ from chemcoord.typing import Integral, SequenceNotStr, Vector
 class Molecule(GenericCore):
     @abstractmethod
     def _return_appropiate_type(
-        self, selected: Union[Series, DataFrame]
-    ) -> Union[Self, Series, DataFrame]: ...
+        self, selected: Series | DataFrame
+    ) -> Self | Series | DataFrame: ...
 
 
 T = TypeVar("T", bound=Molecule)
@@ -31,8 +31,8 @@ class _generic_Indexer(Generic[T]):
     molecule: T
 
 
-IntIdx: TypeAlias = Union[Integral, Set[Integral], Vector, SequenceNotStr[Integral]]
-StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str]]
+IntIdx: TypeAlias = Integral | Set[Integral] | Vector | SequenceNotStr[Integral]
+StrIdx: TypeAlias = str | Set[str] | SequenceNotStr[str]
 
 
 class _Loc(_generic_Indexer, Generic[T]):
@@ -45,29 +45,39 @@ class _Loc(_generic_Indexer, Generic[T]):
     @overload
     def __getitem__(
         self,
-        key: Union[
-            Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-        ],
+        key: (
+            Index | Set[Integral] | Vector | SequenceNotStr[Integral] | slice | Series
+        ),
     ) -> T: ...
 
     @overload
     def __getitem__(
         self,
         key: tuple[
-            Union[
-                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-            ],
-            Union[Index, Set[str], Vector, SequenceNotStr[str], Series],
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+            Index | Set[str] | Vector | SequenceNotStr[str] | Series,
         ],
-    ) -> Union[T, DataFrame]: ...
+    ) -> T | DataFrame: ...
 
     @overload
     def __getitem__(
         self,
         key: tuple[
-            Union[
-                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-            ],
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
             slice,
         ],
     ) -> T: ...
@@ -76,9 +86,14 @@ class _Loc(_generic_Indexer, Generic[T]):
     def __getitem__(
         self,
         key: tuple[
-            Union[
-                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-            ],
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
             str,
         ],
     ) -> Series: ...
@@ -88,42 +103,42 @@ class _Loc(_generic_Indexer, Generic[T]):
         self,
         key: tuple[
             Integral,
-            Union[Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
+            Index | Set[str] | Vector | SequenceNotStr[str] | slice | Series,
         ],
-    ) -> Union[T, Series]: ...
+    ) -> T | Series: ...
 
     @overload
     def __getitem__(
         self,
         key: tuple[Integral, str],
-    ) -> Union[float, str]: ...
+    ) -> float | str: ...
 
     def __getitem__(
         self,
-        key: Union[
-            Union[
-                Integral,
-                Index,
-                Set[Integral],
-                Vector,
-                SequenceNotStr[Integral],
-                slice,
-                Series,
-            ],
-            tuple[
-                Union[
-                    Integral,
-                    Index,
-                    Set[Integral],
-                    Vector,
-                    SequenceNotStr[Integral],
-                    slice,
-                    Series,
-                ],
-                Union[str, Index, Set[str], Vector, SequenceNotStr[str], slice, Series],
-            ],
-        ],
-    ) -> Union[T, DataFrame, Series, float, str]:
+        key: (
+            (
+                Integral
+                | Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            )
+            | tuple[
+                (
+                    Integral
+                    | Index
+                    | Set[Integral]
+                    | Vector
+                    | SequenceNotStr[Integral]
+                    | slice
+                    | Series
+                ),
+                str | Index | Set[str] | Vector | SequenceNotStr[str] | slice | Series,
+            ]
+        ),
+    ) -> T | DataFrame | Series | float | str:
         if isinstance(key, tuple):
             selected = self.molecule._frame.loc[
                 _set_caster(key[0]), _set_caster(key[1])
@@ -138,13 +153,13 @@ class _Loc(_generic_Indexer, Generic[T]):
 
     def __setitem__(
         self,
-        key: Union[
-            IntIdx,
-            slice,
-            Series,
-            Index,
-            tuple[Union[Series, IntIdx, slice, Index], Union[Series, StrIdx, slice]],
-        ],
+        key: (
+            IntIdx
+            | slice
+            | Series
+            | Index
+            | tuple[Series | IntIdx | slice | Index, Series | StrIdx | slice]
+        ),
         value,
     ) -> None:
         df = self.molecule._frame
@@ -186,29 +201,39 @@ class _ILoc(_generic_Indexer, Generic[T]):
     @overload
     def __getitem__(
         self,
-        key: Union[
-            Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-        ],
+        key: (
+            Index | Set[Integral] | Vector | SequenceNotStr[Integral] | slice | Series
+        ),
     ) -> T: ...
 
     @overload
     def __getitem__(
         self,
         key: tuple[
-            Union[
-                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-            ],
-            Union[Index, Set[Integral], Vector, SequenceNotStr[Integral], Series],
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+            Index | Set[Integral] | Vector | SequenceNotStr[Integral] | Series,
         ],
-    ) -> Union[T, DataFrame]: ...
+    ) -> T | DataFrame: ...
 
     @overload
     def __getitem__(
         self,
         key: tuple[
-            Union[
-                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-            ],
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
             slice,
         ],
     ) -> T: ...
@@ -217,9 +242,14 @@ class _ILoc(_generic_Indexer, Generic[T]):
     def __getitem__(
         self,
         key: tuple[
-            Union[
-                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-            ],
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
             Integral,
         ],
     ) -> Series: ...
@@ -229,52 +259,57 @@ class _ILoc(_generic_Indexer, Generic[T]):
         self,
         key: tuple[
             Integral,
-            Union[
-                Index, Set[Integral], Vector, SequenceNotStr[Integral], slice, Series
-            ],
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
         ],
-    ) -> Union[T, Series]: ...
+    ) -> T | Series: ...
 
     @overload
     def __getitem__(
         self,
         key: tuple[Integral, Integral],
-    ) -> Union[float, str]: ...
+    ) -> float | str: ...
 
     def __getitem__(
         self,
-        key: Union[
-            Union[
-                Integral,
-                Index,
-                Set[Integral],
-                Vector,
-                SequenceNotStr[Integral],
-                slice,
-                Series,
-            ],
-            tuple[
-                Union[
-                    Integral,
-                    Index,
-                    Set[Integral],
-                    Vector,
-                    SequenceNotStr[Integral],
-                    slice,
-                    Series,
-                ],
-                Union[
-                    Integral,
-                    Index,
-                    Set[Integral],
-                    Vector,
-                    SequenceNotStr[Integral],
-                    slice,
-                    Series,
-                ],
-            ],
-        ],
-    ) -> Union[T, DataFrame, Series, float, str]:
+        key: (
+            (
+                Integral
+                | Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            )
+            | tuple[
+                (
+                    Integral
+                    | Index
+                    | Set[Integral]
+                    | Vector
+                    | SequenceNotStr[Integral]
+                    | slice
+                    | Series
+                ),
+                (
+                    Integral
+                    | Index
+                    | Set[Integral]
+                    | Vector
+                    | SequenceNotStr[Integral]
+                    | slice
+                    | Series
+                ),
+            ]
+        ),
+    ) -> T | DataFrame | Series | float | str:
         if isinstance(key, tuple):
             selected = self.molecule._frame.iloc[
                 _set_caster(key[0]), _set_caster(key[1])
@@ -288,12 +323,12 @@ class _ILoc(_generic_Indexer, Generic[T]):
 
     def __setitem__(
         self,
-        key: Union[
-            IntIdx,
-            slice,
-            Series,
-            tuple[Union[Series, IntIdx, slice], Union[Series, IntIdx, slice]],
-        ],
+        key: (
+            IntIdx
+            | slice
+            | Series
+            | tuple[Series | IntIdx | slice, Series | IntIdx | slice]
+        ),
         value,
     ) -> None:
         df = self.molecule._frame

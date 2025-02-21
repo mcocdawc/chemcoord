@@ -7,7 +7,7 @@ class GenericIO:
     def _sympy_formatter(self) -> Self:
         def formatter(x):
             if isinstance(x, sympy.Basic):
-                return "${}$".format(sympy.latex(x))
+                return f"${sympy.latex(x)}$"
             else:
                 return x
 
