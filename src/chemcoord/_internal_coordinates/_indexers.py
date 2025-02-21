@@ -287,12 +287,12 @@ class _SafeBase:
                 raise exception
 
         if can_convert_at_all:
-            if molecule.dummy_manipulation_allowed:
-                self.molecule._remove_dummies(inplace=True)
-
             self.molecule._frame = (
                 self.molecule._clean_different_dihedral_orientation()._frame
             )
+
+            if molecule.dummy_manipulation_allowed:
+                self.molecule._remove_dummies(inplace=True)
 
             if self.molecule.pure_internal_mov:
                 ref = self.molecule._metadata["last_valid_cartesian"]
