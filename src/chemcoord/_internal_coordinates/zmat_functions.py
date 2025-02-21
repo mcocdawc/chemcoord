@@ -147,8 +147,6 @@ def apply_grad_cartesian_tensor(grad_X: Tensor4D, zmat_dist: Zmat) -> Cartesian:
 def _z_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Zmat]:
     z_start = start.get_zmat()
     z_end = end.get_zmat(z_start.loc[:, ["b", "a", "d"]])
-    z_start.__truediv__(1)
-    z_start.__rtruediv__(1)
     with TestOperators(False):
         z_step = (z_end - z_start).minimize_dihedrals() / float(N - 1)
     result = [z_start.copy()]

@@ -114,11 +114,11 @@ def show_versions(as_json=False):
         print("------------------")
 
         for k, stat in sys_info:
-            print("%s: %s" % (k, stat))
+            print(f"{k}: {stat}")
 
         print("")
         for k, stat in deps_blob:
-            print("%s: %s" % (k, stat))
+            print(f"{k}: {stat}")
 
 
 def main():

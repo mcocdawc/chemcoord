@@ -3,10 +3,10 @@ import os
 import subprocess
 import tempfile
 import warnings
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from threading import Thread
-from typing import Callable, Literal, Union, overload
+from typing import Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -27,9 +27,9 @@ from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 
 
 def view(
-    molecule: Union[Cartesian, Sequence[Cartesian]],
-    viewer: Union[PathLike, None] = None,
-    list_viewer_file: Union[Literal["molden", "xyz"], None] = None,
+    molecule: Cartesian | Sequence[Cartesian],
+    viewer: PathLike | None = None,
+    list_viewer_file: Literal["molden", "xyz"] | None = None,
     use_curr_dir: bool = False,
 ) -> None:
     """View your molecule or list of molecules.
@@ -116,11 +116,11 @@ def to_xyz_trajectory(
 
 def to_xyz_trajectory(
     cartesian_list: Sequence[Cartesian],
-    buf: Union[PathLike, None] = None,
+    buf: PathLike | None = None,
     sort_index: bool = True,
     overwrite: bool = True,
     float_format: Callable[[float], str] = "{:.6f}".format,
-) -> Union[str, None]:
+) -> str | None:
     """Write a list of Cartesians into an xyz file.
 
     .. note:: Since it permamently writes a file, this function
@@ -183,11 +183,11 @@ def to_molden(
 
 def to_molden(
     cartesian_list: Sequence[Cartesian],
-    buf: Union[PathLike, None] = None,
+    buf: PathLike | None = None,
     sort_index: bool = True,
     overwrite: bool = True,
     float_format: Callable[[float], str] = "{:.6f}".format,
-) -> Union[str, None]:
+) -> str | None:
     """Write a list of Cartesians into a molden file.
 
     .. note:: Since it permamently writes a file, this function
@@ -268,7 +268,7 @@ def read_molden(
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
-    with open(inputfile, "r") as f:
+    with open(inputfile) as f:
         found = False
         while not found:
             line = f.readline()
@@ -382,7 +382,7 @@ def allclose(
 def concat(
     cartesians: Sequence[Cartesian],
     ignore_index: bool = False,
-    keys: Union[Iterable, None] = None,
+    keys: Iterable | None = None,
 ) -> Cartesian:
     """Join list of cartesians into one molecule.
 
@@ -497,7 +497,7 @@ def orthonormalize_righthanded(basis: Matrix[np.floating]) -> Matrix[np.float64]
 def get_kabsch_rotation(
     Q: Matrix[np.floating],
     P: Matrix[np.floating],
-    weights: Union[Vector[np.floating], None] = None,
+    weights: Vector[np.floating] | None = None,
 ) -> Matrix[np.float64]:
     """Calculate the optimal rotation from ``P`` unto ``Q``.
 

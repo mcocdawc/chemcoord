@@ -1,5 +1,5 @@
 import warnings
-from typing import Literal, Union, overload
+from typing import Literal, overload
 
 import pandas as pd
 from pandas._typing import ReadCsvBuffer
@@ -49,7 +49,7 @@ class ZmatIO(ZmatCore, GenericIO):
             return (insert_txt + substr).join(txt.split(substr))
 
         html_txt = out._frame._repr_html_()
-        insert_txt = "<caption>{}</caption>\n".format(self.__class__.__name__)
+        insert_txt = f"<caption>{self.__class__.__name__}</caption>\n"
         return insert_before_substring(insert_txt, "<thead>", html_txt)
 
     def _remove_upper_triangle(self) -> Self:
@@ -98,17 +98,17 @@ class ZmatIO(ZmatCore, GenericIO):
     @overload
     def to_latex(
         self,
-        buf: Union[WriteBuffer[str], PathLike] = ...,
+        buf: WriteBuffer[str] | PathLike = ...,
         upper_triangle: bool = ...,
         **kwargs,
     ) -> None: ...
 
     def to_latex(
         self,
-        buf: Union[WriteBuffer[str], PathLike, None] = None,
+        buf: WriteBuffer[str] | PathLike | None = None,
         upper_triangle: bool = True,
         **kwargs,
-    ) -> Union[str, None]:
+    ) -> str | None:
         """Render a DataFrame to a tabular environment table.
 
         You can splice this into a LaTeX document.
@@ -123,7 +123,7 @@ class ZmatIO(ZmatCore, GenericIO):
 
     @classmethod
     def read_zmat(
-        cls, inputfile: Union[ReadCsvBuffer[str], PathLike], implicit_index: bool = True
+        cls, inputfile: ReadCsvBuffer[str] | PathLike, implicit_index: bool = True
     ) -> Self:
         """Reads a zmat file.
 
@@ -181,13 +181,13 @@ class ZmatIO(ZmatCore, GenericIO):
 
     def to_zmat(
         self,
-        buf: Union[PathLike, None] = None,
+        buf: PathLike | None = None,
         upper_triangle: bool = True,
         implicit_index: bool = True,
         float_format: FloatFormatType = "{:.6f}".format,
         overwrite: bool = True,
         header: bool = False,
-    ) -> Union[str, None]:
+    ) -> str | None:
         """Write zmat-file
 
         Args:

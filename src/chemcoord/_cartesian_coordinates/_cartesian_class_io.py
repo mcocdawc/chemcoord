@@ -9,7 +9,7 @@ from collections.abc import Hashable
 from functools import partial
 from threading import Thread
 from types import ModuleType
-from typing import Any, Literal, Union, overload
+from typing import Any, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -33,13 +33,13 @@ from chemcoord.typing import (
     WriteBuffer,
 )
 
-pyscf: Union[ModuleType, None] = None
+pyscf: ModuleType | None = None
 try:
     import pyscf  # type: ignore[no-redef]
     from pyscf.gto.mole import Mole
 except ImportError:
     pass
-ase: Union[ModuleType, None] = None
+ase: ModuleType | None = None
 try:
     import ase  # type: ignore[no-redef]
     from ase.atoms import Atoms as AseAtoms
@@ -72,67 +72,67 @@ class CartesianIO(CartesianCore, GenericIO):
             return (insert_txt + substr).join(txt.split(substr))
 
         html_txt = new._frame._repr_html_()  # type: ignore[operator]
-        insert_txt = "<caption>{}</caption>\n".format(self.__class__.__name__)
+        insert_txt = f"<caption>{self.__class__.__name__}</caption>\n"
         return insert_before_substring(insert_txt, "<thead>", html_txt)
 
     @overload
     def to_string(
         self,
         buf: None = None,
-        columns: Union[Axes, None] = ...,
-        col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
+        columns: Axes | None = ...,
+        col_space: int | list[int] | dict[Hashable, int] | None = ...,
+        header: bool | SequenceNotStr[str] = ...,
         index: bool = ...,
         na_rep: str = ...,
-        formatters: Union[FormattersType, None] = ...,
-        float_format: Union[FloatFormatType, None] = ...,
-        sparsify: Union[bool, None] = ...,
+        formatters: FormattersType | None = ...,
+        float_format: FloatFormatType | None = ...,
+        sparsify: bool | None = ...,
         index_names: bool = ...,
-        justify: Union[str, None] = ...,
-        line_width: Union[int, None] = ...,
-        max_rows: Union[int, None] = ...,
-        max_cols: Union[int, None] = ...,
+        justify: str | None = ...,
+        line_width: int | None = ...,
+        max_rows: int | None = ...,
+        max_cols: int | None = ...,
         show_dimensions: bool = ...,
     ) -> str: ...
 
     @overload
     def to_string(
         self,
-        buf: Union[WriteBuffer[str], PathLike] = ...,
-        columns: Union[Axes, None] = ...,
-        col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
+        buf: WriteBuffer[str] | PathLike = ...,
+        columns: Axes | None = ...,
+        col_space: int | list[int] | dict[Hashable, int] | None = ...,
+        header: bool | SequenceNotStr[str] = ...,
         index: bool = ...,
         na_rep: str = ...,
-        formatters: Union[FormattersType, None] = ...,
-        float_format: Union[FloatFormatType, None] = ...,
-        sparsify: Union[bool, None] = ...,
+        formatters: FormattersType | None = ...,
+        float_format: FloatFormatType | None = ...,
+        sparsify: bool | None = ...,
         index_names: bool = ...,
-        justify: Union[str, None] = ...,
-        line_width: Union[int, None] = ...,
-        max_rows: Union[int, None] = ...,
-        max_cols: Union[int, None] = ...,
+        justify: str | None = ...,
+        line_width: int | None = ...,
+        max_rows: int | None = ...,
+        max_cols: int | None = ...,
         show_dimensions: bool = ...,
     ) -> None: ...
 
     def to_string(
         self,
-        buf: Union[WriteBuffer[str], PathLike, None] = None,
-        columns: Union[Axes, None] = None,
-        col_space: Union[int, list[int], dict[Hashable, int], None] = None,
-        header: Union[bool, SequenceNotStr[str]] = True,
+        buf: WriteBuffer[str] | PathLike | None = None,
+        columns: Axes | None = None,
+        col_space: int | list[int] | dict[Hashable, int] | None = None,
+        header: bool | SequenceNotStr[str] = True,
         index: bool = True,
         na_rep: str = "NaN",
-        formatters: Union[FormattersType, None] = None,
-        float_format: Union[FloatFormatType, None] = None,
-        sparsify: Union[bool, None] = None,
+        formatters: FormattersType | None = None,
+        float_format: FloatFormatType | None = None,
+        sparsify: bool | None = None,
         index_names: bool = True,
-        justify: Union[str, None] = None,
-        line_width: Union[int, None] = None,
-        max_rows: Union[int, None] = None,
-        max_cols: Union[int, None] = None,
+        justify: str | None = None,
+        line_width: int | None = None,
+        max_rows: int | None = None,
+        max_cols: int | None = None,
         show_dimensions: bool = False,
-    ) -> Union[str, None]:
+    ) -> str | None:
         """Render a DataFrame to a console-friendly tabular output.
 
         Wrapper around the :meth:`pandas.DataFrame.to_string` method.
@@ -159,72 +159,72 @@ class CartesianIO(CartesianCore, GenericIO):
     def to_latex(
         self,
         buf: None = None,
-        columns: Union[Axes, None] = ...,
-        col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
+        columns: Axes | None = ...,
+        col_space: int | list[int] | dict[Hashable, int] | None = ...,
+        header: bool | SequenceNotStr[str] = ...,
         index: bool = ...,
         na_rep: str = ...,
-        formatters: Union[FormattersType, None] = ...,
-        float_format: Union[FloatFormatType, None] = ...,
-        sparsify: Union[bool, None] = ...,
+        formatters: FormattersType | None = ...,
+        float_format: FloatFormatType | None = ...,
+        sparsify: bool | None = ...,
         index_names: bool = ...,
         bold_rows: bool = ...,
-        column_format: Union[str, None] = ...,
-        longtable: Union[bool, None] = ...,
-        escape: Union[bool, None] = ...,
-        encoding: Union[str, None] = ...,
+        column_format: str | None = ...,
+        longtable: bool | None = ...,
+        escape: bool | None = ...,
+        encoding: str | None = ...,
         decimal: str = ...,
-        multicolumn: Union[bool, None] = ...,
-        multicolumn_format: Union[str, None] = ...,
-        multirow: Union[bool, None] = ...,
+        multicolumn: bool | None = ...,
+        multicolumn_format: str | None = ...,
+        multirow: bool | None = ...,
     ) -> str: ...
 
     @overload
     def to_latex(
         self,
-        buf: Union[WriteBuffer[str], PathLike] = ...,
-        columns: Union[Axes, None] = ...,
-        col_space: Union[int, list[int], dict[Hashable, int], None] = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
+        buf: WriteBuffer[str] | PathLike = ...,
+        columns: Axes | None = ...,
+        col_space: int | list[int] | dict[Hashable, int] | None = ...,
+        header: bool | SequenceNotStr[str] = ...,
         index: bool = ...,
         na_rep: str = ...,
-        formatters: Union[FormattersType, None] = ...,
-        float_format: Union[FloatFormatType, None] = ...,
-        sparsify: Union[bool, None] = ...,
+        formatters: FormattersType | None = ...,
+        float_format: FloatFormatType | None = ...,
+        sparsify: bool | None = ...,
         index_names: bool = ...,
         bold_rows: bool = ...,
-        column_format: Union[str, None] = ...,
-        longtable: Union[bool, None] = ...,
-        escape: Union[bool, None] = ...,
-        encoding: Union[str, None] = ...,
+        column_format: str | None = ...,
+        longtable: bool | None = ...,
+        escape: bool | None = ...,
+        encoding: str | None = ...,
         decimal: str = ...,
-        multicolumn: Union[bool, None] = ...,
-        multicolumn_format: Union[str, None] = ...,
-        multirow: Union[bool, None] = ...,
+        multicolumn: bool | None = ...,
+        multicolumn_format: str | None = ...,
+        multirow: bool | None = ...,
     ) -> None: ...
 
     def to_latex(
         self,
-        buf: Union[WriteBuffer[str], PathLike, None] = None,
-        columns: Union[Axes, None] = None,
-        col_space: Union[int, list[int], dict[Hashable, int], None] = None,
-        header: Union[bool, SequenceNotStr[str]] = True,
+        buf: WriteBuffer[str] | PathLike | None = None,
+        columns: Axes | None = None,
+        col_space: int | list[int] | dict[Hashable, int] | None = None,
+        header: bool | SequenceNotStr[str] = True,
         index: bool = True,
         na_rep: str = "NaN",
-        formatters: Union[FormattersType, None] = None,
-        float_format: Union[FloatFormatType, None] = None,
-        sparsify: Union[bool, None] = None,
+        formatters: FormattersType | None = None,
+        float_format: FloatFormatType | None = None,
+        sparsify: bool | None = None,
         index_names: bool = True,
         bold_rows: bool = True,
-        column_format: Union[str, None] = None,
-        longtable: Union[bool, None] = None,
-        escape: Union[bool, None] = None,
-        encoding: Union[str, None] = None,
+        column_format: str | None = None,
+        longtable: bool | None = None,
+        escape: bool | None = None,
+        encoding: str | None = None,
         decimal: str = ".",
-        multicolumn: Union[bool, None] = None,
-        multicolumn_format: Union[str, None] = None,
-        multirow: Union[bool, None] = None,
-    ) -> Union[str, None]:
+        multicolumn: bool | None = None,
+        multicolumn_format: str | None = None,
+        multirow: bool | None = None,
+    ) -> str | None:
         """Render a DataFrame to a tabular environment table.
 
         You can splice this into a LaTeX document.
@@ -259,7 +259,7 @@ class CartesianIO(CartesianCore, GenericIO):
         buf: None = None,
         sort_index: bool = ...,
         index: bool = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
+        header: bool | SequenceNotStr[str] = ...,
         float_format: FloatFormatType = ...,
         overwrite: bool = ...,
     ) -> str: ...
@@ -270,20 +270,20 @@ class CartesianIO(CartesianCore, GenericIO):
         buf: PathLike = ...,
         sort_index: bool = ...,
         index: bool = ...,
-        header: Union[bool, SequenceNotStr[str]] = ...,
+        header: bool | SequenceNotStr[str] = ...,
         float_format: FloatFormatType = ...,
         overwrite: bool = ...,
     ) -> None: ...
 
     def to_xyz(
         self,
-        buf: Union[PathLike, None] = None,
+        buf: PathLike | None = None,
         sort_index: bool = True,
         index: bool = False,
-        header: Union[bool, SequenceNotStr[str]] = False,
+        header: bool | SequenceNotStr[str] = False,
         float_format: FloatFormatType = "{:.6f}".format,
         overwrite: bool = True,
-    ) -> Union[str, None]:
+    ) -> str | None:
         """Write xyz-file
 
         Args:
@@ -345,11 +345,11 @@ class CartesianIO(CartesianCore, GenericIO):
     @classmethod
     def read_xyz(
         cls,
-        buf: Union[ReadCsvBuffer[str], PathLike],
+        buf: ReadCsvBuffer[str] | PathLike,
         start_index: int = 0,
         get_bonds: bool = True,
-        nrows: Union[int, None] = None,
-        engine: Union[Literal["c", "python", "pyarrow", "python-fwf"], None] = None,
+        nrows: int | None = None,
+        engine: Literal["c", "python", "pyarrow", "python-fwf"] | None = None,
     ) -> Self:
         """Read a file of coordinate information.
 
@@ -401,8 +401,8 @@ class CartesianIO(CartesianCore, GenericIO):
     def to_cjson(self, buf: PathLike = ..., **kwargs: Any) -> None: ...
 
     def to_cjson(
-        self, buf: Union[PathLike, None] = None, **kwargs: Any
-    ) -> Union[dict[str, Any], None]:
+        self, buf: PathLike | None = None, **kwargs: Any
+    ) -> dict[str, Any] | None:
         """Write a cjson file or return dictionary.
 
         The cjson format is specified
@@ -451,7 +451,7 @@ class CartesianIO(CartesianCore, GenericIO):
             return None
 
     @classmethod
-    def read_cjson(cls, buf: Union[dict[str, Any], PathLike]) -> Self:
+    def read_cjson(cls, buf: dict[str, Any] | PathLike) -> Self:
         """Read a cjson file or a dictionary.
 
         The cjson format is specified
@@ -468,7 +468,7 @@ class CartesianIO(CartesianCore, GenericIO):
         if isinstance(buf, dict):
             data = buf.copy()
         else:
-            with open(buf, "r") as f:
+            with open(buf) as f:
                 data = json.load(f)
             assert data["chemical json"] == 0
 
@@ -508,9 +508,7 @@ class CartesianIO(CartesianCore, GenericIO):
             metadata=metadata,
         )
 
-    def view(
-        self, viewer: Union[PathLike, None] = None, use_curr_dir: bool = False
-    ) -> None:
+    def view(self, viewer: PathLike | None = None, use_curr_dir: bool = False) -> None:
         """View your molecule.
 
         .. note:: This function writes a temporary file and opens it with
