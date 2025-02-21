@@ -44,7 +44,6 @@ CLASSIFIERS = [
     "Operating System :: Microsoft :: Windows",
     "Natural Language :: English",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -77,7 +76,7 @@ def setup_package():
         packages=find_packages("src"),
         package_dir={"": "src"},
         install_requires=INSTALL_REQUIRES,
-        python_requires=">=3.8",
+        python_requires=">=3.10",
     )
 
 
