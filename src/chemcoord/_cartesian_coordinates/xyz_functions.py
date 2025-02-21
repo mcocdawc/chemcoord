@@ -21,6 +21,7 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
 from chemcoord._cartesian_coordinates._cartesian_class_core import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
+from chemcoord._internal_coordinates.zmat_functions import _zmat_interpolate
 from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
 from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
@@ -580,3 +581,20 @@ def apply_grad_zmat_tensor(
     new.loc[:, "atom"] = cart_dist.loc[:, "atom"]
     new.loc[:, ["bond", "angle", "dihedral"]] = C_dist
     return Zmat(new, _metadata={"last_valid_cartesian": cart_dist})
+
+
+def _cart_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesian]:
+    Delta = (end - start) / (N - 1)
+    return [start + i * Delta for i in range(N)]
+
+
+def interpolate(
+    start: Cartesian, end: Cartesian, N: int, coord: Literal["cart", "zmat"] = "zmat"
+) -> list[Cartesian]:
+    """Interpolate between start and end structure."""
+    if coord == "cart":
+        return _cart_interpolate(start, end, N)
+    elif coord == "zmat":
+        return _zmat_interpolate(start, end, N)
+    else:
+        assert_never(f"coord must be either 'cart' or 'zmat', not {coord}")
