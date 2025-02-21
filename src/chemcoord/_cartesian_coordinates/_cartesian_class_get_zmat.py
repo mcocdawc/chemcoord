@@ -85,13 +85,13 @@ class CartesianGetZmat(CartesianCore):
                 may be provided. The rest is created automatically.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             pd.DataFrame: Construction table
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination(
@@ -230,7 +230,7 @@ class CartesianGetZmat(CartesianCore):
 
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
             perform_checks (bool): The checks for invalid references are
                 performed using :meth:`~chemcoord.Cartesian.correct_dihedral`
                 and :meth:`~chemcoord.Cartesian.correct_absolute_refs`.
@@ -239,7 +239,7 @@ class CartesianGetZmat(CartesianCore):
             :class:`pandas.DataFrame`: Construction table
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         if fragment_list is not None:
             fragments = fragment_list
@@ -365,13 +365,13 @@ class CartesianGetZmat(CartesianCore):
             construction_table (pd.DataFrame):
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             pd.DataFrame: Appropiately renamed construction table.
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         problem_index = self.check_dihedral(construction_table)
         bond_dict = cast(
@@ -638,13 +638,13 @@ class CartesianGetZmat(CartesianCore):
             construction_table (pandas.DataFrame):
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             Zmat: A new instance of :class:`~Zmat`.
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         self.get_bonds(use_lookup=use_lookup)
         self._give_val_sorted_bond_dict(use_lookup=use_lookup)

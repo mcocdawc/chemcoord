@@ -4,13 +4,15 @@ import subprocess
 import tempfile
 import warnings
 from collections.abc import Iterable, Sequence
+from pathlib import Path
 from threading import Thread
-from typing import Callable, Union, overload
+from typing import Callable, Literal, Union, overload
 
 import numpy as np
 import pandas as pd
 import sympy
 from pandas.core.frame import DataFrame
+from typing_extensions import assert_never
 
 from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
@@ -27,6 +29,7 @@ from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 def view(
     molecule: Union[Cartesian, Sequence[Cartesian]],
     viewer: Union[PathLike, None] = None,
+    list_viewer_file: Union[Literal["molden", "xyz"], None] = None,
     use_curr_dir: bool = False,
 ) -> None:
     """View your molecule or list of molecules.
@@ -47,41 +50,115 @@ def view(
     Returns:
         None:
     """
-    viewer = settings["defaults"]["viewer"]
+    if viewer is None:
+        viewer = settings.defaults.viewer
+    if list_viewer_file is None:
+        list_viewer_file = settings.defaults.list_viewer_file
     if isinstance(molecule, Cartesian):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
     elif isinstance(molecule, Sequence):
         cartesian_list = molecule
         if use_curr_dir:
-            TEMP_DIR = os.path.curdir
+            TEMP_DIR = Path(os.path.curdir)
         else:
-            TEMP_DIR = tempfile.gettempdir()
+            TEMP_DIR = Path(tempfile.gettempdir())
 
-        def give_filename(i: int) -> str:
-            return os.path.join(TEMP_DIR, f"ChemCoord_list_{i}.molden")
+        def give_filename(i: int, suffix: Literal["molden", "xyz"]) -> Path:
+            return TEMP_DIR / f"ChemCoord_list_{i}.{suffix}"
 
         i = 1
-        while os.path.exists(give_filename(i)):
+        while give_filename(i, list_viewer_file).exists():
             i = i + 1
 
-        to_molden(cartesian_list, buf=give_filename(i))
+        if list_viewer_file == "molden":
+            to_molden(cartesian_list, buf=give_filename(i, list_viewer_file))
+        elif list_viewer_file == "xyz":
+            to_xyz_trajectory(cartesian_list, buf=give_filename(i, list_viewer_file))
+        else:
+            assert_never("Invalid list_viewer_file.")
 
         def open_file(i: int) -> None:
             """Open file and close after being finished."""
             try:
-                assert viewer is not None
-                subprocess.check_call([viewer, give_filename(i)])
+                subprocess.check_call([viewer, give_filename(i, list_viewer_file)])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
             finally:
                 if use_curr_dir:
                     pass
                 else:
-                    os.remove(give_filename(i))
+                    give_filename(i, list_viewer_file).unlink()
 
         Thread(target=open_file, args=(i,)).start()
     else:
         raise ValueError("Argument is neither list nor Cartesian.")
+
+
+@overload
+def to_xyz_trajectory(
+    cartesian_list: Sequence[Cartesian],
+    buf: None = None,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> str: ...
+
+
+@overload
+def to_xyz_trajectory(
+    cartesian_list: Sequence[Cartesian],
+    buf: PathLike,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> None: ...
+
+
+def to_xyz_trajectory(
+    cartesian_list: Sequence[Cartesian],
+    buf: Union[PathLike, None] = None,
+    sort_index: bool = True,
+    overwrite: bool = True,
+    float_format: Callable[[float], str] = "{:.6f}".format,
+) -> Union[str, None]:
+    """Write a list of Cartesians into an xyz file.
+
+    .. note:: Since it permamently writes a file, this function
+        is strictly speaking **not sideeffect free**.
+        The list to be written is of course not changed.
+
+    Args:
+        cartesian_list (list):
+        buf (str): StringIO-like, optional buffer to write to
+        sort_index (bool): If sort_index is true, the Cartesian
+            is sorted by the index before writing.
+        overwrite (bool): May overwrite existing files.
+        float_format (one-parameter function): Formatter function
+            to apply to column’s elements if they are floats.
+            The result of this function must be a unicode string.
+
+    Returns:
+        output : string (or unicode, depending on data and options)
+    """
+    if sort_index:
+        cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
+
+    output = ""
+    for struct in cartesian_list:
+        output += struct.to_xyz(float_format=float_format) + "\n"
+
+    if buf is not None:
+        if overwrite:
+            with open(buf, mode="w") as f:
+                f.write(output)
+            return None
+
+        else:
+            with open(buf, mode="x") as f:
+                f.write(output)
+            return None
+    else:
+        return output
 
 
 @overload

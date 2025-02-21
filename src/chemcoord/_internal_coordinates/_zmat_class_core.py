@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Sequence
 from functools import partial
 from numbers import Real
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -16,9 +16,13 @@ from typing_extensions import Self
 import chemcoord._internal_coordinates._indexers as indexers
 import chemcoord._internal_coordinates._zmat_transformation as transformation
 import chemcoord.constants as constants
+from chemcoord._cartesian_coordinates._cart_transformation import (
+    _jit_normalize,
+    get_ref_pos,
+)
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._internal_coordinates._zmat_class_pandas_wrapper import PandasWrapper
-from chemcoord._utilities import _decorators
+from chemcoord._utilities._decorators import Appender, njit
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
 from chemcoord.exceptions import (
     ERR_CODE_OK,
@@ -26,12 +30,12 @@ from chemcoord.exceptions import (
     InvalidReference,
     PhysicalMeaning,
 )
-from chemcoord.typing import Tensor4D
+from chemcoord.typing import Matrix, Tensor4D, Vector
 
 if TYPE_CHECKING:
     from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 
-append_indexer_docstring = _decorators.Appender(
+append_indexer_docstring = Appender(
     """In the case of obtaining elements, the indexing behaves like
 Indexing and Selecting data in
 `Pandas <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_.
@@ -684,6 +688,32 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             zmat = zmat._insert_dummy_zmat(exception, inplace=False)
             return zmat._remove_dummies(inplace=False)
 
+    def _clean_different_dihedral_orientation(self) -> Self:
+        new = self.copy()
+        problematic_indices = new._find_differing_dihedral_orientation(
+            self._metadata["last_valid_cartesian"]
+        )
+        while any(problematic_indices):
+            current_row = np.argmax(problematic_indices)
+            idx = self.index[current_row]
+            old = self.get_cartesian()
+            new.unsafe_loc[idx, "dihedral"] = _complementary_dihedral(
+                new.unsafe_loc[idx, "dihedral"]
+            )
+            # We identify all subsequent indices that move with the changed index
+            # and consider them fixed as well.
+            problematic_indices[
+                (new.get_cartesian() - old).get_distance_to().loc[:, "distance"] > 0
+            ] = False
+        return new
+
+    def _find_differing_dihedral_orientation(self, other: Cartesian) -> Vector:
+        c_table: Final = self._extract_c_table()
+        ref: Final = other.loc[self.index, ["x", "y", "z"]].values.T
+        new: Final = self.get_cartesian().loc[self.index, ["x", "y", "z"]].values.T
+
+        return _jit_different_orientations(ref, new, c_table)
+
     def get_cartesian(self) -> Cartesian:
         """Return the molecule in cartesian coordinates.
 
@@ -710,13 +740,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             cartesian = Cartesian(xyz_frame, metadata=self.metadata)
             return cartesian
 
-        c_table = self.loc[:, ["b", "a", "d"]]
-        c_table = (
-            replace_without_warn(c_table, constants.int_label)
-            .astype("i8")
-            .replace({k: v for v, k in enumerate(c_table.index)})
-            .values.T
-        )
+        c_table = self._extract_c_table()
 
         C = self.loc[:, ["bond", "angle", "dihedral"]].values.T
         C[[1, 2], :] = np.radians(C[[1, 2], :])
@@ -735,6 +759,16 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         elif err != ERR_CODE_OK:
             raise ValueError("Unknown error")
         return create_cartesian(positions, row + 1)
+
+    def _extract_c_table(self):
+        "Return a transposed and reindexed c_table, ready for jitted functions"
+        c_table = self.loc[:, ["b", "a", "d"]]
+        return (
+            replace_without_warn(c_table, constants.int_label)
+            .astype("i8")
+            .replace({k: v for v, k in enumerate(c_table.index)})
+            .values.T
+        )
 
     @overload
     def get_grad_cartesian(
@@ -903,3 +937,34 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)
         return self.get_cartesian(*args, **kwargs)
+
+
+@njit
+def _jit_get_normal(vectors: Matrix) -> Vector:
+    BA = vectors[:, 1] - vectors[:, 0]
+    if np.allclose(BA, 0.0):
+        raise InvalidReference
+    AD = vectors[:, 2] - vectors[:, 1]
+    N = np.cross(AD, BA)
+    if np.allclose(N, 0.0):
+        raise InvalidReference
+    return _jit_normalize(N)
+
+
+@njit
+def _jit_different_orientations(
+    X_ref: Matrix, X_new: Matrix, c_table: Matrix
+) -> Vector:
+    result = np.full(X_ref.shape[1], False)
+    for i in range(X_ref.shape[1]):
+        result[i] = (
+            _jit_get_normal(get_ref_pos(X_ref, c_table[:, i]))
+            @ _jit_get_normal(get_ref_pos(X_new, c_table[:, i]))
+        ) < 0.0
+
+    return result
+
+
+def _complementary_dihedral(dihedral: Series) -> Series:
+    r = (dihedral + 180) % 360
+    return r - (r // 180) * 360

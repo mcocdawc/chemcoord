@@ -113,6 +113,37 @@ def test_interpolation():
         start_index=1,
     )
 
+    def z_interpolate(start, end, N):
+        z_start = start.get_zmat()
+        z_end = end.get_zmat(z_start.loc[:, ["b", "a", "d"]])
+        with cc.zmat_functions.TestOperators(False):
+            z_step = (z_end - z_start).minimize_dihedrals() / (N - 1)
+        result = [z_start.copy()]
+        for i in range(N - 1):
+            result.append(result[-1] + z_step)
+        return result
+
+    cartesians = [zm.get_cartesian() for zm in z_interpolate(start, end, 21)]
+
+    assert allclose(start, cartesians[0])
+    assert allclose(end, cartesians[-1])
+
+    assert all(allclose(m, ref, atol=1e-6) for m, ref in zip(cartesians, interpolated))
+
+
+def test_old_interpolation():
+    start = cc.Cartesian.read_xyz(
+        join(STRUCTURE_PATH, "MeOH_Furan_start.xyz"), start_index=1
+    )
+    end = cc.Cartesian.read_xyz(
+        join(STRUCTURE_PATH, "MeOH_Furan_end.xyz"), start_index=1
+    )
+
+    interpolated = cc.xyz_functions.read_molden(
+        join(STRUCTURE_PATH, "MeOH_Furan_interpolated.molden"),
+        start_index=1,
+    )
+
     z_start = start.get_zmat()
     z_end = end.get_zmat(z_start.loc[:, ["b", "a", "d"]])
 
