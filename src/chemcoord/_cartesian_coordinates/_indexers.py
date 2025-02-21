@@ -1,7 +1,7 @@
 import warnings
 from abc import abstractmethod
 from collections.abc import Set
-from typing import Generic, TypeAlias, TypeVar, Union, overload
+from typing import Generic, TypeAlias, TypeVar, overload
 
 from attrs import define
 from pandas.core.frame import DataFrame
@@ -31,8 +31,8 @@ class _generic_Indexer(Generic[T]):
     molecule: T
 
 
-IntIdx: TypeAlias = Union[Integral, Set[Integral], Vector, SequenceNotStr[Integral]]
-StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str]]
+IntIdx: TypeAlias = Integral | Set[Integral] | Vector | SequenceNotStr[Integral]
+StrIdx: TypeAlias = str | Set[str] | SequenceNotStr[str]
 
 
 class _Loc(_generic_Indexer, Generic[T]):

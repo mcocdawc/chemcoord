@@ -11,7 +11,7 @@ i.e. the type is mostly useful to document intent to the developer.
 
 import os
 from collections.abc import Sequence
-from typing import Any, NewType, TypeAlias, TypeVar, Union
+from typing import Any, NewType, TypeAlias, TypeVar
 
 import numpy as np
 
@@ -56,18 +56,18 @@ Tensor7D = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 Tensor = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 
 #: Type annotation for pathlike objects.
-PathLike: TypeAlias = Union[str, os.PathLike[str]]
+PathLike: TypeAlias = str | os.PathLike[str]
 #: Type annotation for dictionaries holding keyword arguments.
 KwargDict: TypeAlias = dict[str, Any]
 
 
 AtomIdx = NewType("AtomIdx", int)
 
-Real: TypeAlias = Union[float, np.floating]
-Integral: TypeAlias = Union[int, np.integer]
+Real: TypeAlias = float | np.floating
+Integral: TypeAlias = int | np.integer
 
 
-ArithmeticOther = Union[Real, Sequence, Sequence[Sequence], Vector, Matrix]
+ArithmeticOther = Real | Sequence | Sequence[Sequence] | Vector | Matrix
 
 
 #: A type for generic functions/classes without any constraints.
