@@ -9,7 +9,6 @@ Note that most numpy functions return :python:`ndarray[Any, Any]`
 i.e. the type is mostly useful to document intent to the developer.
 """
 
-import numbers
 import os
 from collections.abc import Sequence
 from typing import Any, NewType, TypeAlias, TypeVar
@@ -64,8 +63,8 @@ KwargDict: TypeAlias = dict[str, Any]
 
 AtomIdx = NewType("AtomIdx", int)
 
-Real: TypeAlias = int | float | np.floating | numbers.Real
-Integral: TypeAlias = int | np.integer | numbers.Integral
+Real: TypeAlias = int | float | np.floating
+Integral: TypeAlias = int | np.integer
 
 
 ArithmeticOther = Real | Sequence | Sequence[Sequence] | Vector | Matrix

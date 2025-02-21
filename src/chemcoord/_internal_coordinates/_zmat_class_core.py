@@ -4,7 +4,7 @@ import copy
 import warnings
 from collections.abc import Callable, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -278,7 +278,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         coords = ["bond", "angle", "dihedral"]
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            result = self.loc[:, coords] / other.loc[:, coords]
+            result = self.loc[:, coords].values / other.loc[:, coords].values
         elif isinstance(other, Real):
             result = self.loc[:, coords].values / other
         else:
@@ -296,9 +296,9 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         coords = ["bond", "angle", "dihedral"]
         if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
-            result = other.loc[:, coords] / self.loc[:, coords]
+            result = other.loc[:, coords].values / self.loc[:, coords].values
         elif isinstance(other, Real):
-            result = cast(DataFrame, other / self.loc[:, coords])
+            result = other / self.loc[:, coords].values
         else:
             raise TypeError(
                 "You can only multiply a ZMatrix with another ZMatrix or a number"
