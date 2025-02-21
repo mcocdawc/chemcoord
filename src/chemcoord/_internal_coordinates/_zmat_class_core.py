@@ -55,6 +55,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     dummy_manipulation_allowed = True
     test_operators = True
     pure_internal_mov = False
+    clean_dihedral_orientation = False
 
     def __init__(self, frame, metadata=None, _metadata=None):
         """How to initialize a Zmat instance.

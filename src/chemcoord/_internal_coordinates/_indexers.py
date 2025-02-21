@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from abc import abstractmethod
 from collections.abc import Set
@@ -25,7 +27,7 @@ from chemcoord.typing import Integral, SequenceNotStr, Vector
 T = TypeVar("T", bound=GenericCore)
 
 IntIdx: TypeAlias = Union[Integral, Set[Integral], Vector, SequenceNotStr[Integral]]
-StrIdx: TypeAlias = Union[str, Set[str], SequenceNotStr[str]]
+StrIdx: TypeAlias = str | Set[str] | SequenceNotStr[str]
 
 
 @define
@@ -287,9 +289,10 @@ class _SafeBase:
                 raise exception
 
         if can_convert_at_all:
-            self.molecule._frame = (
-                self.molecule._clean_different_dihedral_orientation()._frame
-            )
+            if molecule._clean_dihedral_orientation:
+                self.molecule._frame = (
+                    self.molecule._clean_different_dihedral_orientation()._frame
+                )
 
             if molecule.dummy_manipulation_allowed:
                 self.molecule._remove_dummies(inplace=True)

@@ -99,6 +99,21 @@ class PureInternalMovement:
         self.cls.pure_internal_mov = self.old_value
 
 
+class CleanDihedralOrientation:
+    def __init__(self, clean_dihedral_orientation, cls=None):
+        if cls is None:
+            cls = Zmat
+        self.cls = cls
+        self.clean_dihedral_orientation = clean_dihedral_orientation
+        self.old_value = self.cls.pure_internal_mov
+
+    def __enter__(self):
+        self.cls.pure_internal_mov = self.clean_dihedral_orientation
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.cls.pure_internal_mov = self.old_value
+
+
 def apply_grad_cartesian_tensor(grad_X: Tensor4D, zmat_dist: Zmat) -> Cartesian:
     """Apply the gradient for transformation to cartesian space onto zmat_dist.
 
@@ -127,3 +142,17 @@ def apply_grad_cartesian_tensor(grad_X: Tensor4D, zmat_dist: Zmat) -> Cartesian:
     return Cartesian.set_atom_coords(
         atoms=zmat_dist["atom"], coords=cart_dist, index=zmat_dist.index
     )
+
+
+def _z_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Zmat]:
+    z_start = start.get_zmat()
+    z_end = end.get_zmat(z_start.loc[:, ["b", "a", "d"]])
+    z_start.__truediv__(1)
+    z_start.__rtruediv__(1)
+    with TestOperators(False):
+        z_step = (z_end - z_start).minimize_dihedrals() / float(N - 1)
+    result = [z_start.copy()]
+    with CleanDihedralOrientation(True):
+        for i in range(N - 1):
+            result.append(result[-1] + z_step)
+    return result
