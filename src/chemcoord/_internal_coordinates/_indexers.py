@@ -289,6 +289,11 @@ class _SafeBase:
         if can_convert_at_all:
             if molecule.dummy_manipulation_allowed:
                 self.molecule._remove_dummies(inplace=True)
+
+            self.molecule._frame = (
+                self.molecule._clean_different_dihedral_orientation()._frame
+            )
+
             if self.molecule.pure_internal_mov:
                 ref = self.molecule._metadata["last_valid_cartesian"]
                 new = self.molecule.get_cartesian()
@@ -296,6 +301,10 @@ class _SafeBase:
                 rotated = ref.align(new, mass_weight=True)[1]
                 c_table = self.molecule.loc[:, ["b", "a", "d"]]
                 self.molecule._frame = rotated.get_zmat(c_table)._frame
+
+            self.molecule._metadata["last_valid_cartesian"] = (
+                self.molecule.get_cartesian()
+            )
         else:
             self.molecule = molecule
 
