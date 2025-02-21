@@ -11,7 +11,7 @@ i.e. the type is mostly useful to document intent to the developer.
 
 import os
 from collections.abc import Sequence
-from typing import Any, Dict, NewType, Tuple, TypeVar, Union
+from typing import Any, NewType, TypeAlias, TypeVar, Union
 
 import numpy as np
 
@@ -24,7 +24,6 @@ from pandas._typing import (  # noqa: F401
     SequenceNotStr,
     WriteBuffer,
 )
-from typing_extensions import TypeAlias
 
 # We want the dtype to behave covariant, i.e. if a
 #  Vector[float] is allowed, then the more specific
@@ -40,26 +39,26 @@ T_dtype_co = TypeVar("T_dtype_co", bound=np.generic, covariant=True)
 # make the typechecks more strict over time, when shape checking finally comes to numpy.
 
 #: Type annotation of a vector.
-Vector = np.ndarray[Tuple[int], np.dtype[T_dtype_co]]
+Vector = np.ndarray[tuple[int], np.dtype[T_dtype_co]]
 #: Type annotation of a matrix.
-Matrix = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
+Matrix = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 #: Type annotation of a tensor.
-Tensor3D = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
+Tensor3D = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 #: Type annotation of a tensor.
-Tensor4D = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
+Tensor4D = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 #: Type annotation of a tensor.
-Tensor5D = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
+Tensor5D = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 #: Type annotation of a tensor.
-Tensor6D = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
+Tensor6D = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 #: Type annotation of a tensor.
-Tensor7D = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
+Tensor7D = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 #: Type annotation of a tensor.
-Tensor = np.ndarray[Tuple[int, ...], np.dtype[T_dtype_co]]
+Tensor = np.ndarray[tuple[int, ...], np.dtype[T_dtype_co]]
 
 #: Type annotation for pathlike objects.
 PathLike: TypeAlias = Union[str, os.PathLike[str]]
 #: Type annotation for dictionaries holding keyword arguments.
-KwargDict: TypeAlias = Dict[str, Any]
+KwargDict: TypeAlias = dict[str, Any]
 
 
 AtomIdx = NewType("AtomIdx", int)
