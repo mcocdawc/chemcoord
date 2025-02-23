@@ -116,23 +116,23 @@ class CleanDihedralOrientation:
 
     If this does not help, one can use this contextmanager to clean the orientation::
 
-    with CleanDihedralOrientation(True):
-        zmat_1.loc[1, 'angle'] = 170
+        with CleanDihedralOrientation(True):
+            zmat_1.loc[1, 'angle'] = 170
 
     Even then it is advised to apply small steps changes.
     """
 
-    def __init__(self, clean_dihedral_orientation, cls=None):
+    def __init__(self, clean_dihedral_orientation: bool, cls=None) -> None:
         if cls is None:
             cls = Zmat
         self.cls = cls
         self.clean_dihedral_orientation = clean_dihedral_orientation
         self.old_value = self.cls.clean_dihedral_orientation
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.cls.clean_dihedral_orientation = self.clean_dihedral_orientation
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.cls.clean_dihedral_orientation = self.old_value
 
 
