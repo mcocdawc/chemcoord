@@ -318,10 +318,9 @@ class _SafeBase:
                 raise exception
 
         if can_convert_at_all:
-            if molecule._clean_dihedral_orientation:
-                self.molecule._frame = (
-                    self.molecule._clean_different_dihedral_orientation()._frame
-                )
+            self.molecule._frame = (
+                self.molecule._clean_different_dihedral_orientation()._frame
+            )
 
             if molecule.dummy_manipulation_allowed:
                 self.molecule._remove_dummies(inplace=True)

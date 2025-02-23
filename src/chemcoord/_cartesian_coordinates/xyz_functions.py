@@ -28,7 +28,7 @@ from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 
 
 def view(
-    molecule: Cartesian | Sequence[Cartesian],
+    molecule: Cartesian | Iterable[Cartesian],
     viewer: PathLike | None = None,
     list_viewer_file: Literal["molden", "xyz"] | None = None,
     use_curr_dir: bool = False,
@@ -57,8 +57,8 @@ def view(
         list_viewer_file = settings.defaults.list_viewer_file
     if isinstance(molecule, Cartesian):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
-    elif isinstance(molecule, Sequence):
-        cartesian_list = molecule
+    elif isinstance(molecule, Iterable):
+        cartesians = molecule
         if use_curr_dir:
             TEMP_DIR = Path(os.path.curdir)
         else:
@@ -72,9 +72,9 @@ def view(
             i = i + 1
 
         if list_viewer_file == "molden":
-            to_molden(cartesian_list, buf=give_filename(i, list_viewer_file))
+            to_molden(cartesians, buf=give_filename(i, list_viewer_file))
         elif list_viewer_file == "xyz":
-            to_xyz_trajectory(cartesian_list, buf=give_filename(i, list_viewer_file))
+            to_xyz_trajectory(cartesians, buf=give_filename(i, list_viewer_file))
         else:
             assert_never("Invalid list_viewer_file.")
 
@@ -92,12 +92,15 @@ def view(
 
         Thread(target=open_file, args=(i,)).start()
     else:
-        raise ValueError("Argument is neither list nor Cartesian.")
+        raise ValueError(
+            "Argument is neither iterable of Cartesians nor Cartesian "
+            f"but instead: {type(molecule)}"
+        )
 
 
 @overload
 def to_xyz_trajectory(
-    cartesian_list: Sequence[Cartesian],
+    cartesian_list: Iterable[Cartesian],
     buf: None = None,
     sort_index: bool = ...,
     overwrite: bool = ...,
@@ -107,7 +110,7 @@ def to_xyz_trajectory(
 
 @overload
 def to_xyz_trajectory(
-    cartesian_list: Sequence[Cartesian],
+    cartesian_list: Iterable[Cartesian],
     buf: PathLike,
     sort_index: bool = ...,
     overwrite: bool = ...,
@@ -116,7 +119,7 @@ def to_xyz_trajectory(
 
 
 def to_xyz_trajectory(
-    cartesian_list: Sequence[Cartesian],
+    cartesian_list: Iterable[Cartesian],
     buf: PathLike | None = None,
     sort_index: bool = True,
     overwrite: bool = True,
@@ -149,22 +152,16 @@ def to_xyz_trajectory(
         output += struct.to_xyz(float_format=float_format) + "\n"
 
     if buf is not None:
-        if overwrite:
-            with open(buf, mode="w") as f:
-                f.write(output)
-            return None
-
-        else:
-            with open(buf, mode="x") as f:
-                f.write(output)
-            return None
+        with open(buf, mode="w" if overwrite else "x") as f:
+            f.write(output)
+        return None
     else:
         return output
 
 
 @overload
 def to_molden(
-    cartesian_list: Sequence[Cartesian],
+    cartesians: Iterable[Cartesian],
     buf: None = None,
     sort_index: bool = ...,
     overwrite: bool = ...,
@@ -174,7 +171,7 @@ def to_molden(
 
 @overload
 def to_molden(
-    cartesian_list: Sequence[Cartesian],
+    cartesians: Iterable[Cartesian],
     buf: PathLike,
     sort_index: bool = ...,
     overwrite: bool = ...,
@@ -183,7 +180,7 @@ def to_molden(
 
 
 def to_molden(
-    cartesian_list: Sequence[Cartesian],
+    cartesians: Iterable[Cartesian],
     buf: PathLike | None = None,
     sort_index: bool = True,
     overwrite: bool = True,
@@ -196,20 +193,24 @@ def to_molden(
         The list to be written is of course not changed.
 
     Args:
-        cartesian_list (list):
-        buf (str): StringIO-like, optional buffer to write to
-        sort_index (bool): If sort_index is true, the Cartesian
+        cartesian_list :
+        buf : StringIO-like, optional buffer to write to
+        sort_index : If sort_index is true, the Cartesian
             is sorted by the index before writing.
-        overwrite (bool): May overwrite existing files.
+        overwrite : May overwrite existing files.
         float_format (one-parameter function): Formatter function
             to apply to column’s elements if they are floats.
             The result of this function must be a unicode string.
 
     Returns:
-        formatted : string (or unicode, depending on data and options)
+        str :
     """
     if sort_index:
-        cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
+        cartesian_list = [molecule.sort_index() for molecule in cartesians]
+    else:
+        cartesian_list = list(cartesian_list)
+    if not all(isinstance(molecule, Cartesian) for molecule in cartesians):
+        raise TypeError("All elements in cartesians must be Cartesians.")
 
     give_header = (
         "[MOLDEN FORMAT]\n"
@@ -237,12 +238,8 @@ def to_molden(
     output = header + "\n".join(coordinates)
 
     if buf is not None:
-        if overwrite:
-            with open(buf, mode="w") as f:
-                f.write(output)
-        else:
-            with open(buf, mode="x") as f:
-                f.write(output)
+        with open(buf, mode="w" if overwrite else "x") as f:
+            f.write(output)
         return None
     else:
         return output

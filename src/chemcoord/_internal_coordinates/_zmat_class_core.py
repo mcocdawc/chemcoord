@@ -5,6 +5,7 @@ import warnings
 from collections.abc import Callable, Sequence
 from functools import partial
 from typing import TYPE_CHECKING, Any, Final, Literal, overload
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -605,7 +606,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 "For the dihedral reference of atom {i} the "
                 "dummy atom {dummy_d} was inserted"
             ).format
-            warnings.warn(give_message(i=i, dummy_d=dummy_d), UserWarning)
+            warn(give_message(i=i, dummy_d=dummy_d), UserWarning)
 
         def insert_dummy(zmat, i, dummy_cart, dummy_d):
             """Works INPLACE on self._frame"""
@@ -673,7 +674,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         zmat_values = zmat.get_cartesian()._calculate_zmat_values(c_table)
         zmat.unsafe_loc[to_remove, ["bond", "angle", "dihedral"]] = zmat_values
         zmat._frame.drop([has_dummies[k]["dummy_d"] for k in to_remove], inplace=True)
-        warnings.warn(f"The dummy atoms {to_remove} were removed", UserWarning)
+        warn(f"The dummy atoms {to_remove} were removed", UserWarning)
         for k in to_remove:
             zmat._metadata["has_dummies"].pop(k)
         if not inplace:
@@ -693,6 +694,18 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         problematic_indices = new._find_differing_dihedral_orientation(
             self._metadata["last_valid_cartesian"]
         )
+        if any(problematic_indices) and not self.clean_dihedral_orientation:
+            warn(
+                "Potentially problematic reference change for dihedral detected.\n"
+                "The reaction path might still be correct, but inspection is advised.\n"
+                "For a clean fix consider smaller steps for the coordinate change \n"
+                "and/or using the\n"
+                ":class:`chemcoord.zmat_functions.CleanDihedralOrientation` "
+                "context manager.",
+                UserWarning,
+            )
+            return new
+
         while any(problematic_indices):
             current_row = np.argmax(problematic_indices)
             idx = self.index[current_row]
@@ -935,7 +948,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         message = "Will be removed in the future. Please use get_cartesian."
         with warnings.catch_warnings():
             warnings.simplefilter("always")
-            warnings.warn(message, DeprecationWarning)
+            warn(message, DeprecationWarning)
         return self.get_cartesian(*args, **kwargs)
 
 
