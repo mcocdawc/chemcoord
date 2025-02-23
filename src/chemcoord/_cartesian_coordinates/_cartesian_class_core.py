@@ -1190,9 +1190,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         :func:`xyz_functions.orthonormalize` as a previous step.
 
         Args:
-            old_basis (np.array):
-            new_basis (np.array):
-            rotate_only (bool):
+            old_basis :
+            new_basis :
+            orthonormalize :
 
         Returns:
             Cartesian: The transformed molecule.

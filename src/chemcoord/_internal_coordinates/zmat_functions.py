@@ -53,6 +53,9 @@ class TestOperators:
         with TestOperators(True):
             zmat_1 + zmat_2
             # Raises InvalidReference Exception
+
+    Since it is on by default, the contextmanager is mostly relevant for switching
+    the validity testing off when doing a difference.
     """
 
     def __init__(self, test_operators, cls=None):
@@ -118,10 +121,10 @@ def apply_grad_cartesian_tensor(grad_X: Tensor4D, zmat_dist: Zmat) -> Cartesian:
     """Apply the gradient for transformation to cartesian space onto zmat_dist.
 
     Args:
-        grad_X (:class:`numpy.ndarray`): A ``(3, n, n, 3)`` array.
+        grad_X : A ``(3, n, n, 3)`` array.
             The mathematical details of the index layout is explained in
             :meth:`~chemcoord.Cartesian.get_grad_zmat()`.
-        zmat_dist (:class:`~chemcoord.Zmat`):
+        zmat_dist :
             Distortions in Zmatrix space.
 
     Returns:
