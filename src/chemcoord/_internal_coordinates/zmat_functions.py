@@ -181,7 +181,8 @@ def _zmat_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesia
     # in cartesian space. This is more stable when following smoothly
     # a trajectory in small steps.
     # Hence, it is crucial to use accumulate, to use the previous value.
-    return [
-        zm.get_cartesian()
-        for zm in accumulate((z_step for _ in range(N - 1)), initial=z_start)
-    ]
+    with CleanDihedralOrientation(True):
+        return [
+            zm.get_cartesian()
+            for zm in accumulate((z_step for _ in range(N - 1)), initial=z_start)
+        ]
