@@ -198,12 +198,9 @@ def to_molden(
         sort_index : If sort_index is true, the Cartesian
             is sorted by the index before writing.
         overwrite : May overwrite existing files.
-        float_format (one-parameter function): Formatter function
+        float_format : Formatter function
             to apply to column’s elements if they are floats.
             The result of this function must be a unicode string.
-
-    Returns:
-        str :
     """
     if sort_index:
         cartesian_list = [molecule.sort_index() for molecule in cartesians]
@@ -316,18 +313,15 @@ def isclose(
     """Compare two molecules for numerical equality.
 
     Args:
-        a (Cartesian):
-        b (Cartesian):
-        align (bool): a and b are
+        a :
+        b :
+        align : a and b are
             prealigned along their principal axes of inertia and moved to their
             barycenters before comparing.
-        rtol (float): Relative tolerance for the numerical equality comparison
+        rtol : Relative tolerance for the numerical equality comparison
             look into :func:`numpy.isclose` for further explanation.
-        atol (float): Relative tolerance for the numerical equality comparison
+        atol : Relative tolerance for the numerical equality comparison
             look into :func:`numpy.isclose` for further explanation.
-
-    Returns:
-        :class:`numpy.ndarray`: Boolean array.
     """
     # The pandas documentation says about the arguments to all(axis=...)
     #   None : reduce all axes, return a scalar
