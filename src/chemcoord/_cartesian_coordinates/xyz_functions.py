@@ -588,7 +588,15 @@ def _cart_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesia
 def interpolate(
     start: Cartesian, end: Cartesian, N: int, coord: Literal["cart", "zmat"] = "zmat"
 ) -> list[Cartesian]:
-    """Interpolate between start and end structure."""
+    """Interpolate between start and end structure.
+
+    Args:
+        start :
+        end :
+        N (int): Number of structures to interpolate between.
+        coord :
+            Interpolate either in cartesian or zmatrix space.
+    """
     if coord == "cart":
         return _cart_interpolate(start, end, N)
     elif coord == "zmat":
