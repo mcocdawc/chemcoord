@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import warnings
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Sequence, Set
 from functools import partial
 from typing import TYPE_CHECKING, Any, Final, Literal, overload
 from warnings import warn
@@ -10,6 +10,7 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
 from pandas.core.series import Series
 from typing_extensions import Self
 
@@ -30,7 +31,14 @@ from chemcoord.exceptions import (
     InvalidReference,
     PhysicalMeaning,
 )
-from chemcoord.typing import Matrix, Real, Tensor4D, Vector
+from chemcoord.typing import (
+    Integral,
+    Matrix,
+    Real,
+    SequenceNotStr,
+    Tensor4D,
+    Vector,
+)
 
 if TYPE_CHECKING:
     from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
@@ -343,7 +351,25 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype("i8")
         return new
 
-    def assign(self, idx, col, val) -> Self:
+    def assign(
+        self,
+        idx: Integral
+        | Index
+        | Set[Integral]
+        | Vector
+        | SequenceNotStr[Integral]
+        | slice
+        | Series,
+        col: Literal["bond", "angle", "dihedral"],
+        val: Real,
+    ) -> Self:
+        """Return a copy where the value is assigned.
+
+        Args:
+            idx :
+            col :
+            val :
+        """
         new = self.copy()
         new.safe_loc[idx, col] = val
         return new

@@ -294,9 +294,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             idx :
             col :
             val :
-
-        Returns:
-            Cartesian:
         """
         new = self.copy()
         new.loc[idx, col] = val
