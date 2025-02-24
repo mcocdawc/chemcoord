@@ -209,7 +209,7 @@ def to_molden(
         cartesian_list = [molecule.sort_index() for molecule in cartesians]
     else:
         cartesian_list = list(cartesian_list)
-    if not all(isinstance(molecule, Cartesian) for molecule in cartesians):
+    if not all(isinstance(molecule, Cartesian) for molecule in cartesian_list):
         raise TypeError("All elements in cartesians must be Cartesians.")
 
     give_header = (

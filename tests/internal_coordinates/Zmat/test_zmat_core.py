@@ -1,9 +1,12 @@
 import os
 from io import StringIO
+from itertools import accumulate
 from os.path import join
+from typing import Final
 
 import numpy as np
 import pandas as pd
+import pytest
 from sympy import Symbol
 
 import chemcoord as cc
@@ -100,44 +103,14 @@ def test_pure_internal_move():
         assert cc.xyz_functions.allclose(m, ref.align(m, mass_weight=True)[1])
 
 
-def test_interpolation():
+def test_MeOH_Furan_interpolation():
     start = cc.Cartesian.read_xyz(
         join(STRUCTURE_PATH, "MeOH_Furan_start.xyz"), start_index=1
     )
     end = cc.Cartesian.read_xyz(
         join(STRUCTURE_PATH, "MeOH_Furan_end.xyz"), start_index=1
     )
-
-    interpolated = cc.xyz_functions.read_molden(
-        join(STRUCTURE_PATH, "MeOH_Furan_interpolated.molden"),
-        start_index=1,
-    )
-
-    def z_interpolate(start, end, N):
-        z_start = start.get_zmat()
-        z_end = end.get_zmat(z_start.loc[:, ["b", "a", "d"]])
-        with cc.zmat_functions.TestOperators(False):
-            z_step = (z_end - z_start).minimize_dihedrals() / (N - 1)
-        result = [z_start.copy()]
-        for i in range(N - 1):
-            result.append(result[-1] + z_step)
-        return result
-
-    cartesians = [zm.get_cartesian() for zm in z_interpolate(start, end, 21)]
-
-    assert allclose(start, cartesians[0])
-    assert allclose(end, cartesians[-1])
-
-    assert all(allclose(m, ref, atol=1e-6) for m, ref in zip(cartesians, interpolated))
-
-
-def test_old_interpolation():
-    start = cc.Cartesian.read_xyz(
-        join(STRUCTURE_PATH, "MeOH_Furan_start.xyz"), start_index=1
-    )
-    end = cc.Cartesian.read_xyz(
-        join(STRUCTURE_PATH, "MeOH_Furan_end.xyz"), start_index=1
-    )
+    N: Final = 21
 
     interpolated = cc.xyz_functions.read_molden(
         join(STRUCTURE_PATH, "MeOH_Furan_interpolated.molden"),
@@ -147,14 +120,67 @@ def test_old_interpolation():
     z_start = start.get_zmat()
     z_end = end.get_zmat(z_start.loc[:, ["b", "a", "d"]])
 
-    N = 20
     with cc.zmat_functions.TestOperators(False):
-        z_steps = [i * (z_end - z_start).minimize_dihedrals() / N for i in range(N + 1)]
+        diff: Final = (z_end - z_start).minimize_dihedrals() / (N - 1)
 
-    assert allclose(start, (z_start + z_steps[0]).get_cartesian())
-    assert allclose(end, (z_start + z_steps[-1]).get_cartesian())
+    with pytest.warns(UserWarning), cc.zmat_functions.CleanDihedralOrientation(False):
+        with cc.zmat_functions.TestOperators(False):
+            z_steps = [i * diff for i in range(N)]
 
+        assert allclose(start, (z_start + z_steps[0]).get_cartesian())
+        assert allclose(end, (z_start + z_steps[-1]).get_cartesian())
+
+        assert all(
+            allclose((z_start + D).get_cartesian(), ref, atol=5e-6)
+            for D, ref in zip(z_steps, interpolated)
+        )
+
+    with cc.zmat_functions.CleanDihedralOrientation(True):
+        with cc.zmat_functions.TestOperators(False):
+            z_steps = [i * diff for i in range(N)]
+
+        assert allclose(start, (z_start + z_steps[0]).get_cartesian())
+        assert not allclose(end, (z_start + z_steps[-1]).get_cartesian())
+
+        assert not all(
+            allclose((z_start + D).get_cartesian(), ref, atol=5e-6)
+            for D, ref in zip(z_steps, interpolated)
+        )
+
+    for clean_orientation in (True, False):
+        with cc.zmat_functions.CleanDihedralOrientation(clean_orientation):
+            cartesians = [
+                zm.get_cartesian()
+                for zm in accumulate((diff for _ in range(N - 1)), initial=z_start)
+            ]
+
+            assert allclose(start, cartesians[0])
+            assert allclose(end, cartesians[-1])
+            assert all(
+                allclose(m, ref, atol=5e-6) for m, ref in zip(cartesians, interpolated)
+            )
+
+    cartesians = cc.interpolate(start, end, 21, coord="zmat")
+    assert allclose(start, cartesians[0])
+    assert allclose(end, cartesians[-1])
+    assert all(allclose(m, ref, atol=5e-6) for m, ref in zip(cartesians, interpolated))
+
+
+def test_water_dimer_interpolation():
+    molecule = cc.Cartesian.read_xyz(join(STRUCTURE_PATH, "water.xyz"), start_index=1)
+    reference_cartesians = cc.xyz_functions.read_molden(
+        join(STRUCTURE_PATH, "water_dimer_interpolated.molden"), start_index=1
+    )
+    zmolecule = molecule.get_zmat()
+
+    # Assert that dummy atoms were inserted; the UserWarning is expected
+    with pytest.warns(UserWarning), cc.zmat_functions.CleanDihedralOrientation(True):
+        cartesians = [
+            x.get_cartesian().loc[lambda m: m.atom != "X"]
+            for x in (
+                zmolecule.assign(4, "angle", x) for x in np.linspace(150, 210, 21)
+            )
+        ]
     assert all(
-        allclose((z_start + D).get_cartesian(), ref, atol=5e-6)
-        for D, ref in zip(z_steps, interpolated)
+        allclose(m, ref, atol=5e-5) for m, ref in zip(cartesians, reference_cartesians)
     )

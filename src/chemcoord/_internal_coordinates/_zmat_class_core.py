@@ -343,6 +343,11 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype("i8")
         return new
 
+    def assign(self, idx, col, val) -> Self:
+        new = self.copy()
+        new.safe_loc[idx, col] = val
+        return new
+
     def iupacify(self) -> Self:
         r"""Give the IUPAC conform representation.
 

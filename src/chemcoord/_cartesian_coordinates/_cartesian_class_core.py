@@ -276,6 +276,11 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                     pass
         return out
 
+    def assign(self, idx, col, val) -> Self:
+        new = self.copy()
+        new.loc[idx, col] = val
+        return new
+
     @staticmethod
     @njit
     def _jit_give_bond_array(

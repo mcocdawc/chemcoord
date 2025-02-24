@@ -1,3 +1,5 @@
+from itertools import accumulate
+
 import numpy as np
 import sympy
 
@@ -172,20 +174,14 @@ def _zmat_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesia
 
     with TestOperators(False):
         z_step = (z_end - z_start).minimize_dihedrals() / (N - 1)
-    # It seems unnecessary to write the following loop in this way instead of
+    # It seems unnecessary to write the accumulation in this way instead of
     # using one list comprehension.
     #   [z_start + D * i for i in range(N)]
     # However, there is a dependency on the previous orientation of the molecule
     # in cartesian space. This is more stable when following smoothly
     # a trajectory in small steps.
-    # If we consider the last element in the list comprehension version
-    #    z_start + D * (N - 1)
-    #  then the last valid cartesian is still `z_start.get_cartesian()`
-    #  which might lead to spurios, wrong fixes of the dihedral reference orientation,
-    # while the last element in the loop version depends on zmatrces[-2],
-    # i.e. the second to last element in the list.
-    zmatrices = [z_start.copy()]
-    with CleanDihedralOrientation(True):
-        for i in range(N - 1):
-            zmatrices.append(zmatrices[-1] + z_step)
-    return [zm.get_cartesian() for zm in zmatrices]
+    # Hence, it is crucial to use accumulate, to use the previous value.
+    return [
+        zm.get_cartesian()
+        for zm in accumulate((z_step for _ in range(N - 1)), initial=z_start)
+    ]
