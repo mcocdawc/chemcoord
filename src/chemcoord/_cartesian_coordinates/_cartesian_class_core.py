@@ -276,7 +276,28 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                     pass
         return out
 
-    def assign(self, idx, col, val) -> Self:
+    def assign(
+        self,
+        idx: Integral
+        | Index
+        | Set[Integral]
+        | Vector
+        | SequenceNotStr[Integral]
+        | slice
+        | Series,
+        col: Literal["x", "y", "z"],
+        val: Real,
+    ) -> Self:
+        """Return a copy where the value is assigned.
+
+        Args:
+            idx :
+            col :
+            val :
+
+        Returns:
+            Cartesian:
+        """
         new = self.copy()
         new.loc[idx, col] = val
         return new
