@@ -107,11 +107,11 @@ def to_multiple_xyz(
 
 def to_multiple_xyz(
     cartesian_list: Iterable[Cartesian],
-    buf: Union[PathLike, None] = None,
+    buf: PathLike | None = None,
     sort_index: bool = True,
     overwrite: bool = True,
     float_format: Callable[[float], str] = "{:.6f}".format,
-) -> Union[str, None]:
+) -> str | None:
     """Write a list of Cartesians into an xyz file.
 
     .. note:: Since it permamently writes a file, this function
