@@ -86,8 +86,8 @@ def view(
 
 
 @overload
-def multiple_to_xyz(
-    cartesian_list: Sequence[Cartesian],
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
     buf: None = None,
     sort_index: bool = ...,
     overwrite: bool = ...,
@@ -96,8 +96,8 @@ def multiple_to_xyz(
 
 
 @overload
-def multiple_to_xyz(
-    cartesian_list: Sequence[Cartesian],
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
     buf: PathLike,
     sort_index: bool = ...,
     overwrite: bool = ...,
@@ -105,8 +105,8 @@ def multiple_to_xyz(
 ) -> None: ...
 
 
-def multiple_to_xyz(
-    cartesian_list: Sequence[Cartesian],
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
     buf: Union[PathLike, None] = None,
     sort_index: bool = True,
     overwrite: bool = True,
@@ -119,11 +119,11 @@ def multiple_to_xyz(
         The list to be written is of course not changed.
 
     Args:
-        cartesian_list (list):
-        buf (str): StringIO-like, optional buffer to write to
-        sort_index (bool): If sort_index is true, the Cartesian
+        cartesian_list :
+        buf : StringIO-like, optional buffer to write to
+        sort_index : If sort_index is true, the Cartesian
             is sorted by the index before writing.
-        overwrite (bool): May overwrite existing files.
+        overwrite : May overwrite existing files.
         float_format (one-parameter function): Formatter function
             to apply to column’s elements if they are floats.
             The result of this function must be a unicode string.
@@ -152,8 +152,8 @@ def read_multiple_xyz(
     """Read a multiple-xyz file.
 
     Args:
-        inputfile (str):
-        start_index (int):
+        inputfile :
+        start_index :
 
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.

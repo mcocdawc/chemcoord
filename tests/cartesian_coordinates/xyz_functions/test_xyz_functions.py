@@ -88,13 +88,8 @@ def test_multiple_xyz():
 
     cartesian_list = [molecule1, molecule2, molecule3]
 
-    cc._cartesian_coordinates.xyz_functions.multiple_to_xyz(cartesian_list, output_path)
-    test_cartesian_list = cc._cartesian_coordinates.xyz_functions.read_multiple_xyz(
-        output_path
-    )
+    cc.xyz_functions.multiple_to_xyz(cartesian_list, output_path)
+    test_cartesian_list = cc.xyz_functions.read_multiple_xyz(output_path)
 
-    for i in range(len(cartesian_list)):
-        assert allclose(
-            cartesian_list[i],
-            test_cartesian_list[i],
-        )
+    for ref, just_read in zip(cartesian_list, test_cartesian_list):
+        assert allclose(ref, just_read)
