@@ -21,7 +21,7 @@ class PointGroupOperations(list):
         self, sch_symbol: str, operations: Sequence[SymmOp], tolerance: float = 0.1
     ) -> None:
         self.sch_symbol = sch_symbol
-        super(PointGroupOperations, self).__init__(
+        super().__init__(
             [op.rotation_matrix for op in generate_full_symmops(operations, tolerance)]
         )
 

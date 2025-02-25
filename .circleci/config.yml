@@ -46,7 +46,6 @@ run_tests: &run_tests
 workflows:
   sample:
     jobs:
-      - py39
       - py310
       - py310_analysis
       - py311
@@ -54,11 +53,6 @@ workflows:
       - py312
 
 jobs:
-  py39:
-    <<: *run_tests
-    docker:
-      - image: cimg/python:3.9
-
   py310:
     <<: *run_tests
     docker:
