@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import warnings
 from collections.abc import Callable, Iterable, Sequence
+from io import StringIO
 from pathlib import Path
 from threading import Thread
 from typing import Literal, overload
@@ -74,7 +75,7 @@ def view(
         if list_viewer_file == "molden":
             to_molden(cartesians, buf=give_filename(i, list_viewer_file))
         elif list_viewer_file == "xyz":
-            to_xyz_trajectory(cartesians, buf=give_filename(i, list_viewer_file))
+            to_multiple_xyz(cartesians, buf=give_filename(i, list_viewer_file))
         else:
             assert_never("Invalid list_viewer_file.")
 
@@ -99,7 +100,7 @@ def view(
 
 
 @overload
-def to_xyz_trajectory(
+def to_multiple_xyz(
     cartesian_list: Iterable[Cartesian],
     buf: None = None,
     sort_index: bool = ...,
@@ -109,7 +110,7 @@ def to_xyz_trajectory(
 
 
 @overload
-def to_xyz_trajectory(
+def to_multiple_xyz(
     cartesian_list: Iterable[Cartesian],
     buf: PathLike,
     sort_index: bool = ...,
@@ -118,7 +119,7 @@ def to_xyz_trajectory(
 ) -> None: ...
 
 
-def to_xyz_trajectory(
+def to_multiple_xyz(
     cartesian_list: Iterable[Cartesian],
     buf: PathLike | None = None,
     sort_index: bool = True,
@@ -132,17 +133,14 @@ def to_xyz_trajectory(
         The list to be written is of course not changed.
 
     Args:
-        cartesian_list (list):
-        buf (str): StringIO-like, optional buffer to write to
-        sort_index (bool): If sort_index is true, the Cartesian
+        cartesian_list :
+        buf : StringIO-like, optional buffer to write to
+        sort_index : If sort_index is true, the Cartesian
             is sorted by the index before writing.
-        overwrite (bool): May overwrite existing files.
+        overwrite : May overwrite existing files.
         float_format (one-parameter function): Formatter function
             to apply to column’s elements if they are floats.
             The result of this function must be a unicode string.
-
-    Returns:
-        output : string (or unicode, depending on data and options)
     """
     if sort_index:
         cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
@@ -157,6 +155,43 @@ def to_xyz_trajectory(
         return None
     else:
         return output
+
+
+def read_multiple_xyz(
+    inputfile: PathLike, start_index: int = 0, get_bonds: bool = True
+) -> list[Cartesian]:
+    """Read a multiple-xyz file.
+
+    Args:
+        inputfile :
+        start_index :
+
+    Returns:
+        list: A list containing :class:`~chemcoord.Cartesian` is returned.
+    """
+    with open(inputfile, "r") as f:
+        strings = f.readlines()
+        cartesians = []
+        finished = False
+        current_line = 0
+        while not finished:
+            molecule_len = int(strings[current_line])
+            cartesians.append(
+                Cartesian.read_xyz(
+                    StringIO(
+                        "".join(strings[current_line : current_line + molecule_len + 2])
+                    ),
+                    start_index=start_index,
+                    get_bonds=get_bonds,
+                    nrows=molecule_len,
+                    engine="python",
+                )
+            )
+            current_line += 2 + molecule_len
+
+            finished = current_line == len(strings)
+
+    return cartesians
 
 
 @overload

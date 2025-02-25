@@ -11,7 +11,9 @@ from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: F401
     normalize,
     orthonormalize_righthanded,
     read_molden,
+    read_multiple_xyz,
     to_molden,
+    to_multiple_xyz,
     view,
     write_molden,
 )
