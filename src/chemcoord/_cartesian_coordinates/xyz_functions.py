@@ -3,10 +3,10 @@ import os
 import subprocess
 import tempfile
 import warnings
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from io import StringIO
 from threading import Thread
-from typing import Callable, Union, overload
+from typing import Union, overload
 
 import numpy as np
 import pandas as pd
