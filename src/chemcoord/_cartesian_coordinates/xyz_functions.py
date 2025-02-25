@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import warnings
 from collections.abc import Callable, Iterable, Sequence
+from io import StringIO
 from threading import Thread
 from typing import overload
 
@@ -82,6 +83,101 @@ def view(
         Thread(target=open_file, args=(i,)).start()
     else:
         raise ValueError("Argument is neither list nor Cartesian.")
+
+
+@overload
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
+    buf: None = None,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> str: ...
+
+
+@overload
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
+    buf: PathLike,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> None: ...
+
+
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
+    buf: PathLike | None = None,
+    sort_index: bool = True,
+    overwrite: bool = True,
+    float_format: Callable[[float], str] = "{:.6f}".format,
+) -> str | None:
+    """Write a list of Cartesians into an xyz file.
+
+    .. note:: Since it permamently writes a file, this function
+        is strictly speaking **not sideeffect free**.
+        The list to be written is of course not changed.
+
+    Args:
+        cartesian_list :
+        buf : StringIO-like, optional buffer to write to
+        sort_index : If sort_index is true, the Cartesian
+            is sorted by the index before writing.
+        overwrite : May overwrite existing files.
+        float_format (one-parameter function): Formatter function
+            to apply to column’s elements if they are floats.
+            The result of this function must be a unicode string.
+    """
+    if sort_index:
+        cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
+
+    output = ""
+    for struct in cartesian_list:
+        output += struct.to_xyz(float_format=float_format) + "\n"
+
+    if buf is not None:
+        with open(buf, mode="w" if overwrite else "x") as f:
+            f.write(output)
+        return None
+    else:
+        return output
+
+
+def read_multiple_xyz(
+    inputfile: PathLike, start_index: int = 0, get_bonds: bool = True
+) -> list[Cartesian]:
+    """Read a multiple-xyz file.
+
+    Args:
+        inputfile :
+        start_index :
+
+    Returns:
+        list: A list containing :class:`~chemcoord.Cartesian` is returned.
+    """
+    with open(inputfile, "r") as f:
+        strings = f.readlines()
+        cartesians = []
+        finished = False
+        current_line = 0
+        while not finished:
+            molecule_len = int(strings[current_line])
+            cartesians.append(
+                Cartesian.read_xyz(
+                    StringIO(
+                        "".join(strings[current_line : current_line + molecule_len + 2])
+                    ),
+                    start_index=start_index,
+                    get_bonds=get_bonds,
+                    nrows=molecule_len,
+                    engine="python",
+                )
+            )
+            current_line += 2 + molecule_len
+
+            finished = current_line == len(strings)
+
+    return cartesians
 
 
 @overload
