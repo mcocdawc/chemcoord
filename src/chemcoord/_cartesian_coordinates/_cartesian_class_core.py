@@ -276,6 +276,29 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                     pass
         return out
 
+    def assign(
+        self,
+        idx: Integral
+        | Index
+        | Set[Integral]
+        | Vector
+        | SequenceNotStr[Integral]
+        | slice
+        | Series,
+        col: Literal["x", "y", "z"],
+        val: Real,
+    ) -> Self:
+        """Return a copy where the value is assigned.
+
+        Args:
+            idx :
+            col :
+            val :
+        """
+        new = self.copy()
+        new.loc[idx, col] = val
+        return new
+
     @staticmethod
     @njit
     def _jit_give_bond_array(
@@ -425,7 +448,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
                 ``atomic_radius_cc`` and can be changed with
-                :attr:`settings['defaults']['atomic_radius_data']`.
+                :attr:`settings.defaults.atomic_radius_data`.
                 Compare with :func:`add_data`.
 
         Returns:
@@ -433,7 +456,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             indices of atoms bonded to.
         """
         if atomic_radius_data is None:
-            atomic_radius_data = settings["defaults"]["atomic_radius_data"]
+            atomic_radius_data = settings.defaults.atomic_radius_data
 
         def complete_calculation() -> dict[AtomIdx, set[AtomIdx]]:
             old_index = self.index
@@ -547,13 +570,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 for the path finding.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
         exclude = set() if exclude is None else exclude
         bond_dict = self.get_bonds(use_lookup=use_lookup)
         i = index_of_atom
@@ -607,13 +630,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             sliced_frame (Cartesian):
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             Cartesian:
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         included_atoms_set = set(sliced_cartesian.index)
         assert included_atoms_set.issubset(set(self.index)), (
@@ -916,13 +939,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 :meth:`~chemcoord.Cartesian.get_bonds`.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             list: A list of sets of indices or new Cartesian instances.
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         fragments: list[set[AtomIdx]] | list[Self] = []
         pending = set(self.index)
@@ -1003,13 +1026,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 is returned. Otherwise a new Cartesian instance.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         exclude = [tuple[0] for tuple in list_of_indextuples]
 
@@ -1041,13 +1064,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 :class:`~chemcoord.Cartesian`.
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             list: List containing :class:`~chemcoord.Cartesian`.
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         if isinstance(fragments, Sequence):
             index_of_all_fragments = OrderedSet(fragments[0].index)
@@ -1190,9 +1213,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         :func:`xyz_functions.orthonormalize` as a previous step.
 
         Args:
-            old_basis (np.array):
-            new_basis (np.array):
-            rotate_only (bool):
+            old_basis :
+            new_basis :
+            orthonormalize :
 
         Returns:
             Cartesian: The transformed molecule.
@@ -1326,7 +1349,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             n_sphere (int):
             use_lookup (bool): Use a lookup variable for
                 :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings['defaults']['use_lookup']``
+                specified in ``settings.defaults.use_lookup``
 
         Returns:
             dict: The output will look like this::
@@ -1337,7 +1360,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 the set of indices of atoms in this environment.
         """
         if use_lookup is None:
-            use_lookup = settings["defaults"]["use_lookup"]
+            use_lookup = settings.defaults.use_lookup
 
         def get_chem_env(
             self: Self, i: AtomIdx, n_sphere: float
