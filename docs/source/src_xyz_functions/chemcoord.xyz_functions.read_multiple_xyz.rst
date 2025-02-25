@@ -1,5 +1,5 @@
 chemcoord.xyz\_functions.read\_multiple\_xyz
-================================
+============================================
 
 .. currentmodule:: chemcoord.xyz_functions
 

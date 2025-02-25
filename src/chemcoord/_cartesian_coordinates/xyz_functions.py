@@ -127,9 +127,6 @@ def to_multiple_xyz(
         float_format (one-parameter function): Formatter function
             to apply to column’s elements if they are floats.
             The result of this function must be a unicode string.
-
-    Returns:
-        output : string (or unicode, depending on data and options)
     """
     if sort_index:
         cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
@@ -177,8 +174,8 @@ def read_multiple_xyz(
                 )
             )
             current_line += 2 + molecule_len
-            if current_line == len(strings):
-                finished = True
+
+            finished = current_line == len(strings)
 
     return cartesians
 

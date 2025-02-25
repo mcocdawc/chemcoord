@@ -88,7 +88,7 @@ def test_multiple_xyz():
 
     cartesian_list = [molecule1, molecule2, molecule3]
 
-    cc.xyz_functions.multiple_to_xyz(cartesian_list, output_path)
+    cc.xyz_functions.to_multiple_xyz(cartesian_list, output_path)
     test_cartesian_list = cc.xyz_functions.read_multiple_xyz(output_path)
 
     for ref, just_read in zip(cartesian_list, test_cartesian_list):
