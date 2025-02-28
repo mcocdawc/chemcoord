@@ -1,9 +1,16 @@
+from abc import ABC
+
 import pandas as pd
+from pandas.core.frame import DataFrame
 
 import chemcoord.constants as constants
 
 
-class GenericCore(object):
+class GenericCore(ABC):
+    _frame: DataFrame
+    metadata: dict
+    _metadata: dict
+
     def add_data(self, new_cols=None):
         """Adds a column with the requested data.
 

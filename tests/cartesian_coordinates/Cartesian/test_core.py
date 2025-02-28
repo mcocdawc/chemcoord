@@ -96,7 +96,7 @@ bond_dict = {
 
 
 def test_init():
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         cc.Cartesian(5)
     with pytest.raises(PhysicalMeaning):
         cc.Cartesian(molecule.loc[:, ["atom", "x"]])
@@ -248,9 +248,7 @@ def test_get_bonds():
     }
     assert (
         molecule.get_bonds(
-            modified_properties={
-                k: 0.0 for k in molecule[molecule["atom"] == "C"].index
-            }
+            modified_properties={k: 0.0 for k in molecule[molecule.atom == "C"].index}
         )
         == modified_expected
     )
@@ -288,8 +286,10 @@ def test_coordination_sphere():
     }
     expctd[6] = set()
 
-    for i_atom, connected_atoms in expctd.items():
-        assert connected_atoms == set(molecule.get_coordination_sphere(7, i_atom).index)
+    for n_sphere, connected_atoms in expctd.items():
+        assert connected_atoms == set(
+            molecule.get_coordination_sphere(7, n_sphere=n_sphere).index
+        )
 
 
 def test_cut_sphere():

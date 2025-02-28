@@ -609,6 +609,9 @@ class CartesianBmat(CartesianCore):
         # path_2 = list(reversed(path_2))
         path = path_1  # + path_2
 
+        # TEMPFIX
+        path.append(path[-1].align(end)[1])
+
         return path
 
 

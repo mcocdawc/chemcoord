@@ -1,4 +1,4 @@
-class PandasWrapper(object):
+class PandasWrapper:
     """This class provides wrappers for :class:`pandas.DataFrame` methods.
 
     It has the same behaviour as the :class:`~pandas.DataFrame`

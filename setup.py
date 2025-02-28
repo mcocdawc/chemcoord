@@ -17,7 +17,9 @@ INSTALL_REQUIRES = [
     "sympy",
     "six",
     "pymatgen",
-    "typing-extensions",
+    "typing_extensions",
+    "ordered-set",
+    "attrs",
 ]
 KEYWORDS = [
     "chemcoord",
@@ -41,7 +43,6 @@ CLASSIFIERS = [
     "Operating System :: Microsoft :: Windows",
     "Natural Language :: English",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -74,7 +75,7 @@ def setup_package():
         packages=find_packages("src"),
         package_dir={"": "src"},
         install_requires=INSTALL_REQUIRES,
-        python_requires=">=3.8,<3.14",
+        python_requires=">=3.10",
     )
 
 

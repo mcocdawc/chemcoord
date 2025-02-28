@@ -33,6 +33,7 @@
       ~AsymmetricUnitCartesian.from_pyscf_molecule
       ~AsymmetricUnitCartesian.get_B_traj
       ~AsymmetricUnitCartesian.get_Wilson_B
+      ~AsymmetricUnitCartesian.from_pyscf
       ~AsymmetricUnitCartesian.get_align_transf
       ~AsymmetricUnitCartesian.get_angle_degrees
       ~AsymmetricUnitCartesian.get_ase_atoms
@@ -69,6 +70,7 @@
       ~AsymmetricUnitCartesian.replace
       ~AsymmetricUnitCartesian.reset_index
       ~AsymmetricUnitCartesian.restrict_bond_dict
+      ~AsymmetricUnitCartesian.set_atom_coords
       ~AsymmetricUnitCartesian.set_index
       ~AsymmetricUnitCartesian.sort_index
       ~AsymmetricUnitCartesian.sort_values

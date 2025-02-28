@@ -98,3 +98,32 @@ def test_pure_internal_move():
 
     for m in structures:
         assert cc.xyz_functions.allclose(m, ref.align(m, mass_weight=True)[1])
+
+
+def test_interpolation():
+    start = cc.Cartesian.read_xyz(
+        join(STRUCTURE_PATH, "MeOH_Furan_start.xyz"), start_index=1
+    )
+    end = cc.Cartesian.read_xyz(
+        join(STRUCTURE_PATH, "MeOH_Furan_end.xyz"), start_index=1
+    )
+
+    interpolated = cc.xyz_functions.read_molden(
+        join(STRUCTURE_PATH, "MeOH_Furan_interpolated.molden"),
+        start_index=1,
+    )
+
+    z_start = start.get_zmat()
+    z_end = end.get_zmat(z_start.loc[:, ["b", "a", "d"]])
+
+    N = 20
+    with cc.zmat_functions.TestOperators(False):
+        z_steps = [i * (z_end - z_start).minimize_dihedrals() / N for i in range(N + 1)]
+
+    assert allclose(start, (z_start + z_steps[0]).get_cartesian())
+    assert allclose(end, (z_start + z_steps[-1]).get_cartesian())
+
+    assert all(
+        allclose((z_start + D).get_cartesian(), ref, atol=5e-6)
+        for D, ref in zip(z_steps, interpolated)
+    )

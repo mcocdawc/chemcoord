@@ -1,27 +1,167 @@
 import warnings
+from abc import abstractmethod
+from collections.abc import Set
+from typing import Generic, TypeAlias, TypeVar, overload
 
+from attrs import define
+from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
+from pandas.core.series import Series
+from typing_extensions import Self
+
+from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._temporary_deprecation_workarounds import is_iterable
+from chemcoord.typing import Integral, SequenceNotStr, Vector
 
 
-class _generic_Indexer(object):
-    def __init__(self, molecule):
-        self.molecule = molecule
+# The Cartesian should know if to return a Cartesian, Series or DataFrame
+# after indexing. Force this with an abstract method.
+class Molecule(GenericCore):
+    @abstractmethod
+    def _return_appropiate_type(
+        self, selected: Series | DataFrame
+    ) -> Self | Series | DataFrame: ...
 
 
-class _Loc(_generic_Indexer):
-    def __getitem__(self, key):
+T = TypeVar("T", bound=Molecule)
+
+
+@define
+class _generic_Indexer(Generic[T]):
+    molecule: T
+
+
+IntIdx: TypeAlias = Integral | Set[Integral] | Vector | SequenceNotStr[Integral]
+StrIdx: TypeAlias = str | Set[str] | SequenceNotStr[str]
+
+
+class _Loc(_generic_Indexer, Generic[T]):
+    @overload
+    def __getitem__(
+        self,
+        key: Integral,
+    ) -> T: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: (
+            Index | Set[Integral] | Vector | SequenceNotStr[Integral] | slice | Series
+        ),
+    ) -> T: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+            Index | Set[str] | Vector | SequenceNotStr[str] | Series,
+        ],
+    ) -> T | DataFrame: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+            slice,
+        ],
+    ) -> T: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+            str,
+        ],
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Integral,
+            Index | Set[str] | Vector | SequenceNotStr[str] | slice | Series,
+        ],
+    ) -> T | Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[Integral, str],
+    ) -> float | str: ...
+
+    def __getitem__(
+        self,
+        key: (
+            (
+                Integral
+                | Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            )
+            | tuple[
+                (
+                    Integral
+                    | Index
+                    | Set[Integral]
+                    | Vector
+                    | SequenceNotStr[Integral]
+                    | slice
+                    | Series
+                ),
+                str | Index | Set[str] | Vector | SequenceNotStr[str] | slice | Series,
+            ]
+        ),
+    ) -> T | DataFrame | Series | float | str:
         if isinstance(key, tuple):
             selected = self.molecule._frame.loc[
                 _set_caster(key[0]), _set_caster(key[1])
             ]
         else:
             selected = self.molecule._frame.loc[_set_caster(key)]
+
         try:
             return self.molecule._return_appropiate_type(selected)
         except AttributeError:
             return selected
 
-    def __setitem__(self, key, value):
+    def __setitem__(
+        self,
+        key: (
+            IntIdx
+            | slice
+            | Series
+            | Index
+            | tuple[Series | IntIdx | slice | Index, Series | StrIdx | slice]
+        ),
+        value,
+    ) -> None:
         df = self.molecule._frame
         try:
             with warnings.catch_warnings():
@@ -51,8 +191,125 @@ class _Loc(_generic_Indexer):
                 raise TypeError("Assignment not supported.")
 
 
-class _ILoc(_generic_Indexer):
-    def __getitem__(self, key):
+class _ILoc(_generic_Indexer, Generic[T]):
+    @overload
+    def __getitem__(
+        self,
+        key: Integral,
+    ) -> T: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: (
+            Index | Set[Integral] | Vector | SequenceNotStr[Integral] | slice | Series
+        ),
+    ) -> T: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+            Index | Set[Integral] | Vector | SequenceNotStr[Integral] | Series,
+        ],
+    ) -> T | DataFrame: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+            slice,
+        ],
+    ) -> T: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+            Integral,
+        ],
+    ) -> Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[
+            Integral,
+            (
+                Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            ),
+        ],
+    ) -> T | Series: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: tuple[Integral, Integral],
+    ) -> float | str: ...
+
+    def __getitem__(
+        self,
+        key: (
+            (
+                Integral
+                | Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+            )
+            | tuple[
+                (
+                    Integral
+                    | Index
+                    | Set[Integral]
+                    | Vector
+                    | SequenceNotStr[Integral]
+                    | slice
+                    | Series
+                ),
+                (
+                    Integral
+                    | Index
+                    | Set[Integral]
+                    | Vector
+                    | SequenceNotStr[Integral]
+                    | slice
+                    | Series
+                ),
+            ]
+        ),
+    ) -> T | DataFrame | Series | float | str:
         if isinstance(key, tuple):
             selected = self.molecule._frame.iloc[
                 _set_caster(key[0]), _set_caster(key[1])
@@ -64,7 +321,16 @@ class _ILoc(_generic_Indexer):
         except AttributeError:
             return selected
 
-    def __setitem__(self, key, value):
+    def __setitem__(
+        self,
+        key: (
+            IntIdx
+            | slice
+            | Series
+            | tuple[Series | IntIdx | slice, Series | IntIdx | slice]
+        ),
+        value,
+    ) -> None:
         df = self.molecule._frame
         try:
             with warnings.catch_warnings():

@@ -74,4 +74,4 @@ def test_xyz_cast():
 
 def test_pyscf_conversion():
     m = Cartesian.read_xyz(get_complete_path("water.xyz"))
-    assert allclose(Cartesian.from_pyscf_molecule(m.to_pyscf()), m)
+    assert allclose(Cartesian.from_pyscf(m.to_pyscf()), m)

@@ -3,19 +3,33 @@ import os
 import subprocess
 import tempfile
 import warnings
+from collections.abc import Callable, Iterable, Sequence
+from io import StringIO
 from threading import Thread
+from typing import overload
 
 import numpy as np
 import pandas as pd
 import sympy
-from numba import njit
-from typing_extensions import Union
+from pandas.core.frame import DataFrame
 
-from chemcoord._utilities.typing import Vector
+from chemcoord._cartesian_coordinates._cart_transformation import (
+    _jit_normalize,
+    normalize,
+)
+from chemcoord._cartesian_coordinates._cartesian_class_core import COORDS
+from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
+from chemcoord._internal_coordinates.zmat_class_main import Zmat
+from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
+from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 
 
-def view(molecule, viewer=None, use_curr_dir=False):
+def view(
+    molecule: Cartesian | Sequence[Cartesian],
+    viewer: PathLike | None = None,
+    use_curr_dir: bool = False,
+) -> None:
     """View your molecule or list of molecules.
 
     .. note:: This function writes a temporary file and opens it with
@@ -35,21 +49,17 @@ def view(molecule, viewer=None, use_curr_dir=False):
         None:
     """
     viewer = settings["defaults"]["viewer"]
-    if hasattr(molecule, "view"):
+    if isinstance(molecule, Cartesian):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
-    else:
-        if pd.api.types.is_list_like(molecule):
-            cartesian_list = molecule
-        else:
-            raise ValueError("Argument is neither list nor Cartesian.")
+    elif isinstance(molecule, Sequence):
+        cartesian_list = molecule
         if use_curr_dir:
             TEMP_DIR = os.path.curdir
         else:
             TEMP_DIR = tempfile.gettempdir()
 
-        def give_filename(i):
-            filename = "ChemCoord_list_" + str(i) + ".molden"
-            return os.path.join(TEMP_DIR, filename)
+        def give_filename(i: int) -> str:
+            return os.path.join(TEMP_DIR, f"ChemCoord_list_{i}.molden")
 
         i = 1
         while os.path.exists(give_filename(i)):
@@ -57,9 +67,10 @@ def view(molecule, viewer=None, use_curr_dir=False):
 
         to_molden(cartesian_list, buf=give_filename(i))
 
-        def open_file(i):
+        def open_file(i: int) -> None:
             """Open file and close after being finished."""
             try:
+                assert viewer is not None
                 subprocess.check_call([viewer, give_filename(i)])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
@@ -70,16 +81,133 @@ def view(molecule, viewer=None, use_curr_dir=False):
                     os.remove(give_filename(i))
 
         Thread(target=open_file, args=(i,)).start()
+    else:
+        raise ValueError("Argument is neither list nor Cartesian.")
+
+
+@overload
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
+    buf: None = None,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> str: ...
+
+
+@overload
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
+    buf: PathLike,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> None: ...
+
+
+def to_multiple_xyz(
+    cartesian_list: Iterable[Cartesian],
+    buf: PathLike | None = None,
+    sort_index: bool = True,
+    overwrite: bool = True,
+    float_format: Callable[[float], str] = "{:.6f}".format,
+) -> str | None:
+    """Write a list of Cartesians into an xyz file.
+
+    .. note:: Since it permamently writes a file, this function
+        is strictly speaking **not sideeffect free**.
+        The list to be written is of course not changed.
+
+    Args:
+        cartesian_list :
+        buf : StringIO-like, optional buffer to write to
+        sort_index : If sort_index is true, the Cartesian
+            is sorted by the index before writing.
+        overwrite : May overwrite existing files.
+        float_format (one-parameter function): Formatter function
+            to apply to column’s elements if they are floats.
+            The result of this function must be a unicode string.
+    """
+    if sort_index:
+        cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
+
+    output = ""
+    for struct in cartesian_list:
+        output += struct.to_xyz(float_format=float_format) + "\n"
+
+    if buf is not None:
+        with open(buf, mode="w" if overwrite else "x") as f:
+            f.write(output)
+        return None
+    else:
+        return output
+
+
+def read_multiple_xyz(
+    inputfile: PathLike, start_index: int = 0, get_bonds: bool = True
+) -> list[Cartesian]:
+    """Read a multiple-xyz file.
+
+    Args:
+        inputfile :
+        start_index :
+
+    Returns:
+        list: A list containing :class:`~chemcoord.Cartesian` is returned.
+    """
+    with open(inputfile, "r") as f:
+        strings = f.readlines()
+        cartesians = []
+        finished = False
+        current_line = 0
+        while not finished:
+            molecule_len = int(strings[current_line])
+            cartesians.append(
+                Cartesian.read_xyz(
+                    StringIO(
+                        "".join(strings[current_line : current_line + molecule_len + 2])
+                    ),
+                    start_index=start_index,
+                    get_bonds=get_bonds,
+                    nrows=molecule_len,
+                    engine="python",
+                )
+            )
+            current_line += 2 + molecule_len
+
+            finished = current_line == len(strings)
+
+    return cartesians
+
+
+@overload
+def to_molden(
+    cartesian_list: Sequence[Cartesian],
+    buf: None = None,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> str: ...
+
+
+@overload
+def to_molden(
+    cartesian_list: Sequence[Cartesian],
+    buf: PathLike,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> None: ...
 
 
 # ignoring mypy as mypy does not consider implicit None returns as
 # returning None
 def to_xyz_trajectory(
     cartesian_list: Vector,
-    buf: Union[str, None] = None,
+    buf: str | None = None,
     overwrite: bool = True,
     float_format="{:.6f}".format,
-) -> Union[str, None]:
+) -> str | None:
     """Write a list of Cartesians into an xyz file.
 
     .. note:: Since it permamently writes a file, this function
@@ -117,12 +245,12 @@ def to_xyz_trajectory(
 
 
 def to_molden(
-    cartesian_list,
-    buf=None,
-    sort_index=True,
-    overwrite=True,
-    float_format="{:.6f}".format,
-):
+    cartesian_list: Sequence[Cartesian],
+    buf: PathLike | None = None,
+    sort_index: bool = True,
+    overwrite: bool = True,
+    float_format: Callable[[float], str] = "{:.6f}".format,
+) -> str | None:
     """Write a list of Cartesians into a molden file.
 
     .. note:: Since it permamently writes a file, this function
@@ -158,8 +286,9 @@ def to_molden(
     ).format
 
     values = len(cartesian_list) * "1\n"
-    energy = [str(m.metadata.get("energy", 1)) for m in cartesian_list]
-    energy = "\n".join(energy) + "\n"
+    energy = (
+        "\n".join([str(m.metadata.get("energy", 1)) for m in cartesian_list]) + "\n"
+    )
 
     header = give_header(energy=energy, max_force=values, rms_force=values)
 
@@ -176,11 +305,12 @@ def to_molden(
         else:
             with open(buf, mode="x") as f:
                 f.write(output)
+        return None
     else:
         return output
 
 
-def write_molden(*args, **kwargs):
+def write_molden(*args, **kwargs):  # type: ignore[no-untyped-def]
     """Deprecated, use :func:`~chemcoord.xyz_functions.to_molden`"""
     message = "Will be removed in the future. Please use to_molden()."
     with warnings.catch_warnings():
@@ -189,7 +319,9 @@ def write_molden(*args, **kwargs):
     return to_molden(*args, **kwargs)
 
 
-def read_molden(inputfile, start_index=0, get_bonds=True):
+def read_molden(
+    inputfile: PathLike, start_index: int = 0, get_bonds: bool = True
+) -> list[Cartesian]:
     """Read a molden file.
 
     Args:
@@ -199,11 +331,7 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
-    from chemcoord._cartesian_coordinates.cartesian_class_main import (  # noqa: PLC0415
-        Cartesian,
-    )
-
-    with open(inputfile, "r") as f:
+    with open(inputfile) as f:
         found = False
         while not found:
             line = f.readline()
@@ -243,7 +371,13 @@ def read_molden(inputfile, start_index=0, get_bonds=True):
     return cartesians
 
 
-def isclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
+def isclose(
+    a: Cartesian,
+    b: Cartesian,
+    align: bool = False,
+    rtol: float = 1.0e-5,
+    atol: float = 1.0e-8,
+) -> DataFrame:
     """Compare two molecules for numerical equality.
 
     Args:
@@ -260,10 +394,13 @@ def isclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
     Returns:
         :class:`numpy.ndarray`: Boolean array.
     """
-    coords = ["x", "y", "z"]
+    # The pandas documentation says about the arguments to all(axis=...)
+    #   None : reduce all axes, return a scalar
+    # https://pandas.pydata.org/docs/reference/api/pandas.Series.all.html
+    # but the stubs don't have it.
     if not (
         set(a.index) == set(b.index)
-        and (a.loc[:, "atom"] == b.loc[a.index, "atom"]).all(axis=None)
+        and (a.loc[:, "atom"] == b.loc[a.index, "atom"]).all(axis=None)  # type: ignore[arg-type]
     ):
         message = "Can only compare molecules with the same atoms and labels"
         raise ValueError(message)
@@ -271,15 +408,21 @@ def isclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
     if align:
         a = a.get_inertia()["transformed_Cartesian"]
         b = b.get_inertia()["transformed_Cartesian"]
-    A, B = a.loc[:, coords], b.loc[a.index, coords]
+    A, B = a.loc[:, COORDS].values, b.loc[a.index, COORDS].values
 
-    out = pd.DataFrame(index=a.index, columns=["atom"] + coords, dtype=bool)
+    out = pd.DataFrame(index=a.index, columns=["atom"] + COORDS, dtype=bool)
     out.loc[:, "atom"] = True
-    out.loc[:, coords] = np.isclose(A, B, rtol=rtol, atol=atol)
+    out.loc[:, COORDS] = np.isclose(A, B, rtol=rtol, atol=atol)
     return out
 
 
-def allclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
+def allclose(
+    a: Cartesian,
+    b: Cartesian,
+    align: bool = False,
+    rtol: float = 1.0e-5,
+    atol: float = 1.0e-8,
+) -> bool:
     """Compare two molecules for numerical equality.
 
     Args:
@@ -299,7 +442,11 @@ def allclose(a, b, align=False, rtol=1.0e-5, atol=1.0e-8):
     return isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None)
 
 
-def concat(cartesians, ignore_index=False, keys=None):
+def concat(
+    cartesians: Sequence[Cartesian],
+    ignore_index: bool = False,
+    keys: Iterable | None = None,
+) -> Cartesian:
     """Join list of cartesians into one molecule.
 
     Wrapper around the :func:`pandas.concat` function.
@@ -309,13 +456,9 @@ def concat(cartesians, ignore_index=False, keys=None):
     Args:
         cartesians (sequence): A sequence of :class:`~chemcoord.Cartesian`
             to be concatenated.
-        ignore_index (sequence, bool, int): If it is a boolean, it
+        ignore_index (bool): It
             behaves like in the description of
             :meth:`pandas.DataFrame.append`.
-            If it is a sequence, it becomes the new index.
-            If it is an integer,
-            ``range(ignore_index, ignore_index + len(new))``
-            becomes the new index.
         keys (sequence): If multiple levels passed, should contain tuples.
             Construct hierarchical index using the passed keys as
             the outermost level
@@ -324,35 +467,16 @@ def concat(cartesians, ignore_index=False, keys=None):
         Cartesian:
     """
     frames = [molecule._frame for molecule in cartesians]
-    new = pd.concat(frames, ignore_index=ignore_index, keys=keys, verify_integrity=True)
-
-    if type(ignore_index) is bool:
+    if keys is None:
+        new = pd.concat(frames, ignore_index=ignore_index, verify_integrity=True)
+    else:
         new = pd.concat(
             frames, ignore_index=ignore_index, keys=keys, verify_integrity=True
         )
-    else:
-        new = pd.concat(frames, ignore_index=True, keys=keys, verify_integrity=True)
-        if type(ignore_index) is int:
-            new.index = range(ignore_index, ignore_index + len(new))
-        else:
-            new.index = ignore_index
     return cartesians[0].__class__(new)
 
 
-def normalize(vector):
-    """Normalizes a vector"""
-    normed_vector = vector / np.linalg.norm(vector)
-    return normed_vector
-
-
-@njit(cache=True)
-def _jit_normalize(vector):
-    """Normalizes a vector"""
-    normed_vector = vector / np.linalg.norm(vector)
-    return normed_vector
-
-
-def get_rotation_matrix(axis, angle):
+def get_rotation_matrix(axis: Sequence[float], angle: float) -> Matrix[np.float64]:
     """Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
@@ -366,15 +490,16 @@ def get_rotation_matrix(axis, angle):
     Returns:
         Rotation matrix (np.array):
     """
-    axis = normalize(np.array(axis))
-    if not (np.array([1, 1, 1]).shape) == (3,):
+    vaxis = normalize(np.asarray(axis))
+    if not (vaxis.shape) == (3,):
         raise ValueError("axis.shape has to be 3")
-    angle = float(angle)
-    return _jit_get_rotation_matrix(axis, angle)
+    return _jit_get_rotation_matrix(vaxis, angle)
 
 
-@njit(cache=True)
-def _jit_get_rotation_matrix(axis, angle):
+@njit
+def _jit_get_rotation_matrix(
+    axis: Vector[np.float64], angle: Real
+) -> Matrix[np.float64]:
     """Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
@@ -404,7 +529,7 @@ def _jit_get_rotation_matrix(axis, angle):
     return rot_matrix
 
 
-def orthonormalize_righthanded(basis):
+def orthonormalize_righthanded(basis: Matrix[np.floating]) -> Matrix[np.float64]:
     """Orthonormalizes righthandedly a given 3D basis.
 
     This functions returns a right handed orthonormalize_righthandedd basis.
@@ -432,7 +557,11 @@ def orthonormalize_righthanded(basis):
     return np.array([e1, e2, e3]).T
 
 
-def get_kabsch_rotation(Q, P, weights=None):
+def get_kabsch_rotation(
+    Q: Matrix[np.floating],
+    P: Matrix[np.floating],
+    weights: Vector[np.floating] | None = None,
+) -> Matrix[np.float64]:
     """Calculate the optimal rotation from ``P`` unto ``Q``.
 
     Using the Kabsch algorithm the optimal rotation matrix
@@ -462,7 +591,9 @@ def get_kabsch_rotation(Q, P, weights=None):
     return W @ np.diag([1.0, 1.0, d]) @ V.T
 
 
-def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
+def apply_grad_zmat_tensor(
+    grad_C: Tensor4D, construction_table: DataFrame, cart_dist: Cartesian
+) -> Zmat:
     """Apply the gradient for transformation to Zmatrix space onto cart_dist.
 
     Args:
@@ -480,7 +611,6 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
     if (construction_table.index != cart_dist.index).any():
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
-    from chemcoord._internal_coordinates.zmat_class_main import Zmat  # noqa: PLC0415
 
     dtypes = [
         ("atom", str),
@@ -496,7 +626,7 @@ def apply_grad_zmat_tensor(grad_C, construction_table, cart_dist):
         np.empty(len(construction_table), dtype=dtypes), index=cart_dist.index
     )
 
-    X_dist = cart_dist.loc[:, ["x", "y", "z"]].values.T
+    X_dist = cart_dist.loc[:, COORDS].values.T
     C_dist = np.tensordot(grad_C, X_dist, axes=([3, 2], [0, 1])).T
     if C_dist.dtype == np.dtype("i8"):
         C_dist = C_dist.astype("f8")

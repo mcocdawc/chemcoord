@@ -43,7 +43,14 @@
 
    .. autosummary::
    
+      ~Zmat.a
+      ~Zmat.angle
+      ~Zmat.atom
+      ~Zmat.b
+      ~Zmat.bond
       ~Zmat.columns
+      ~Zmat.d
+      ~Zmat.dihedral
       ~Zmat.dtypes
       ~Zmat.dummy_manipulation_allowed
       ~Zmat.empty
@@ -57,5 +64,6 @@
       ~Zmat.test_operators
       ~Zmat.unsafe_iloc
       ~Zmat.unsafe_loc
+      ~Zmat.metadata
    
    

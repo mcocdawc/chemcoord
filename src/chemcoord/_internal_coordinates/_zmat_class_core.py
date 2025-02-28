@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 import copy
 import warnings
+from collections.abc import Callable, Sequence
 from functools import partial
+from numbers import Real
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
+from pandas.core.frame import DataFrame
+from pandas.core.series import Series
+from typing_extensions import Self
 
 import chemcoord._internal_coordinates._indexers as indexers
 import chemcoord._internal_coordinates._zmat_transformation as transformation
@@ -18,6 +26,10 @@ from chemcoord.exceptions import (
     InvalidReference,
     PhysicalMeaning,
 )
+from chemcoord.typing import Tensor4D
+
+if TYPE_CHECKING:
+    from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 
 append_indexer_docstring = _decorators.Appender(
     """In the case of obtaining elements, the indexing behaves like
@@ -78,7 +90,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         fill_missing_keys_with_defaults(self._metadata)
 
-    def copy(self):
+    def copy(self) -> Self:
         molecule = self.__class__(
             self._frame, metadata=self.metadata, _metadata=self._metadata
         )
@@ -91,38 +103,70 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             selected = self._frame[key]
         return selected
 
-    def __getattr__(self, name: str):
-        """
-        After regular attribute access, try looking up the name
-        This allows simpler access to columns for interactive use.
-        """
-        # Note: obj.x will always call obj.__getattribute__('x') prior to
-        # calling obj.__getattr__('x').
+    if not TYPE_CHECKING:
 
-        if name.startswith("__"):
-            # See here, why we do this
-            # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
-            raise AttributeError()
-        if name in self._frame.columns:
-            return self[name]
-        return object.__getattribute__(self, name)
+        def __getattr__(self, name: str) -> Any:
+            """
+            After regular attribute access, try looking up the name
+            This allows simpler access to columns for interactive use.
+            """
+            # Note: obj.x will always call obj.__getattribute__('x') prior to
+            # calling obj.__getattr__('x').
+
+            if name.startswith("__"):
+                # See here, why we do this
+                # https://stackoverflow.com/questions/47299243/recursionerror-when-python-copy-deepcopy
+                raise AttributeError()
+            if name in self._frame.columns:
+                return self[name]
+            return object.__getattribute__(self, name)
+
+    # manually implement the attribute access for the columns
+    # atom, b, a, d, bond, angle, dihedral statically
+    @property
+    def atom(self) -> Series:
+        return self.loc[:, "atom"]
+
+    @property
+    def b(self) -> Series:
+        return self.loc[:, "b"]
+
+    @property
+    def a(self) -> Series:
+        return self.loc[:, "a"]
+
+    @property
+    def d(self) -> Series:
+        return self.loc[:, "d"]
+
+    @property
+    def bond(self) -> Series:
+        return self.loc[:, "bond"]
+
+    @property
+    def angle(self) -> Series:
+        return self.loc[:, "angle"]
+
+    @property
+    def dihedral(self) -> Series:
+        return self.loc[:, "dihedral"]
 
     @property
     @append_indexer_docstring
-    def loc(self):
+    def loc(self) -> indexers._Loc:
         """Label based indexing for obtaining elements."""
         return indexers._Loc(self)
 
     @property
     @append_indexer_docstring
-    def unsafe_loc(self):
+    def unsafe_loc(self) -> indexers._Unsafe_Loc:
         """Label based indexing for obtaining elements
         and assigning values unsafely.
         """
         return indexers._Unsafe_Loc(self)
 
     @property
-    def safe_loc(self):
+    def safe_loc(self) -> indexers._Safe_Loc:
         """Label based indexing for obtaining elements and assigning
         values safely.
 
@@ -135,13 +179,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     @property
     @append_indexer_docstring
-    def iloc(self):
+    def iloc(self) -> indexers._ILoc:
         """Integer position based indexing for obtaining elements."""
         return indexers._ILoc(self)
 
     @property
     @append_indexer_docstring
-    def unsafe_iloc(self):
+    def unsafe_iloc(self) -> indexers._Unsafe_ILoc:
         """Integer position based indexing for obtaining elements
         and assigning values unsafely.
         """
@@ -149,13 +193,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
     @property
     @append_indexer_docstring
-    def safe_iloc(self):
+    def safe_iloc(self) -> indexers._Safe_ILoc:
         """Integer position based indexing for obtaining elements
         and assigning values safely.
         """
         return indexers._Safe_ILoc(self)
 
-    def _test_if_can_be_added(self, other):
+    def _test_if_can_be_added(self, other: Self) -> None:
         cols = ["atom", "b", "a", "d"]
         if not (
             (self.loc[:, cols] == other.loc[:, cols]).all(axis=None)
@@ -169,13 +213,10 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
             raise PhysicalMeaning(message)
 
-    def __add__(self, other):
+    def __add__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = self.loc[:, coords] + other.loc[:, coords]
-        else:
-            result = self.loc[:, coords] + other
+        self._test_if_can_be_added(other)
+        result = self.loc[:, coords] + other.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -183,16 +224,13 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __radd__(self, other):
+    def __radd__(self, other: Self) -> Self:
         return self + other
 
-    def __sub__(self, other):
+    def __sub__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = self.loc[:, coords] - other.loc[:, coords]
-        else:
-            result = self.loc[:, coords] - other
+        self._test_if_can_be_added(other)
+        result = self.loc[:, coords] - other.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -200,13 +238,10 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
-            self._test_if_can_be_added(other)
-            result = other.loc[:, coords] - self.loc[:, coords]
-        else:
-            result = other - self.loc[:, coords]
+        self._test_if_can_be_added(other)
+        result = other.loc[:, coords] - self.loc[:, coords]
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -214,13 +249,17 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __mul__(self, other):
+    def __mul__(self, other: Self | Real) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] * other.loc[:, coords]
-        else:
+        elif isinstance(other, Real):
             result = self.loc[:, coords] * other
+        else:
+            raise TypeError(
+                "You can only multiply a ZMatrix with another ZMatrix or a number"
+            )
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -228,16 +267,20 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Self | Real) -> Self:
         return self * other
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: Self | Real) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             result = self.loc[:, coords] / other.loc[:, coords]
+        elif isinstance(other, Real):
+            result = self.loc[:, coords].values / other
         else:
-            result = self.loc[:, coords] / other
+            raise TypeError(
+                "You can only multiply a ZMatrix with another ZMatrix or a number"
+            )
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
@@ -245,27 +288,22 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = result
         return new
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other: Self | Real) -> Self:
         coords = ["bond", "angle", "dihedral"]
-        if isinstance(other, ZmatCore):
+        if isinstance(other, self.__class__):
             self._test_if_can_be_added(other)
             result = other.loc[:, coords] / self.loc[:, coords]
+        elif isinstance(other, Real):
+            result = cast(DataFrame, other / self.loc[:, coords])
         else:
-            result = other / self.loc[:, coords]
+            raise TypeError(
+                "You can only multiply a ZMatrix with another ZMatrix or a number"
+            )
         new = self.copy()
         if self.test_operators:
             new.safe_loc[:, coords] = result
         else:
             new.unsafe_loc[:, coords] = result
-        return new
-
-    def __pow__(self, other):
-        coords = ["bond", "angle", "dihedral"]
-        new = self.copy()
-        if self.test_operators:
-            new.safe_loc[:, coords] = self.loc[:, coords] ** other
-        else:
-            new.unsafe_loc[:, coords] = self.loc[:, coords] ** other
         return new
 
     def __pos__(self):
@@ -274,7 +312,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def __neg__(self):
         return -1 * self
 
-    def __abs__(self):
+    def __abs__(self: Self) -> Self:
         coords = ["bond", "angle", "dihedral"]
         new = self.copy()
         if self.test_operators:
@@ -283,16 +321,16 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             new.unsafe_loc[:, coords] = abs(self.loc[:, coords])
         return new
 
-    def __eq__(self, other):
+    def __eq__(self, other: Self) -> DataFrame:  # type: ignore[override]
         self._test_if_can_be_added(other)
         return self._frame == other._frame
 
-    def __ne__(self, other):
+    def __ne__(self, other: Self) -> DataFrame:  # type: ignore[override]
         self._test_if_can_be_added(other)
         return self._frame != other._frame
 
     @staticmethod
-    def _cast_correct_types(frame):
+    def _cast_correct_types(frame: DataFrame) -> DataFrame:
         new = frame.copy()
         zmat_values = ["bond", "angle", "dihedral"]
         new.loc[:, zmat_values] = frame.loc[:, zmat_values].astype("f8")
@@ -300,7 +338,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new.loc[:, zmat_cols] = frame.loc[:, zmat_cols].astype("i8")
         return new
 
-    def iupacify(self):
+    def iupacify(self) -> Self:
         r"""Give the IUPAC conform representation.
 
         Mathematically speaking the angles in a zmatrix are
@@ -330,7 +368,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             Zmat: Zmatrix with accordingly changed angles and dihedrals.
         """
 
-        def convert_d(d):
+        def convert_d(d: Series) -> Series:
             r = d % 360
             return r - (r // 180) * 360
 
@@ -344,7 +382,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new.unsafe_loc[:, "dihedral"] = convert_d(new.loc[:, "dihedral"])
         return new
 
-    def minimize_dihedrals(self):
+    def minimize_dihedrals(self) -> Self:
         r"""Give a representation of the dihedral with minimized absolute value.
 
         Mathematically speaking the angles in a zmatrix are
@@ -389,7 +427,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         new = self.copy()
 
-        def convert_d(d):
+        def convert_d(d: Series) -> Series:
             r = d % 360
             return r - (r // 180) * 360
 
@@ -399,7 +437,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     # python 3.x is so much butter than 2.7
     # https://www.python.org/dev/peps/pep-3102/
     # def subs(self, *args, perform_checks=True):
-    def subs(self, *args, **kwargs):
+    def subs(self, *args, **kwargs) -> Self:
         """Substitute a symbolic expression in ``['bond', 'angle', 'dihedral']``
 
         This is a wrapper around the substitution mechanism of
@@ -427,7 +465,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             Zmat: Zmatrix with substituted symbolic expressions.
             If all resulting sympy expressions in a column are numbers,
-            the column is recasted to 64bit float.
+            the column is recasted to float.
         """
         perform_checks = kwargs.pop("perform_checks", True)
         cols = ["bond", "angle", "dihedral"]
@@ -468,7 +506,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 self._metadata["last_valid_cartesian"] = new_cartesian
         return out
 
-    def change_numbering(self, new_index=None):
+    def change_numbering(self, new_index: Sequence | None = None) -> Self:
         """Change numbering to a new index.
 
         Changes the numbering of index and all dependent numbering
@@ -513,7 +551,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         out = self.copy()
         out.unsafe_loc[:, ["b", "a", "d"]] = c_table
-        out._frame.index = new_index
+        out._frame.index = new_index  # type: ignore[assignment]
         return out
 
     def _insert_dummy_cart(self, exception, last_valid_cartesian=None):
@@ -631,7 +669,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         zmat_values = zmat.get_cartesian()._calculate_zmat_values(c_table)
         zmat.unsafe_loc[to_remove, ["bond", "angle", "dihedral"]] = zmat_values
         zmat._frame.drop([has_dummies[k]["dummy_d"] for k in to_remove], inplace=True)
-        warnings.warn("The dummy atoms {} were removed".format(to_remove), UserWarning)
+        warnings.warn(f"The dummy atoms {to_remove} were removed", UserWarning)
         for k in to_remove:
             zmat._metadata["has_dummies"].pop(k)
         if not inplace:
@@ -646,7 +684,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             zmat = zmat._insert_dummy_zmat(exception, inplace=False)
             return zmat._remove_dummies(inplace=False)
 
-    def get_cartesian(self):
+    def get_cartesian(self) -> Cartesian:
         """Return the molecule in cartesian coordinates.
 
         Raises an :class:`~exceptions.InvalidReference` exception,
@@ -694,12 +732,35 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             raise InvalidReference(
                 i=i, b=b, a=a, d=d, already_built_cartesian=cartesian
             )
-        elif err == ERR_CODE_OK:
-            return create_cartesian(positions, row + 1)
+        elif err != ERR_CODE_OK:
+            raise ValueError("Unknown error")
+        return create_cartesian(positions, row + 1)
+
+    @overload
+    def get_grad_cartesian(
+        self,
+        as_function: Literal[True] = True,
+        chain: bool = ...,
+        drop_auto_dummies: bool = ...,
+        pure_internal: bool | None = ...,
+    ) -> Callable[[Self], Cartesian]: ...
+
+    @overload
+    def get_grad_cartesian(
+        self,
+        as_function: Literal[False] = ...,
+        chain: bool = ...,
+        drop_auto_dummies: bool = ...,
+        pure_internal: bool | None = ...,
+    ) -> Tensor4D: ...
 
     def get_grad_cartesian(
-        self, as_function=True, chain=True, drop_auto_dummies=True, pure_internal=None
-    ):
+        self,
+        as_function: bool = True,
+        chain: bool = True,
+        drop_auto_dummies: bool = True,
+        pure_internal: bool | None = None,
+    ) -> Tensor4D | Callable[[Self], Cartesian]:
         r"""Return the gradient for the transformation to a Cartesian.
 
         If ``as_function`` is True, a function is returned that can be directly
