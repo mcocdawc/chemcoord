@@ -133,6 +133,7 @@ class _Loc(_generic_Indexer):
                     | SequenceNotStr[Integral]
                     | slice
                     | Series
+                    | QueryFunction
                 ),
                 str | Index | Set[str] | Vector | SequenceNotStr[str] | slice | Series,
             ]
