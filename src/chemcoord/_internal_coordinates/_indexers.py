@@ -25,7 +25,7 @@ T = TypeVar("T", bound=GenericCore)
 
 IntIdx: TypeAlias = Integral | Set[Integral] | Vector | SequenceNotStr[Integral]
 StrIdx: TypeAlias = str | Set[str] | SequenceNotStr[str]
-QueryFunction: TypeAlias = Callable[[DataFrame], Series[bool]]
+QueryFunction: TypeAlias = Callable[[DataFrame], Series]
 
 
 @define

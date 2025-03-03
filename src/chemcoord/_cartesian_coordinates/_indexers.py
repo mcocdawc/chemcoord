@@ -33,7 +33,7 @@ class _generic_Indexer(Generic[T]):
 
 IntIdx: TypeAlias = Integral | Set[Integral] | Vector | SequenceNotStr[Integral]
 StrIdx: TypeAlias = str | Set[str] | SequenceNotStr[str]
-QueryFunction: TypeAlias = Callable[[DataFrame], Series[bool]]
+QueryFunction: TypeAlias = Callable[[DataFrame], Series]
 
 
 class _Loc(_generic_Indexer, Generic[T]):
