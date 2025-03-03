@@ -1,6 +1,6 @@
 import warnings
 from abc import abstractmethod
-from collections.abc import Set
+from collections.abc import Callable, Set
 from typing import Generic, TypeAlias, TypeVar, overload
 
 from attrs import define
@@ -25,6 +25,7 @@ T = TypeVar("T", bound=GenericCore)
 
 IntIdx: TypeAlias = Integral | Set[Integral] | Vector | SequenceNotStr[Integral]
 StrIdx: TypeAlias = str | Set[str] | SequenceNotStr[str]
+QueryFunction: TypeAlias = Callable[[DataFrame], Series[bool]]
 
 
 @define
@@ -51,7 +52,13 @@ class _Loc(_generic_Indexer):
     def __getitem__(
         self,
         key: (
-            Index | Set[Integral] | Vector | SequenceNotStr[Integral] | slice | Series
+            Index
+            | Set[Integral]
+            | Vector
+            | SequenceNotStr[Integral]
+            | slice
+            | Series
+            | QueryFunction
         ),
     ) -> DataFrame: ...
 
@@ -66,6 +73,7 @@ class _Loc(_generic_Indexer):
                 | SequenceNotStr[Integral]
                 | slice
                 | Series
+                | QueryFunction
             ),
             Index | Set[str] | Vector | SequenceNotStr[str] | slice | Series,
         ],
@@ -82,6 +90,7 @@ class _Loc(_generic_Indexer):
                 | SequenceNotStr[Integral]
                 | slice
                 | Series
+                | QueryFunction
             ),
             str,
         ],
@@ -113,6 +122,7 @@ class _Loc(_generic_Indexer):
                 | SequenceNotStr[Integral]
                 | slice
                 | Series
+                | QueryFunction
             )
             | tuple[
                 (
