@@ -20,6 +20,7 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
     COORDS,
     PandasWrapper,
 )
+from chemcoord._cartesian_coordinates._indexers import QueryFunction
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
@@ -284,7 +285,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         | Vector
         | SequenceNotStr[Integral]
         | slice
-        | Series,
+        | Series
+        | QueryFunction,
         col: Literal["x", "y", "z"],
         val: Real,
     ) -> Self:

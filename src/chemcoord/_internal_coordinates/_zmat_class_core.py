@@ -359,7 +359,8 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         | Vector
         | SequenceNotStr[Integral]
         | slice
-        | Series,
+        | Series
+        | indexers.QueryFunction,
         col: Literal["bond", "angle", "dihedral"],
         val: Real,
     ) -> Self:
