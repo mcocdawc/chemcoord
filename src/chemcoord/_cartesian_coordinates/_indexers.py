@@ -1,6 +1,6 @@
 import warnings
 from abc import abstractmethod
-from collections.abc import Set
+from collections.abc import Callable, Set
 from typing import Generic, TypeAlias, TypeVar, overload
 
 from attrs import define
@@ -33,6 +33,7 @@ class _generic_Indexer(Generic[T]):
 
 IntIdx: TypeAlias = Integral | Set[Integral] | Vector | SequenceNotStr[Integral]
 StrIdx: TypeAlias = str | Set[str] | SequenceNotStr[str]
+QueryFunction: TypeAlias = Callable[[DataFrame], Series]
 
 
 class _Loc(_generic_Indexer, Generic[T]):
@@ -46,7 +47,13 @@ class _Loc(_generic_Indexer, Generic[T]):
     def __getitem__(
         self,
         key: (
-            Index | Set[Integral] | Vector | SequenceNotStr[Integral] | slice | Series
+            Index
+            | Set[Integral]
+            | Vector
+            | SequenceNotStr[Integral]
+            | slice
+            | Series
+            | QueryFunction
         ),
     ) -> T: ...
 
@@ -61,6 +68,7 @@ class _Loc(_generic_Indexer, Generic[T]):
                 | SequenceNotStr[Integral]
                 | slice
                 | Series
+                | QueryFunction
             ),
             Index | Set[str] | Vector | SequenceNotStr[str] | Series,
         ],
@@ -77,6 +85,7 @@ class _Loc(_generic_Indexer, Generic[T]):
                 | SequenceNotStr[Integral]
                 | slice
                 | Series
+                | QueryFunction
             ),
             slice,
         ],
@@ -93,6 +102,7 @@ class _Loc(_generic_Indexer, Generic[T]):
                 | SequenceNotStr[Integral]
                 | slice
                 | Series
+                | QueryFunction
             ),
             str,
         ],
@@ -124,6 +134,7 @@ class _Loc(_generic_Indexer, Generic[T]):
                 | SequenceNotStr[Integral]
                 | slice
                 | Series
+                | QueryFunction
             )
             | tuple[
                 (
@@ -134,6 +145,7 @@ class _Loc(_generic_Indexer, Generic[T]):
                     | SequenceNotStr[Integral]
                     | slice
                     | Series
+                    | QueryFunction
                 ),
                 str | Index | Set[str] | Vector | SequenceNotStr[str] | slice | Series,
             ]
