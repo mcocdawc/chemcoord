@@ -15,6 +15,8 @@
 
 - Added contextmanager to temporarily change element data.
 
+- Made it easier to change element data in `get_bonds`
+
 
 ## Infrastructure
 
