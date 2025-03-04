@@ -12,7 +12,7 @@ from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
 from pandas.core.series import Series
 from sortedcontainers import SortedSet
-from typing_extensions import Self
+from typing_extensions import Self, assert_never
 
 import chemcoord._cartesian_coordinates.xyz_functions as xyz_functions
 import chemcoord.constants as constants
@@ -23,6 +23,7 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
 from chemcoord._generic_classes.generic_core import GenericCore
 from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
+from chemcoord.constants import RestoreElementData, elements
 from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.typing import (
     ArithmeticOther,
@@ -311,9 +312,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self_bonding_allowed: bool = False,
         convert_index: Mapping[AtomIdx, AtomIdx] | None = None,
     ) -> None:
-        """If bond_dict is provided, this function is not side effect free
-        bond_dict has to be a defaultdict(set)
-        """
+        """This function has side effects and bond_dict has to be a defaultdict(set)"""
         assert isinstance(bond_dict, defaultdict) or bond_dict is None
         fragment_indices = list(fragment_indices)
         if convert_index is None:
@@ -375,14 +374,57 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             array_of_fragments[i, j, k] = selection
         return array_of_fragments
 
+    def _get_atom_radii(
+        self,
+        modify_element_data: Real
+        | Callable[[Real], Real]
+        | Mapping[str, Real]
+        | None = None,
+        modify_atom_data: Mapping[int, Real] | None = None,
+        data_col: str | None = None,
+    ) -> Vector[np.float64]:
+        if data_col is None:
+            data_col = settings["defaults"]["atomic_radius_data"]
+
+        with RestoreElementData():
+            used_vdW_r = elements.loc[:, data_col]
+            if isinstance(modify_element_data, Real):
+                elements.loc[:, data_col] = used_vdW_r.map(
+                    lambda _: float(modify_element_data)
+                )
+            elif callable(modify_element_data):
+                elements.loc[:, data_col] = used_vdW_r.map(modify_element_data)  # type: ignore[arg-type]
+            elif isinstance(modify_element_data, Mapping):
+                elements.loc[:, data_col].update(modify_element_data)  # type: ignore[arg-type]
+                # assert False, elements.loc["C", atomic_radius_data]
+            elif modify_element_data is None:
+                pass
+            else:
+                assert_never(modify_element_data)
+
+            atom_radii = self.add_data(data_col)[data_col]
+            if isinstance(modify_atom_data, Mapping):
+                atom_radii.update(modify_atom_data)
+            elif modify_atom_data is None:
+                pass
+            else:
+                assert_never(modify_atom_data)
+
+        return atom_radii.values
+
     def get_bonds(
         self,
+        *,
         self_bonding_allowed: bool = False,
-        offset: float = 3.0,
-        modified_properties: Mapping[AtomIdx, float] | None = None,
+        offset: float | None = None,
+        modify_atom_data: Mapping[int, float] | None = None,
+        modify_element_data: Real
+        | Callable[[Real], Real]
+        | Mapping[str, Real]
+        | None = None,
         use_lookup: bool = False,
         set_lookup: bool = True,
-        atomic_radius_data: str | None = None,
+        atomic_radius_data_col: str | None = None,
     ) -> dict[AtomIdx, set[AtomIdx]]:
         """Return a dictionary representing the bonds.
 
@@ -408,17 +450,28 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         greatly improves performance.
 
         Args:
-            modified_properties (dic): If you want to change the van der
+            modify_atom_data : If you want to change the van der
                 Vaals radius of one or more specific atoms, pass a
-                dictionary that looks like::
-
-                    modified_properties = {index1: 1.5}
-
+                dictionary that looks like
+                :python:`modified_properties = {index1: 1.5}`.
                 For global changes use the constants module.
-            offset (float):
+            modify_element_data : If you want to temporarily change the global
+                tabulated data of the van der Waals radii.
+                It is possible to pass:
+
+                * a single number which is used as radius for all atoms,
+                * a callable which is applied to all radii and
+                  can be used to e.g. scale via :python:`lambda r: r * 1.1`,
+                * a dictionary which maps the element symbol to the van der Waals
+                  radius, to change the radius of individual elements,
+                  e.g. :python:`{"C": 1.5}`.
+            offset :
                 The offset used to determine the overlap between bins in the
                 divide et impera function that is used to avoid the quadratic scaling
                 when calculating pair-wise distances.
+                If :python:`None`, it will be chosen slightly larger than twice
+                the maximum atom radius, which guarantees that no bond is missed because
+                of binning.
             use_lookup (bool):
             set_lookup (bool):
             self_bonding_allowed (bool):
@@ -432,19 +485,25 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             dict: Dictionary mapping from an atom index to the set of
             indices of atoms bonded to.
         """
-        if atomic_radius_data is None:
-            atomic_radius_data = settings["defaults"]["atomic_radius_data"]
 
         def complete_calculation() -> dict[AtomIdx, set[AtomIdx]]:
             old_index = self.index
+            atom_radii = self._get_atom_radii(
+                modify_element_data, modify_atom_data, atomic_radius_data_col
+            )
+            # From now on, we assume a 0,...,n indexed molecule
+            # and can use plain numpy integer arrays
             self.index = range(len(self))  # type: ignore[assignment]
-            fragments = self._divide_et_impera(offset=offset)
+            # Choose the offset such that even with maximum van der Waals radius r
+            # both atoms (denoted as stars) end up in one bin
+            #    *_________|_________*
+            #         r         r
+            #     ____________________|   left bin
+            #   |____________________     right bin
+            fragments = self._divide_et_impera(
+                offset=2.1 * atom_radii.max() if offset is None else offset
+            )
             positions = np.array(self.loc[:, COORDS], order="F")
-            data = self.add_data([atomic_radius_data, "valency"])
-            bond_radii = data[atomic_radius_data]
-            if modified_properties is not None:
-                bond_radii.update(Series(modified_properties))
-            bond_radii = bond_radii.values
             bond_dict: defaultdict[AtomIdx, set[AtomIdx]] = defaultdict(set)
             for i, j, k in product(*[range(x) for x in fragments.shape]):
                 # The following call is not side effect free and changes
@@ -452,7 +511,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 self._update_bond_dict(
                     fragments[i, j, k],
                     positions,
-                    bond_radii,
+                    atom_radii,
                     bond_dict=bond_dict,
                     self_bonding_allowed=self_bonding_allowed,
                 )
