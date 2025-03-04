@@ -450,13 +450,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         greatly improves performance.
 
         Args:
-            modified_properties : If you want to change the van der
+            modify_atom_data : If you want to change the van der
                 Vaals radius of one or more specific atoms, pass a
                 dictionary that looks like
                 :python:`modified_properties = {index1: 1.5}`.
                 For global changes use the constants module.
-            vdW_radius : If you want to temporarily change the global tabulated data
-                of the van der Waals radii.
+            modify_element_data : If you want to temporarily change the global
+                tabulated data of the van der Waals radii.
                 It is possible to pass:
 
                 * a single number which is used as radius for all atoms,
