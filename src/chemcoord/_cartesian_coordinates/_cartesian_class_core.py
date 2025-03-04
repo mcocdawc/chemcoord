@@ -309,7 +309,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         bond_radii: Vector[np.floating],
         self_bonding_allowed: bool = False,
     ) -> Matrix[np.bool_]:
-        """Calculate a boolean array where ``A[i,j] is True`` indicates a
+        """Calculate a boolean array where ``A[i, j] == True`` indicates a
         bond between the i-th and j-th atom.
         """
         n = pos.shape[0]
@@ -409,7 +409,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         data_col: str | None = None,
     ) -> Vector[np.float64]:
         if data_col is None:
-            data_col = settings["defaults"]["atomic_radius_data"]
+            data_col = settings.defaults.atomic_radius_data
 
         with RestoreElementData():
             used_vdW_r = elements.loc[:, data_col]
