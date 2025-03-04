@@ -486,7 +486,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             self.index = old_index
             rename = self.index
             return {
-                AtomIdx(rename[key]): {AtomIdx(rename[i]) for i in bond_dict[key]}
+                AtomIdx(int(rename[key])): {
+                    AtomIdx(int(rename[i])) for i in bond_dict[key]
+                }
                 for key in bond_dict
             }
 

@@ -32,6 +32,8 @@ A collection of functions operating on instances of
     ~xyz_functions.isclose
     ~xyz_functions.allclose
     ~xyz_functions.concat
+    ~xyz_functions.to_multiple_xyz
+    ~xyz_functions.read_multiple_xyz
     ~xyz_functions.write_molden
     ~xyz_functions.to_molden
     ~xyz_functions.read_molden
