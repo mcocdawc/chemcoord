@@ -79,17 +79,22 @@ def test_concat_with_zmats():
 def test_multiple_xyz():
     output_path = os.path.join(STRUCTURES, "xyz_test.xyz")
 
-    path1 = os.path.join(STRUCTURES, "MIL53_small.xyz")
-    path2 = os.path.join(STRUCTURES, "nasty_cube.xyz")
-    path3 = os.path.join(STRUCTURES, "MeOH_Furan_end.xyz")
-    molecule1 = cc.Cartesian.read_xyz(path1)
-    molecule2 = cc.Cartesian.read_xyz(path2)
-    molecule3 = cc.Cartesian.read_xyz(path3)
+    try:
+        path1 = os.path.join(STRUCTURES, "MIL53_small.xyz")
+        path2 = os.path.join(STRUCTURES, "nasty_cube.xyz")
+        path3 = os.path.join(STRUCTURES, "MeOH_Furan_end.xyz")
+        molecule1 = cc.Cartesian.read_xyz(path1)
+        molecule2 = cc.Cartesian.read_xyz(path2)
+        molecule3 = cc.Cartesian.read_xyz(path3)
 
-    cartesian_list = [molecule1, molecule2, molecule3]
+        cartesian_list = [molecule1, molecule2, molecule3]
 
-    cc.xyz_functions.to_multiple_xyz(cartesian_list, output_path)
-    test_cartesian_list = cc.xyz_functions.read_multiple_xyz(output_path)
+        cc.xyz_functions.to_multiple_xyz(cartesian_list, output_path)
+        test_cartesian_list = cc.xyz_functions.read_multiple_xyz(output_path)
 
-    for ref, just_read in zip(cartesian_list, test_cartesian_list):
-        assert allclose(ref, just_read)
+        for ref, just_read in zip(cartesian_list, test_cartesian_list):
+            assert allclose(ref, just_read)
+    except Exception as e:
+        raise e
+    finally:
+        os.remove(output_path)
