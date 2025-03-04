@@ -9,6 +9,8 @@
 - `to_molden` and similar functions accept now an `Iterable[Cartesian]`,
     previously `to_molden(zm.get_cartesian() for zm in zmatrices)` unexpectedly failed.
 
+- fixed bug where get_bonds with modified atom data only worked with 0-indexed molecules (the default)
+
 
 ## New features
 
@@ -25,6 +27,8 @@
 - reworked settings as dataclass
 
 - Exposed an explicit interpolate function
+
+- Made it easier to change element data in `get_bonds`
 
 
 ## Infrastructure

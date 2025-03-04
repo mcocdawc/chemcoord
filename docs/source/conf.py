@@ -28,6 +28,16 @@ import chemcoord as cc
 # If your documentation needs a minimal Sphinx version, state it here.
 # needs_sphinx = '1.0'
 
+rst_prolog = """
+.. role:: python(code)
+    :language: python
+    :class: highlight
+
+.. role:: bash(code)
+   :language: bash
+   :class: highlight
+"""
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
