@@ -166,11 +166,29 @@ class _Loc(_generic_Indexer, Generic[T]):
     def __setitem__(
         self,
         key: (
-            IntIdx
-            | slice
-            | Series
-            | Index
-            | tuple[Series | IntIdx | slice | Index, Series | StrIdx | slice]
+            (
+                Integral
+                | Index
+                | Set[Integral]
+                | Vector
+                | SequenceNotStr[Integral]
+                | slice
+                | Series
+                | QueryFunction
+            )
+            | tuple[
+                (
+                    Integral
+                    | Index
+                    | Set[Integral]
+                    | Vector
+                    | SequenceNotStr[Integral]
+                    | slice
+                    | Series
+                    | QueryFunction
+                ),
+                str | Index | Set[str] | Vector | SequenceNotStr[str] | slice | Series,
+            ]
         ),
         value,
     ) -> None:

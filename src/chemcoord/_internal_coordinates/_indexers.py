@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from abc import abstractmethod
 from collections.abc import Callable, Set
@@ -302,14 +304,6 @@ class _Unsafe_base:
 
 class _SafeBase:
     def __setitem__(self, key, value):
-        try:
-            self.molecule._metadata["last_valid_cartesian"] = (
-                self.molecule.get_cartesian()
-            )
-        except TypeError:
-            # We are here because of Sympy
-            pass
-
         if self.molecule.dummy_manipulation_allowed:
             molecule = self.molecule
         else:
@@ -318,6 +312,7 @@ class _SafeBase:
         indexer = getattr(molecule, f"unsafe_{self._get_idxer()}")
         indexer[key] = value
 
+        can_convert_at_all = True
         try:
             molecule.get_cartesian()
         # Sympy objects
@@ -325,6 +320,7 @@ class _SafeBase:
         # the raised exception before https://github.com/numpy/numpy/issues/13666
         except (AttributeError, TypeError):
             self.molecule = molecule
+            can_convert_at_all = False
         except InvalidReference as exception:
             if molecule.dummy_manipulation_allowed:
                 self.molecule._insert_dummy_zmat(exception, inplace=True)
@@ -332,22 +328,27 @@ class _SafeBase:
                 exception.zmat_after_assignment = molecule
                 raise exception
 
-        if molecule.dummy_manipulation_allowed:
-            try:
-                self.molecule._remove_dummies(inplace=True)
-            # Sympy objects
-            # catches AttributeError, because this was
-            # the raised exception before https://github.com/numpy/numpy/issues/13666
-            except (AttributeError, TypeError):
-                pass
+        if can_convert_at_all:
+            self.molecule._frame = (
+                self.molecule._clean_different_dihedral_orientation()._frame
+            )
 
-        if self.molecule.pure_internal_mov:
-            ref = self.molecule._metadata["last_valid_cartesian"]
-            new = self.molecule.get_cartesian()
-            # TODO(@Oskar): Ensure that this works with Dummy atoms as well
-            rotated = ref.align(new, mass_weight=True)[1]
-            c_table = self.molecule.loc[:, ["b", "a", "d"]]
-            self.molecule._frame = rotated.get_zmat(c_table)._frame
+            if molecule.dummy_manipulation_allowed:
+                self.molecule._remove_dummies(inplace=True)
+
+            if self.molecule.pure_internal_mov:
+                ref = self.molecule._metadata["last_valid_cartesian"]
+                new = self.molecule.get_cartesian()
+                # TODO(@Oskar): Ensure that this works with Dummy atoms as well
+                rotated = ref.align(new, mass_weight=True)[1]
+                c_table = self.molecule.loc[:, ["b", "a", "d"]]
+                self.molecule._frame = rotated.get_zmat(c_table)._frame
+
+            self.molecule._metadata["last_valid_cartesian"] = (
+                self.molecule.get_cartesian()
+            )
+        else:
+            self.molecule = molecule
 
 
 class _Unsafe_Loc(_Loc, _Unsafe_base):

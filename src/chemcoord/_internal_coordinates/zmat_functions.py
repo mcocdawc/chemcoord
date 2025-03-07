@@ -1,3 +1,5 @@
+from itertools import accumulate
+
 import numpy as np
 import sympy
 
@@ -53,6 +55,9 @@ class TestOperators:
         with TestOperators(True):
             zmat_1 + zmat_2
             # Raises InvalidReference Exception
+
+    Since it is on by default, the contextmanager is mostly relevant for switching
+    the validity testing off when doing a difference.
     """
 
     def __init__(self, test_operators, cls=None):
@@ -99,14 +104,48 @@ class PureInternalMovement:
         self.cls.pure_internal_mov = self.old_value
 
 
+class CleanDihedralOrientation:
+    """Clean the orientation of dihedral references.
+
+    It can sometimes be, that a change in a Z-matrix coordinate flips the orientation
+    of a dihedral reference lateron in the molecule.
+    Note that there is an implicit dependence on the previous state of the Z-matrix
+    that could still be transformed to cartesian coordinates,
+    since a smooth trajectory forms a reference frame for the next step by itself.
+    Hence, this problem can be altogether generally avoided by applying smaller steps,
+    i.e. instead of changing ``zmat_1.loc[1, 'angle'] = 170`` in one step,
+    it is better to increment/decrement the angle in steps.
+
+    If this does not help, one can use this contextmanager to clean the orientation::
+
+        with CleanDihedralOrientation(True):
+            zmat_1.loc[1, 'angle'] = 170
+
+    Even then it is advised to apply small steps changes.
+    """
+
+    def __init__(self, clean_dihedral_orientation: bool, cls=None) -> None:
+        if cls is None:
+            cls = Zmat
+        self.cls = cls
+        self.clean_dihedral_orientation = clean_dihedral_orientation
+        self.old_value = self.cls.clean_dihedral_orientation
+
+    def __enter__(self) -> None:
+        self.cls.clean_dihedral_orientation = self.clean_dihedral_orientation
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.cls.clean_dihedral_orientation = self.old_value
+
+
 def apply_grad_cartesian_tensor(grad_X: Tensor4D, zmat_dist: Zmat) -> Cartesian:
     """Apply the gradient for transformation to cartesian space onto zmat_dist.
 
     Args:
-        grad_X (:class:`numpy.ndarray`): A ``(3, n, n, 3)`` array.
+        grad_X : A ``(3, n, n, 3)`` array.
             The mathematical details of the index layout is explained in
             :meth:`~chemcoord.Cartesian.get_grad_zmat()`.
-        zmat_dist (:class:`~chemcoord.Zmat`):
+        zmat_dist :
             Distortions in Zmatrix space.
 
     Returns:
@@ -127,3 +166,23 @@ def apply_grad_cartesian_tensor(grad_X: Tensor4D, zmat_dist: Zmat) -> Cartesian:
     return Cartesian.set_atom_coords(
         atoms=zmat_dist["atom"], coords=cart_dist, index=zmat_dist.index
     )
+
+
+def _zmat_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesian]:
+    z_start = start.get_zmat()
+    z_end = end.get_zmat(z_start.loc[:, ["b", "a", "d"]])
+
+    with TestOperators(False):
+        z_step = (z_end - z_start).minimize_dihedrals() / (N - 1)
+    # It seems unnecessary to write the accumulation in this way instead of
+    # using one list comprehension.
+    #   [z_start + D * i for i in range(N)]
+    # However, there is a dependency on the previous orientation of the molecule
+    # in cartesian space. This is more stable when following smoothly
+    # a trajectory in small steps.
+    # Hence, it is crucial to use accumulate, to use the previous value.
+    with CleanDihedralOrientation(True):
+        return [
+            zm.get_cartesian()
+            for zm in accumulate((z_step for _ in range(N - 1)), initial=z_start)
+        ]

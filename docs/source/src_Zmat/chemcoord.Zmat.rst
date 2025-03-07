@@ -5,17 +5,18 @@
 
 .. autoclass:: Zmat
 
-   
+
    .. automethod:: __init__
 
-   
+
    .. rubric:: Methods
 
    .. autosummary::
-   
+
       ~Zmat.__init__
       ~Zmat.add_data
       ~Zmat.change_numbering
+      ~Zmat.assign
       ~Zmat.copy
       ~Zmat.get_cartesian
       ~Zmat.get_electron_number
@@ -34,15 +35,15 @@
       ~Zmat.to_xyz
       ~Zmat.to_zmat
       ~Zmat.write
-   
-   
 
-   
-   
+
+
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
+
       ~Zmat.columns
       ~Zmat.dtypes
       ~Zmat.dummy_manipulation_allowed
@@ -57,5 +58,5 @@
       ~Zmat.test_operators
       ~Zmat.unsafe_iloc
       ~Zmat.unsafe_loc
-   
-   
+
+
