@@ -63,7 +63,7 @@ KwargDict: TypeAlias = dict[str, Any]
 
 AtomIdx = NewType("AtomIdx", int)
 
-Real: TypeAlias = int | float | np.integer | np.floating
+Real: TypeAlias = int | float | np.floating
 Integral: TypeAlias = int | np.integer
 
 
