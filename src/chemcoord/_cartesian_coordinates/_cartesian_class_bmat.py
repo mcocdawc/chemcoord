@@ -8,6 +8,9 @@ from numpy.linalg import lstsq, norm
 from sortedcontainers import SortedSet
 from typing_extensions import Self
 
+from chemcoord._cartesian_coordinates._cart_transformation import (
+    _jit_normalize,
+)
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord.typing import BondDict, Matrix, Vector
 
@@ -131,7 +134,7 @@ class CartesianBmat(CartesianCore):
             # procedure from J. Chem. Phys. 117, 9160 (2002); https://doi.org/10.1063/1.1515483
 
             # get ith internal coordinate
-            coord = internal_coord_arr[i]
+            coord = internal_coord_arr[i, :]
 
             # distances
             if coord[-1] == 2:
@@ -139,9 +142,7 @@ class CartesianBmat(CartesianCore):
                 positions = position_arr[coord[:2]]
 
                 # derivatives are just components of unit vector along distance
-                u = positions[0] - positions[1]
-
-                normedu = u / norm(u)
+                normedu = _jit_normalize(positions[0] - positions[1])
                 # for each cartesian coordinate
                 for j in prange(3):  # type: ignore[attr-defined]
                     B_matrix[i, j + 3 * coord[0]] = normedu[j]
@@ -155,9 +156,7 @@ class CartesianBmat(CartesianCore):
                 angle_derivs = angle_deriv(positions)
 
                 for j in prange(3):  # type: ignore[attr-defined]
-                    B_matrix[i, j + 3 * coord[0]] = angle_derivs[0, j]
-                    B_matrix[i, j + 3 * coord[1]] = angle_derivs[1, j]
-                    B_matrix[i, j + 3 * coord[2]] = angle_derivs[2, j]
+                    B_matrix[i, j + 3 * coord[:3]] = angle_derivs[:3, j]
 
             # dihedrals
             else:
@@ -167,10 +166,7 @@ class CartesianBmat(CartesianCore):
                 dihedral_derivs = dihedral_deriv(positions)
 
                 for j in prange(3):  # type: ignore[attr-defined]
-                    B_matrix[i, j + 3 * coord[0]] = dihedral_derivs[0, j]
-                    B_matrix[i, j + 3 * coord[1]] = dihedral_derivs[1, j]
-                    B_matrix[i, j + 3 * coord[2]] = dihedral_derivs[2, j]
-                    B_matrix[i, j + 3 * coord[3]] = dihedral_derivs[3, j]
+                    B_matrix[i, j + 3 * coord[:4]] = dihedral_derivs[:4, j]
 
         return B_matrix
 
@@ -178,23 +174,22 @@ class CartesianBmat(CartesianCore):
     @njit(cache=True)
     def jit_angle_deriv(positions: Matrix) -> Matrix:
         # vectors making up the angle
-        u = positions[0] - positions[1]
-        v = positions[2] - positions[1]
 
-        normedu = u / norm(u)
-        normedv = v / norm(v)
+        u = positions[0] - positions[1]
+        normedu = _jit_normalize(u)
+        v = positions[2] - positions[1]
+        normedv = _jit_normalize(v)
 
         w = cross(u, v)
 
         # if they were parallel
-        if np.isclose(w, np.array([0, 0, 0])).all():
-            w = cross(u, np.array([1, -1, 1]))
-
+        if np.allclose(w, 0.0):
+            w = cross(normedu, np.array([1, -1, 1]))
         # if u and [1, -1, 1] were parallel
-        if np.isclose(w, np.array([0, 0, 0])).all():
-            w = cross(u, np.array([-1, 1, 1]))
+        if np.allclose(w, 0.0):
+            w = cross(normedu, np.array([-1, 1, 1]))
 
-        normedw = w / norm(w)
+        normedw = _jit_normalize(w)
         return np.stack(
             (
                 cross(normedu, normedw) / norm(u),
@@ -212,17 +207,17 @@ class CartesianBmat(CartesianCore):
         w = positions[2] - positions[1]
         v = positions[3] - positions[2]
 
-        normedu = u / norm(u)
-        normedw = w / norm(w)
-        normedv = v / norm(v)
+        normedu = _jit_normalize(u)
+        normedw = _jit_normalize(w)
+        normedv = _jit_normalize(v)
 
-        cosu = np.dot(normedu, normedw)
+        cosu = normedu @ normedw
         # note this could be 0 if undefined dihedral
-        sinu = np.sqrt(1 - (np.dot(normedu, normedw)) ** 2)
+        sinu = np.sqrt(1 - (normedu @ normedw) ** 2)
 
-        cosv = -np.dot(normedv, normedw)
+        cosv = -(normedv @ normedw)
         # note this could be 0 if undefined dihedral
-        sinv = np.sqrt(1 - (np.dot(normedv, normedw)) ** 2)
+        sinv = np.sqrt(1 - (normedv @ normedw) ** 2)
 
         # catching cases where certain dihedrals are undefined
         if (sinu, sinv) == (0, 0):
@@ -248,6 +243,8 @@ class CartesianBmat(CartesianCore):
                     -cross(normedv, normedw) / (norm(v) * (sinv**2)),
                 )
             )
+        if any(np.isclose([sinu, sinv], 0)):
+            raise ValueError("sinu or sinv is 0")
         else:
             return np.stack(
                 (
@@ -349,13 +346,10 @@ class CartesianBmat(CartesianCore):
                 positions = position_arr[coord[:3]]
 
                 # vectors making up the angle
-                u = positions[0] - positions[1]
-                v = positions[2] - positions[1]
+                normedu = _jit_normalize(positions[0] - positions[1])
+                normedv = _jit_normalize(positions[2] - positions[1])
 
-                normedu = u / norm(u)
-                normedv = v / norm(v)
-
-                internal_coordinates[i] = np.arccos(np.dot(normedu, normedv))
+                internal_coordinates[i] = np.arccos(normedu @ normedv)
 
             # dihedrals
             else:
@@ -363,18 +357,12 @@ class CartesianBmat(CartesianCore):
                 positions = position_arr[coord[:4]]
 
                 # vectors making up dihedral
-                u = positions[1] - positions[0]
-                w = positions[2] - positions[1]
-                v = positions[3] - positions[2]
+                normedu = _jit_normalize(positions[1] - positions[0])
+                normedw = _jit_normalize(positions[2] - positions[1])
+                normedv = _jit_normalize(positions[3] - positions[2])
 
-                # TODO: use cc's renormalize
-
-                normedu = u / norm(u)
-                normedw = w / norm(w)
-                normedv = v / norm(v)
-
-                uw = np.dot(normedu, normedw)
-                wv = np.dot(normedw, normedv)
+                uw = normedu @ normedw
+                wv = normedw @ normedv
 
                 x = cross(cross(normedu, normedw), cross(normedw, normedv)) @ normedw
                 y = cross(normedu, normedw) @ cross(normedw, normedv)
