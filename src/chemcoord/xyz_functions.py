@@ -6,6 +6,7 @@ from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: F401
     concat,
     get_kabsch_rotation,
     get_rotation_matrix,
+    interpolate,
     isclose,
     normalize,
     orthonormalize_righthanded,
