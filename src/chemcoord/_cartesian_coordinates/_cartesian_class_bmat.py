@@ -16,6 +16,45 @@ primitives: TypeAlias = SortedSet[
 
 
 class CartesianBmat(CartesianCore):
+    def new_primitive_coords(self, use_lookup: bool = False) -> primitives:
+        """
+        Generate set of redundant internal coordinates for the system.
+        Stored in a sortedcontainers.SortedSet to maintain order while
+        being able to use Python's union operator. Sorted by length of
+        coordinate, then by standard order based on the atoms' indices.
+        Args:
+            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
+                coordinates to use in the calculation. If None, calculates using the
+                get_primitive_coords method
+            use_lookup (bool): default False, if True, uses a lookup table for bond
+                determination when generating primitive internal coordinates
+        Returns:
+            SortedSet[tuple]: SortedSet of redundant internal coordinates
+        """
+        # the key prioritizes length, then sorts lexicographically
+        primitive_coordinates = SortedSet(key=lambda x: (len(x), x))
+
+        bonds = self.get_bonds(use_lookup=use_lookup)
+
+        def canonicalize(*args: int) -> tuple[int, ...]:
+            if args[0] < args[-1]:
+                return tuple(args)
+            else:
+                return tuple(reversed(args))
+
+        # TODO early returns (purely for  performance))
+        for atom1 in self.index:
+            for atom2 in bonds[atom1]:
+                primitive_coordinates.add(canonicalize(atom1, atom2))
+                for atom3 in bonds[atom2] - {atom1}:
+                    primitive_coordinates.add(canonicalize(atom1, atom2, atom3))
+                    for atom4 in bonds[atom3] - {atom1, atom2}:
+                        primitive_coordinates.add(
+                            canonicalize(atom1, atom2, atom3, atom4)
+                        )
+
+        return primitive_coordinates
+
     def get_primitive_coords(self, use_lookup: bool = False) -> primitives:
         """
         Generate set of redundant internal coordinates for the system.
@@ -579,9 +618,17 @@ class CartesianBmat(CartesianCore):
                 self._metadata["bond_dict"][index1].add(index2)
                 self._metadata["bond_dict"][index2].add(index1)
 
-        coords = (
+        """coords = (
             self.get_primitive_coords(use_lookup=True)
             | end.get_primitive_coords()
+            | SortedSet(additional_coords, key=lambda x: (len(x), x))
+        )"""
+
+        # TEST NEW COORDS
+
+        coords = (
+            self.new_primitive_coords(use_lookup=True)
+            | end.new_primitive_coords()
             | SortedSet(additional_coords, key=lambda x: (len(x), x))
         )
 
@@ -610,6 +657,8 @@ class CartesianBmat(CartesianCore):
         path = path_1  # + path_2
 
         # TEMPFIX
+        for i, image in enumerate(path[1:]):
+            path[i + 1] = path[i].align(path[i + 1])[1]
         path.append(path[-1].align(end)[1])
 
         return path
