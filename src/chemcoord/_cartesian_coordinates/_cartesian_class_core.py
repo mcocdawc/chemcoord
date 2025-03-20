@@ -231,7 +231,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         molecule._metadata = copy.deepcopy(self._metadata)
         return molecule
 
-    def subs(self, *args) -> Self:
+    def subs(self, *args) -> Self:  # type: ignore[no-untyped-def]
         """Substitute a symbolic expression in ``['x', 'y', 'z']``
 
         This is a wrapper around the substitution mechanism of
@@ -255,7 +255,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         out = self.copy()
 
-        def get_subs_f(*args) -> Callable[[T], T | float]:
+        def get_subs_f(*args) -> Callable[[T], T | float]:  # type: ignore[no-untyped-def]
             def subs_function(x: T) -> T | float:
                 if hasattr(x, "subs"):
                     x = x.subs(*args)
