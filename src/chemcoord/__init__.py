@@ -11,6 +11,7 @@ from chemcoord._cartesian_coordinates.point_group import PointGroupOperations
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._print_versions import show_versions
 from chemcoord.configuration import settings
+from chemcoord.xyz_functions import interpolate
 from chemcoord.zmat_functions import (
     DummyManipulation,
     PureInternalMovement,

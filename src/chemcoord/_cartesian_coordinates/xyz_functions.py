@@ -5,13 +5,15 @@ import tempfile
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from io import StringIO
+from pathlib import Path
 from threading import Thread
-from typing import overload
+from typing import Literal, overload
 
 import numpy as np
 import pandas as pd
 import sympy
 from pandas.core.frame import DataFrame
+from typing_extensions import assert_never
 
 from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
@@ -20,14 +22,16 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
 from chemcoord._cartesian_coordinates._cartesian_class_core import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
+from chemcoord._internal_coordinates.zmat_functions import _zmat_interpolate
 from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
 from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 
 
 def view(
-    molecule: Cartesian | Sequence[Cartesian],
+    molecule: Cartesian | Iterable[Cartesian],
     viewer: PathLike | None = None,
+    list_viewer_file: Literal["molden", "xyz"] | None = None,
     use_curr_dir: bool = False,
 ) -> None:
     """View your molecule or list of molecules.
@@ -48,41 +52,51 @@ def view(
     Returns:
         None:
     """
-    viewer = settings["defaults"]["viewer"]
+    if viewer is None:
+        viewer = settings.defaults.viewer
+    if list_viewer_file is None:
+        list_viewer_file = settings.defaults.list_viewer_file
     if isinstance(molecule, Cartesian):
         molecule.view(viewer=viewer, use_curr_dir=use_curr_dir)
-    elif isinstance(molecule, Sequence):
-        cartesian_list = molecule
+    elif isinstance(molecule, Iterable):
+        cartesians = molecule
         if use_curr_dir:
-            TEMP_DIR = os.path.curdir
+            TEMP_DIR = Path(os.path.curdir)
         else:
-            TEMP_DIR = tempfile.gettempdir()
+            TEMP_DIR = Path(tempfile.gettempdir())
 
-        def give_filename(i: int) -> str:
-            return os.path.join(TEMP_DIR, f"ChemCoord_list_{i}.molden")
+        def give_filename(i: int, suffix: Literal["molden", "xyz"]) -> Path:
+            return TEMP_DIR / f"ChemCoord_list_{i}.{suffix}"
 
         i = 1
-        while os.path.exists(give_filename(i)):
+        while give_filename(i, list_viewer_file).exists():
             i = i + 1
 
-        to_molden(cartesian_list, buf=give_filename(i))
+        if list_viewer_file == "molden":
+            to_molden(cartesians, buf=give_filename(i, list_viewer_file))
+        elif list_viewer_file == "xyz":
+            to_multiple_xyz(cartesians, buf=give_filename(i, list_viewer_file))
+        else:
+            assert_never("Invalid list_viewer_file.")
 
         def open_file(i: int) -> None:
             """Open file and close after being finished."""
             try:
-                assert viewer is not None
-                subprocess.check_call([viewer, give_filename(i)])
+                subprocess.check_call([viewer, give_filename(i, list_viewer_file)])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise
             finally:
                 if use_curr_dir:
                     pass
                 else:
-                    os.remove(give_filename(i))
+                    give_filename(i, list_viewer_file).unlink()
 
         Thread(target=open_file, args=(i,)).start()
     else:
-        raise ValueError("Argument is neither list nor Cartesian.")
+        raise ValueError(
+            "Argument is neither iterable of Cartesians nor Cartesian "
+            f"but instead: {type(molecule)}"
+        )
 
 
 @overload
@@ -182,7 +196,7 @@ def read_multiple_xyz(
 
 @overload
 def to_molden(
-    cartesian_list: Sequence[Cartesian],
+    cartesians: Iterable[Cartesian],
     buf: None = None,
     sort_index: bool = ...,
     overwrite: bool = ...,
@@ -192,7 +206,7 @@ def to_molden(
 
 @overload
 def to_molden(
-    cartesian_list: Sequence[Cartesian],
+    cartesians: Iterable[Cartesian],
     buf: PathLike,
     sort_index: bool = ...,
     overwrite: bool = ...,
@@ -201,7 +215,7 @@ def to_molden(
 
 
 def to_molden(
-    cartesian_list: Sequence[Cartesian],
+    cartesians: Iterable[Cartesian],
     buf: PathLike | None = None,
     sort_index: bool = True,
     overwrite: bool = True,
@@ -214,20 +228,21 @@ def to_molden(
         The list to be written is of course not changed.
 
     Args:
-        cartesian_list (list):
-        buf (str): StringIO-like, optional buffer to write to
-        sort_index (bool): If sort_index is true, the Cartesian
+        cartesian_list :
+        buf : StringIO-like, optional buffer to write to
+        sort_index : If sort_index is true, the Cartesian
             is sorted by the index before writing.
-        overwrite (bool): May overwrite existing files.
-        float_format (one-parameter function): Formatter function
+        overwrite : May overwrite existing files.
+        float_format : Formatter function
             to apply to column’s elements if they are floats.
             The result of this function must be a unicode string.
-
-    Returns:
-        formatted : string (or unicode, depending on data and options)
     """
     if sort_index:
-        cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
+        cartesian_list = [molecule.sort_index() for molecule in cartesians]
+    else:
+        cartesian_list = list(cartesian_list)
+    if not all(isinstance(molecule, Cartesian) for molecule in cartesian_list):
+        raise TypeError("All elements in cartesians must be Cartesians.")
 
     give_header = (
         "[MOLDEN FORMAT]\n"
@@ -255,12 +270,8 @@ def to_molden(
     output = header + "\n".join(coordinates)
 
     if buf is not None:
-        if overwrite:
-            with open(buf, mode="w") as f:
-                f.write(output)
-        else:
-            with open(buf, mode="x") as f:
-                f.write(output)
+        with open(buf, mode="w" if overwrite else "x") as f:
+            f.write(output)
         return None
     else:
         return output
@@ -337,18 +348,15 @@ def isclose(
     """Compare two molecules for numerical equality.
 
     Args:
-        a (Cartesian):
-        b (Cartesian):
-        align (bool): a and b are
+        a :
+        b :
+        align : a and b are
             prealigned along their principal axes of inertia and moved to their
             barycenters before comparing.
-        rtol (float): Relative tolerance for the numerical equality comparison
+        rtol : Relative tolerance for the numerical equality comparison
             look into :func:`numpy.isclose` for further explanation.
-        atol (float): Relative tolerance for the numerical equality comparison
+        atol : Relative tolerance for the numerical equality comparison
             look into :func:`numpy.isclose` for further explanation.
-
-    Returns:
-        :class:`numpy.ndarray`: Boolean array.
     """
     # The pandas documentation says about the arguments to all(axis=...)
     #   None : reduce all axes, return a scalar
@@ -599,3 +607,28 @@ def apply_grad_zmat_tensor(
     new.loc[:, "atom"] = cart_dist.loc[:, "atom"]
     new.loc[:, ["bond", "angle", "dihedral"]] = C_dist
     return Zmat(new, _metadata={"last_valid_cartesian": cart_dist})
+
+
+def _cart_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesian]:
+    Delta = (end - start) / (N - 1)
+    return [start + i * Delta for i in range(N)]
+
+
+def interpolate(
+    start: Cartesian, end: Cartesian, N: int, coord: Literal["cart", "zmat"] = "zmat"
+) -> list[Cartesian]:
+    """Interpolate between start and end structure.
+
+    Args:
+        start :
+        end :
+        N (int): Number of structures to interpolate between.
+        coord :
+            Interpolate either in cartesian or zmatrix space.
+    """
+    if coord == "cart":
+        return _cart_interpolate(start, end, N)
+    elif coord == "zmat":
+        return _zmat_interpolate(start, end, N)
+    else:
+        assert_never(f"coord must be either 'cart' or 'zmat', not {coord}")

@@ -12,21 +12,15 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import os
-import sys
 
 # on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # if on_rtd:
 #    html_theme = 'default'
 # else:
 #     sys.path.append(os.path.dirname(os.path.normpath(module_dir)))
-
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath("../../src"))
-
 import chemcoord as cc
 
 # -- General configuration ------------------------------------------------
@@ -146,6 +140,9 @@ pygments_style = "sphinx"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+autodoc_typehints_format = "short"
+autodoc_typehints = "description"
 
 
 # -- Options for HTML output ----------------------------------------------
