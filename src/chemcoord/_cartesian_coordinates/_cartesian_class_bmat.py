@@ -220,29 +220,6 @@ class CartesianBmat(CartesianCore):
         sinv = np.sqrt(1 - (normedv @ normedw) ** 2)
 
         # catching cases where certain dihedrals are undefined
-        if (sinu, sinv) == (0, 0):
-            print("yikes!")
-            return np.full((4, 3), float("nan"))
-        elif sinv == 0:
-            print("yikes!")
-            return np.stack(
-                (
-                    cross(normedu, normedw) / (norm(u) * (sinu**2)),
-                    np.array([float("nan"), float("nan"), float("nan")]),
-                    np.array([float("nan"), float("nan"), float("nan")]),
-                    np.array([float("nan"), float("nan"), float("nan")]),
-                )
-            )
-        elif sinu == 0:
-            print("yikes!")
-            return np.stack(
-                (
-                    np.array([float("nan"), float("nan"), float("nan")]),
-                    np.array([float("nan"), float("nan"), float("nan")]),
-                    np.array([float("nan"), float("nan"), float("nan")]),
-                    -cross(normedv, normedw) / (norm(v) * (sinv**2)),
-                )
-            )
         if any(np.isclose([sinu, sinv], 0)):
             raise ValueError("sinu or sinv is 0")
         else:
@@ -367,11 +344,10 @@ class CartesianBmat(CartesianCore):
                 x = cross(cross(normedu, normedw), cross(normedw, normedv)) @ normedw
                 y = cross(normedu, normedw) @ cross(normedw, normedv)
 
-                if uw != 1 and wv != 1:
+                if not any(np.isclose([uw, wv], 1)):
                     internal_coordinates[i] = np.arctan2(x, y)
                 else:
-                    print("yikes!")
-                    internal_coordinates[i] = float("nan")
+                    raise ValueError("sinu or sinv is 0")
 
         return internal_coordinates
 
