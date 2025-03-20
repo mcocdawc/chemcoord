@@ -223,14 +223,8 @@ def to_xyz_trajectory(
         output += struct.to_xyz(float_format=float_format) + "\n"
 
     if buf is not None:
-        if overwrite:
-            with open(buf, mode="w") as f:
-                f.write(output)
-            return None
-
-        else:
-            with open(buf, mode="x") as f:
-                f.write(output)
+        with open(buf, mode="w" if overwrite else "x") as f:
+            f.write(output)
             return None
     else:
         return output
