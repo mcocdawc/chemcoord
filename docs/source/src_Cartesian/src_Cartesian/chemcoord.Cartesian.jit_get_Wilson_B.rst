@@ -1,7 +1,7 @@
 :orphan:
 
 chemcoord.Cartesian.jit\_get\_Wilson\_B
-===================================
+=======================================
 
 .. currentmodule:: chemcoord
 

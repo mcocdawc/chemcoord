@@ -27,6 +27,7 @@ class CartesianBmat(CartesianCore):
         Stored in a sortedcontainers.SortedSet to maintain order while
         being able to use Python's union operator. Sorted by length of
         coordinate, then by standard order based on the atoms' indices.
+
         Args:
             coordinates (SortedSet[tuple]): default None, SortedSet of primitive
                 coordinates to use in the calculation. If None, calculates using the
