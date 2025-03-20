@@ -1,4 +1,5 @@
 from itertools import combinations
+from typing import Callable, TypeAlias
 
 import numpy as np
 from numba import njit, prange
@@ -6,7 +7,6 @@ from numpy import cross
 from numpy.linalg import lstsq, norm
 from sortedcontainers import SortedSet
 from typing_extensions import Self
-from typing import Callable, TypeAlias
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._utilities.typing import Matrix, Vector
