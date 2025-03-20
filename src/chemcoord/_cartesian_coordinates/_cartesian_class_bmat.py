@@ -195,27 +195,13 @@ class CartesianBmat(CartesianCore):
             w = cross(u, np.array([-1, 1, 1]))
 
         normedw = w / norm(w)
-        return np.array(
-            [
-                [
-                    cross(normedu, normedw)[0] / norm(u),
-                    cross(normedu, normedw)[1] / norm(u),
-                    cross(normedu, normedw)[2] / norm(u),
-                ],
-                [
-                    -(cross(normedu, normedw)[0] / norm(u))
-                    - (cross(normedw, normedv)[0] / norm(v)),
-                    -(cross(normedu, normedw)[1] / norm(u))
-                    - (cross(normedw, normedv)[1] / norm(v)),
-                    -(cross(normedu, normedw)[2] / norm(u))
-                    - (cross(normedw, normedv)[2] / norm(v)),
-                ],
-                [
-                    cross(normedw, normedv)[0] / norm(v),
-                    cross(normedw, normedv)[1] / norm(v),
-                    cross(normedw, normedv)[2] / norm(v),
-                ],
-            ]
+        return np.stack(
+            (
+                cross(normedu, normedw) / norm(u),
+                -(cross(normedu, normedw) / norm(u))
+                - (cross(normedw, normedv) / norm(v)),
+                cross(normedw, normedv) / norm(v),
+            )
         )
 
     @staticmethod
@@ -244,116 +230,52 @@ class CartesianBmat(CartesianCore):
             return np.full((4, 3), float("nan"))
         elif sinv == 0:
             print("yikes!")
-            return np.array(
-                [
-                    [
-                        cross(normedu, normedw)[0] / (norm(u) * (sinu**2)),
-                        cross(normedu, normedw)[1] / (norm(u) * (sinu**2)),
-                        cross(normedu, normedw)[2] / (norm(u) * (sinu**2)),
-                    ],
-                    [float("nan"), float("nan"), float("nan")],
-                    [float("nan"), float("nan"), float("nan")],
-                    [float("nan"), float("nan"), float("nan")],
-                ]
+            return np.stack(
+                (
+                    cross(normedu, normedw) / (norm(u) * (sinu**2)),
+                    np.array([float("nan"), float("nan"), float("nan")]),
+                    np.array([float("nan"), float("nan"), float("nan")]),
+                    np.array([float("nan"), float("nan"), float("nan")]),
+                )
             )
         elif sinu == 0:
             print("yikes!")
-            return np.array(
-                [
-                    [float("nan"), float("nan"), float("nan")],
-                    [float("nan"), float("nan"), float("nan")],
-                    [float("nan"), float("nan"), float("nan")],
-                    [
-                        -cross(normedv, normedw)[0] / (norm(v) * (sinv**2)),
-                        -cross(normedv, normedw)[1] / (norm(v) * (sinv**2)),
-                        -cross(normedv, normedw)[2] / (norm(v) * (sinv**2)),
-                    ],
-                ]
+            return np.stack(
+                (
+                    np.array([float("nan"), float("nan"), float("nan")]),
+                    np.array([float("nan"), float("nan"), float("nan")]),
+                    np.array([float("nan"), float("nan"), float("nan")]),
+                    -cross(normedv, normedw) / (norm(v) * (sinv**2)),
+                )
             )
         else:
-            return np.array(
-                [
-                    [
-                        cross(normedu, normedw)[0] / (norm(u) * (sinu**2)),
-                        cross(normedu, normedw)[1] / (norm(u) * (sinu**2)),
-                        cross(normedu, normedw)[2] / (norm(u) * (sinu**2)),
-                    ],
-                    [
-                        -cross(normedu, normedw)[0] / (norm(u) * (sinu**2))
+            return np.stack(
+                (
+                    cross(normedu, normedw) / (norm(u) * (sinu**2)),
+                    -cross(normedu, normedw) / (norm(u) * (sinu**2))
                         + (
                             (
-                                (cross(normedu, normedw)[0] * cosu)
+                                (cross(normedu, normedw) * cosu)
                                 / (norm(w) * (sinu**2))
                             )
                             - (
-                                (cross(normedv, normedw)[0] * cosv)
+                                (cross(normedv, normedw) * cosv)
                                 / (norm(w) * (sinv**2))
                             )
                         ),
-                        -cross(normedu, normedw)[1] / (norm(u) * (sinu**2))
-                        + (
-                            (
-                                (cross(normedu, normedw)[1] * cosu)
-                                / (norm(w) * (sinu**2))
-                            )
-                            - (
-                                (cross(normedv, normedw)[1] * cosv)
-                                / (norm(w) * (sinv**2))
-                            )
-                        ),
-                        -cross(normedu, normedw)[2] / (norm(u) * (sinu**2))
-                        + (
-                            (
-                                (cross(normedu, normedw)[2] * cosu)
-                                / (norm(w) * (sinu**2))
-                            )
-                            - (
-                                (cross(normedv, normedw)[2] * cosv)
-                                / (norm(w) * (sinv**2))
-                            )
-                        ),
-                    ],
-                    [
-                        cross(normedv, normedw)[0] / (norm(v) * (sinv**2))
+                    cross(normedv, normedw) / (norm(v) * (sinv**2))
                         - (
                             (
-                                (cross(normedu, normedw)[0] * cosu)
+                                (cross(normedu, normedw) * cosu)
                                 / (norm(w) * (sinu**2))
                             )
                             - (
-                                (cross(normedv, normedw)[0] * cosv)
+                                (cross(normedv, normedw) * cosv)
                                 / (norm(w) * (sinv**2))
                             )
                         ),
-                        cross(normedv, normedw)[1] / (norm(v) * (sinv**2))
-                        - (
-                            (
-                                (cross(normedu, normedw)[1] * cosu)
-                                / (norm(w) * (sinu**2))
-                            )
-                            - (
-                                (cross(normedv, normedw)[1] * cosv)
-                                / (norm(w) * (sinv**2))
-                            )
-                        ),
-                        cross(normedv, normedw)[2] / (norm(v) * (sinv**2))
-                        - (
-                            (
-                                (cross(normedu, normedw)[2] * cosu)
-                                / (norm(w) * (sinu**2))
-                            )
-                            - (
-                                (cross(normedv, normedw)[2] * cosv)
-                                / (norm(w) * (sinv**2))
-                            )
-                        ),
-                    ],
-                    [
-                        -cross(normedv, normedw)[0] / (norm(v) * (sinv**2)),
-                        -cross(normedv, normedw)[1] / (norm(v) * (sinv**2)),
-                        -cross(normedv, normedw)[2] / (norm(v) * (sinv**2)),
-                    ],
-                ]
+                    -cross(normedv, normedw) / (norm(v) * (sinv**2)),
+                )
             )
 
     def x_to_c(
@@ -454,12 +376,6 @@ class CartesianBmat(CartesianCore):
                 uw = np.dot(normedu, normedw)
                 wv = np.dot(normedw, normedv)
 
-                # TODO: replace with @
-                """x = -np.dot(cross(normedu, normedw), cross(normedv, normedw))
-                y = np.dot(
-                    cross(cross(normedu, normedw), normedw), cross(normedv, normedw)
-                )"""
-
                 x = cross(cross(normedu, normedw), cross(normedw, normedv)) @ normedw
                 y = cross(normedu, normedw) @ cross(normedw, normedv)
 
@@ -479,7 +395,6 @@ class CartesianBmat(CartesianCore):
         rcond: float | None = None,
     ) -> Self:
         # TODO: make sure additional_coords are getting passed along correctly.
-        # could account for messed up 1st step when you add too many
         current_struct = self.copy()
 
         x_current = np.array(self.loc[:, ["x", "y", "z"]]).flatten()
@@ -494,15 +409,6 @@ class CartesianBmat(CartesianCore):
 
         # TODO: change this to use the modulus function already written in here
         # check to make sure it takes the shorter dihedral and angle
-        """delta_c = np.array([
-            delta_c[i]
-            if (np.abs(delta_c[i]) < np.pi or len(coords[i]) == 2)
-            else -(2 * np.pi - delta_c[i])
-            if delta_c[i] > 0
-            else (2 * np.pi + delta_c[i])
-            for i in range(len(delta_c))
-        ])"""
-
         delta_c = np.array(
             [
                 delta_c[i]
@@ -514,10 +420,7 @@ class CartesianBmat(CartesianCore):
         )
 
         B = current_struct.get_Wilson_B(internal_coordinates=coords)
-        # TEST: replacing division of delta_x by N with division of delta_c by N
-        # RESULT: this obviously does not matter, and can mess up the lstsq for large N
         delta_x = lstsq(B, delta_c, rcond=rcond)[0]
-        # invB = pinv(B)
 
         x_current = x_current + (delta_x / N)
 
@@ -574,37 +477,18 @@ class CartesianBmat(CartesianCore):
             | SortedSet(additional_coords, key=lambda x: (len(x), x))
         )
 
-        # TEST: meeting in the middle
-        path_1 = [self]
-        # path_2 = [end]
-        # TODO: interpolate rotation
+        path = [self]
 
-        # rotation_matrix = self.get_align_transf(end)
+        # TODO: interpolate rotation
 
         # for each subdivision,
         for i in range(N):
-            new_struct = path_1[i].B_traj_step(end, N - i, coords, rcond=rcond)
-            # TODO: figure out whether to match rotation to start, end,
-            # or previous struct
-            # path_1.append(((i / N) * rotation_matrix) @ new_struct)
-            path_1.append(new_struct)
+            new_struct = path[i].B_traj_step(end, N - i, coords, rcond=rcond)
+            path.append(new_struct)
 
-        """for i in range(N - (N // 2)):
-            new_struct = path_2[i].B_traj_step(path_1[-1], N - i, coords, rcond=rcond)
-            # TODO: figure out whether to match rotation to start, end,
-            # or previous struct
-            path_2.append((((i / N)) * rotation_matrix) @ new_struct)"""
-
-        # path_2 = list(reversed(path_2))
-        path = path_1  # + path_2
-
-        # TEMPFIX
+        # temporary rotational and translational alignment
         for i, image in enumerate(path[1:]):
             path[i + 1] = path[i].align(path[i + 1])[1]
         path.append(path[-1].align(end)[1])
 
         return path
-
-
-# move before class
-def _jit_angle_deriv() -> None: ...
