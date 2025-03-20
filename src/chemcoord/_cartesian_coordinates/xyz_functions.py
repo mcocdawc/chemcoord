@@ -169,7 +169,7 @@ def read_multiple_xyz(
     Returns:
         list: A list containing :class:`~chemcoord.Cartesian` is returned.
     """
-    with open(inputfile, "r") as f:
+    with open(inputfile) as f:
         strings = f.readlines()
         cartesians = []
         finished = False
