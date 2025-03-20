@@ -164,7 +164,7 @@ class ZmatIO(ZmatCore, GenericIO):
                     zmat_frame.loc[i, "dihedral"] = zmat_values[2]
 
         elif zmat_frame.iloc[0, 1] in constants.int_label.keys():
-            zmat_frame = zmat_frame.replace(
+            zmat_frame = zmat_frame.replace(  # type: ignore[misc]
                 {col: constants.int_label for col in ["b", "a", "d"]}
             )
 
