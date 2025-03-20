@@ -16,7 +16,7 @@ primitives: TypeAlias = SortedSet[
 
 
 class CartesianBmat(CartesianCore):
-    def new_primitive_coords(self, use_lookup: bool = False) -> primitives:
+    def get_primitive_coords(self, use_lookup: bool = False) -> primitives:
         """
         Generate set of redundant internal coordinates for the system.
         Stored in a sortedcontainers.SortedSet to maintain order while
@@ -52,59 +52,6 @@ class CartesianBmat(CartesianCore):
                         primitive_coordinates.add(
                             canonicalize(atom1, atom2, atom3, atom4)
                         )
-
-        return primitive_coordinates
-
-    def get_primitive_coords(self, use_lookup: bool = False) -> primitives:
-        """
-        Generate set of redundant internal coordinates for the system.
-
-        Stored in a sortedcontainers.SortedSet to maintain order while
-        being able to use Python's union operator. Sorted by length of
-        coordinate, then by standard order based on the atoms' indices.
-
-        Args:
-            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
-                coordinates to use in the calculation. If None, calculates using the
-                get_primitive_coords method
-            use_lookup (bool): default False, if True, uses a lookup table for bond
-                determination when generating primitive internal coordinates
-
-        Returns:
-            SortedSet[tuple]: SortedSet of redundant internal coordinates
-        """
-
-        # the key prioritizes length, then sorts lexicographically
-        primitive_coordinates = SortedSet(key=lambda x: (len(x), x))
-
-        bonds = self.get_bonds(use_lookup=use_lookup)
-
-        for atom1, atom2 in combinations(range(len(bonds)), 2):
-            # bond distance
-            if atom2 in bonds[atom1]:
-                primitive_coordinates.add((atom1, atom2))
-
-                # angle
-                for atom0 in bonds[atom1] - {atom2}:
-                    primitive_coordinates.add((atom0, atom1, atom2))
-
-                    # dihedral
-                    for atom00 in bonds[atom0] - {atom1, atom2}:
-                        primitive_coordinates.add((atom00, atom0, atom1, atom2))
-
-                # angle
-                for atom3 in bonds[atom2] - {atom1}:
-                    primitive_coordinates.add((atom1, atom2, atom3))
-
-                    # dihedral
-                    for atom4 in bonds[atom3] - {atom1, atom2}:
-                        primitive_coordinates.add((atom1, atom2, atom3, atom4))
-
-        # get rid of reversed duplicates
-        for item in primitive_coordinates:
-            rev = tuple(reversed(item))
-            if rev in primitive_coordinates:
-                primitive_coordinates.remove(rev)
 
         return primitive_coordinates
 
@@ -618,20 +565,12 @@ class CartesianBmat(CartesianCore):
                 self._metadata["bond_dict"][index1].add(index2)
                 self._metadata["bond_dict"][index2].add(index1)
 
-        """coords = (
+        coords = (
             self.get_primitive_coords(use_lookup=True)
             | end.get_primitive_coords()
             | SortedSet(additional_coords, key=lambda x: (len(x), x))
-        )"""
-
-        # TEST NEW COORDS
-
-        coords = (
-            self.new_primitive_coords(use_lookup=True)
-            | end.new_primitive_coords()
-            | SortedSet(additional_coords, key=lambda x: (len(x), x))
         )
-
+        
         # TEST: meeting in the middle
         path_1 = [self]
         # path_2 = [end]
