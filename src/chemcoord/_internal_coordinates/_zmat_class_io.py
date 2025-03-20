@@ -164,12 +164,12 @@ class ZmatIO(ZmatCore, GenericIO):
                     zmat_frame.loc[i, "dihedral"] = zmat_values[2]
 
         elif zmat_frame.iloc[0, 1] in constants.int_label.keys():
-            zmat_frame = zmat_frame.replace(  # type: ignore[misc]
-                {col: constants.int_label for col in ["b", "a", "d"]}
+            zmat_frame = zmat_frame.replace(
+                {col: constants.int_label for col in ["b", "a", "d"]}  # type: ignore[misc]
             )
 
         zmat_frame = cls._cast_correct_types(zmat_frame).replace(
-            {col: constants.string_repr for col in ["b", "a", "d"]}
+            {col: constants.string_repr for col in ["b", "a", "d"]}  # type: ignore[misc]
         )
         try:
             Zmat = cls(zmat_frame)
