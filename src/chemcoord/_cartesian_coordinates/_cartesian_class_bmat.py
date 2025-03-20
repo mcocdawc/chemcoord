@@ -5,13 +5,14 @@ from numba import njit, prange
 from numpy import cross
 from numpy.linalg import lstsq, norm
 from sortedcontainers import SortedSet
-from typing_extensions import Callable, Self, TypeAlias, Union
+from typing_extensions import Self
+from typing import Callable, TypeAlias
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._utilities.typing import Matrix, Vector
 
 primitives: TypeAlias = SortedSet[
-    Union[tuple[int, int], tuple[int, int, int], tuple[int, int, int, int]]
+    tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]
 ]
 
 
@@ -57,7 +58,7 @@ class CartesianBmat(CartesianCore):
 
     def get_Wilson_B(
         self,
-        internal_coordinates: Union[primitives, None] = None,
+        internal_coordinates: primitives | None = None,
         use_lookup: bool = False,
     ) -> Matrix:
         """
@@ -355,7 +356,7 @@ class CartesianBmat(CartesianCore):
 
     def x_to_c(
         self,
-        internal_coordinates: Union[primitives, None] = None,
+        internal_coordinates: primitives | None = None,
         use_lookup: bool = False,
     ) -> Vector:
         """
@@ -473,7 +474,7 @@ class CartesianBmat(CartesianCore):
         end: Self,
         N: int,
         coords: primitives,
-        rcond: Union[float, None] = None,
+        rcond: float | None = None,
     ) -> Self:
         # TODO: make sure additional_coords are getting passed along correctly.
         # could account for messed up 1st step when you add too many
@@ -529,8 +530,8 @@ class CartesianBmat(CartesianCore):
         self,
         end: Self,
         N: int,
-        additional_coords: Union[primitives, None] = None,
-        rcond: Union[float, None] = None,
+        additional_coords: primitives | None = None,
+        rcond: float | None = None,
     ) -> list[Self]:
         """
         Create a trajectory between two structures.
@@ -570,7 +571,7 @@ class CartesianBmat(CartesianCore):
             | end.get_primitive_coords()
             | SortedSet(additional_coords, key=lambda x: (len(x), x))
         )
-        
+
         # TEST: meeting in the middle
         path_1 = [self]
         # path_2 = [end]
