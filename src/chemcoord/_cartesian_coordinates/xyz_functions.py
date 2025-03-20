@@ -194,33 +194,11 @@ def read_multiple_xyz(
     return cartesians
 
 
-@overload
-def to_molden(
-    cartesians: Iterable[Cartesian],
-    buf: None = None,
-    sort_index: bool = ...,
-    overwrite: bool = ...,
-    float_format: Callable[[float], str] = ...,
-) -> str: ...
-
-
-@overload
-def to_molden(
-    cartesians: Iterable[Cartesian],
-    buf: PathLike,
-    sort_index: bool = ...,
-    overwrite: bool = ...,
-    float_format: Callable[[float], str] = ...,
-) -> None: ...
-
-
-# ignoring mypy as mypy does not consider implicit None returns as
-# returning None
 def to_xyz_trajectory(
     cartesian_list: Vector,
     buf: str | None = None,
     overwrite: bool = True,
-    float_format="{:.6f}".format,
+    float_format: Callable[[float], str] = "{:.6f}".format,
 ) -> str | None:
     """Write a list of Cartesians into an xyz file.
 
@@ -256,6 +234,26 @@ def to_xyz_trajectory(
             return None
     else:
         return output
+
+
+@overload
+def to_molden(
+    cartesians: Iterable[Cartesian],
+    buf: None = None,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> str: ...
+
+
+@overload
+def to_molden(
+    cartesians: Iterable[Cartesian],
+    buf: PathLike,
+    sort_index: bool = ...,
+    overwrite: bool = ...,
+    float_format: Callable[[float], str] = ...,
+) -> None: ...
 
 
 def to_molden(

@@ -9,15 +9,16 @@ from sortedcontainers import SortedSet
 from typing_extensions import Self
 
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
-from chemcoord._utilities.typing import Matrix, Vector
+from chemcoord.typing import BondDict, Matrix, Vector
 
-primitives: TypeAlias = SortedSet[
-    tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]
-]
+#: Unfortunately SortedSet is not a generic type, if it was, the primitives
+#: would be declared as
+#: ``SortedSet[tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]``
+primitives: TypeAlias = SortedSet
 
 
 class CartesianBmat(CartesianCore):
-    def get_primitive_coords(self, use_lookup: bool = False) -> primitives:
+    def get_primitive_coords(self, bonds: BondDict | None = None) -> primitives:
         """
         Generate set of redundant internal coordinates for the system.
         Stored in a sortedcontainers.SortedSet to maintain order while
@@ -35,7 +36,8 @@ class CartesianBmat(CartesianCore):
         # the key prioritizes length, then sorts lexicographically
         primitive_coordinates = SortedSet(key=lambda x: (len(x), x))
 
-        bonds = self.get_bonds(use_lookup=use_lookup)
+        if bonds is None:
+            bonds = self.get_bonds()
 
         def canonicalize(*args: int) -> tuple[int, ...]:
             if args[0] < args[-1]:
@@ -59,7 +61,7 @@ class CartesianBmat(CartesianCore):
     def get_Wilson_B(
         self,
         internal_coordinates: primitives | None = None,
-        use_lookup: bool = False,
+        bonds: BondDict | None = None,
     ) -> Matrix:
         """
         Generate Wilson's B matrix for the current structure.
@@ -77,7 +79,7 @@ class CartesianBmat(CartesianCore):
 
         # get primitive coordinates
         if internal_coordinates is None:
-            internal_coordinates = self.get_primitive_coords(use_lookup=use_lookup)
+            internal_coordinates = self.get_primitive_coords(bonds)
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
@@ -124,7 +126,7 @@ class CartesianBmat(CartesianCore):
         # initialize B matrix
         B_matrix = np.zeros((len(internal_coord_arr), 3 * n_atoms))
 
-        for i in prange(len(internal_coord_arr)):
+        for i in prange(len(internal_coord_arr)):  # type: ignore[attr-defined]
             # separate cases for distances, angles, and dihedrals
             # procedure from J. Chem. Phys. 117, 9160 (2002); https://doi.org/10.1063/1.1515483
 
@@ -141,7 +143,7 @@ class CartesianBmat(CartesianCore):
 
                 normedu = u / norm(u)
                 # for each cartesian coordinate
-                for j in prange(3):
+                for j in prange(3):  # type: ignore[attr-defined]
                     B_matrix[i, j + 3 * coord[0]] = normedu[j]
                     B_matrix[i, j + 3 * coord[1]] = -normedu[j]
 
@@ -152,7 +154,7 @@ class CartesianBmat(CartesianCore):
 
                 angle_derivs = angle_deriv(positions)
 
-                for j in prange(3):
+                for j in prange(3):  # type: ignore[attr-defined]
                     B_matrix[i, j + 3 * coord[0]] = angle_derivs[0, j]
                     B_matrix[i, j + 3 * coord[1]] = angle_derivs[1, j]
                     B_matrix[i, j + 3 * coord[2]] = angle_derivs[2, j]
@@ -164,7 +166,7 @@ class CartesianBmat(CartesianCore):
 
                 dihedral_derivs = dihedral_deriv(positions)
 
-                for j in prange(3):
+                for j in prange(3):  # type: ignore[attr-defined]
                     B_matrix[i, j + 3 * coord[0]] = dihedral_derivs[0, j]
                     B_matrix[i, j + 3 * coord[1]] = dihedral_derivs[1, j]
                     B_matrix[i, j + 3 * coord[2]] = dihedral_derivs[2, j]
@@ -357,7 +359,7 @@ class CartesianBmat(CartesianCore):
     def x_to_c(
         self,
         internal_coordinates: primitives | None = None,
-        use_lookup: bool = False,
+        bonds: BondDict | None = None,
     ) -> Vector:
         """
         Conversion between cartesian coordinates and internal coordinates
@@ -374,7 +376,7 @@ class CartesianBmat(CartesianCore):
         """
         # get primitive coordinates
         if internal_coordinates is None:
-            internal_coordinates = self.get_primitive_coords(use_lookup=use_lookup)
+            internal_coordinates = self.get_primitive_coords(bonds=bonds)
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
@@ -405,7 +407,7 @@ class CartesianBmat(CartesianCore):
         """
         internal_coordinates = np.empty(len(internal_coord_arr))
 
-        for i in prange(len(internal_coord_arr)):
+        for i in prange(len(internal_coord_arr)): # type: ignore[attr-defined]
             # get ith internal coordinate
             coord = internal_coord_arr[i]
 
@@ -554,20 +556,20 @@ class CartesianBmat(CartesianCore):
         """
 
         if additional_coords is None:
-            additional_coords = set()
+            additional_coords = SortedSet([], key=lambda x: (len(x), x))
 
-        self.get_bonds()
+        bonds = self.get_bonds()
         fragments = self.fragmentate()
         if len(fragments) != 1:
             for fragment_pair in combinations(fragments, 2):
                 index1, index2, _ = fragment_pair[0].get_shortest_distance(
                     fragment_pair[1]
                 )
-                self._metadata["bond_dict"][index1].add(index2)
-                self._metadata["bond_dict"][index2].add(index1)
+                bonds[index1].add(index2)
+                bonds[index2].add(index1)
 
         coords = (
-            self.get_primitive_coords(use_lookup=True)
+            self.get_primitive_coords(bonds=bonds)
             | end.get_primitive_coords()
             | SortedSet(additional_coords, key=lambda x: (len(x), x))
         )
@@ -605,4 +607,4 @@ class CartesianBmat(CartesianCore):
 
 
 # move before class
-def _jit_angle_deriv(): ...
+def _jit_angle_deriv() -> None: ...
