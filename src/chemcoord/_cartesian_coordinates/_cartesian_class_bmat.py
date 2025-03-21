@@ -98,12 +98,12 @@ class CartesianBmat(CartesianCore):
     @staticmethod
     @njit(parallel=True, cache=True)
     def jit_get_Wilson_B(
-        position_arr: Matrix,
-        internal_coord_arr: Matrix,
+        position_arr: Matrix[float64],
+        internal_coord_arr: Matrix[int64],
         n_atoms: int,
         angle_deriv: Callable,
         dihedral_deriv: Callable,
-    ) -> Matrix:
+    ) -> Matrix[float64]:
         """
         Jit-compiled Wilson's B matrix generator.
 
@@ -170,8 +170,9 @@ class CartesianBmat(CartesianCore):
         # vectors making up the angle
 
         u = positions[0] - positions[1]
-        normedu = _jit_normalize(u)
         v = positions[2] - positions[1]
+
+        normedu = _jit_normalize(u)
         normedv = _jit_normalize(v)
 
         w = cross(u, v)
