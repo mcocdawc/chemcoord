@@ -1,3 +1,4 @@
+from functools import partial
 from itertools import combinations
 from typing import Callable, TypeAlias
 
@@ -20,6 +21,9 @@ from chemcoord.typing import BondDict, Matrix, Vector
 primitives: TypeAlias = SortedSet
 
 
+MySortedSet = partial(SortedSet, key=lambda x: (len(x), x))
+
+
 class CartesianBmat(CartesianCore):
     def get_primitives_idx(self, bonds: BondDict | None = None) -> primitives:
         """
@@ -38,7 +42,7 @@ class CartesianBmat(CartesianCore):
             SortedSet[tuple]: SortedSet of redundant internal coordinates
         """
         # the key prioritizes length, then sorts lexicographically
-        idx_primitive_coords = SortedSet(key=lambda x: (len(x), x))
+        idx_primitive_coords = MySortedSet()
 
         if bonds is None:
             bonds = self.get_bonds()
@@ -260,6 +264,18 @@ class CartesianBmat(CartesianCore):
 
         return self.jit_x_to_c(position_arr, self._to_array(internal_coords_idx))
 
+    def _reindex_to_0(self, internal_coords_idx: primitives) -> primitives:
+        """Return a reindexed version of `primitives` as if `self` was indexed contiguosly
+        from 0 to n - 1."""
+        index_to_rownum = {index: i for i, index in enumerate(self.index)}
+
+        return MySortedSet(
+            {
+                tuple(index_to_rownum[i] for i in coordinate_idx)
+                for coordinate_idx in internal_coords_idx
+            }
+        )
+
     def _to_array(self, internal_coords_idx: primitives) -> Matrix[int64]:
         """Converts the index of the primitive internal coordinates to an array
         and changes to 0-based indexing.
@@ -272,9 +288,8 @@ class CartesianBmat(CartesianCore):
         molecule to 0-based indexing.
         """
         internal_coord_idx_arr = np.empty((len(internal_coords_idx), 5), dtype=int64)
-        for i, coordinate in enumerate(internal_coords_idx):
-            for j, index in enumerate(coordinate):
-                internal_coord_idx_arr[i, j] = index
+        for i, coordinate in enumerate(self._reindex_to_0(internal_coords_idx)):
+            internal_coord_idx_arr[i, : len(coordinate)] = coordinate
             internal_coord_idx_arr[i, 4] = len(coordinate)
         return internal_coord_idx_arr
 
@@ -424,7 +439,7 @@ class CartesianBmat(CartesianCore):
         """
         if primitives_idx is None:
             if add_coords is None:
-                add_coords = SortedSet([], key=lambda x: (len(x), x))
+                add_coords = MySortedSet()
 
             bonds = self.get_bonds()
             fragments = self.fragmentate()
@@ -439,7 +454,7 @@ class CartesianBmat(CartesianCore):
             primitives_idx = (
                 self.get_primitives_idx(bonds=bonds)
                 | end.get_primitives_idx()
-                | SortedSet(add_coords, key=lambda x: (len(x), x))
+                | MySortedSet(add_coords)
             )
 
         path = [self]
