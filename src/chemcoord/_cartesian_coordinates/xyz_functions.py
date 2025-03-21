@@ -194,42 +194,6 @@ def read_multiple_xyz(
     return cartesians
 
 
-def to_xyz_trajectory(
-    cartesian_list: Vector,
-    buf: str | None = None,
-    overwrite: bool = True,
-    float_format: Callable[[float], str] = "{:.6f}".format,
-) -> str | None:
-    """Write a list of Cartesians into an xyz file.
-
-    .. note:: Since it permamently writes a file, this function
-        is strictly speaking **not sideeffect free**.
-        The list to be written is of course not changed.
-
-    Args:
-        cartesian_list (list):
-        buf (str): StringIO-like, optional buffer to write to
-        overwrite (bool): May overwrite existing files.
-        float_format (one-parameter function): Formatter function
-            to apply to column’s elements if they are floats.
-            The result of this function must be a unicode string.
-
-    Returns:
-        formatted : string (or unicode, depending on data and options)
-    """
-
-    output = ""
-    for struct in cartesian_list:
-        output += struct.to_xyz(float_format=float_format) + "\n"
-
-    if buf is not None:
-        with open(buf, mode="w" if overwrite else "x") as f:
-            f.write(output)
-            return None
-    else:
-        return output
-
-
 @overload
 def to_molden(
     cartesians: Iterable[Cartesian],
