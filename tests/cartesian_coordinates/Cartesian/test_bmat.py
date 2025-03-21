@@ -35,7 +35,7 @@ molecule3 = Cartesian.read_xyz(get_complete_path("peroxide.xyz"))
 
 
 def test_primitive_coordinates():
-    coords = molecule1.get_primitive_coords()
+    coords = molecule1.get_primitives_idx()
     expected = SortedSet(
         [
             (0, 1),

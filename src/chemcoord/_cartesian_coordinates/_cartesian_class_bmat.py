@@ -21,7 +21,7 @@ primitives: TypeAlias = SortedSet
 
 
 class CartesianBmat(CartesianCore):
-    def get_primitive_coords(self, bonds: BondDict | None = None) -> primitives:
+    def get_primitives_idx(self, bonds: BondDict | None = None) -> primitives:
         """
         Generate set of redundant internal coordinates for the system.
         Stored in a sortedcontainers.SortedSet to maintain order while
@@ -83,7 +83,7 @@ class CartesianBmat(CartesianCore):
 
         # get primitive coordinates
         if idx_internal_coords is None:
-            idx_internal_coords = self.get_primitive_coords(bonds)
+            idx_internal_coords = self.get_primitives_idx(bonds)
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
@@ -254,20 +254,22 @@ class CartesianBmat(CartesianCore):
         """
         # get primitive coordinates
         if internal_coords_idx is None:
-            internal_coords_idx = self.get_primitive_coords(bonds=bonds)
+            internal_coords_idx = self.get_primitives_idx(bonds=bonds)
 
         position_arr = np.array(self.loc[:, ["x", "y", "z"]])
 
         return self.jit_x_to_c(position_arr, self._to_array(internal_coords_idx))
 
-
-    @staticmethod
-    def _to_array(internal_coords_idx: primitives) -> Matrix[int64]:
+    def _to_array(self, internal_coords_idx: primitives) -> Matrix[int64]:
         """Converts the index of the primitive internal coordinates to an array
+        and changes to 0-based indexing.
 
         The array is a rectangualar (n, 5) array, where n is the number of
         internal coordinates. The last column denotes the number of defined columns and
         the type of coordinate, i.e. (n=2) bond, (n=3) angle, (n=4) dihedral.
+
+        In addition, this function switches from the arbitrary flexible index of a
+        molecule to 0-based indexing.
         """
         internal_coord_idx_arr = np.empty((len(internal_coords_idx), 5), dtype=int64)
         for i, coordinate in enumerate(internal_coords_idx):
@@ -283,6 +285,9 @@ class CartesianBmat(CartesianCore):
     ) -> Vector[float64]:
         """
         Jit-compiled conversion between cartesian coordinates and internal coordinates
+
+        .. note:: This function implicitly assumes that `internal_coords_idx`
+            is for a 0-indexed molecule.
 
         Args:
             position_arr (Matrix): array of cartesian coordinate locations of the
@@ -393,6 +398,7 @@ class CartesianBmat(CartesianCore):
         self,
         end: Self,
         N: int,
+        *,
         additional_coords: primitives | None = None,
         rcond: float | None = None,
     ) -> list[Self]:
@@ -430,8 +436,8 @@ class CartesianBmat(CartesianCore):
                 bonds[index2].add(index1)
 
         coords = (
-            self.get_primitive_coords(bonds=bonds)
-            | end.get_primitive_coords()
+            self.get_primitives_idx(bonds=bonds)
+            | end.get_primitives_idx()
             | SortedSet(additional_coords, key=lambda x: (len(x), x))
         )
 
