@@ -399,7 +399,8 @@ class CartesianBmat(CartesianCore):
         end: Self,
         N: int,
         *,
-        additional_coords: primitives | None = None,
+        primitives_idx: primitives | None = None,
+        add_coords: primitives | None = None,
         rcond: float | None = None,
     ) -> list[Self]:
         """
@@ -421,25 +422,25 @@ class CartesianBmat(CartesianCore):
         Returns:
             list[Cartesian]: pathway between self and end
         """
+        if primitives_idx is None:
+            if add_coords is None:
+                add_coords = SortedSet([], key=lambda x: (len(x), x))
 
-        if additional_coords is None:
-            additional_coords = SortedSet([], key=lambda x: (len(x), x))
+            bonds = self.get_bonds()
+            fragments = self.fragmentate()
+            if len(fragments) != 1:
+                for fragment_pair in combinations(fragments, 2):
+                    index1, index2, _ = fragment_pair[0].get_shortest_distance(
+                        fragment_pair[1]
+                    )
+                    bonds[index1].add(index2)
+                    bonds[index2].add(index1)
 
-        bonds = self.get_bonds()
-        fragments = self.fragmentate()
-        if len(fragments) != 1:
-            for fragment_pair in combinations(fragments, 2):
-                index1, index2, _ = fragment_pair[0].get_shortest_distance(
-                    fragment_pair[1]
-                )
-                bonds[index1].add(index2)
-                bonds[index2].add(index1)
-
-        coords = (
-            self.get_primitives_idx(bonds=bonds)
-            | end.get_primitives_idx()
-            | SortedSet(additional_coords, key=lambda x: (len(x), x))
-        )
+            primitives_idx = (
+                self.get_primitives_idx(bonds=bonds)
+                | end.get_primitives_idx()
+                | SortedSet(add_coords, key=lambda x: (len(x), x))
+            )
 
         path = [self]
 
@@ -447,7 +448,7 @@ class CartesianBmat(CartesianCore):
 
         # for each subdivision,
         for i in range(N):
-            new_struct = path[i].B_traj_step(end, N - i, coords, rcond=rcond)
+            new_struct = path[i].B_traj_step(end, N - i, primitives_idx, rcond=rcond)
             path.append(new_struct)
 
         # temporary rotational and translational alignment
