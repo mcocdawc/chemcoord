@@ -22,4 +22,4 @@ ignore = [
         # if people import stuff with a leading underscore
         # they (should) know that this is private by convention
 ]
-preview = true
+preview = false

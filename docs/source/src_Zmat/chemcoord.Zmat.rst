@@ -45,6 +45,8 @@
    .. autosummary::
 
       ~Zmat.columns
+      ~Zmat.d
+      ~Zmat.dihedral
       ~Zmat.dtypes
       ~Zmat.dummy_manipulation_allowed
       ~Zmat.empty
