@@ -103,7 +103,7 @@ def test_pure_internal_move():
         assert cc.xyz_functions.allclose(m, ref.align(m, mass_weight=True)[1])
 
 
-def test_MeOH_Furan_interpolation():
+def test_MeOH_Furan_interpolation() -> None:
     start = cc.Cartesian.read_xyz(
         join(STRUCTURE_PATH, "MeOH_Furan_start.xyz"), start_index=1
     )
