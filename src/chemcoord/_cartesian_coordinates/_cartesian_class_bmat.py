@@ -267,11 +267,11 @@ class CartesianBmat(CartesianCore):
     def _reindex_to_0(self, internal_coords_idx: primitives) -> primitives:
         """Return a reindexed version of `primitives` as if `self` was indexed
         contiguously from 0 to n - 1."""
-        index_to_rownum = {index: i for i, index in enumerate(self.index)}
+        index_to_rownum = {index: row for row, index in enumerate(self.index)}
 
         return MySortedSet(
             {
-                tuple(index_to_rownum[i] for i in coordinate_idx)
+                tuple(index_to_rownum[index] for index in coordinate_idx)
                 for coordinate_idx in internal_coords_idx
             }
         )
