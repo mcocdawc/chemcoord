@@ -265,8 +265,8 @@ class CartesianBmat(CartesianCore):
         return self.jit_x_to_c(position_arr, self._to_array(internal_coords_idx))
 
     def _reindex_to_0(self, internal_coords_idx: primitives) -> primitives:
-        """Return a reindexed version of `primitives` as if `self` was indexed contiguosly
-        from 0 to n - 1."""
+        """Return a reindexed version of `primitives` as if `self` was indexed
+        contiguously from 0 to n - 1."""
         index_to_rownum = {index: i for i, index in enumerate(self.index)}
 
         return MySortedSet(
