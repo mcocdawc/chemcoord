@@ -35,7 +35,7 @@ molecule3 = Cartesian.read_xyz(get_complete_path("peroxide.xyz"))
 
 
 def test_primitive_coordinates():
-    coords = molecule1.get_primitive_coords()
+    coords = molecule1.get_primitives_idx()
     expected = SortedSet(
         [
             (0, 1),
@@ -312,12 +312,27 @@ def test_x_to_c():
 
 def test_get_B_traj():
     path = molecule1.get_B_traj(molecule2, 10)
-    expected = []
 
     expected = read_molden(get_complete_path("cyclohexane_path.out"))
 
-    check_list = []
-    for i in range(10):
-        check_list.append(allclose(path[i], expected[i], atol=1e-5))
+    for calculated, reference in zip(path, expected):
+        assert allclose(calculated, reference, atol=1e-5)
 
-    assert np.all(check_list)
+
+def test_get_B_traj_reindexed():
+    molecule1 = Cartesian.read_xyz(
+        get_complete_path("cyclohexane_chair.xyz"), start_index=10
+    )
+    molecule2 = Cartesian.read_xyz(
+        get_complete_path("cyclohexane_twist_boat.xyz"), start_index=10
+    )
+
+    path = molecule1.get_B_traj(molecule2, 10)
+
+    expected = read_molden(get_complete_path("cyclohexane_path.out"))
+
+    for m in expected:
+        m.index = range(10, 10 + len(m))
+
+    for calculated, reference in zip(path, expected):
+        assert allclose(calculated, reference, atol=1e-5)
