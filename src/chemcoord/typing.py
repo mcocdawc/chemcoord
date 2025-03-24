@@ -10,7 +10,7 @@ i.e. the type is mostly useful to document intent to the developer.
 """
 
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence, Set
 from typing import Any, NewType, TypeAlias, TypeVar
 
 import numpy as np
@@ -62,6 +62,7 @@ KwargDict: TypeAlias = dict[str, Any]
 
 
 AtomIdx = NewType("AtomIdx", int)
+BondDict: TypeAlias = Mapping[AtomIdx, Set[AtomIdx]]
 
 Real: TypeAlias = int | float | np.floating
 Integral: TypeAlias = int | np.integer

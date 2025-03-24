@@ -185,9 +185,6 @@ def test_assignment():
 
 def test_get_bonds():
     assert bond_dict == molecule.get_bonds()
-    molecule._metadata["bond_dict"][56].add(4)
-    assert not (bond_dict == molecule.get_bonds(use_lookup=True))
-    assert bond_dict == molecule.get_bonds()
     modified_expected = {
         1: {51},
         3: {6, 55, 56},

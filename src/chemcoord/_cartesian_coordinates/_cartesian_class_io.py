@@ -347,7 +347,6 @@ class CartesianIO(CartesianCore, GenericIO):
         cls,
         buf: ReadCsvBuffer[str] | PathLike,
         start_index: int = 0,
-        get_bonds: bool = True,
         nrows: int | None = None,
         engine: Literal["c", "python", "pyarrow", "python-fwf"] | None = None,
     ) -> Self:
@@ -366,7 +365,6 @@ class CartesianIO(CartesianCore, GenericIO):
                 By file-like object, we refer to objects with a read() method,
                 such as a file handler (e.g. via builtin open function) or StringIO.
             start_index (int):
-            get_bonds (bool):
             nrows (int): Number of rows of file to read.
                 Note that the first two rows are implicitly excluded.
             engine (str): Wrapper for the same argument of :func:`pandas.read_csv`.
@@ -391,8 +389,6 @@ class CartesianIO(CartesianCore, GenericIO):
         molecule = cls(frame)
         molecule.index = range(start_index, start_index + len(molecule))  # type: ignore[assignment]
 
-        if get_bonds:
-            molecule.get_bonds(use_lookup=False, set_lookup=True)
         return molecule
 
     @overload

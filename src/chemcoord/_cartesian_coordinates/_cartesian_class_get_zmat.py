@@ -22,7 +22,6 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
 )
 from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
-from chemcoord.configuration import settings
 from chemcoord.exceptions import (
     ERR_CODE_OK,
     ERR_CODE_InvalidReference,
@@ -30,7 +29,7 @@ from chemcoord.exceptions import (
     InvalidReference,
     UndefinedCoordinateSystem,
 )
-from chemcoord.typing import AtomIdx, Matrix, Tensor4D, Vector
+from chemcoord.typing import AtomIdx, BondDict, Matrix, Tensor4D, Vector
 
 
 class CartesianGetZmat(CartesianCore):
@@ -61,10 +60,10 @@ class CartesianGetZmat(CartesianCore):
 
     def _get_frag_constr_table(
         self,
+        *,
+        sorted_bond_dict: Mapping[AtomIdx, SortedSet],
         start_atom: AtomIdx | None = None,
         predefined_table: DataFrame | None = None,
-        use_lookup: bool | None = None,
-        bond_dict: Mapping[AtomIdx, SortedSet] | None = None,
     ) -> DataFrame:
         """Create a construction table for a Zmatrix.
 
@@ -83,23 +82,14 @@ class CartesianGetZmat(CartesianCore):
             start_atom: An index for the first atom may be provided.
             predefined_table (pd.DataFrame): An uncomplete construction table
                 may be provided. The rest is created automatically.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
 
         Returns:
             pd.DataFrame: Construction table
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
-
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination(
                 "Either start_atom or predefined_table has to be None"
             )
-        if bond_dict is None:
-            bond_dict = self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-
         if predefined_table is not None:
             self._check_construction_table(predefined_table)
             i = predefined_table.index[0]
@@ -118,9 +108,9 @@ class CartesianGetZmat(CartesianCore):
 
         visited = {i}
         if len(self) > 1:
-            parent = {j: i for j in bond_dict[i]}
+            parent = {j: i for j in sorted_bond_dict[i]}
             work_bond_dict = OrderedDict(
-                [(j, bond_dict[j] - visited) for j in bond_dict[i]]
+                [(j, sorted_bond_dict[j] - visited) for j in sorted_bond_dict[i]]
             )
             _modify_priority(work_bond_dict, user_defined)
         else:
@@ -137,13 +127,13 @@ class CartesianGetZmat(CartesianCore):
                         if len(order_of_def) == 1:
                             construction_table[i] = {"b": b, "a": "e_z", "d": "e_x"}
                         elif len(order_of_def) == 2:
-                            a = (bond_dict[b] & set(order_of_def))[0]
+                            a = (sorted_bond_dict[b] & set(order_of_def))[0]
                             construction_table[i] = {"b": b, "a": a, "d": "e_x"}
                         else:
                             try:
                                 a = parent[b]
                             except KeyError:
-                                a = (bond_dict[b] & set(order_of_def))[0]
+                                a = (sorted_bond_dict[b] & set(order_of_def))[0]
                             try:
                                 d = parent[a]
                                 if d in {b, a}:
@@ -151,9 +141,15 @@ class CartesianGetZmat(CartesianCore):
                                     raise UndefinedCoordinateSystem(message)
                             except (KeyError, UndefinedCoordinateSystem):
                                 try:
-                                    d = ((bond_dict[a] & set(order_of_def)) - {b, a})[0]
+                                    d = (
+                                        (sorted_bond_dict[a] & set(order_of_def))
+                                        - {b, a}
+                                    )[0]
                                 except IndexError:
-                                    d = ((bond_dict[b] & set(order_of_def)) - {b, a})[0]
+                                    d = (
+                                        (sorted_bond_dict[b] & set(order_of_def))
+                                        - {b, a}
+                                    )[0]
                             construction_table[i] = {"b": b, "a": a, "d": d}
                     else:
                         a, d = (construction_table[b][k] for k in ["b", "a"])
@@ -162,7 +158,7 @@ class CartesianGetZmat(CartesianCore):
 
                 visited.add(i)
                 for j in work_bond_dict[i]:
-                    new_work_bond_dict[j] = bond_dict[j] - visited
+                    new_work_bond_dict[j] = sorted_bond_dict[j] - visited
                     parent[j] = i
 
             work_bond_dict = new_work_bond_dict
@@ -174,7 +170,7 @@ class CartesianGetZmat(CartesianCore):
     def get_construction_table(
         self,
         fragment_list: (Sequence[Self | tuple[Self, DataFrame]] | None) = None,
-        use_lookup: bool | None = None,
+        bond_dict: BondDict | None = None,
         perform_checks: bool = True,
     ) -> DataFrame:
         """Create a construction table for a Zmatrix.
@@ -222,9 +218,8 @@ class CartesianGetZmat(CartesianCore):
                 their number of atoms, in order to use the largest fragment
                 as reference for the other ones.
 
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
+            bond_dict : A bond dictionary computed via
+                :meth:`~chemcoord.Cartesian.get_bonds`.
             perform_checks (bool): The checks for invalid references are
                 performed using :meth:`~chemcoord.Cartesian.correct_dihedral`
                 and :meth:`~chemcoord.Cartesian.correct_absolute_refs`.
@@ -232,20 +227,16 @@ class CartesianGetZmat(CartesianCore):
         Returns:
             :class:`pandas.DataFrame`: Construction table
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
+        if bond_dict is None:
+            bond_dict = self.get_bonds()
 
         if fragment_list is not None:
             fragments = fragment_list
         else:
-            self.get_bonds(use_lookup=use_lookup)
-            self._give_val_sorted_bond_dict(use_lookup=use_lookup)
             fragments = sorted(
-                self.fragmentate(use_lookup=use_lookup), key=len, reverse=True
+                self.fragmentate(bond_dict=bond_dict), key=len, reverse=True
             )
-            # During function execution the bonding situation does not change,
-            # so the lookup may be used now.
-            use_lookup = True
+        sorted_bond_dict = self._sort_by_valency(bond_dict)
 
         def prepend_missing_parts_of_molecule(
             fragment_list: Sequence[Self | tuple[Self, DataFrame]],
@@ -259,7 +250,7 @@ class CartesianGetZmat(CartesianCore):
 
             if set(self.index) - set(full_index):
                 missing_part = self.get_without(
-                    self.loc[full_index], use_lookup=use_lookup
+                    self.loc[full_index], bond_dict=sorted_bond_dict
                 )
                 fragment_list = missing_part + list(fragment_list)
             return list(fragment_list)
@@ -269,11 +260,13 @@ class CartesianGetZmat(CartesianCore):
         if isinstance(fragments[0], tuple):
             fragment, references = fragments[0]
             full_table = fragment._get_frag_constr_table(
-                use_lookup=use_lookup, predefined_table=references
+                sorted_bond_dict=sorted_bond_dict, predefined_table=references
             )
         else:
             fragment = fragments[0]
-            full_table = fragment._get_frag_constr_table(use_lookup=use_lookup)
+            full_table = fragment._get_frag_constr_table(
+                sorted_bond_dict=sorted_bond_dict
+            )
 
         for specified in fragments[1:]:
             finished_part = self.loc[full_table.index]
@@ -286,13 +279,15 @@ class CartesianGetZmat(CartesianCore):
                         "min(3, len(fragment)) rows."
                     )
                 constr_table = fragment._get_frag_constr_table(
-                    predefined_table=references, use_lookup=use_lookup
+                    predefined_table=references,
+                    sorted_bond_dict=sorted_bond_dict,
                 )
             else:
                 fragment = specified
                 i, b = fragment.get_shortest_distance(finished_part)[:2]
                 constr_table = fragment._get_frag_constr_table(
-                    start_atom=i, use_lookup=use_lookup
+                    start_atom=i,
+                    sorted_bond_dict=sorted_bond_dict,
                 )
                 if len(full_table) == 1:
                     a, d = "e_z", "e_x"
@@ -324,8 +319,8 @@ class CartesianGetZmat(CartesianCore):
 
         c_table = full_table
         if perform_checks:
-            c_table = self.correct_dihedral(c_table)
-            c_table = self.correct_dihedral(c_table, use_lookup=use_lookup)
+            c_table = self.correct_dihedral(c_table, sorted_bond_dict)
+            c_table = self.correct_dihedral(c_table, sorted_bond_dict)
             c_table = self.correct_absolute_refs(c_table)
         return c_table
 
@@ -348,7 +343,9 @@ class CartesianGetZmat(CartesianCore):
         return [rename[i] for i in problem_index]
 
     def correct_dihedral(
-        self, construction_table: DataFrame, use_lookup: bool | None = None
+        self,
+        construction_table: DataFrame,
+        bond_dict: BondDict | None = None,
     ) -> DataFrame:
         """Reindexe the dihedral defining atom if linear reference is used.
 
@@ -357,32 +354,33 @@ class CartesianGetZmat(CartesianCore):
 
         Args:
             construction_table (pd.DataFrame):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
+            bond_dict : A bond dictionary computed via
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             pd.DataFrame: Appropiately renamed construction table.
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
-
-        problem_index = self.check_dihedral(construction_table)
-        bond_dict = cast(
-            dict[int, SortedSet], self._give_val_sorted_bond_dict(use_lookup=use_lookup)
+        if bond_dict is None:
+            bond_dict = self.get_bonds()
+        sorted_bond_dict = cast(
+            dict[int, SortedSet], self._sort_by_valency(bond_dict=bond_dict)
         )
+        problem_index = self.check_dihedral(construction_table)
         c_table = construction_table.copy()
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
             b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]  # type: ignore[list-item,index]
             try:
                 c_table.loc[i, "d"] = (
-                    bond_dict[a] - {b, a, problem_d} - set(c_table.index[loc_i:])  # type: ignore[index,misc]
+                    sorted_bond_dict[a] - {b, a, problem_d} - set(c_table.index[loc_i:])  # type: ignore[index,misc]
                 )[0]
             except IndexError:
                 visited = set(c_table.index[loc_i:]) | {b, a, problem_d}  # type: ignore[misc]
                 tmp_bond_dict = OrderedDict(
-                    [(j, bond_dict[j] - visited) for j in bond_dict[problem_d]]  # type: ignore[index]
+                    [
+                        (j, sorted_bond_dict[j] - visited)
+                        for j in sorted_bond_dict[problem_d]  # type: ignore[index]
+                    ]
                 )
                 found = False
                 while tmp_bond_dict and not found:
@@ -397,7 +395,7 @@ class CartesianGetZmat(CartesianCore):
                         else:
                             visited.add(new_d)
                             for j in tmp_bond_dict[new_d]:
-                                new_tmp_bond_dict[j] = bond_dict[j] - visited
+                                new_tmp_bond_dict[j] = sorted_bond_dict[j] - visited
                     tmp_bond_dict = new_tmp_bond_dict
                 if not found:
                     other_atoms = c_table.index[:loc_i].difference([b, a])  # type: ignore[misc]
@@ -576,7 +574,7 @@ class CartesianGetZmat(CartesianCore):
     def get_zmat(
         self,
         construction_table: DataFrame | None = None,
-        use_lookup: bool | None = None,
+        bond_dict: BondDict | None = None,
     ) -> Zmat:
         """Transform to internal coordinates.
 
@@ -630,24 +628,18 @@ class CartesianGetZmat(CartesianCore):
 
         Args:
             construction_table (pandas.DataFrame):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
+            bond_dict : A bond dictionary computed via
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             Zmat: A new instance of :class:`~Zmat`.
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
-
-        self.get_bonds(use_lookup=use_lookup)
-        self._give_val_sorted_bond_dict(use_lookup=use_lookup)
-        use_lookup = True
-        # During function execution the connectivity situation won't change
-        # So use_look=True will be used
+        sorted_bond_dict = self._sort_by_valency(
+            self.get_bonds() if bond_dict is None else bond_dict
+        )
         if construction_table is None:
-            c_table = self.get_construction_table(use_lookup=use_lookup)
-            c_table = self.correct_dihedral(c_table, use_lookup=use_lookup)
+            c_table = self.get_construction_table(bond_dict=sorted_bond_dict)
+            c_table = self.correct_dihedral(c_table, bond_dict=sorted_bond_dict)
             c_table = self.correct_absolute_refs(c_table)
         else:
             c_table = construction_table
