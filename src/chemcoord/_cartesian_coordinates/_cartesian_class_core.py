@@ -3,7 +3,7 @@ import itertools
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from itertools import product
-from typing import Any, Literal, TypeVar, cast, overload
+from typing import Any, Final, Literal, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -487,57 +487,51 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             indices of atoms bonded to.
         """
 
-        def complete_calculation() -> dict[AtomIdx, set[AtomIdx]]:
-            old_index = self.index
-            atom_radii = self._get_atom_radii(
-                modify_element_data, modify_atom_data, atomic_radius_data_col
+        old_index = self.index
+        atom_radii = self._get_atom_radii(
+            modify_element_data, modify_atom_data, atomic_radius_data_col
+        )
+        # From now on, we assume a 0,...,n indexed molecule
+        # and can use plain numpy integer arrays
+        self.index = range(len(self))  # type: ignore[assignment]
+        # Choose the offset such that even with maximum van der Waals radius r
+        # both atoms (denoted as stars) end up in one bin
+        #    *_________|_________*
+        #         r         r
+        #     ____________________|   left bin
+        #   |____________________     right bin
+        fragments = self._divide_et_impera(
+            offset=2.1 * atom_radii.max() if offset is None else offset
+        )
+        positions = np.array(self.loc[:, COORDS], order="F")
+        bond_dict: defaultdict[AtomIdx, set[AtomIdx]] = defaultdict(set)
+        for i, j, k in product(*[range(x) for x in fragments.shape]):
+            # The following call is not side effect free and changes
+            # bond_dict
+            self._update_bond_dict(
+                fragments[i, j, k],
+                positions,
+                atom_radii,
+                bond_dict=bond_dict,
+                self_bonding_allowed=self_bonding_allowed,
             )
-            # From now on, we assume a 0,...,n indexed molecule
-            # and can use plain numpy integer arrays
-            self.index = range(len(self))  # type: ignore[assignment]
-            # Choose the offset such that even with maximum van der Waals radius r
-            # both atoms (denoted as stars) end up in one bin
-            #    *_________|_________*
-            #         r         r
-            #     ____________________|   left bin
-            #   |____________________     right bin
-            fragments = self._divide_et_impera(
-                offset=2.1 * atom_radii.max() if offset is None else offset
-            )
-            positions = np.array(self.loc[:, COORDS], order="F")
-            bond_dict: defaultdict[AtomIdx, set[AtomIdx]] = defaultdict(set)
-            for i, j, k in product(*[range(x) for x in fragments.shape]):
-                # The following call is not side effect free and changes
-                # bond_dict
-                self._update_bond_dict(
-                    fragments[i, j, k],
-                    positions,
-                    atom_radii,
-                    bond_dict=bond_dict,
-                    self_bonding_allowed=self_bonding_allowed,
-                )
 
-            for i in set(self.index) - set(bond_dict.keys()):
-                bond_dict[AtomIdx(i)] = set()
+        for i in set(self.index) - set(bond_dict.keys()):
+            bond_dict[AtomIdx(i)] = set()
 
-            self.index = old_index
-            rename = self.index
-            return {
-                AtomIdx(int(rename[key])): {
-                    AtomIdx(int(rename[i])) for i in bond_dict[key]
-                }
-                for key in bond_dict
-            }
-
-        return complete_calculation()
+        self.index = old_index
+        rename = self.index
+        return {
+            AtomIdx(int(rename[key])): {AtomIdx(int(rename[i])) for i in bond_dict[key]}
+            for key in bond_dict
+        }
 
     def _sort_by_valency(self, bond_dict: BondDict) -> dict[AtomIdx, SortedSet]:
-        valency = dict(zip(self.index, self.add_data("valency")["valency"]))
-        val_bond_dict = {
+        valency: Final = dict(zip(self.index, self.add_data("valency")["valency"]))
+        return {
             key: SortedSet([i for i in bond_dict[key]], key=lambda x: -valency[x])
             for key in bond_dict
         }
-        return val_bond_dict
 
     @overload
     def get_coordination_sphere(
