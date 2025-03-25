@@ -3,7 +3,7 @@ import itertools
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from itertools import product
-from typing import Any, Literal, cast, overload
+from typing import Any, Literal, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -983,9 +983,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 fragments.append(fragment)  # type: ignore[arg-type]
         return fragments
 
-    def restrict_bond_dict(
-        self, bond_dict: Mapping[AtomIdx, set[AtomIdx]]
-    ) -> dict[AtomIdx, set[AtomIdx]]:
+    _T = TypeVar("_T", Set, SortedSet)
+
+    def restrict_bond_dict(self, bond_dict: Mapping[AtomIdx, _T]) -> dict[AtomIdx, _T]:
         """Restrict a bond dictionary to self.
 
         Args:
