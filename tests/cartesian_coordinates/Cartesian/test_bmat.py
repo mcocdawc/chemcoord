@@ -313,7 +313,7 @@ def test_x_to_c():
 def test_get_B_traj():
     path = molecule1.get_B_traj(molecule2, 10)
 
-    expected = read_molden(get_complete_path("cyclohexane_path.out"))
+    expected = read_molden(get_complete_path("cyclohexane_path.molden"))
 
     for calculated, reference in zip(path, expected):
         assert allclose(calculated, reference, atol=1e-5)
@@ -329,7 +329,7 @@ def test_get_B_traj_reindexed():
 
     path = molecule1.get_B_traj(molecule2, 10)
 
-    expected = read_molden(get_complete_path("cyclohexane_path.out"))
+    expected = read_molden(get_complete_path("cyclohexane_path.molden"))
 
     for m in expected:
         m.index = range(10, 10 + len(m))

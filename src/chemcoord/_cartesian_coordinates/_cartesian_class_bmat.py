@@ -1,6 +1,6 @@
 from functools import partial
 from itertools import combinations
-from typing import Callable, TypeAlias
+from typing import TypeAlias
 
 import numpy as np
 from numba import njit, prange
@@ -21,11 +21,14 @@ from chemcoord.typing import BondDict, Matrix, Vector
 primitives: TypeAlias = SortedSet
 
 
+# the key prioritizes length, then sorts lexicographically
 MySortedSet = partial(SortedSet, key=lambda x: (len(x), x))
 
 
 class CartesianBmat(CartesianCore):
-    def get_primitives_idx(self, bonds: BondDict | None = None) -> primitives:
+    def get_primitives_idx(
+        self, bonds: BondDict | None = None, connect_fragments: bool = True
+    ) -> primitives:
         """
         Generate set of redundant internal coordinates for the system.
         Stored in a sortedcontainers.SortedSet to maintain order while
@@ -41,7 +44,29 @@ class CartesianBmat(CartesianCore):
         Returns:
             SortedSet[tuple]: SortedSet of redundant internal coordinates
         """
-        # the key prioritizes length, then sorts lexicographically
+        if bonds is None:
+            bond_dict = self.get_bonds()
+        else:
+            # Change to mutable set, i.e. dict[AtomIdx, set[AtomIdx]] instead of
+            # non-mutable ``collections.abc.Set`` since we need the ``add`` method.
+            bond_dict = {i_atom: set(connected) for i_atom, connected in bonds.items()}
+
+        if connect_fragments:
+            fragments = self.fragmentate()
+            if len(fragments) != 1:
+                for fragment_pair in combinations(fragments, 2):
+                    index1, index2, _ = fragment_pair[0].get_shortest_distance(
+                        fragment_pair[1]
+                    )
+                    bond_dict[index1].add(index2)
+                    bond_dict[index2].add(index1)
+        return self._get_primitives_single_molecule(bond_dict)
+
+    def _get_primitives_single_molecule(
+        self, bonds: BondDict | None = None
+    ) -> primitives:
+        """This function calculated the primitive internal coordinates
+        purely based on chemical connectivity and does not connect fragments."""
         idx_primitive_coords = MySortedSet()
 
         if bonds is None:
@@ -84,29 +109,19 @@ class CartesianBmat(CartesianCore):
         Returns:
             NDArray[float64]: Wilson's B matrix
         """
-
-        # get primitive coordinates
         if idx_internal_coords is None:
             idx_internal_coords = self.get_primitives_idx(bonds)
 
-        position_arr = np.array(self.loc[:, ["x", "y", "z"]])
-
-        return self.jit_get_Wilson_B(
-            position_arr,
+        return self._jit_get_Wilson_B(
+            self.loc[:, ["x", "y", "z"]].values,
             self._to_array(idx_internal_coords),
-            len(self),
-            self.jit_angle_deriv,
-            self.jit_dihedral_deriv,
         )
 
     @staticmethod
     @njit(parallel=True, cache=True)
-    def jit_get_Wilson_B(
+    def _jit_get_Wilson_B(
         position_arr: Matrix[float64],
         internal_coord_arr: Matrix[int64],
-        n_atoms: int,
-        angle_deriv: Callable,
-        dihedral_deriv: Callable,
     ) -> Matrix[float64]:
         """
         Jit-compiled Wilson's B matrix generator.
@@ -118,14 +133,13 @@ class CartesianBmat(CartesianCore):
                 length of the coordinate. If the coordinate is not a dihedral, there are
                 unused numbers in the 4th, or 3rd and 4th, places to ensure a
                 rectangular array
-            n_atoms (int): the number of atoms in the system, used to get matrix size
 
         Returns:
             Matrix[float64]: Wilson's B matrix
         """
 
         # initialize B matrix
-        B_matrix = np.zeros((len(internal_coord_arr), 3 * n_atoms))
+        B_matrix = np.zeros((len(internal_coord_arr), position_arr.size))
 
         for i in prange(len(internal_coord_arr)):  # type: ignore[attr-defined]
             # separate cases for distances, angles, and dihedrals
@@ -151,7 +165,7 @@ class CartesianBmat(CartesianCore):
                 # get positions of participating atoms
                 positions = position_arr[coord[:3]]
 
-                angle_derivs = angle_deriv(positions)
+                angle_derivs = _jit_angle_deriv(positions)
 
                 for j in prange(3):  # type: ignore[attr-defined]
                     B_matrix[i, j + 3 * coord[:3]] = angle_derivs[:3, j]
@@ -161,83 +175,12 @@ class CartesianBmat(CartesianCore):
                 # get positions of participating atoms
                 positions = position_arr[coord[:4]]
 
-                dihedral_derivs = dihedral_deriv(positions)
+                dihedral_derivs = _jit_dihedral_deriv(positions)
 
                 for j in prange(3):  # type: ignore[attr-defined]
                     B_matrix[i, j + 3 * coord[:4]] = dihedral_derivs[:4, j]
 
         return B_matrix
-
-    @staticmethod
-    @njit(cache=True)
-    def jit_angle_deriv(positions: Matrix) -> Matrix:
-        # vectors making up the angle
-
-        u = positions[0] - positions[1]
-        v = positions[2] - positions[1]
-
-        normedu = _jit_normalize(u)
-        normedv = _jit_normalize(v)
-
-        w = cross(u, v)
-
-        # if they were parallel
-        if np.allclose(w, 0.0):
-            w = cross(normedu, np.array([1, -1, 1]))
-        # if u and [1, -1, 1] were parallel
-        if np.allclose(w, 0.0):
-            w = cross(normedu, np.array([-1, 1, 1]))
-
-        normedw = _jit_normalize(w)
-        return np.stack(
-            (
-                cross(normedu, normedw) / norm(u),
-                -(cross(normedu, normedw) / norm(u))
-                - (cross(normedw, normedv) / norm(v)),
-                cross(normedw, normedv) / norm(v),
-            )
-        )
-
-    @staticmethod
-    @njit(cache=True)
-    def jit_dihedral_deriv(positions: Matrix) -> Matrix:
-        # vectors making up dihedral
-        u = positions[0] - positions[1]
-        w = positions[2] - positions[1]
-        v = positions[3] - positions[2]
-
-        normedu = _jit_normalize(u)
-        normedw = _jit_normalize(w)
-        normedv = _jit_normalize(v)
-
-        cosu = normedu @ normedw
-        # note this could be 0 if undefined dihedral
-        sinu = np.sqrt(1 - (normedu @ normedw) ** 2)
-
-        cosv = -(normedv @ normedw)
-        # note this could be 0 if undefined dihedral
-        sinv = np.sqrt(1 - (normedv @ normedw) ** 2)
-
-        # catching cases where certain dihedrals are undefined
-        if np.isclose(sinu, 0.0) or np.isclose(sinv, 0.0):
-            raise ValueError("sinu or sinv is 0")
-        else:
-            return np.stack(
-                (
-                    cross(normedu, normedw) / (norm(u) * (sinu**2)),
-                    -cross(normedu, normedw) / (norm(u) * (sinu**2))
-                    + (
-                        ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-                        - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-                    ),
-                    cross(normedv, normedw) / (norm(v) * (sinv**2))
-                    - (
-                        ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-                        - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-                    ),
-                    -cross(normedv, normedw) / (norm(v) * (sinv**2)),
-                )
-            )
 
     def x_to_c(
         self,
@@ -261,9 +204,9 @@ class CartesianBmat(CartesianCore):
         if internal_coords_idx is None:
             internal_coords_idx = self.get_primitives_idx(bonds=bonds)
 
-        position_arr = np.array(self.loc[:, ["x", "y", "z"]])
-
-        return self.jit_x_to_c(position_arr, self._to_array(internal_coords_idx))
+        return self.jit_x_to_c(
+            self.loc[:, ["x", "y", "z"]].values, self._to_array(internal_coords_idx)
+        )
 
     def _reindex_to_0(self, internal_coords_idx: primitives) -> primitives:
         """Return a reindexed version of `primitives` as if `self` was indexed
@@ -370,45 +313,39 @@ class CartesianBmat(CartesianCore):
         self,
         end: Self,
         N: int,
-        coords: primitives,
+        coord_idx: primitives,
         rcond: float | None = None,
     ) -> Self:
         # TODO: make sure additional_coords are getting passed along correctly.
-        current_struct = self.copy()
 
-        x_current = np.array(self.loc[:, ["x", "y", "z"]]).flatten()
-
-        c_current = self.x_to_c(internal_coords_idx=coords)
         # this could be made faster by not recalculating this at every step, just
         # storing it in the main loop and passing it to this function
-        c2 = end.x_to_c(internal_coords_idx=coords)
 
-        # difference between current point and final point in internal coordinates
-        delta_c = c2 - c_current
+        c_current = self.x_to_c(internal_coords_idx=coord_idx)
+        c2 = end.x_to_c(internal_coords_idx=coord_idx)
 
-        # TODO: change this to use the modulus function already written in here
-        # check to make sure it takes the shorter dihedral and angle
-        delta_c = np.array(
-            [
-                delta_c[i]
-                if len(coords[i]) != 4
-                else (delta_c[i] % (2 * np.pi))
-                - ((delta_c[i] % (2 * np.pi)) // np.pi) * (2 * np.pi)
-                for i in range(len(delta_c))
-            ]
-        )
+        # interpolated difference between current point
+        # and final point in internal coordinates
+        delta_c = self._clean_dihedral(c2 - c_current, coord_idx) / (N - 1)
 
-        B = current_struct.get_Wilson_B(idx_internal_coords=coords)
+        B = self.get_Wilson_B(idx_internal_coords=coord_idx)
         delta_x = lstsq(B, delta_c, rcond=rcond)[0]
 
-        x_current = x_current + (delta_x / N)
+        return self + delta_x.reshape(len(delta_x) // 3, 3)
 
-        assert len(x_current) % 3 == 0
-        current_struct.loc[:, ["x", "y", "z"]] = np.reshape(
-            x_current, (len(x_current) // 3, 3)
+    @staticmethod
+    def _clean_dihedral(
+        delta_c: Vector[float64], coord_idx: primitives
+    ) -> Vector[float64]:
+        return np.array(
+            [
+                coord_val
+                if len(idx) != 4
+                else (coord_val % (2 * np.pi))
+                - ((coord_val % (2 * np.pi)) // np.pi) * (2 * np.pi)
+                for idx, coord_val in zip(coord_idx, delta_c)
+            ]
         )
-
-        return current_struct
 
     def get_B_traj(
         self,
@@ -416,7 +353,6 @@ class CartesianBmat(CartesianCore):
         N: int,
         *,
         primitives_idx: primitives | None = None,
-        add_coords: primitives | None = None,
         rcond: float | None = None,
     ) -> list[Self]:
         """
@@ -431,45 +367,95 @@ class CartesianBmat(CartesianCore):
         Args:
             end (Cartesian): end structure
             N (int): number of subdivisions
-            additional_coords (SortedSet[tuple]): SortedSet of additional primitive
-                coordinates to use in the calculation of the trajectory.
             rcond (float): ...
 
         Returns:
             list[Cartesian]: pathway between self and end
         """
         if primitives_idx is None:
-            if add_coords is None:
-                add_coords = MySortedSet()
-
-            bonds = self.get_bonds()
-            fragments = self.fragmentate()
-            if len(fragments) != 1:
-                for fragment_pair in combinations(fragments, 2):
-                    index1, index2, _ = fragment_pair[0].get_shortest_distance(
-                        fragment_pair[1]
-                    )
-                    bonds[index1].add(index2)
-                    bonds[index2].add(index1)
-
-            primitives_idx = (
-                self.get_primitives_idx(bonds=bonds)
-                | end.get_primitives_idx()
-                | MySortedSet(add_coords)
-            )
+            primitives_idx = self.get_primitives_idx() | end.get_primitives_idx()
 
         path = [self]
 
         # TODO: interpolate rotation
 
         # for each subdivision,
-        for i in range(N):
-            new_struct = path[i].B_traj_step(end, N - i, primitives_idx, rcond=rcond)
+        for i in range(1, N - 2):
+            new_struct = path[-1].B_traj_step(end, N - i, primitives_idx, rcond=rcond)
             path.append(new_struct)
 
-        # temporary rotational and translational alignment
-        for i, image in enumerate(path[1:]):
-            path[i + 1] = path[i].align(path[i + 1])[1]
-        path.append(path[-1].align(end)[1])
+        # interpolate from end, but align with last interpolated structure
+        path.append(
+            path[-1].align(end.B_traj_step(path[-1], 3, primitives_idx, rcond=rcond))[1]
+            + path[-1].get_centroid()
+        )
+        # append aligned end
+        path.append(path[-1].align(end)[1] + path[-1].get_centroid())
 
         return path
+
+
+@njit(cache=True)
+def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
+    # vectors making up dihedral
+    u = positions[0] - positions[1]
+    w = positions[2] - positions[1]
+    v = positions[3] - positions[2]
+
+    normedu = _jit_normalize(u)
+    normedw = _jit_normalize(w)
+    normedv = _jit_normalize(v)
+
+    cosu = normedu @ normedw
+    # note this could be 0 if undefined dihedral
+    sinu = np.sqrt(1 - (normedu @ normedw) ** 2)
+
+    cosv = -(normedv @ normedw)
+    # note this could be 0 if undefined dihedral
+    sinv = np.sqrt(1 - (normedv @ normedw) ** 2)
+
+    # catching cases where certain dihedrals are undefined
+    if np.isclose(sinu, 0.0) or np.isclose(sinv, 0.0):
+        raise ValueError("sinu or sinv is 0")
+    else:
+        return np.stack(
+            (
+                cross(normedu, normedw) / (norm(u) * (sinu**2)),
+                -cross(normedu, normedw) / (norm(u) * (sinu**2))
+                + (
+                    ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
+                    - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
+                ),
+                cross(normedv, normedw) / (norm(v) * (sinv**2))
+                - (
+                    ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
+                    - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
+                ),
+                -cross(normedv, normedw) / (norm(v) * (sinv**2)),
+            )
+        )
+
+
+@njit(cache=True)
+def _jit_angle_deriv(positions: Matrix) -> Matrix:
+    # vectors making up the angle
+
+    u = positions[0] - positions[1]
+    v = positions[2] - positions[1]
+
+    normedu = _jit_normalize(u)
+    normedv = _jit_normalize(v)
+
+    w = cross(u, v)
+
+    # if they were parallel
+    if np.allclose(w, 0.0):
+        w = cross(normedu, np.array([1, -1, 1]))
+    # if u and [1, -1, 1] were parallel
+    if np.allclose(w, 0.0):
+        w = cross(normedu, np.array([-1, 1, 1]))
+
+    normedw = _jit_normalize(w)
+    A = cross(normedu, normedw) / norm(u)
+    B = cross(normedw, normedv) / norm(v)
+    return np.stack((A, -(A + B), B))

@@ -1125,7 +1125,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         pos2 = other.loc[:, COORDS].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
-        return AtomIdx(self.index[i]), AtomIdx(other.index[j]), float(D[i, j])  # type: ignore[call-overload]
+        return AtomIdx(int(self.index[i])), AtomIdx(int(other.index[j])), float(D[i, j])  # type: ignore[call-overload]
 
     def get_inertia(self) -> dict[str, Any]:
         """Calculate the inertia tensor and transforms along
