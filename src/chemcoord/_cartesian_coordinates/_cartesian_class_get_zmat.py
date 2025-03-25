@@ -321,7 +321,6 @@ class CartesianGetZmat(CartesianCore):
         c_table = full_table
         if perform_checks:
             c_table = self.correct_dihedral(c_table, sorted_bond_dict)
-            c_table = self.correct_dihedral(c_table, sorted_bond_dict)
             c_table = self.correct_absolute_refs(c_table)
         return c_table
 
