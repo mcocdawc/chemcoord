@@ -12,7 +12,6 @@ DEFAULT_RC_PATH: Final = Path("~/.chemcoord.yml")
 
 @define(hash=True, kw_only=True)
 class Defaults:
-    use_lookup: bool = False
     #: Which atomic radius data to use.
     atomic_radius_data: str = "atomic_radius_cc"
     #: Which molecular viewer to use.

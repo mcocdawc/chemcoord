@@ -37,7 +37,6 @@ The possible settings and their defaults are:
    .. autosummary::
     :toctree: src_Defaults
 
-    ~Defaults.use_lookup
     ~Defaults.atomic_radius_data
     ~Defaults.viewer
     ~Defaults.list_viewer_file
