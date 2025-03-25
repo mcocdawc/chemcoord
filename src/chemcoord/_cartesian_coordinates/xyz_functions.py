@@ -157,9 +157,7 @@ def to_multiple_xyz(
         return output
 
 
-def read_multiple_xyz(
-    inputfile: PathLike, start_index: int = 0, get_bonds: bool = True
-) -> list[Cartesian]:
+def read_multiple_xyz(inputfile: PathLike, start_index: int = 0) -> list[Cartesian]:
     """Read a multiple-xyz file.
 
     Args:
@@ -182,7 +180,6 @@ def read_multiple_xyz(
                         "".join(strings[current_line : current_line + molecule_len + 2])
                     ),
                     start_index=start_index,
-                    get_bonds=get_bonds,
                     nrows=molecule_len,
                     engine="python",
                 )
@@ -286,9 +283,7 @@ def write_molden(*args, **kwargs):  # type: ignore[no-untyped-def]
     return to_molden(*args, **kwargs)
 
 
-def read_molden(
-    inputfile: PathLike, start_index: int = 0, get_bonds: bool = True
-) -> list[Cartesian]:
+def read_molden(inputfile: PathLike, start_index: int = 0) -> list[Cartesian]:
     """Read a molden file.
 
     Args:
@@ -329,7 +324,6 @@ def read_molden(
             cartesian = Cartesian.read_xyz(
                 f,
                 start_index=start_index,
-                get_bonds=get_bonds,
                 nrows=number_of_atoms,
                 engine="python",
             )

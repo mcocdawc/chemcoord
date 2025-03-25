@@ -3,7 +3,7 @@ import itertools
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence, Set
 from itertools import product
-from typing import Any, Literal, cast, overload
+from typing import Any, Final, Literal, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -30,6 +30,7 @@ from chemcoord.typing import (
     ArithmeticOther,
     AtomIdx,
     Axes,
+    BondDict,
     Integral,
     Matrix,
     Real,
@@ -447,32 +448,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         | Callable[[Real], Real]
         | Mapping[str, Real]
         | None = None,
-        use_lookup: bool = False,
-        set_lookup: bool = True,
         atomic_radius_data_col: str | None = None,
     ) -> dict[AtomIdx, set[AtomIdx]]:
         """Return a dictionary representing the bonds.
-
-        .. warning:: This function is **not sideeffect free**, since it
-            assigns the output to a variable ``self._metadata['bond_dict']`` if
-            ``set_lookup`` is ``True`` (which is the default). This is
-            necessary for performance reasons.
-
-        ``.get_bonds()`` will use or not use a lookup
-        depending on ``use_lookup``. Greatly increases performance if
-        True, but could introduce bugs in certain situations.
-
-        Just imagine a situation where the :class:`~Cartesian` is
-        changed manually. If you apply lateron a method e.g.
-        :meth:`~get_zmat()` that makes use of :meth:`~get_bonds()`
-        the dictionary of the bonds
-        may not represent the actual situation anymore.
-
-        You have two possibilities to cope with this problem.
-        Either you just re-execute ``get_bonds`` on your specific instance,
-        or you change the ``internally_use_lookup`` option in the settings.
-        Please note that the internal use of the lookup variable
-        greatly improves performance.
 
         Args:
             modify_atom_data : If you want to change the van der
@@ -497,8 +475,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 If :python:`None`, it will be chosen slightly larger than twice
                 the maximum atom radius, which guarantees that no bond is missed because
                 of binning.
-            use_lookup (bool):
-            set_lookup (bool):
             self_bonding_allowed (bool):
             atomic_radius_data (str): Defines which column of
                 :attr:`constants.elements` is used. The default is
@@ -511,76 +487,51 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             indices of atoms bonded to.
         """
 
-        def complete_calculation() -> dict[AtomIdx, set[AtomIdx]]:
-            old_index = self.index
-            atom_radii = self._get_atom_radii(
-                modify_element_data, modify_atom_data, atomic_radius_data_col
+        old_index = self.index
+        atom_radii = self._get_atom_radii(
+            modify_element_data, modify_atom_data, atomic_radius_data_col
+        )
+        # From now on, we assume a 0,...,n indexed molecule
+        # and can use plain numpy integer arrays
+        self.index = range(len(self))  # type: ignore[assignment]
+        # Choose the offset such that even with maximum van der Waals radius r
+        # both atoms (denoted as stars) end up in one bin
+        #    *_________|_________*
+        #         r         r
+        #     ____________________|   left bin
+        #   |____________________     right bin
+        fragments = self._divide_et_impera(
+            offset=2.1 * atom_radii.max() if offset is None else offset
+        )
+        positions = np.array(self.loc[:, COORDS], order="F")
+        bond_dict: defaultdict[AtomIdx, set[AtomIdx]] = defaultdict(set)
+        for i, j, k in product(*[range(x) for x in fragments.shape]):
+            # The following call is not side effect free and changes
+            # bond_dict
+            self._update_bond_dict(
+                fragments[i, j, k],
+                positions,
+                atom_radii,
+                bond_dict=bond_dict,
+                self_bonding_allowed=self_bonding_allowed,
             )
-            # From now on, we assume a 0,...,n indexed molecule
-            # and can use plain numpy integer arrays
-            self.index = range(len(self))  # type: ignore[assignment]
-            # Choose the offset such that even with maximum van der Waals radius r
-            # both atoms (denoted as stars) end up in one bin
-            #    *_________|_________*
-            #         r         r
-            #     ____________________|   left bin
-            #   |____________________     right bin
-            fragments = self._divide_et_impera(
-                offset=2.1 * atom_radii.max() if offset is None else offset
-            )
-            positions = np.array(self.loc[:, COORDS], order="F")
-            bond_dict: defaultdict[AtomIdx, set[AtomIdx]] = defaultdict(set)
-            for i, j, k in product(*[range(x) for x in fragments.shape]):
-                # The following call is not side effect free and changes
-                # bond_dict
-                self._update_bond_dict(
-                    fragments[i, j, k],
-                    positions,
-                    atom_radii,
-                    bond_dict=bond_dict,
-                    self_bonding_allowed=self_bonding_allowed,
-                )
 
-            for i in set(self.index) - set(bond_dict.keys()):
-                bond_dict[AtomIdx(i)] = set()
+        for i in set(self.index) - set(bond_dict.keys()):
+            bond_dict[AtomIdx(i)] = set()
 
-            self.index = old_index
-            rename = self.index
-            return {
-                AtomIdx(int(rename[key])): {
-                    AtomIdx(int(rename[i])) for i in bond_dict[key]
-                }
-                for key in bond_dict
-            }
+        self.index = old_index
+        rename = self.index
+        return {
+            AtomIdx(int(rename[key])): {AtomIdx(int(rename[i])) for i in bond_dict[key]}
+            for key in bond_dict
+        }
 
-        if use_lookup:
-            bond_dict = self._metadata.get("bond_dict", complete_calculation())
-        else:
-            bond_dict = complete_calculation()
-
-        if set_lookup:
-            self._metadata["bond_dict"] = bond_dict
-        return bond_dict
-
-    def _give_val_sorted_bond_dict(self, use_lookup: bool) -> dict[AtomIdx, SortedSet]:
-        def complete_calculation() -> dict[AtomIdx, SortedSet]:
-            bond_dict = self.get_bonds(use_lookup=use_lookup)
-            valency = dict(zip(self.index, self.add_data("valency")["valency"]))
-            val_bond_dict = {
-                key: SortedSet([i for i in bond_dict[key]], key=lambda x: -valency[x])
-                for key in bond_dict
-            }
-            return val_bond_dict
-
-        if use_lookup:
-            try:
-                val_bond_dict = self._metadata["val_bond_dict"]
-            except KeyError:
-                val_bond_dict = complete_calculation()
-        else:
-            val_bond_dict = complete_calculation()
-        self._metadata["val_bond_dict"] = val_bond_dict
-        return val_bond_dict
+    def _sort_by_valency(self, bond_dict: BondDict) -> dict[AtomIdx, SortedSet]:
+        valency: Final = dict(zip(self.index, self.add_data("valency")["valency"]))
+        return {
+            key: SortedSet([i for i in bond_dict[key]], key=lambda x: -valency[x])
+            for key in bond_dict
+        }
 
     @overload
     def get_coordination_sphere(
@@ -591,7 +542,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         give_only_index: Literal[False] = False,
         only_surface: bool = ...,
         exclude: set[AtomIdx] | None = ...,
-        use_lookup: bool | None = ...,
+        bond_dict: BondDict | None = ...,
     ) -> Self: ...
 
     @overload
@@ -603,7 +554,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         give_only_index: Literal[True],
         only_surface: bool = ...,
         exclude: set[AtomIdx] | None = ...,
-        use_lookup: bool | None = ...,
+        bond_dict: BondDict | None = ...,
     ) -> set[AtomIdx]: ...
 
     def get_coordination_sphere(
@@ -614,7 +565,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         give_only_index: bool = False,
         only_surface: bool = True,
         exclude: set[AtomIdx] | None = None,
-        use_lookup: bool | None = None,
+        bond_dict: BondDict | None = None,
     ) -> Self | set[AtomIdx]:
         """Return a Cartesian of atoms in the n-th coordination sphere.
 
@@ -631,17 +582,13 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 sphere.
             exclude (set): A set of indices that should be ignored
                 for the path finding.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
         exclude = set() if exclude is None else exclude
-        bond_dict = self.get_bonds(use_lookup=use_lookup)
+        if bond_dict is None:
+            bond_dict = self.get_bonds()
         i = index_of_atom
         if (n_sphere < 0) or (n_sphere < float("inf") and n_sphere != int(n_sphere)):
             raise ValueError(
@@ -678,7 +625,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             return self.loc[index_out - exclude]
 
     def _preserve_bonds(
-        self, sliced_cartesian: Self, use_lookup: bool | None = None
+        self,
+        sliced_cartesian: Self,
+        bond_dict: BondDict | None = None,
     ) -> Self:
         """Is called after cutting geometric shapes.
 
@@ -691,24 +640,22 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         Args:
             sliced_frame (Cartesian):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
+            bond_dict : A bond dictionary computed via
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             Cartesian:
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
+        if bond_dict is None:
+            bond_dict = self.get_bonds()
 
         included_atoms_set = set(sliced_cartesian.index)
         assert included_atoms_set.issubset(set(self.index)), (
             "The sliced Cartesian has to be a subset of the bigger frame"
         )
-        bond_dic = self.get_bonds(use_lookup=use_lookup)
         new_atoms: set[AtomIdx] = set()
         for atom in included_atoms_set:
-            new_atoms = new_atoms | bond_dic[atom]
+            new_atoms = new_atoms | bond_dict[atom]
         new_atoms = new_atoms - included_atoms_set
         while not new_atoms == set():
             index_of_interest = new_atoms.pop()
@@ -718,7 +665,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 only_surface=False,
                 exclude=included_atoms_set,
                 give_only_index=True,
-                use_lookup=use_lookup,
+                bond_dict=bond_dict,
             )
             new_atoms = new_atoms - included_atoms_set
         molecule = self.loc[included_atoms_set, :]
@@ -981,43 +928,43 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     @overload
     def fragmentate(
         self,
-        give_only_index: Literal[False] = False,
-        use_lookup: bool | None = ...,
+        give_only_index: Literal[False] = ...,
+        bond_dict: BondDict | None = ...,
     ) -> list[Self]: ...
 
     @overload
     def fragmentate(
-        self, give_only_index: Literal[True], use_lookup: bool | None = ...
+        self,
+        give_only_index: Literal[True],
+        bond_dict: BondDict | None = ...,
     ) -> list[set[AtomIdx]]: ...
 
     def fragmentate(
-        self, give_only_index: bool = False, use_lookup: bool | None = None
+        self,
+        give_only_index: bool = False,
+        bond_dict: BondDict | None = None,
     ) -> list[Self] | list[set[AtomIdx]]:
         """Get the indices of non bonded parts in the molecule.
 
         Args:
             give_only_index (bool): If ``True`` a set of indices is returned.
                 Otherwise a new Cartesian instance.
-            use_lookup (bool): Use a lookup variable for
+            bond_dict : A bond dictionary computed via
                 :meth:`~chemcoord.Cartesian.get_bonds`.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
 
         Returns:
             list: A list of sets of indices or new Cartesian instances.
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
+        if bond_dict is None:
+            bond_dict = self.get_bonds()
 
         fragments: list[set[AtomIdx]] | list[Self] = []
         pending = set(self.index)
-        self.get_bonds(use_lookup=use_lookup)
 
         while pending:
             index = self.get_coordination_sphere(
                 pending.pop(),
-                use_lookup=True,
+                bond_dict=bond_dict,
                 n_sphere=float("inf"),
                 only_surface=False,
                 give_only_index=True,
@@ -1027,21 +974,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 fragments.append(index)  # type: ignore[arg-type]
             else:
                 fragment = self.loc[index]
-                fragment._metadata["bond_dict"] = fragment.restrict_bond_dict(
-                    self._metadata["bond_dict"]
-                )
-                try:
-                    fragment._metadata["val_bond_dict"] = fragment.restrict_bond_dict(
-                        self._metadata["val_bond_dict"]
-                    )
-                except KeyError:
-                    pass
                 fragments.append(fragment)  # type: ignore[arg-type]
         return fragments
 
-    def restrict_bond_dict(
-        self, bond_dict: Mapping[AtomIdx, set[AtomIdx]]
-    ) -> dict[AtomIdx, set[AtomIdx]]:
+    _T = TypeVar("_T", Set, SortedSet)
+
+    def restrict_bond_dict(self, bond_dict: Mapping[AtomIdx, _T]) -> dict[AtomIdx, _T]:
         """Restrict a bond dictionary to self.
 
         Args:
@@ -1058,7 +996,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self,
         list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
         give_only_index: Literal[False] = False,
-        use_lookup: bool | None = None,
+        bond_dict: BondDict | None = None,
     ) -> Self: ...
 
     @overload
@@ -1066,14 +1004,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         self,
         list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
         give_only_index: Literal[True],
-        use_lookup: bool | None = None,
+        bond_dict: BondDict | None = None,
     ) -> set[AtomIdx]: ...
 
     def get_fragment(
         self,
         list_of_indextuples: Sequence[tuple[AtomIdx, AtomIdx]],
         give_only_index: bool = False,
-        use_lookup: bool | None = None,
+        bond_dict: BondDict | None = None,
     ) -> Self | set[AtomIdx]:
         """Get the indices of the atoms in a fragment.
 
@@ -1087,15 +1025,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             list_of_indextuples (list):
             give_only_index (bool): If ``True`` a set of indices
                 is returned. Otherwise a new Cartesian instance.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
+            bond_dict : A bond dictionary computed via
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             A set of indices or a new Cartesian instance.
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
+        if bond_dict is None:
+            bond_dict = self.get_bonds()
 
         exclude = [tuple[0] for tuple in list_of_indextuples]
 
@@ -1108,7 +1045,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             n_sphere=float("inf"),
             only_surface=False,
             give_only_index=True,
-            use_lookup=use_lookup,
+            bond_dict=bond_dict,
         )
         if give_only_index:
             return fragment_index
@@ -1118,23 +1055,19 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def get_without(
         self,
         fragments: Self | Sequence[Self],
-        use_lookup: bool | None = None,
+        bond_dict: BondDict | None = None,
     ) -> list[Self]:
         """Return self without the specified fragments.
 
         Args:
             fragments: Either a list of :class:`~chemcoord.Cartesian` or a
                 :class:`~chemcoord.Cartesian`.
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
+            bond_dict : A bond dictionary computed via
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             list: List containing :class:`~chemcoord.Cartesian`.
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
-
         if isinstance(fragments, Sequence):
             index_of_all_fragments = OrderedSet(fragments[0].index)
             for fragment in fragments[1:]:
@@ -1142,8 +1075,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         else:
             index_of_all_fragments = fragments.index  # type: ignore[assignment]
         missing_part = self.loc[OrderedSet(self.index) - index_of_all_fragments]
+        if bond_dict is None:
+            bond_dict = missing_part.get_bonds()
+        else:
+            bond_dict = missing_part.restrict_bond_dict(bond_dict)
         return sorted(
-            missing_part.fragmentate(use_lookup=use_lookup), key=len, reverse=True
+            missing_part.fragmentate(bond_dict=bond_dict), key=len, reverse=True
         )
 
     @staticmethod
@@ -1376,7 +1313,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             return None
 
     def partition_chem_env(
-        self, n_sphere: int = 4, use_lookup: bool | None = None
+        self, n_sphere: int = 4, bond_dict: BondDict | None = None
     ) -> dict[tuple[str, frozenset[tuple[str, int]]], set[AtomIdx]]:
         """This function partitions the molecule into subsets of the
         same chemical environment.
@@ -1410,9 +1347,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         Args:
             n_sphere (int):
-            use_lookup (bool): Use a lookup variable for
-                :meth:`~chemcoord.Cartesian.get_bonds`. The default is
-                specified in ``settings.defaults.use_lookup``
+            bond_dict : A bond dictionary computed via
+                :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
             dict: The output will look like this::
@@ -1422,8 +1358,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 A dictionary mapping from a chemical environment to
                 the set of indices of atoms in this environment.
         """
-        if use_lookup is None:
-            use_lookup = settings.defaults.use_lookup
+        if bond_dict is None:
+            bond_dict = self.get_bonds()
 
         def get_chem_env(
             self: Self, i: AtomIdx, n_sphere: float
@@ -1433,7 +1369,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 n_sphere=n_sphere,
                 only_surface=False,
                 give_only_index=True,
-                use_lookup=use_lookup,
+                bond_dict=bond_dict,
             )
             env_index.remove(i)
             atoms = self.loc[env_index, "atom"]
