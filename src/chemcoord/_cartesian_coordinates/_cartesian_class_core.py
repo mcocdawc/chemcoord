@@ -659,7 +659,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         assert included_atoms_set.issubset(set(self.index)), (
             "The sliced Cartesian has to be a subset of the bigger frame"
         )
-        bond_dict = self.get_bonds()
         new_atoms: set[AtomIdx] = set()
         for atom in included_atoms_set:
             new_atoms = new_atoms | bond_dict[atom]

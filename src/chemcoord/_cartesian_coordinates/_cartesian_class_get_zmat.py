@@ -229,14 +229,14 @@ class CartesianGetZmat(CartesianCore):
         """
         if bond_dict is None:
             bond_dict = self.get_bonds()
+        sorted_bond_dict = self._sort_by_valency(bond_dict)
 
         if fragment_list is not None:
             fragments = fragment_list
         else:
             fragments = sorted(
-                self.fragmentate(bond_dict=bond_dict), key=len, reverse=True
+                self.fragmentate(bond_dict=sorted_bond_dict), key=len, reverse=True
             )
-        sorted_bond_dict = self._sort_by_valency(bond_dict)
 
         def prepend_missing_parts_of_molecule(
             fragment_list: Sequence[Self | tuple[Self, DataFrame]],
@@ -260,12 +260,13 @@ class CartesianGetZmat(CartesianCore):
         if isinstance(fragments[0], tuple):
             fragment, references = fragments[0]
             full_table = fragment._get_frag_constr_table(
-                sorted_bond_dict=sorted_bond_dict, predefined_table=references
+                sorted_bond_dict=fragment.restrict_bond_dict(sorted_bond_dict),
+                predefined_table=references,
             )
         else:
             fragment = fragments[0]
             full_table = fragment._get_frag_constr_table(
-                sorted_bond_dict=sorted_bond_dict
+                sorted_bond_dict=fragment.restrict_bond_dict(sorted_bond_dict)
             )
 
         for specified in fragments[1:]:
@@ -280,7 +281,7 @@ class CartesianGetZmat(CartesianCore):
                     )
                 constr_table = fragment._get_frag_constr_table(
                     predefined_table=references,
-                    sorted_bond_dict=sorted_bond_dict,
+                    sorted_bond_dict=fragment.restrict_bond_dict(sorted_bond_dict),
                 )
             else:
                 fragment = specified
