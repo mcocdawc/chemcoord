@@ -20,8 +20,8 @@ from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
     COORDS,
 )
-from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
+from chemcoord._zmat_internal_coordinates.zmat_class_main import Zmat
 from chemcoord.exceptions import (
     ERR_CODE_OK,
     ERR_CODE_InvalidReference,
@@ -347,7 +347,7 @@ class CartesianGetZmat(CartesianCore):
         construction_table: DataFrame,
         bond_dict: BondDict | None = None,
     ) -> DataFrame:
-        """Reindexe the dihedral defining atom if linear reference is used.
+        """Reindex the dihedral defining atom if linear reference is used.
 
         Uses :meth:`~Cartesian.check_dihedral` to obtain the problematic
         indices.
@@ -447,7 +447,7 @@ class CartesianGetZmat(CartesianCore):
             raise ValueError(message(i=i))
         for k in range(3):
             if k < row:
-                A[k] = self.loc[c_table.iloc[row, k], COORDS]  # type: ignore[index]
+                A[k] = self.loc[c_table.iloc[row, k], COORDS]  # type: ignore[call-overload,index]
             else:
                 A[k] = abs_refs[c_table.iloc[row, k]]  # type: ignore[index]
         v1, v2 = A[2] - A[1], A[1] - A[0]

@@ -14,17 +14,19 @@ from pandas.core.indexes.base import Index
 from pandas.core.series import Series
 from typing_extensions import Self
 
-import chemcoord._internal_coordinates._indexers as indexers
-import chemcoord._internal_coordinates._zmat_transformation as transformation
+import chemcoord._zmat_internal_coordinates._indexers as indexers
+import chemcoord._zmat_internal_coordinates._zmat_transformation as transformation
 import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
     get_ref_pos,
 )
 from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord._internal_coordinates._zmat_class_pandas_wrapper import PandasWrapper
 from chemcoord._utilities._decorators import Appender, njit
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
+from chemcoord._zmat_internal_coordinates._zmat_class_pandas_wrapper import (
+    PandasWrapper,
+)
 from chemcoord.exceptions import (
     ERR_CODE_OK,
     ERR_CODE_InvalidReference,
@@ -464,9 +466,8 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         new = self.copy()
 
-        def convert_d(d: Series) -> Series:
-            r = d % 360
-            return r - (r // 180) * 360
+        def convert_d(d: Series) -> Vector[np.float64]:
+            return np.mod(d + 180, 360) - 180   # type: ignore[return-value]
 
         new.unsafe_loc[:, "dihedral"] = convert_d(new.loc[:, "dihedral"])
         return new
@@ -967,7 +968,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             grad_X = drop_dummies(grad_X, self)
 
         if as_function:
-            from chemcoord._internal_coordinates.zmat_functions import (  # noqa: PLC0415
+            from chemcoord._zmat_internal_coordinates.zmat_functions import (  # noqa: PLC0415
                 apply_grad_cartesian_tensor,
             )
 

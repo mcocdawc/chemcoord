@@ -1,10 +1,18 @@
 import os
 
+import numpy as np
 import pandas as pd
 import pytest
 
 import chemcoord as cc
-from chemcoord.xyz_functions import allclose
+from chemcoord import Cartesian, interpolate
+from chemcoord._cartesian_coordinates.xyz_functions import normalize
+from chemcoord.xyz_functions import (
+    allclose,
+    get_rotation_matrix,
+    get_rotation_params,
+    read_molden,
+)
 
 pd.set_option("future.no_silent_downcasting", True)
 
@@ -21,6 +29,11 @@ def get_structure_path(script_path):
             return structure_path
         else:
             test_path = os.path.join(test_path, "..")
+
+
+def get_complete_path(structure):
+    STRUCTURES = get_structure_path(get_script_path())
+    return os.path.join(STRUCTURES, structure)
 
 
 STRUCTURES = get_structure_path(get_script_path())
@@ -98,3 +111,37 @@ def test_multiple_xyz():
         raise e
     finally:
         os.remove(output_path)
+
+
+def test_rotation_matrix():
+    rng = np.random.RandomState(77)
+
+    axis, angle = (
+        normalize(rng.random_sample(3)),
+        np.mod(rng.random_sample(), 2 * np.pi),
+    )
+
+    computed_axis, computed_angle = get_rotation_params(
+        get_rotation_matrix(axis, angle)
+    )
+
+    assert np.allclose(axis, computed_axis)
+    assert np.allclose(angle, computed_angle)
+
+
+def test_get_B_traj_reindexed():
+    # Use a non-standard start index of 7 to ensure that it's correctly working
+
+    cyc_chair = Cartesian.read_xyz(
+        get_complete_path("cyclohexane_chair.xyz"), start_index=7
+    )
+    cyc_boat = Cartesian.read_xyz(
+        get_complete_path("cyclohexane_twist_boat.xyz"), start_index=7
+    )
+
+    path = interpolate(cyc_boat, cyc_chair, 10, "RIC")
+
+    expected = read_molden(get_complete_path("cyclohexane_path.molden"), start_index=7)
+
+    for calculated, reference in zip(path, expected):
+        assert allclose(calculated, reference, atol=1e-6)

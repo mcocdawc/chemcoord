@@ -7,7 +7,7 @@ from typing_extensions import Self
 
 import chemcoord.constants as constants
 from chemcoord._generic_classes.generic_IO import GenericIO
-from chemcoord._internal_coordinates._zmat_class_core import ZmatCore
+from chemcoord._zmat_internal_coordinates._zmat_class_core import ZmatCore
 from chemcoord.exceptions import InvalidReference, UndefinedCoordinateSystem
 from chemcoord.typing import (
     FloatFormatType,

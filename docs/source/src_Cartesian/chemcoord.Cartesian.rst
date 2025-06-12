@@ -18,6 +18,7 @@
       ~Cartesian.align
       ~Cartesian.apply
       ~Cartesian.applymap
+      ~Cartesian.assign
       ~Cartesian.basistransform
       ~Cartesian.change_numbering
       ~Cartesian.check_absolute_refs
@@ -30,10 +31,8 @@
       ~Cartesian.fragmentate
       ~Cartesian.from_ase_atoms
       ~Cartesian.from_pymatgen_molecule
-      ~Cartesian.from_pyscf_molecule
-      ~Cartesian.get_B_traj
-      ~Cartesian.get_Wilson_B
       ~Cartesian.from_pyscf
+      ~Cartesian.get_Wilson_B
       ~Cartesian.get_align_transf
       ~Cartesian.get_angle_degrees
       ~Cartesian.get_ase_atoms
@@ -52,16 +51,15 @@
       ~Cartesian.get_grad_zmat
       ~Cartesian.get_inertia
       ~Cartesian.get_pointgroup
-      ~Cartesian.get_primitive_coords
+      ~Cartesian.get_primitives_idx
       ~Cartesian.get_pymatgen_molecule
+      ~Cartesian.get_ric
       ~Cartesian.get_shortest_distance
       ~Cartesian.get_total_mass
       ~Cartesian.get_without
       ~Cartesian.get_zmat
       ~Cartesian.has_same_sumformula
       ~Cartesian.insert
-      ~Cartesian.jit_get_Wilson_B
-      ~Cartesian.jit_x_to_c
       ~Cartesian.partition_chem_env
       ~Cartesian.read_cjson
       ~Cartesian.read_xyz
@@ -83,7 +81,6 @@
       ~Cartesian.to_zmat
       ~Cartesian.view
       ~Cartesian.write_xyz
-      ~Cartesian.x_to_c
    
    
 
@@ -93,6 +90,7 @@
 
    .. autosummary::
    
+      ~Cartesian.atom
       ~Cartesian.columns
       ~Cartesian.dtypes
       ~Cartesian.empty
@@ -100,5 +98,10 @@
       ~Cartesian.index
       ~Cartesian.loc
       ~Cartesian.shape
+      ~Cartesian.values
+      ~Cartesian.x
+      ~Cartesian.y
+      ~Cartesian.z
+      ~Cartesian.metadata
    
    

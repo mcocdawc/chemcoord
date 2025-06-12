@@ -18,6 +18,8 @@ class Defaults:
     viewer: str = "gv.exe"
     #: Which filetype to use when viewing a list of molecules.
     list_viewer_file: Literal["molden", "xyz"] = "molden"
+    #: Number of workers for ``joblib`` processbased parallelism
+    n_worker: int = 1
 
 
 @define(hash=True, kw_only=True)

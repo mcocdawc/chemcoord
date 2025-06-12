@@ -5,7 +5,6 @@ import pandas as pd
 from sortedcontainers import SortedSet
 
 from chemcoord import Cartesian
-from chemcoord.xyz_functions import allclose, read_molden
 
 pd.set_option("future.no_silent_downcasting", True)
 
@@ -192,8 +191,8 @@ def test_Wilson_B():
     assert np.allclose(B_mat, expected)
 
 
-def test_x_to_c():
-    cs = molecule1.x_to_c()
+def test_transformation():
+    cs = molecule1.get_ric()
     expected = np.array(
         [
             1.5356843,
@@ -306,33 +305,4 @@ def test_x_to_c():
             -1.01833403,
         ]
     )
-
-    assert np.allclose(cs, expected)
-
-
-def test_get_B_traj():
-    path = molecule1.get_B_traj(molecule2, 10)
-
-    expected = read_molden(get_complete_path("cyclohexane_path.molden"))
-
-    for calculated, reference in zip(path, expected):
-        assert allclose(calculated, reference, atol=1e-5)
-
-
-def test_get_B_traj_reindexed():
-    molecule1 = Cartesian.read_xyz(
-        get_complete_path("cyclohexane_chair.xyz"), start_index=10
-    )
-    molecule2 = Cartesian.read_xyz(
-        get_complete_path("cyclohexane_twist_boat.xyz"), start_index=10
-    )
-
-    path = molecule1.get_B_traj(molecule2, 10)
-
-    expected = read_molden(get_complete_path("cyclohexane_path.molden"))
-
-    for m in expected:
-        m.index = range(10, 10 + len(m))
-
-    for calculated, reference in zip(path, expected):
-        assert allclose(calculated, reference, atol=1e-5)
+    assert np.allclose(cs.q, expected)

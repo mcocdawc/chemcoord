@@ -21,6 +21,7 @@ INSTALL_REQUIRES = [
     "ordered-set",
     "attrs",
     "cattrs",
+    "joblib",
 ]
 KEYWORDS = [
     "chemcoord",

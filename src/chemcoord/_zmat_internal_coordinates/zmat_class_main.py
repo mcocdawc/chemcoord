@@ -1,4 +1,4 @@
-from chemcoord._internal_coordinates._zmat_class_io import ZmatIO
+from chemcoord._zmat_internal_coordinates._zmat_class_io import ZmatIO
 
 # from chemcoord.internal_coordinates._zmat_class_gradient import ZmatGradient
 
