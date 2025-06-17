@@ -614,7 +614,9 @@ class CartesianIO(CartesianCore, GenericIO):
             Returns:
                 Cartesian:
             """
-            return cls(atoms=atoms.get_chemical_symbols(), coords=atoms.positions)  # type: ignore[call-arg]
+            return cls.set_atom_coords(
+                atoms=atoms.get_chemical_symbols(), coords=atoms.positions
+            )
 
     if pyscf is not None:
 
