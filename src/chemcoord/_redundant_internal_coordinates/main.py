@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 from typing import TYPE_CHECKING, Self, TypeAlias
+from collections.abc import Sequence
 
 import numpy as np
 from attrs import define
@@ -154,13 +155,25 @@ def RIC_interpolate(
     end: Cartesian,
     N: int,
     coord_idx: Primitives | None = None,
+    max_iter: int = 100,
+    seed: Cartesian | Sequence[Cartesian] | None = None,
 ) -> list[Cartesian]:
+    from chemcoord._cartesian_coordinates.xyz_functions import interpolate
+
     if coord_idx is None:
         coord_idx = get_primitives_idx(start, end)
     q1, q2 = start.get_ric(coord_idx), end.get_ric(coord_idx)
     Delta_q = (q2 - q1).minimize_dihedral()
     Qs = [q1 + (Delta_q * i / (N - 1)) for i in range(N)]
 
+    if seed is None:
+        seed = interpolate(start, end, N, coord="zmat")
+    elif isinstance(seed, Cartesian):
+        seed = [seed for _ in range(N)]
+
+    def f(q: RedundantInternalCoordinates, seed: Cartesian) -> Cartesian:
+        return q.get_cartesian(max_iter=max_iter, start_guess=seed)
+
     return Parallel(n_jobs=settings.defaults.n_worker)(
-        delayed(lambda q: q.get_cartesian())(q) for q in Qs
+        delayed(f)(q, seed) for q, seed in zip(Qs, seed, strict=True)
     )
