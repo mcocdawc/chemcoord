@@ -22,6 +22,7 @@ INSTALL_REQUIRES = [
     "attrs",
     "cattrs",
     "joblib",
+    "PyYAML",
 ]
 KEYWORDS = [
     "chemcoord",
