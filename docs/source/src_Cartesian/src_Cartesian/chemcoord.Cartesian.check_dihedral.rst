@@ -1,5 +1,3 @@
-﻿:orphan:
-
 chemcoord.Cartesian.check\_dihedral
 ===================================
 

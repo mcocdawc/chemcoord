@@ -22,6 +22,8 @@
    .. rubric:: Export and IO
 
    .. autosummary::
+      :toctree: src_Cartesian
+
       ~Cartesian.to_cjson
       ~Cartesian.to_latex
       ~Cartesian.to_pyscf
@@ -34,6 +36,7 @@
    .. rubric:: Methods
 
    .. autosummary::
+      :toctree: src_Cartesian
 
       ~Cartesian.add_data
       ~Cartesian.align
@@ -91,10 +94,10 @@
    .. rubric:: Attributes
 
    .. autosummary::
+      :toctree: src_Cartesian
 
       ~Cartesian.columns
       ~Cartesian.dtypes
-      ~Cartesian.empty
       ~Cartesian.iloc
       ~Cartesian.index
       ~Cartesian.loc
