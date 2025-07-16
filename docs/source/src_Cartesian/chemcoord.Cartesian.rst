@@ -37,8 +37,6 @@
 
       ~Cartesian.add_data
       ~Cartesian.align
-      ~Cartesian.apply
-      ~Cartesian.applymap
       ~Cartesian.basistransform
       ~Cartesian.change_numbering
       ~Cartesian.check_absolute_refs
