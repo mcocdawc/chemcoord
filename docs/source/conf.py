@@ -71,7 +71,7 @@ intersphinx_mapping = {
 
 # 'numpydoc'
 # Custom settings:
-# autosummary_generate = True
+autosummary_generate = False
 # numpydoc_show_class_members = True
 
 
