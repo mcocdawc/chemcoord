@@ -20,3 +20,4 @@ py:class Series
 py:class EngFormatter
 py:class pandas._typing.ReadCsvBuffer
 py:class pandas._typing.WriteBuffer
+py:class chemcoord.typing.T_dtype_co

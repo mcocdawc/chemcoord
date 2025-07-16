@@ -242,12 +242,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         with value.
 
         Args:
-            symb_expr (sympy expression):
+            symb_expr : A sympy expression
             value :
-            perform_checks (bool): If ``perform_checks is True``,
-                it is asserted, that the resulting Zmatrix can be converted
-                to cartesian coordinates.
-                Dummy atoms will be inserted automatically if necessary.
 
         Returns:
             Cartesian: Cartesian with substituted symbolic expressions.
@@ -1392,7 +1388,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         The rotation minimises the distances between the
         atom pairs of same label.
         Uses the Kabsch algorithm implemented within
-        :func:`~.xyz_functions.get_kabsch_rotation`
+        :func:`~xyz_functions.get_kabsch_rotation`
 
         Args:
             other (Cartesian):
