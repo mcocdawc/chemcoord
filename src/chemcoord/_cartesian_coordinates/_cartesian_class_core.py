@@ -792,7 +792,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         The indices can be given in two ways:
 
         * As list of lists: ``[[i1, b1], [i2, b2]...]``
-        * As :class:`pd.DataFrame` where ``i`` is taken from the index and
+        * As :class:`pandas.DataFrame` where ``i`` is taken from the index and
           ``b`` from the respective column ``'b'``.
 
         Args:
@@ -827,7 +827,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         The indices can be given in two ways:
 
         * As list of lists: ``[[i1, b1, a1], [i2, b2, a2]...]``
-        * As :class:`pd.DataFrame` where ``i`` is taken from the index and
+        * As :class:`pandas.DataFrame` where ``i`` is taken from the index and
           ``b`` and ``a`` from the respective columns ``'b'`` and ``'a'``.
 
         Args:
@@ -1206,7 +1206,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         handed. Besides all involved matrices are transposed
         instead of inverted.
         In some applications this may require the function
-        :func:`xyz_functions.orthonormalize` as a previous step.
+        :func:`xyz_functions.orthonormalize_righthanded` as a previous step.
 
         Args:
             old_basis :
