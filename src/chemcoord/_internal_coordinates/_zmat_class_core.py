@@ -66,19 +66,17 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     clean_dihedral_orientation = False
 
     def __init__(self, frame, metadata=None, _metadata=None):
-        """How to initialize a Zmat instance.
+        """Initialize a Zmat instance.
 
         Args:
-            init (pd.DataFrame): A Dataframe with at least the columns
-                ``['atom', 'b', 'bond', 'a', 'angle',
-                'd', 'dihedral']``.
-                Where ``'atom'`` is a string for the elementsymbol.
-            order_of_definition (list like): Specify in which order
-                the Zmatrix is defined. If ``None`` it just uses
-                ``self.index``.
+            frame: DataFrame with at least the columns
+                ``['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']``.
+                Where ``'atom'`` is a string for the element symbol.
+            metadata: Optional metadata dictionary.
+            _metadata: Optional internal metadata dictionary.
 
         Returns:
-            Zmat: A new zmat instance.
+            A new Zmat instance.
         """
         if not self._required_cols <= set(frame.columns):
             raise PhysicalMeaning(
@@ -367,9 +365,9 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """Return a copy where the value is assigned.
 
         Args:
-            idx :
-            col :
-            val :
+            idx: Index or indices to assign.
+            col: Column to assign.
+            val: Value to assign.
         """
         new = self.copy()
         new.safe_loc[idx, col] = val
@@ -492,9 +490,9 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             ``self._metadata['last_valid_cartesian']``.
 
         Args:
-            symb_expr (sympy expression):
+            symb_expr : sympy expression
             value :
-            perform_checks (bool): If ``perform_checks is True``,
+            perform_checks : If ``perform_checks is True``,
                 it is asserted, that the resulting Zmatrix can be converted
                 to cartesian coordinates.
                 Dummy atoms will be inserted automatically if necessary.
@@ -546,17 +544,16 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def change_numbering(self, new_index: Sequence | None = None) -> Self:
         """Change numbering to a new index.
 
-        Changes the numbering of index and all dependent numbering
-            (bond_with...) to a new_index.
-        The user has to make sure that the new_index consists of distinct
-            elements.
+        Changes the numbering of index and all dependent numbering (bond_with...)
+        to a new_index. The user has to make sure that the new_index consists of
+        distinct elements.
 
         Args:
-            new_index (list): If None the new_index is taken from 1 to the
-                number of atoms.
+            new_index: If None, the new_index is taken from 1 to the number of
+                atoms.
 
         Returns:
-            Zmat: Reindexed version of the zmatrix.
+            Reindexed version of the zmatrix.
         """
         if new_index is None:
             new_index = range(len(self))
@@ -762,14 +759,11 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def get_cartesian(self) -> Cartesian:
         """Return the molecule in cartesian coordinates.
 
-        Raises an :class:`~exceptions.InvalidReference` exception,
-        if the reference of the i-th atom is undefined.
-
-        Args:
-            None
+        Raises an :class:`~exceptions.InvalidReference` exception if the
+        reference of the i-th atom is undefined.
 
         Returns:
-            Cartesian: Reindexed version of the zmatrix.
+            Reindexed version of the zmatrix in cartesian coordinates.
         """
 
         def create_cartesian(positions, row):
@@ -976,7 +970,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             return grad_X
 
     def to_xyz(self, *args, **kwargs):
-        """Deprecated, use :meth:`~chemcoord.Zmat.get_cartesian`"""
+        """Deprecated, use :meth:`~chemcoord.Zmat.get_cartesian`."""
         message = "Will be removed in the future. Please use get_cartesian."
         with warnings.catch_warnings():
             warnings.simplefilter("always")
