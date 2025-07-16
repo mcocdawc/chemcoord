@@ -9,6 +9,7 @@
    .. rubric:: Constructors
 
    .. autosummary::
+      :toctree: src_Cartesian
 
       ~Cartesian.__init__
       ~Cartesian.from_ase_atoms
