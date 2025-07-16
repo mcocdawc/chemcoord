@@ -21,7 +21,15 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+import os
+from pathlib import Path
+
 import chemcoord as cc
+
+ON_RTD = os.environ.get("READTHEDOCS") == "True"
+
+# Get the directory where conf.py is located
+CONF_DIR = Path(__file__).parent
 
 # -- General configuration ------------------------------------------------
 
@@ -49,6 +57,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinxcontrib.bibtex",
     # u'sphinx.ext.inheritance_diagram'
 ]
 
@@ -65,7 +74,7 @@ intersphinx_mapping = {
 
 # 'numpydoc'
 # Custom settings:
-# autosummary_generate = True
+autosummary_generate = False
 # numpydoc_show_class_members = True
 
 
@@ -154,10 +163,15 @@ html_theme = "sphinx_rtd_theme"
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "logo_only": True,
-    "display_version": False,
-}
+if ON_RTD:
+    html_theme_options = {
+        "logo_only": True,
+        "display_version": False,
+    }
+else:
+    html_theme_options = {
+        "logo_only": True,
+    }
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -325,3 +339,18 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 # texinfo_no_detailmenu = False
+
+
+bibtex_bibfiles = [str(CONF_DIR / "literature.bib")]
+
+
+nitpicky = True
+nitpick_ignore = []
+
+# taken from https://stackoverflow.com/questions/11417221/sphinx-autodoc-gives-warning-pyclass-reference-target-not-found-type-warning
+for line in open("nitpick-exceptions"):
+    if not line.strip() or line.startswith("#"):
+        continue
+    dtype, target = line.split(None, 1)
+    target = target.strip()
+    nitpick_ignore.append((dtype, target))

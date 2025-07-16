@@ -1,6 +1,4 @@
-﻿:orphan:
-
-chemcoord.AsymmetricUnitCartesian.get\_cartesian
+﻿chemcoord.AsymmetricUnitCartesian.get\_cartesian
 ================================================
 
 .. currentmodule:: chemcoord

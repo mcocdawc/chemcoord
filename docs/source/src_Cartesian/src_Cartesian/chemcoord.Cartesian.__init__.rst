@@ -1,5 +1,3 @@
-﻿:orphan:
-
 chemcoord.Cartesian.\_\_init\_\_
 ================================
 

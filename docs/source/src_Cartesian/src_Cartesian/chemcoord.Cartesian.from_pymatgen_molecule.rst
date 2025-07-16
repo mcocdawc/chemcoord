@@ -1,5 +1,3 @@
-﻿:orphan:
-
 chemcoord.Cartesian.from\_pymatgen\_molecule
 ============================================
 

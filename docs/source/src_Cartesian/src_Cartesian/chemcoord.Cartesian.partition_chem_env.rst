@@ -1,5 +1,3 @@
-﻿:orphan:
-
 chemcoord.Cartesian.partition\_chem\_env
 ========================================
 

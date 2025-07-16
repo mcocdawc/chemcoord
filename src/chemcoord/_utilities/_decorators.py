@@ -120,12 +120,14 @@ def njit(**kwargs) -> Callable[[Function], Function]: ...
 def njit(
     f: Function | None = None, **kwargs
 ) -> Function | Callable[[Function], Function]:
-    """Type-safe jit wrapper that caches the compiled function
+    """
+    Type-safe jit wrapper that caches the compiled function
 
-    With this jit wrapper, you can actually use static typing together with numba.
-    The crucial declaration is that the decorated function's interface is preserved,
-    i.e. mapping :class:`Function` to :class:`Function`.
-    Otherwise the following example would not raise a type error:
+    With this jit wrapper, you can actually use static typing together
+    with numba. The crucial declaration is that the decorated function's
+    interface is preserved, i.e. mapping :class:`Function` to
+    :class:`Function`. Otherwise the following example would not raise a
+    type error:
 
     .. code-block:: python
 
@@ -135,9 +137,11 @@ def njit(
 
         f(2.0)   # No type error
 
-    While the same example, using this custom :func:`njit` would raise a type error.
+    While the same example, using this custom :func:`njit` would raise a
+    type error.
 
-    In addition to type safety, this wrapper also sets :code:`cache=True` by default.
+    In addition to type safety, this wrapper also sets :code:`cache=True`
+    by default.
     """
     if f is None:
         return nb.njit(cache=True, **kwargs)

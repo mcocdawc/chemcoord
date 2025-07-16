@@ -41,7 +41,7 @@ run_tests: &run_tests
           command: pip3 install -r docs/requirements.txt
       - run:
           name: Build documentation
-          command: cd docs; make html
+          command: cd docs; make html SPHINXOPTS="-W --keep-going -n"
 
 workflows:
   sample:

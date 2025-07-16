@@ -1,4 +1,4 @@
-﻿chemcoord.xyz\_functions.apply\_grad\_zmat\_tensor
+chemcoord.xyz\_functions.apply\_grad\_zmat\_tensor
 ==================================================
 
 .. currentmodule:: chemcoord.xyz_functions

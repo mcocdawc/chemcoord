@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 
 MAIN_PACKAGE = "chemcoord"
 DESCRIPTION = "Python module for dealing with chemical coordinates."
-LICENSE = "LGPLv3"
+LICENSE = "LGPL-3.0-or-later"
 AUTHOR = "Oskar Weser"
 EMAIL = "oskar.weser@gmail.com"
 URL = "https://github.com/mcocdawc/chemcoord"
@@ -39,7 +39,6 @@ CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
     "Operating System :: Unix",
     "Operating System :: POSIX",
     "Operating System :: Microsoft :: Windows",

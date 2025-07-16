@@ -1,5 +1,3 @@
-﻿:orphan:
-
 chemcoord.Cartesian.change\_numbering
 =====================================
 

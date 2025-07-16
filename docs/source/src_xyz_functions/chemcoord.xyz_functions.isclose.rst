@@ -1,4 +1,4 @@
-﻿chemcoord.xyz\_functions.isclose
+chemcoord.xyz\_functions.isclose
 ================================
 
 .. currentmodule:: chemcoord.xyz_functions

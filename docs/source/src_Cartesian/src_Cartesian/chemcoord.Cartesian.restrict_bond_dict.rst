@@ -1,5 +1,3 @@
-﻿:orphan:
-
 chemcoord.Cartesian.restrict\_bond\_dict
 ========================================
 

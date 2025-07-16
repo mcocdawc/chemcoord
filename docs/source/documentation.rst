@@ -12,3 +12,4 @@ Contents:
     internal_coordinates
     configuration
     exceptions
+    types

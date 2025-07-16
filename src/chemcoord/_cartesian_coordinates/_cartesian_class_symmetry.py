@@ -81,7 +81,7 @@ class CartesianSymmetry(CartesianCore):
             max_n (int): Maximum number of iterations.
             tolerance (float): Tolerance for detecting symmetry.
                 Gets passed as Argument into
-                :class:`~pymatgen.analyzer.symmetry.PointGroupAnalyzer`.
+                :class:`pymatgen.analyzer.symmetry.PointGroupAnalyzer`.
             epsilon (float): If the elementwise absolute difference of two
                 subsequently symmetrized structures is smaller epsilon,
                 the iteration stops before ``max_n`` is reached.

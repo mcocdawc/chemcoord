@@ -1,5 +1,3 @@
-﻿:orphan:
-
 chemcoord.Cartesian.get\_dihedral\_degrees
 ==========================================
 
