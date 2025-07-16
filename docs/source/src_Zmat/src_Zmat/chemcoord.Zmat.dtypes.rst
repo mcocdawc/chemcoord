@@ -1,6 +1,4 @@
-﻿:orphan:
-
-chemcoord.Zmat.dtypes
+﻿chemcoord.Zmat.dtypes
 =====================
 
 .. currentmodule:: chemcoord
