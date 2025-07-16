@@ -40,6 +40,8 @@ A collection of functions operating on instances of
     ~xyz_functions.view
     ~xyz_functions.apply_grad_zmat_tensor
     ~xyz_functions.get_rotation_matrix
+    ~xyz_functions.get_kabsch_rotation
+    ~xyz_functions.orthonormalize_righthanded
 
 Symmetry
 ---------
