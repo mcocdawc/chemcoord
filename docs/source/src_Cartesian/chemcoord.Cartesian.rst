@@ -86,6 +86,8 @@
       ~Cartesian.subs
       ~Cartesian.symmetrize
       ~Cartesian.to_zmat
+      ~Cartesian.assign
+
 
 
 
