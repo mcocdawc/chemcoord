@@ -21,9 +21,12 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+import os
 from pathlib import Path
 
 import chemcoord as cc
+
+ON_RTD = os.environ.get("READTHEDOCS") == "True"
 
 # Get the directory where conf.py is located
 CONF_DIR = Path(__file__).parent
@@ -160,10 +163,15 @@ html_theme = "sphinx_rtd_theme"
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "logo_only": True,
-    "display_version": False,
-}
+if ON_RTD:
+    html_theme_options = {
+        "logo_only": True,
+        "display_version": False,
+    }
+else:
+    html_theme_options = {
+        "logo_only": True,
+    }
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
