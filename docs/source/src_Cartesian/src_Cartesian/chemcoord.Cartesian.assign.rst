@@ -1,4 +1,3 @@
-:orphan:
 
 chemcoord.Cartesian.assign
 ==========================

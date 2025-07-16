@@ -1,5 +1,4 @@
-﻿:orphan:
-
+﻿
 chemcoord.Zmat.to\_xyz
 ======================
 
