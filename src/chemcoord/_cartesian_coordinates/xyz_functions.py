@@ -523,7 +523,8 @@ def get_kabsch_rotation(
     """Calculate the optimal rotation from ``P`` unto ``Q``.
 
     Using the Kabsch algorithm the optimal rotation matrix
-    for the rotation of ``other`` unto ``self`` is calculated.
+    for the rotation of ``other`` unto ``self``
+    is calculated. :cite:`kabsch_solution_1976`
     The algorithm is described very well in
     `wikipedia <http://en.wikipedia.org/wiki/Kabsch_algorithm>`_.
 

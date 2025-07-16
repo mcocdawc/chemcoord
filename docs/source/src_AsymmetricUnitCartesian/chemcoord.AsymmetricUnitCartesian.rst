@@ -5,14 +5,14 @@
 
 .. autoclass:: AsymmetricUnitCartesian
 
-   
+
    .. automethod:: __init__
 
-   
+
    .. rubric:: Methods
 
    .. autosummary::
-   
+
       ~AsymmetricUnitCartesian.__init__
       ~AsymmetricUnitCartesian.add_data
       ~AsymmetricUnitCartesian.align
@@ -78,15 +78,15 @@
       ~AsymmetricUnitCartesian.to_zmat
       ~AsymmetricUnitCartesian.view
       ~AsymmetricUnitCartesian.write_xyz
-   
-   
 
-   
-   
+
+
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
+
       ~AsymmetricUnitCartesian.columns
       ~AsymmetricUnitCartesian.dtypes
       ~AsymmetricUnitCartesian.empty
@@ -94,5 +94,5 @@
       ~AsymmetricUnitCartesian.index
       ~AsymmetricUnitCartesian.loc
       ~AsymmetricUnitCartesian.shape
-   
-   
+
+
