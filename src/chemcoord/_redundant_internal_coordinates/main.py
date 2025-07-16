@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from functools import partial
 from typing import TYPE_CHECKING, Self, TypeAlias
-from collections.abc import Sequence
 
 import numpy as np
 from attrs import define
@@ -70,7 +70,9 @@ class RedundantInternalCoordinates:
         atol: float = 1e-8,
         max_iter: int = 100,
     ) -> Cartesian:
-        from chemcoord._cartesian_coordinates.xyz_functions import allclose
+        from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
+            allclose,
+        )
 
         if start_guess is None:
             start_guess = self.reference
@@ -158,7 +160,9 @@ def RIC_interpolate(
     max_iter: int = 100,
     seed: Cartesian | Sequence[Cartesian] | None = None,
 ) -> list[Cartesian]:
-    from chemcoord._cartesian_coordinates.xyz_functions import interpolate
+    from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
+        interpolate,
+    )
 
     if coord_idx is None:
         coord_idx = get_primitives_idx(start, end)

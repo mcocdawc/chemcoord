@@ -130,7 +130,7 @@ class CartesianBmat(CartesianCore):
                 determination when generating primitive internal coordinates
 
         """
-        from chemcoord._redundant_internal_coordinates.main import (
+        from chemcoord._redundant_internal_coordinates.main import (  # noqa: PLC0415
             RedundantInternalCoordinates,
         )
 

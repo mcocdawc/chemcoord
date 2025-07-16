@@ -706,7 +706,9 @@ def interpolate(
             Interpolate in Cartesian, Z-matrix,
             or redundant internal coordinate (RIC) space.
     """
-    from chemcoord._redundant_internal_coordinates.main import RIC_interpolate
+    from chemcoord._redundant_internal_coordinates.main import (  # noqa: PLC0415
+        RIC_interpolate,
+    )
 
     if coord == "cart":
         return _cart_interpolate(start, end, N)
@@ -716,6 +718,7 @@ def interpolate(
         return _fix_trans_rot(start, end, RIC_interpolate(start, end, N))
     else:
         assert_never(f"coord must be either 'cart', 'zmat', or 'RIC'; not {coord}")
+
 
 def get_reaction_coordinate(path: Sequence[Cartesian]) -> Vector[np.float64]:
     r"""Compute the reaction coordinate for a path.
@@ -731,7 +734,9 @@ def get_reaction_coordinate(path: Sequence[Cartesian]) -> Vector[np.float64]:
     Args:
         path :
     """
+
     def difference(m1: Cartesian, m2: Cartesian) -> float:
-        return float(np.sqrt(((m2 - m1).loc[:, ["x", "y", "z"]].values**2).sum()))
+        return float(np.sqrt(((m2 - m1).loc[:, ["x", "y", "z"]].values ** 2).sum()))
+
     steps = np.cumsum([0] + [difference(m2, m1) for m2, m1 in zip(path[1:], path)])
     return steps / steps[-1]

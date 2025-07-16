@@ -1252,7 +1252,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         out[normal] = pos[indices[normal]]
 
         for row, i in zip(np.nonzero(~normal), indices[~normal]):
-            out[row] = constants.absolute_refs[i]   # type: ignore[index]
+            out[row] = constants.absolute_refs[i]  # type: ignore[index]
 
         self.index = old_index
         return out

@@ -467,7 +467,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new = self.copy()
 
         def convert_d(d: Series) -> Vector[np.float64]:
-            return np.mod(d + 180, 360) - 180   # type: ignore[return-value]
+            return np.mod(d + 180, 360) - 180  # type: ignore[return-value]
 
         new.unsafe_loc[:, "dihedral"] = convert_d(new.loc[:, "dihedral"])
         return new
@@ -1012,5 +1012,5 @@ def _jit_different_orientations(
 
 
 def _complementary_dihedral(dihedral: Series) -> Series:
-    r = (dihedral + 180) % 360
+    r = np.mod(dihedral + 180, 360)
     return r - (r // 180) * 360
