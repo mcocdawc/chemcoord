@@ -22,3 +22,5 @@ py:class pandas._typing.ReadCsvBuffer
 py:class pandas._typing.WriteBuffer
 py:class chemcoord.typing.T_dtype_co
 py:class chemcoord._cartesian_coordinates._cartesian_class_core._T
+py:attr constants.elements
+py:attr settings.defaults.atomic_radius_data
