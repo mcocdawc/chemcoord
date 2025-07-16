@@ -32,3 +32,4 @@ py:class chemcoord._internal_coordinates._indexers._Safe_Loc
 py:class chemcoord._internal_coordinates._indexers._Safe_ILoc
 py:class chemcoord._internal_coordinates._indexers._Unsafe_Loc
 py:class chemcoord._internal_coordinates._indexers._Unsafe_ILoc
+py:class pymatgen.analyzer.symmetry.PointGroupAnalyzer

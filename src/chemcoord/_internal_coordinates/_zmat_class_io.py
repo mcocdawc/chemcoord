@@ -125,18 +125,18 @@ class ZmatIO(ZmatCore, GenericIO):
     def read_zmat(
         cls, inputfile: ReadCsvBuffer[str] | PathLike, implicit_index: bool = True
     ) -> Self:
-        """Reads a zmat file.
+        """Read a zmat file.
 
         Lines beginning with ``#`` are ignored.
 
         Args:
             inputfile: The file to read from.
-            implicit_index: If this option is true the first column
-                has to be the element symbols for the atoms.
-                The row number is used to determine the index.
+            implicit_index: If true, the first column has to be the element
+                symbols for the atoms. The row number is used to determine the
+                index.
 
         Returns:
-            Zmat:
+            A new Zmat instance.
         """
         cols = ["atom", "b", "bond", "a", "angle", "d", "dihedral"]
         if implicit_index:
@@ -188,23 +188,25 @@ class ZmatIO(ZmatCore, GenericIO):
         overwrite: bool = True,
         header: bool = False,
     ) -> str | None:
-        """Write zmat-file
+        """Write a zmat file.
 
         Args:
-            buf (str): StringIO-like, optional buffer to write to
-            implicit_index (bool): If implicit_index is set, the zmat indexing
-                is changed to ``range(1, len(self) + 1)``.
-                Using :meth:`~chemcoord.Zmat.change_numbering`
-                Besides the index is omitted while writing which means,
-                that the index is given
-                implicitly by the row number.
-            float_format (one-parameter function): Formatter function
-                to apply to column’s elements if they are floats.
-                The result of this function must be a unicode string.
-            overwrite (bool): May overwrite existing files.
+            buf: StringIO-like, optional buffer to write to.
+            upper_triangle: If False, removes the upper triangle from output.
+            implicit_index: If set, the zmat indexing is changed to
+                ``range(1, len(self) + 1)`` using
+                :meth:`~chemcoord.Zmat.change_numbering`. The index is omitted
+                while writing, so the index is given implicitly by the row
+                number.
+            float_format: Formatter function to apply to column’s elements if
+                they are floats. The result of this function must be a unicode
+                string.
+            overwrite: May overwrite existing files.
+            header: Whether to include the header in the output.
 
         Returns:
-            formatted : string (or unicode, depending on data and options)
+            The formatted string (or unicode, depending on data and options),
+            or None if written to a file.
         """
         out = self.copy()
         if implicit_index:
@@ -224,7 +226,7 @@ class ZmatIO(ZmatCore, GenericIO):
             return output
 
     def write(self, *args, **kwargs):
-        """Deprecated, use :meth:`~chemcoord.Zmat.to_zmat`"""
+        """Deprecated, use :meth:`~chemcoord.Zmat.to_zmat`."""
         message = "Will be removed in the future. Please use to_zmat()."
         with warnings.catch_warnings():
             warnings.simplefilter("always")
