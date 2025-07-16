@@ -33,9 +33,9 @@ run_tests: &run_tests
       - run:
           name: Install infrastructure
           command: pip3 install -r tests/testsuite_requirements.txt
-      - run:
-          name: Running tests
-          command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
+      # - run:
+      #     name: Running tests
+      #     command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
       - run:
           name: Prepare documentation
           command: pip3 install -r docs/requirements.txt

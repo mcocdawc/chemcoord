@@ -1,3 +1,4 @@
 sphinx-rtd-theme
 sphinxcontrib.bibtex
 ase
+pyscf
