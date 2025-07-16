@@ -39,6 +39,7 @@ A collection of functions operating on instances of
     ~xyz_functions.read_molden
     ~xyz_functions.view
     ~xyz_functions.apply_grad_zmat_tensor
+    ~xyz_functions.get_rotation_matrix
 
 Symmetry
 ---------
