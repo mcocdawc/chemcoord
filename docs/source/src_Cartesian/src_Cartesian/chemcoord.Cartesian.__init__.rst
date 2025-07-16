@@ -1,4 +1,4 @@
-﻿chemcoord.Cartesian.\_\_init\_\_
+chemcoord.Cartesian.\_\_init\_\_
 ================================
 
 .. currentmodule:: chemcoord
