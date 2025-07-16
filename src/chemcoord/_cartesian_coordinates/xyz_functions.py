@@ -405,7 +405,7 @@ def concat(
 
     Args:
         cartesians: A sequence of Cartesian objects to be concatenated.
-        ignore_index: Behaves like in :meth:`pandas.DataFrame.append`.
+        ignore_index: Behaves like in :func:`pandas.concat`.
         keys: If multiple levels passed, should contain tuples. Construct
             hierarchical index using the passed keys as the outermost level.
 
@@ -544,8 +544,9 @@ def apply_grad_zmat_tensor(
 
     Args:
         grad_C: A (3, n, n, 3) array. The index layout is explained in
-            :meth:`Cartesian.get_grad_zmat`.
-        construction_table: Explained in :meth:`Cartesian.get_construction_table`.
+            :meth:`~chemcoord.Cartesian.get_grad_zmat`.
+        construction_table: Explained in
+            :meth:`~chemcoord.Cartesian.get_construction_table`.
         cart_dist: Distortions in cartesian space.
 
     Returns:
