@@ -6,14 +6,17 @@
 .. autoclass:: Zmat
 
 
-   .. automethod:: __init__
+   .. rubric:: Constructors
 
+   .. autosummary::
+
+      ~Zmat.__init__
+      ~Zmat.read_zmat
 
    .. rubric:: Methods
 
    .. autosummary::
 
-      ~Zmat.__init__
       ~Zmat.add_data
       ~Zmat.assign
       ~Zmat.copy
@@ -25,7 +28,6 @@
       ~Zmat.insert
       ~Zmat.iupacify
       ~Zmat.minimize_dihedrals
-      ~Zmat.read_zmat
       ~Zmat.sort_index
       ~Zmat.sort_values
       ~Zmat.subs
