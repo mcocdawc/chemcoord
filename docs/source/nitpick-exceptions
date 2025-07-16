@@ -24,3 +24,11 @@ py:class chemcoord.typing.T_dtype_co
 py:class chemcoord._cartesian_coordinates._cartesian_class_core._T
 py:attr constants.elements
 py:attr settings.defaults.atomic_radius_data
+py:class chemcoord._cartesian_coordinates._indexers._ILoc
+py:class chemcoord._cartesian_coordinates._indexers._Loc
+py:class chemcoord._internal_coordinates._indexers._ILoc
+py:class chemcoord._internal_coordinates._indexers._Loc
+py:class chemcoord._internal_coordinates._indexers._Safe_Loc
+py:class chemcoord._internal_coordinates._indexers._Safe_ILoc
+py:class chemcoord._internal_coordinates._indexers._Unsafe_Loc
+py:class chemcoord._internal_coordinates._indexers._Unsafe_ILoc
