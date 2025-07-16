@@ -47,16 +47,12 @@
 
       ~Zmat.columns
       ~Zmat.dtypes
-      ~Zmat.dummy_manipulation_allowed
-      ~Zmat.empty
       ~Zmat.iloc
       ~Zmat.index
       ~Zmat.loc
-      ~Zmat.pure_internal_mov
       ~Zmat.safe_iloc
       ~Zmat.safe_loc
       ~Zmat.shape
-      ~Zmat.test_operators
       ~Zmat.unsafe_iloc
       ~Zmat.unsafe_loc
 
