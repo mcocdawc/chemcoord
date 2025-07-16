@@ -334,3 +334,15 @@ texinfo_documents = [
 
 
 bibtex_bibfiles = [str(CONF_DIR / "literature.bib")]
+
+
+nitpicky = True
+nitpick_ignore = []
+
+# taken from https://stackoverflow.com/questions/11417221/sphinx-autodoc-gives-warning-pyclass-reference-target-not-found-type-warning
+for line in open("nitpick-exceptions"):
+    if not line.strip() or line.startswith("#"):
+        continue
+    dtype, target = line.split(None, 1)
+    target = target.strip()
+    nitpick_ignore.append((dtype, target))
