@@ -37,20 +37,16 @@ def view(
     """View your molecule or list of molecules.
 
     .. note:: This function writes a temporary file and opens it with
-        an external viewer.
-        If you modify your molecule afterwards you have to recall view
-        in order to see the changes.
+        an external viewer. If you modify your molecule afterwards you have
+        to recall view in order to see the changes.
 
     Args:
-        molecule: Can be a cartesian, or a list of cartesians.
-        viewer (str): The external viewer to use. The default is
-            specified in settings.viewer
-        use_curr_dir (bool): If True, the temporary file is written to
-            the current diretory. Otherwise it gets written to the
-            OS dependendent temporary directory.
-
-    Returns:
-        None:
+        molecule: A cartesian or a list of cartesians.
+        viewer: The external viewer to use. The default is specified in
+            ``settings.viewer``.
+        use_curr_dir: If True, the temporary file is written to the current
+            directory. Otherwise, it is written to the OS-dependent temporary
+            directory.
     """
     if viewer is None:
         viewer = settings.defaults.viewer
@@ -128,19 +124,18 @@ def to_multiple_xyz(
 ) -> str | None:
     """Write a list of Cartesians into an xyz file.
 
-    .. note:: Since it permamently writes a file, this function
-        is strictly speaking **not sideeffect free**.
-        The list to be written is of course not changed.
+    .. note:: Since it permamently writes a file, this function is strictly
+        speaking **not sideeffect free**. The list to be written is of course
+        not changed.
 
     Args:
-        cartesian_list :
-        buf : StringIO-like, optional buffer to write to
-        sort_index : If sort_index is true, the Cartesian
-            is sorted by the index before writing.
-        overwrite : May overwrite existing files.
-        float_format (one-parameter function): Formatter function
-            to apply to column’s elements if they are floats.
-            The result of this function must be a unicode string.
+        cartesian_list: List of Cartesian objects.
+        buf: Optional buffer or file path to write to.
+        sort_index: If True, the Cartesian is sorted by the index before
+            writing.
+        overwrite: May overwrite existing files.
+        float_format: Formatter function to apply to columns if they are
+            floats.
     """
     if sort_index:
         cartesian_list = [molecule.sort_index() for molecule in cartesian_list]
@@ -161,11 +156,11 @@ def read_multiple_xyz(inputfile: PathLike, start_index: int = 0) -> list[Cartesi
     """Read a multiple-xyz file.
 
     Args:
-        inputfile :
-        start_index :
+        inputfile: The file to read from.
+        start_index: Index to start from.
 
     Returns:
-        list: A list containing :class:`~chemcoord.Cartesian` is returned.
+        A list of Cartesian objects.
     """
     with open(inputfile, "r") as f:
         strings = f.readlines()
@@ -220,19 +215,18 @@ def to_molden(
 ) -> str | None:
     """Write a list of Cartesians into a molden file.
 
-    .. note:: Since it permamently writes a file, this function
-        is strictly speaking **not sideeffect free**.
-        The list to be written is of course not changed.
+    .. note:: Since it permamently writes a file, this function is strictly
+        speaking **not sideeffect free**. The list to be written is of course
+        not changed.
 
     Args:
-        cartesian_list :
-        buf : StringIO-like, optional buffer to write to
-        sort_index : If sort_index is true, the Cartesian
-            is sorted by the index before writing.
-        overwrite : May overwrite existing files.
-        float_format : Formatter function
-            to apply to column’s elements if they are floats.
-            The result of this function must be a unicode string.
+        cartesians: List of Cartesian objects.
+        buf: Optional buffer or file path to write to.
+        sort_index: If True, the Cartesian is sorted by the index before
+            writing.
+        overwrite: May overwrite existing files.
+        float_format: Formatter function to apply to columns if they are
+            floats.
     """
     if sort_index:
         cartesian_list = [molecule.sort_index() for molecule in cartesians]
@@ -287,11 +281,11 @@ def read_molden(inputfile: PathLike, start_index: int = 0) -> list[Cartesian]:
     """Read a molden file.
 
     Args:
-        inputfile (str):
-        start_index (int):
+        inputfile: The file to read from.
+        start_index: Index to start from.
 
     Returns:
-        list: A list containing :class:`~chemcoord.Cartesian` is returned.
+        A list of Cartesian objects.
     """
     with open(inputfile) as f:
         found = False
@@ -342,15 +336,14 @@ def isclose(
     """Compare two molecules for numerical equality.
 
     Args:
-        a :
-        b :
-        align : a and b are
-            prealigned along their principal axes of inertia and moved to their
-            barycenters before comparing.
-        rtol : Relative tolerance for the numerical equality comparison
-            look into :func:`numpy.isclose` for further explanation.
-        atol : Relative tolerance for the numerical equality comparison
-            look into :func:`numpy.isclose` for further explanation.
+        a: First molecule.
+        b: Second molecule.
+        align: If True, a and b are prealigned along their principal axes of
+            inertia and moved to their barycenters before comparing.
+        rtol: Relative tolerance for the numerical equality comparison (see
+            ``numpy.isclose``).
+        atol: Absolute tolerance for the numerical equality comparison (see
+            ``numpy.isclose``).
     """
     # The pandas documentation says about the arguments to all(axis=...)
     #   None : reduce all axes, return a scalar
@@ -384,18 +377,17 @@ def allclose(
     """Compare two molecules for numerical equality.
 
     Args:
-        a (Cartesian):
-        b (Cartesian):
-        align (bool): a and b are
-            prealigned along their principal axes of inertia and moved to their
-            barycenters before comparing.
-        rtol (float): Relative tolerance for the numerical equality comparison
-            look into :func:`numpy.allclose` for further explanation.
-        atol (float): Relative tolerance for the numerical equality comparison
-            look into :func:`numpy.allclose` for further explanation.
+        a: First molecule.
+        b: Second molecule.
+        align: If True, a and b are prealigned along their principal axes of
+            inertia and moved to their barycenters before comparing.
+        rtol: Relative tolerance for the numerical equality comparison (see
+            ``numpy.allclose``).
+        atol: Absolute tolerance for the numerical equality comparison (see
+            ``numpy.allclose``).
 
     Returns:
-        bool:
+        True if all coordinates are close, False otherwise.
     """
     return isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None)
 
@@ -407,22 +399,18 @@ def concat(
 ) -> Cartesian:
     """Join list of cartesians into one molecule.
 
-    Wrapper around the :func:`pandas.concat` function.
-    Default values are the same as in the pandas function except for
-    ``verify_integrity`` which is set to true in case of this library.
+    Wrapper around the :func:`pandas.concat` function. Default values are
+    the same as in the pandas function except for ``verify_integrity`` which
+    is set to true in case of this library.
 
     Args:
-        cartesians (sequence): A sequence of :class:`~chemcoord.Cartesian`
-            to be concatenated.
-        ignore_index (bool): It
-            behaves like in the description of
-            :meth:`pandas.DataFrame.append`.
-        keys (sequence): If multiple levels passed, should contain tuples.
-            Construct hierarchical index using the passed keys as
-            the outermost level
+        cartesians: A sequence of Cartesian objects to be concatenated.
+        ignore_index: Behaves like in :meth:`pandas.DataFrame.append`.
+        keys: If multiple levels passed, should contain tuples. Construct
+            hierarchical index using the passed keys as the outermost level.
 
     Returns:
-        Cartesian:
+        A concatenated Cartesian object.
     """
     frames = [molecule._frame for molecule in cartesians]
     if keys is None:
@@ -438,15 +426,14 @@ def get_rotation_matrix(axis: Sequence[float], angle: float) -> Matrix[np.float6
     """Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
-    around the given axis.
-    The Input angle is in radians.
+    around the given axis. The input angle is in radians.
 
     Args:
-        axis (vector):
-        angle (float):
+        axis: The axis to rotate around.
+        angle: The angle in radians.
 
     Returns:
-        Rotation matrix (np.array):
+        The rotation matrix as a numpy array.
     """
     vaxis = normalize(np.asarray(axis))
     if not (vaxis.shape) == (3,):
@@ -461,15 +448,14 @@ def _jit_get_rotation_matrix(
     """Returns the rotation matrix.
 
     This function returns a matrix for the counterclockwise rotation
-    around the given axis.
-    The Input angle is in radians.
+    around the given axis. The input angle is in radians.
 
     Args:
-        axis (vector):
-        angle (float):
+        axis: The axis to rotate around.
+        angle: The angle in radians.
 
     Returns:
-        Rotation matrix (np.array):
+        The rotation matrix as a numpy array.
     """
     axis = _jit_normalize(axis)
     a = m.cos(angle / 2)
@@ -490,23 +476,23 @@ def _jit_get_rotation_matrix(
 def orthonormalize_righthanded(basis: Matrix[np.floating]) -> Matrix[np.float64]:
     """Orthonormalizes righthandedly a given 3D basis.
 
-    This functions returns a right handed orthonormalize_righthandedd basis.
-    Since only the first two vectors in the basis are used, it does not matter
-    if you give two or three vectors.
+    This function returns a right handed orthonormalized basis. Since only
+    the first two vectors in the basis are used, it does not matter if you
+    give two or three vectors.
 
     Right handed means, that:
 
     .. math::
 
-        \\vec{e_1} \\times \\vec{e_2} &= \\vec{e_3} \\\\
-        \\vec{e_2} \\times \\vec{e_3} &= \\vec{e_1} \\\\
-        \\vec{e_3} \\times \\vec{e_1} &= \\vec{e_2} \\\\
+        \vec{e_1} \times \vec{e_2} &= \vec{e_3} \\
+        \vec{e_2} \times \vec{e_3} &= \vec{e_1} \\
+        \vec{e_3} \times \vec{e_1} &= \vec{e_2} \\
 
     Args:
-        basis (np.array): An array of shape = (3,2) or (3,3)
+        basis: An array of shape (3,2) or (3,3).
 
     Returns:
-        new_basis (np.array): A right handed orthonormalized basis.
+        A right handed orthonormalized basis as a numpy array.
     """
     v1, v2 = basis[:, 0], basis[:, 1]
     e1 = normalize(v1)
@@ -522,17 +508,18 @@ def get_kabsch_rotation(
 ) -> Matrix[np.float64]:
     """Calculate the optimal rotation from ``P`` unto ``Q``.
 
-    Using the Kabsch algorithm the optimal rotation matrix
-    for the rotation of ``other`` unto ``self``
-    is calculated. :cite:`kabsch_solution_1976`
+    Using the Kabsch algorithm the optimal rotation matrix for the rotation
+    of ``other`` unto ``self`` is calculated. :cite:`kabsch_solution_1976`
     The algorithm is described very well in
     `wikipedia <http://en.wikipedia.org/wiki/Kabsch_algorithm>`_.
 
     Args:
-        other (Cartesian):
+        Q: Target coordinates.
+        P: Source coordinates.
+        weights: Optional weights for the points.
 
     Returns:
-        :class:`~numpy.array`: Rotation matrix
+        The optimal rotation matrix as a numpy array.
     """
     # The general problem with weights is decribed in
     # https://en.wikipedia.org/wiki/Wahba%27s_problem
@@ -556,16 +543,13 @@ def apply_grad_zmat_tensor(
     """Apply the gradient for transformation to Zmatrix space onto cart_dist.
 
     Args:
-        grad_C (:class:`numpy.ndarray`): A ``(3, n, n, 3)`` array.
-            The mathematical details of the index layout is explained in
-            :meth:`~chemcoord.Cartesian.get_grad_zmat()`.
-        construction_table (pandas.DataFrame): Explained in
-            :meth:`~chemcoord.Cartesian.get_construction_table()`.
-        cart_dist (:class:`~chemcoord.Cartesian`):
-            Distortions in cartesian space.
+        grad_C: A (3, n, n, 3) array. The index layout is explained in
+            :meth:`Cartesian.get_grad_zmat`.
+        construction_table: Explained in :meth:`Cartesian.get_construction_table`.
+        cart_dist: Distortions in cartesian space.
 
     Returns:
-        :class:`Zmat`: Distortions in Zmatrix space.
+        Distortions in Zmatrix space as a Zmat object.
     """
     if (construction_table.index != cart_dist.index).any():
         message = "construction_table and cart_dist must use the same index"
@@ -615,11 +599,10 @@ def interpolate(
     """Interpolate between start and end structure.
 
     Args:
-        start :
-        end :
-        N (int): Number of structures to interpolate between.
-        coord :
-            Interpolate either in cartesian or zmatrix space.
+        start: Starting structure.
+        end: Ending structure.
+        N: Number of structures to interpolate between.
+        coord: Interpolate either in cartesian or zmatrix space.
     """
     if coord == "cart":
         return _cart_interpolate(start, end, N)

@@ -111,9 +111,9 @@ class ZmatIO(ZmatCore, GenericIO):
     ) -> str | None:
         """Render a DataFrame to a tabular environment table.
 
-        You can splice this into a LaTeX document.
-        Requires ``\\usepackage{booktabs}``.
-        Wrapper around the :meth:`pandas.DataFrame.to_latex` method.
+        You can splice this into a LaTeX document. Requires
+        ``\\usepackage{booktabs}``. Wrapper around the
+        :meth:`pandas.DataFrame.to_latex` method.
         """
         out = self._sympy_formatter()
         out = out._abs_ref_formatter(format_as="latex")
@@ -130,9 +130,9 @@ class ZmatIO(ZmatCore, GenericIO):
         Lines beginning with ``#`` are ignored.
 
         Args:
-            inputfile (str):
-            implicit_index (bool): If this option is true the first column
-            has to be the element symbols for the atoms.
+            inputfile: The file to read from.
+            implicit_index: If this option is true the first column
+                has to be the element symbols for the atoms.
                 The row number is used to determine the index.
 
         Returns:
