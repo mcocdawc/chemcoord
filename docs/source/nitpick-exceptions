@@ -13,3 +13,10 @@ py:class numba.typed.typedlist.List
 py:class numba.core.types.old_scalars.Float
 py:class numba.core.types.old_scalars.Integer
 py:class Function
+py:class pandas._typing.SequenceNotStr
+py:class ExtensionArray
+py:class Index
+py:class Series
+py:class EngFormatter
+py:class pandas._typing.ReadCsvBuffer
+py:class pandas._typing.WriteBuffer
