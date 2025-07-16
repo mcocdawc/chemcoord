@@ -5,14 +5,14 @@
 
 .. autoclass:: Cartesian
 
-   
+
    .. automethod:: __init__
 
-   
+
    .. rubric:: Methods
 
    .. autosummary::
-   
+
       ~Cartesian.__init__
       ~Cartesian.add_data
       ~Cartesian.align
@@ -77,15 +77,15 @@
       ~Cartesian.to_zmat
       ~Cartesian.view
       ~Cartesian.write_xyz
-   
-   
 
-   
-   
+
+
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
+
       ~Cartesian.columns
       ~Cartesian.dtypes
       ~Cartesian.empty
@@ -93,5 +93,5 @@
       ~Cartesian.index
       ~Cartesian.loc
       ~Cartesian.shape
-   
-   
+
+

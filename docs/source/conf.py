@@ -21,7 +21,12 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+from pathlib import Path
+
 import chemcoord as cc
+
+# Get the directory where conf.py is located
+CONF_DIR = Path(__file__).parent
 
 # -- General configuration ------------------------------------------------
 
@@ -49,6 +54,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinxcontrib.bibtex",
     # u'sphinx.ext.inheritance_diagram'
 ]
 
@@ -325,3 +331,6 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 # texinfo_no_detailmenu = False
+
+
+bibtex_bibfiles = [str(CONF_DIR / "literature.bib")]

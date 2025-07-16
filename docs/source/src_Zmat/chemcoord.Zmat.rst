@@ -15,7 +15,6 @@
 
       ~Zmat.__init__
       ~Zmat.add_data
-      ~Zmat.change_numbering
       ~Zmat.assign
       ~Zmat.copy
       ~Zmat.get_cartesian
