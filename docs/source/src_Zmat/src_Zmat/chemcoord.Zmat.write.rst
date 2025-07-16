@@ -1,4 +1,4 @@
-﻿chemcoord.Zmat.write
+chemcoord.Zmat.write
 ====================
 
 .. currentmodule:: chemcoord

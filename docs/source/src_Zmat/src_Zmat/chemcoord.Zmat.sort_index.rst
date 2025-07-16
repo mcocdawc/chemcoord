@@ -1,4 +1,3 @@
-﻿
 chemcoord.Zmat.sort\_index
 ==========================
 

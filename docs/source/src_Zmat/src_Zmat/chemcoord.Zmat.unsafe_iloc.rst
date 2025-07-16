@@ -1,4 +1,4 @@
-﻿chemcoord.Zmat.unsafe\_iloc
+chemcoord.Zmat.unsafe\_iloc
 ===========================
 
 .. currentmodule:: chemcoord

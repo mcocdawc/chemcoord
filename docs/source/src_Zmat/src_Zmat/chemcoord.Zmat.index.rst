@@ -1,4 +1,4 @@
-﻿chemcoord.Zmat.index
+chemcoord.Zmat.index
 ====================
 
 .. currentmodule:: chemcoord

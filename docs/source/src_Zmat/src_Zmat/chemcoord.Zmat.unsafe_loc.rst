@@ -1,4 +1,3 @@
-﻿
 chemcoord.Zmat.unsafe\_loc
 ==========================
 

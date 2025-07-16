@@ -1,4 +1,4 @@
-﻿chemcoord.Zmat.get\_cartesian
+chemcoord.Zmat.get\_cartesian
 =============================
 
 .. currentmodule:: chemcoord

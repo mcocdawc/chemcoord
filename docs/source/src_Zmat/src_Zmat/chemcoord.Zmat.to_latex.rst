@@ -1,4 +1,4 @@
-﻿chemcoord.Zmat.to\_latex
+chemcoord.Zmat.to\_latex
 ========================
 
 .. currentmodule:: chemcoord

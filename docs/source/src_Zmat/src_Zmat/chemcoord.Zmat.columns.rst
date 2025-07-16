@@ -1,4 +1,4 @@
-﻿chemcoord.Zmat.columns
+chemcoord.Zmat.columns
 ======================
 
 .. currentmodule:: chemcoord

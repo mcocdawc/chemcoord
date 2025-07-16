@@ -1,4 +1,4 @@
-﻿chemcoord.Zmat.minimize\_dihedrals
+chemcoord.Zmat.minimize\_dihedrals
 ==================================
 
 .. currentmodule:: chemcoord

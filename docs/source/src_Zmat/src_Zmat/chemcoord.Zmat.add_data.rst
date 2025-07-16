@@ -1,4 +1,3 @@
-﻿
 chemcoord.Zmat.add\_data
 ========================
 
