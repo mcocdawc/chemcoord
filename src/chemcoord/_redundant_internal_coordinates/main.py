@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from functools import partial
 from typing import TYPE_CHECKING, Self, TypeAlias
+from warnings import warn
 
 import numpy as np
 from attrs import define
@@ -68,7 +69,7 @@ class RedundantInternalCoordinates:
         start_guess: Cartesian | None = None,
         rtol: float = 0,
         atol: float = 1e-8,
-        max_iter: int = 100,
+        max_iter: int = 5000,
     ) -> Cartesian:
         from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
             allclose,
@@ -98,6 +99,8 @@ class RedundantInternalCoordinates:
             new = previous + delta_x.reshape(len(previous), 3)
             converged = allclose(new, previous, rtol=rtol, atol=atol, align=True)
             previous = new
+        if i > 100:
+            warn(f"The transformation to cartesian coordinates took {i} iterations.")
         return start_guess.align(new)[1] + start_guess.get_centroid()
 
 
@@ -157,7 +160,7 @@ def RIC_interpolate(
     end: Cartesian,
     N: int,
     coord_idx: Primitives | None = None,
-    max_iter: int = 100,
+    max_iter: int = 5000,
     seed: Cartesian | Sequence[Cartesian] | None = None,
 ) -> list[Cartesian]:
     from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
