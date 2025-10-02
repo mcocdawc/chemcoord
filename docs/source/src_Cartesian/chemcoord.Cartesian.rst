@@ -90,9 +90,6 @@
 
 
 
-
-
-
    .. rubric:: Attributes
 
    .. autosummary::
