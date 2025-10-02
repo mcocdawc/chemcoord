@@ -5,19 +5,34 @@
 
 .. autoclass:: Zmat
 
-   
-   .. automethod:: __init__
 
-   
+   .. rubric:: Constructors
+
+   .. autosummary::
+      :toctree: src_Zmat
+
+      ~Zmat.__init__
+      ~Zmat.read_zmat
+      ~Zmat.copy
+
+   .. rubric:: Export and IO
+
+   .. autosummary::
+      :toctree: src_Zmat
+
+      ~Zmat.to_latex
+      ~Zmat.to_string
+      ~Zmat.to_xyz
+      ~Zmat.to_zmat
+      ~Zmat.write
+
    .. rubric:: Methods
 
    .. autosummary::
-   
-      ~Zmat.__init__
+      :toctree: src_Zmat
+
       ~Zmat.add_data
       ~Zmat.assign
-      ~Zmat.change_numbering
-      ~Zmat.copy
       ~Zmat.get_cartesian
       ~Zmat.get_electron_number
       ~Zmat.get_grad_cartesian
@@ -26,46 +41,28 @@
       ~Zmat.insert
       ~Zmat.iupacify
       ~Zmat.minimize_dihedrals
-      ~Zmat.read_zmat
       ~Zmat.sort_index
       ~Zmat.sort_values
       ~Zmat.subs
-      ~Zmat.to_latex
-      ~Zmat.to_string
-      ~Zmat.to_xyz
-      ~Zmat.to_zmat
-      ~Zmat.write
-   
-   
+      ~Zmat.change_numbering
 
-   
-   
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
-      ~Zmat.a
-      ~Zmat.angle
-      ~Zmat.atom
-      ~Zmat.b
-      ~Zmat.bond
-      ~Zmat.clean_dihedral_orientation
+      :toctree: src_Zmat
+
       ~Zmat.columns
       ~Zmat.d
       ~Zmat.dihedral
       ~Zmat.dtypes
-      ~Zmat.dummy_manipulation_allowed
-      ~Zmat.empty
       ~Zmat.iloc
       ~Zmat.index
       ~Zmat.loc
-      ~Zmat.pure_internal_mov
       ~Zmat.safe_iloc
       ~Zmat.safe_loc
       ~Zmat.shape
-      ~Zmat.test_operators
       ~Zmat.unsafe_iloc
       ~Zmat.unsafe_loc
       ~Zmat.metadata
-   
-   

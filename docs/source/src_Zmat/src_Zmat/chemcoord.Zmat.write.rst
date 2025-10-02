@@ -1,5 +1,3 @@
-﻿:orphan:
-
 chemcoord.Zmat.write
 ====================
 

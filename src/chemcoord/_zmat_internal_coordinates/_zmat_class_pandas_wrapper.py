@@ -1,20 +1,14 @@
 class PandasWrapper:
-    """This class provides wrappers for :class:`pandas.DataFrame` methods.
+    """Wrappers for pandas.DataFrame methods with custom slicing and metadata.
 
-    It has the same behaviour as the :class:`~pandas.DataFrame`
-    with two exceptions:
+    Slicing:
+        Slicing operations try to call the method `_return_appropiate_type`.
+        This allows subclasses to control the type returned when slicing.
+        See `_common_class` for an example.
 
-    Slicing
-        The slicing operations try to call the method
-        :method:`_return_appropiate_type`.
-        This means that a class that inherited from :class:`_pandas_wrapper`
-        may control the type which is returned when a slicing is done.
-        Look into :class:`_common_class` for an example.
-
-    Metadata
-        There are two dictionaris as attributes
-        called `metadata` and `_metadata`
-        which are passed on when doing slices...
+    Metadata:
+        There are two dictionaries as attributes, `metadata` and `_metadata`,
+        which are passed on when doing slices.
     """
 
     def __len__(self):
@@ -26,43 +20,29 @@ class PandasWrapper:
 
     @property
     def index(self):
-        """Returns the index.
-
-        Wrapper around the :meth:`pandas.DataFrame.index` property.
-        """
+        """Return the index (wrapper for pandas.DataFrame.index)."""
         return self._frame.index
 
     @property
     def columns(self):
-        """Returns the columns.
-
-        Wrapper around the :meth:`pandas.DataFrame.columns` property.
-        """
+        """Return the columns (wrapper for pandas.DataFrame.columns)."""
         return self._frame.columns
 
     @property
     def shape(self):
-        """Returns the shape.
-
-        Wrapper around the :meth:`pandas.DataFrame.shape` property.
-        """
+        """Return the shape (wrapper for pandas.DataFrame.shape)."""
         return self._frame.shape
 
     @property
     def dtypes(self):
-        """Returns the dtypes.
-
-        Wrapper around the :meth:`pandas.DataFrame.dtypes` property.
-        """
+        """Return the dtypes (wrapper for pandas.DataFrame.dtypes)."""
         return self._frame.dtypes
 
     def sort_values(
         self, by, axis=0, ascending=True, kind="quicksort", na_position="last"
     ):
         """Sort by the values along either axis
-
-        Wrapper around the :meth:`pandas.DataFrame.sort_values` method.
-        """
+        (wrapper for :meth:`pandas.DataFrame.sort_values`)."""
         return self._frame.sort_values(
             by,
             axis=axis,
@@ -82,10 +62,7 @@ class PandasWrapper:
         na_position="last",
         sort_remaining=True,
     ):
-        """Sort object by labels (along an axis)
-
-        Wrapper around the :meth:`pandas.DataFrame.sort_index` method.
-        """
+        """Sort object by labels (wrapper for pandas.DataFrame.sort_index)."""
         return self._frame.sort_index(
             axis=axis,
             level=level,
@@ -100,6 +77,16 @@ class PandasWrapper:
         """Insert column into molecule at specified location.
 
         Wrapper around the :meth:`pandas.DataFrame.insert` method.
+
+        Args:
+            loc: Insertion index.
+            column: Column label.
+            value: Value to insert.
+            allow_duplicates: Whether to allow duplicate column labels.
+            inplace: If True, modify in place. If False, return a copy.
+
+        Returns:
+            If inplace is False, returns a new object with the column inserted.
         """
         out = self if inplace else self.copy()
         out._frame.insert(loc, column, value, allow_duplicates=allow_duplicates)

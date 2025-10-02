@@ -1,4 +1,4 @@
-﻿chemcoord.xyz\_functions.interpolate
+chemcoord.xyz\_functions.interpolate
 ====================================
 
 .. currentmodule:: chemcoord.xyz_functions

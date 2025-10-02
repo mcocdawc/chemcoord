@@ -1,7 +1,7 @@
 Welcome to ChemCoord's documentation!
 =====================================
 
-The code can be found `here <https://github.com/mcocdawc/chemcoord>`_.
+The code can be found `on GitHub <https://github.com/mcocdawc/chemcoord>`_.
 
 
 Features
@@ -47,7 +47,7 @@ Contents
 
 
 The changelog can be found
-`here <https://github.com/mcocdawc/chemcoord/blob/master/CHANGELOG.md>`_.
+`in the GitHub repo <https://github.com/mcocdawc/chemcoord/blob/master/CHANGELOG.md>`_.
 
 Citation and mathematical background
 ++++++++++++++++++++++++++++++++++++

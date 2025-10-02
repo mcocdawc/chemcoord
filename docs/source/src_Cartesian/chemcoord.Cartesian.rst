@@ -5,33 +5,50 @@
 
 .. autoclass:: Cartesian
 
-   
-   .. automethod:: __init__
 
-   
+   .. rubric:: Constructors
+
+   .. autosummary::
+      :toctree: src_Cartesian
+
+      ~Cartesian.__init__
+      ~Cartesian.from_ase_atoms
+      ~Cartesian.from_pymatgen_molecule
+      ~Cartesian.from_pyscf
+      ~Cartesian.read_cjson
+      ~Cartesian.read_xyz
+      ~Cartesian.copy
+
+   .. rubric:: Export and IO
+
+   .. autosummary::
+      :toctree: src_Cartesian
+
+      ~Cartesian.to_cjson
+      ~Cartesian.to_latex
+      ~Cartesian.to_pyscf
+      ~Cartesian.to_string
+      ~Cartesian.to_xyz
+      ~Cartesian.write_xyz
+      ~Cartesian.view
+
+
    .. rubric:: Methods
 
    .. autosummary::
-   
-      ~Cartesian.__init__
+      :toctree: src_Cartesian
+
       ~Cartesian.add_data
       ~Cartesian.align
-      ~Cartesian.apply
-      ~Cartesian.applymap
-      ~Cartesian.assign
       ~Cartesian.basistransform
       ~Cartesian.change_numbering
       ~Cartesian.check_absolute_refs
       ~Cartesian.check_dihedral
-      ~Cartesian.copy
       ~Cartesian.correct_absolute_refs
       ~Cartesian.correct_dihedral
       ~Cartesian.cut_cuboid
       ~Cartesian.cut_sphere
       ~Cartesian.fragmentate
-      ~Cartesian.from_ase_atoms
-      ~Cartesian.from_pymatgen_molecule
-      ~Cartesian.from_pyscf
       ~Cartesian.get_Wilson_B
       ~Cartesian.get_align_transf
       ~Cartesian.get_angle_degrees
@@ -61,8 +78,6 @@
       ~Cartesian.has_same_sumformula
       ~Cartesian.insert
       ~Cartesian.partition_chem_env
-      ~Cartesian.read_cjson
-      ~Cartesian.read_xyz
       ~Cartesian.reindex_similar
       ~Cartesian.replace
       ~Cartesian.reset_index
@@ -73,35 +88,21 @@
       ~Cartesian.sort_values
       ~Cartesian.subs
       ~Cartesian.symmetrize
-      ~Cartesian.to_cjson
-      ~Cartesian.to_latex
-      ~Cartesian.to_pyscf
-      ~Cartesian.to_string
-      ~Cartesian.to_xyz
       ~Cartesian.to_zmat
-      ~Cartesian.view
-      ~Cartesian.write_xyz
-   
-   
+      ~Cartesian.assign
 
-   
-   
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
-      ~Cartesian.atom
+      :toctree: src_Cartesian
+
       ~Cartesian.columns
       ~Cartesian.dtypes
-      ~Cartesian.empty
       ~Cartesian.iloc
       ~Cartesian.index
       ~Cartesian.loc
       ~Cartesian.shape
-      ~Cartesian.values
-      ~Cartesian.x
-      ~Cartesian.y
-      ~Cartesian.z
-      ~Cartesian.metadata
-   
-   
+
+

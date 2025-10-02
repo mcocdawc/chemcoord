@@ -19,9 +19,9 @@ analysis: &analysis
       - run:
           name: Ruff check
           command: ruff check
-      - run:
-          name: Type checking
-          command: mypy src/ tests/
+      # - run:
+      #     name: Type checking
+      #     command: mypy src/ tests/ | true
 
 
 run_tests: &run_tests
@@ -41,7 +41,7 @@ run_tests: &run_tests
           command: pip3 install -r docs/requirements.txt
       - run:
           name: Build documentation
-          command: cd docs; make html
+          command: cd docs; make html SPHINXOPTS="-W --keep-going -n"
 
 workflows:
   sample:

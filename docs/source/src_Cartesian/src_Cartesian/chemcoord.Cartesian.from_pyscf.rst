@@ -1,7 +1,5 @@
-﻿:orphan:
-
 chemcoord.Cartesian.from\_pyscf
-====================================
+===============================
 
 .. currentmodule:: chemcoord
 

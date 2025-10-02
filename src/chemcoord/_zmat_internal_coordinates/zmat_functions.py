@@ -86,8 +86,7 @@ class PureInternalMovement:
 
     For infinitesimal movements this would be done with the Eckhard conditions,
     but in this case we allow large non-infinitesimal movements.
-    For the details read [6]_.
-
+    For the details see reference :cite:`kneller_eckart_2008`.
     """
 
     def __init__(self, pure_internal_mov, cls=None):

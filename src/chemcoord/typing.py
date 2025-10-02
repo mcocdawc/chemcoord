@@ -1,4 +1,5 @@
-"""Define some types that do not fit into one particular module
+"""
+Define some types that do not fit into one particular module
 
 In particular it enables barebone typechecking for the shape of numpy arrays
 
