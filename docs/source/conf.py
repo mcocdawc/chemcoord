@@ -62,11 +62,11 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    "numpy": ("https://docs.scipy.org/doc/numpy/", None),
-    "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "ase": ("https://ase-lib.org/", None),
     "pandas": ("http://pandas.pydata.org/pandas-docs/stable/", None),
-    "sympy": ("http://docs.sympy.org/latest/", None),
-    "pymatgen": ("http://pymatgen.org/", None),
+    "sympy": ("https://docs.sympy.org/latest/", None),
+    "pymatgen": ("https://pymatgen.org/", None),
     "python": ("https://docs.python.org/3", None),
     "pyscf": ("https://pyscf.org/", None),
 }
