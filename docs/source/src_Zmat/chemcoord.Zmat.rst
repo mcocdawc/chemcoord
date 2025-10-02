@@ -6,16 +6,18 @@
 .. autoclass:: Zmat
 
 
-   .. automethod:: __init__
+   .. rubric:: Constructors
 
+   .. autosummary::
+
+      ~Zmat.__init__
+      ~Zmat.read_zmat
 
    .. rubric:: Methods
 
    .. autosummary::
 
-      ~Zmat.__init__
       ~Zmat.add_data
-      ~Zmat.change_numbering
       ~Zmat.assign
       ~Zmat.copy
       ~Zmat.get_cartesian
@@ -26,7 +28,6 @@
       ~Zmat.insert
       ~Zmat.iupacify
       ~Zmat.minimize_dihedrals
-      ~Zmat.read_zmat
       ~Zmat.sort_index
       ~Zmat.sort_values
       ~Zmat.subs
@@ -46,16 +47,12 @@
 
       ~Zmat.columns
       ~Zmat.dtypes
-      ~Zmat.dummy_manipulation_allowed
-      ~Zmat.empty
       ~Zmat.iloc
       ~Zmat.index
       ~Zmat.loc
-      ~Zmat.pure_internal_mov
       ~Zmat.safe_iloc
       ~Zmat.safe_loc
       ~Zmat.shape
-      ~Zmat.test_operators
       ~Zmat.unsafe_iloc
       ~Zmat.unsafe_loc
 
