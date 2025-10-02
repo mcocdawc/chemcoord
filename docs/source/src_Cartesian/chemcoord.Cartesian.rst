@@ -9,6 +9,7 @@
    .. rubric:: Constructors
 
    .. autosummary::
+      :toctree: src_Cartesian
 
       ~Cartesian.__init__
       ~Cartesian.from_ase_atoms
@@ -21,6 +22,8 @@
    .. rubric:: Export and IO
 
    .. autosummary::
+      :toctree: src_Cartesian
+
       ~Cartesian.to_cjson
       ~Cartesian.to_latex
       ~Cartesian.to_pyscf
@@ -33,11 +36,10 @@
    .. rubric:: Methods
 
    .. autosummary::
+      :toctree: src_Cartesian
 
       ~Cartesian.add_data
       ~Cartesian.align
-      ~Cartesian.apply
-      ~Cartesian.applymap
       ~Cartesian.basistransform
       ~Cartesian.change_numbering
       ~Cartesian.check_absolute_refs
@@ -84,18 +86,17 @@
       ~Cartesian.subs
       ~Cartesian.symmetrize
       ~Cartesian.to_zmat
-
-
+      ~Cartesian.assign
 
 
 
    .. rubric:: Attributes
 
    .. autosummary::
+      :toctree: src_Cartesian
 
       ~Cartesian.columns
       ~Cartesian.dtypes
-      ~Cartesian.empty
       ~Cartesian.iloc
       ~Cartesian.index
       ~Cartesian.loc

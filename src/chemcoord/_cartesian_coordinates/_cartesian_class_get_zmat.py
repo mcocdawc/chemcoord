@@ -36,6 +36,7 @@ class CartesianGetZmat(CartesianCore):
     @staticmethod
     def _check_construction_table(construction_table: DataFrame) -> None:
         """Checks if a construction table uses valid references.
+
         Raises an exception (UndefinedCoordinateSystem) otherwise.
         """
         c_table = construction_table
@@ -67,24 +68,23 @@ class CartesianGetZmat(CartesianCore):
     ) -> DataFrame:
         """Create a construction table for a Zmatrix.
 
-        A construction table is basically a Zmatrix without the values
-        for the bond lenghts, angles and dihedrals.
-        It contains the whole information about which reference atoms
-        are used by each atom in the Zmatrix.
+        A construction table is basically a Zmatrix without the values for the
+        bond lengths, angles, and dihedrals. It contains the information about
+        which reference atoms are used by each atom in the Zmatrix.
 
-        This method creates a so called "chemical" construction table,
-        which makes use of the connectivity table in this molecule.
+        This method creates a so-called "chemical" construction table, which
+        makes use of the connectivity table in this molecule.
 
-        By default the first atom is the one nearest to the centroid.
+        By default, the first atom is the one nearest to the centroid.
         (Compare with :meth:`~Cartesian.get_centroid()`)
 
         Args:
-            start_atom: An index for the first atom may be provided.
-            predefined_table (pd.DataFrame): An uncomplete construction table
-                may be provided. The rest is created automatically.
+            start_atom: Index for the first atom (optional).
+            predefined_table: An incomplete construction table may be provided.
+                The rest is created automatically.
 
         Returns:
-            pd.DataFrame: Construction table
+            Construction table.
         """
         if start_atom is not None and predefined_table is not None:
             raise IllegalArgumentCombination(
@@ -175,57 +175,56 @@ class CartesianGetZmat(CartesianCore):
     ) -> DataFrame:
         """Create a construction table for a Zmatrix.
 
-        A construction table is basically a Zmatrix without the values
-        for the bond lengths, angles and dihedrals.
-        It contains the whole information about which reference atoms
-        are used by each atom in the Zmatrix.
+        A construction table is basically a Zmatrix without the values for the
+        bond lengths, angles, and dihedrals. It contains the information about
+        which reference atoms are used by each atom in the Zmatrix.
 
         The absolute references in cartesian space are one of the following
         magic strings::
 
             ['origin', 'e_x', 'e_y', 'e_z']
 
-        This method creates a so called "chemical" construction table,
-        which makes use of the connectivity table in this molecule.
+        This method creates a so-called "chemical" construction table, which
+        makes use of the connectivity table in this molecule.
 
         Args:
-            fragment_list (sequence): There are four possibilities to specify
-                the sequence of fragments:
+            fragment_list: There are four possibilities to specify the sequence
+                of fragments:
 
                 1. A list of tuples is given. Each tuple contains the fragment
-                with its corresponding construction table in the form of::
+                   with its corresponding construction table in the form of::
 
-                    [(frag1, c_table1), (frag2, c_table2)...]
+                       [(frag1, c_table1), (frag2, c_table2)...]
 
-                If the construction table of a fragment is not complete,
-                the rest of each fragment's
-                construction table is calculated automatically.
+                   If the construction table of a fragment is not complete,
+                   the rest of each fragment's construction table is calculated
+                   automatically.
 
-                2. It is possible to omit the construction tables for some
-                or all fragments as in the following example::
+                2. It is possible to omit the construction tables for some or
+                   all fragments as in the following example::
 
-                    [(frag1, c_table1), frag2, (frag3, c_table3)...]
+                       [(frag1, c_table1), frag2, (frag3, c_table3)...]
 
                 3. If ``self`` contains more atoms than the union over all
-                fragments, the rest of the molecule without the fragments
-                is automatically prepended using
-                :meth:`~Cartesian.get_without`::
+                   fragments, the rest of the molecule without the fragments is
+                   automatically prepended using
+                   :meth:`~Cartesian.get_without`::
 
-                    self.get_without(fragments) + fragment_list
+                       self.get_without(fragments) + fragment_list
 
-                4. If fragment_list is ``None`` then fragmentation, etc.
-                is done automatically. The fragments are then sorted by
-                their number of atoms, in order to use the largest fragment
-                as reference for the other ones.
+                4. If fragment_list is ``None`` then fragmentation, etc. is
+                   done automatically. The fragments are then sorted by their
+                   number of atoms, in order to use the largest fragment as
+                   reference for the other ones.
 
-            bond_dict : A bond dictionary computed via
+            bond_dict: A bond dictionary computed via
                 :meth:`~chemcoord.Cartesian.get_bonds`.
-            perform_checks (bool): The checks for invalid references are
-                performed using :meth:`~chemcoord.Cartesian.correct_dihedral`
-                and :meth:`~chemcoord.Cartesian.correct_absolute_refs`.
+            perform_checks: The checks for invalid references are performed
+                using :meth:`~chemcoord.Cartesian.correct_dihedral` and
+                :meth:`~chemcoord.Cartesian.correct_absolute_refs`.
 
         Returns:
-            :class:`pandas.DataFrame`: Construction table
+            Construction table.
         """
         if bond_dict is None:
             bond_dict = self.get_bonds()
@@ -325,16 +324,16 @@ class CartesianGetZmat(CartesianCore):
         return c_table
 
     def check_dihedral(self, construction_table: DataFrame) -> list[AtomIdx]:
-        """Checks, if the dihedral defining atom is colinear.
+        """Checks if the dihedral defining atom is colinear.
 
         Checks for each index starting from the third row of the
         ``construction_table``, if the reference atoms are colinear.
 
         Args:
-            construction_table (pd.DataFrame):
+            construction_table: Construction table to check.
 
         Returns:
-            list: A list of problematic indices.
+            A list of problematic indices.
         """
         c_table = construction_table
         angles = self.get_angle_degrees(c_table.iloc[3:, :].values)
@@ -347,18 +346,18 @@ class CartesianGetZmat(CartesianCore):
         construction_table: DataFrame,
         bond_dict: BondDict | None = None,
     ) -> DataFrame:
-        """Reindexe the dihedral defining atom if linear reference is used.
+        """Reindex the dihedral defining atom if a linear reference is used.
 
         Uses :meth:`~Cartesian.check_dihedral` to obtain the problematic
         indices.
 
         Args:
-            construction_table (pd.DataFrame):
-            bond_dict : A bond dictionary computed via
+            construction_table: Construction table to check and correct.
+            bond_dict: A bond dictionary computed via
                 :meth:`~chemcoord.Cartesian.get_bonds`.
 
         Returns:
-            pd.DataFrame: Appropiately renamed construction table.
+            Appropriately renamed construction table.
         """
         if bond_dict is None:
             bond_dict = self.get_bonds()
@@ -419,21 +418,21 @@ class CartesianGetZmat(CartesianCore):
         return c_table
 
     def _has_valid_abs_ref(self, i: AtomIdx, construction_table: DataFrame) -> bool:
-        """Checks, if ``i`` uses valid absolute references.
+        """Checks if ``i`` uses valid absolute references.
 
         Checks for each index from first to third row of the
-        ``construction_table``, if the references are colinear.
-        This case has to be specially treated, because the references
-        are not only atoms (to fix internal degrees of freedom) but also points
-        in cartesian space called absolute references.
-        (to fix translational and rotational degrees of freedom)
+        ``construction_table``, if the references are colinear. This case has to
+        be specially treated, because the references are not only atoms (to fix
+        internal degrees of freedom) but also points in cartesian space called
+        absolute references (to fix translational and rotational degrees of
+        freedom).
 
         Args:
-            i (label): The label has to be in the first three rows.
-            construction_table (pd.DataFrame):
+            i: The label, must be in the first three rows.
+            construction_table: Construction table to check.
 
         Returns:
-            bool:
+            True if valid, False otherwise.
         """
         c_table = construction_table
         abs_refs = constants.absolute_refs
@@ -456,36 +455,36 @@ class CartesianGetZmat(CartesianCore):
         )
 
     def check_absolute_refs(self, construction_table: DataFrame) -> list[AtomIdx]:
-        """Checks first three rows of ``construction_table`` for linear references
+        """Checks first three rows of ``construction_table`` for linear references.
 
         Checks for each index from first to third row of the
-        ``construction_table``, if the references are colinear.
-        This case has to be specially treated, because the references
-        are not only atoms (to fix internal degrees of freedom) but also points
-        in cartesian space called absolute references.
-        (to fix translational and rotational degrees of freedom)
+        ``construction_table``, if the references are colinear. This case has to
+        be specially treated, because the references are not only atoms (to fix
+        internal degrees of freedom) but also points in cartesian space called
+        absolute references (to fix translational and rotational degrees of
+        freedom).
 
         Args:
-            construction_table (pd.DataFrame):
+            construction_table: Construction table to check.
 
         Returns:
-            list: A list of problematic indices.
+            A list of problematic indices.
         """
         c_table = construction_table
         return [i for i in c_table.index[:3] if not self._has_valid_abs_ref(i, c_table)]
 
     def correct_absolute_refs(self, construction_table: DataFrame) -> DataFrame:
-        """Reindexe construction_table if linear reference in first three rows
+        """Reindex construction_table if linear reference in first three rows is
         present.
 
         Uses :meth:`~Cartesian.check_absolute_refs` to obtain the problematic
         indices.
 
         Args:
-            construction_table (pd.DataFrame):
+            construction_table: Construction table to check and correct.
 
         Returns:
-            pd.DataFrame: Appropiately renamed construction table.
+            Appropriately renamed construction table.
         """
         c_table = construction_table.copy()
         abs_refs = constants.absolute_refs
@@ -534,10 +533,10 @@ class CartesianGetZmat(CartesianCore):
         """Create the Zmatrix from a construction table.
 
         Args:
-            Construction table (pd.DataFrame):
+            construction_table: Construction table to use.
 
         Returns:
-            Zmat: A new instance of :class:`Zmat`.
+            A new instance of :class:`Zmat`.
         """
         c_table = construction_table
         dtypes = [
@@ -727,13 +726,13 @@ class CartesianGetZmat(CartesianCore):
             \frac{\partial \mathbf{C}_{i, j}}{\partial \mathbf{X}_{l, k}}
 
         Args:
-            construction_table (pandas.DataFrame):
-            as_function (bool): Return a tensor or
+            construction_table :
+            as_function : Return a tensor or
                 :func:`xyz_functions.apply_grad_zmat_tensor`
                 with partially replaced arguments.
 
         Returns:
-            (func, np.array): Depending on ``as_function`` return a tensor or
+            Depending on ``as_function`` return a tensor or
             :func:`~chemcoord.xyz_functions.apply_grad_zmat_tensor`
             with partially replaced arguments.
         """
@@ -772,7 +771,7 @@ class CartesianGetZmat(CartesianCore):
             return grad_C
 
     def to_zmat(self, *args, **kwargs) -> Zmat:  # type: ignore[no-untyped-def]
-        """Deprecated, use :meth:`~Cartesian.get_zmat`"""
+        """Deprecated, use :meth:`~Cartesian.get_zmat`."""
         message = "Will be removed in the future. Please use give_zmat."
         with warnings.catch_warnings():
             warnings.simplefilter("always")

@@ -43,7 +43,7 @@ class InvalidReference(UndefinedCoordinateSystem):
     * ``already_built_cartesian``: The cartesian of all atoms up to (i-1)
     * ``zmat_after_assignment``: Attached information if
       it was raised from the safe assignment methods
-      (:meth:`Zmat.safe_loc` and :meth:`Zmat.unsafe_loc`).
+      (:attr:`~chemcoord.Zmat.safe_loc` and :attr:`~chemcoord.Zmat.unsafe_loc`).
     """
 
     def __init__(

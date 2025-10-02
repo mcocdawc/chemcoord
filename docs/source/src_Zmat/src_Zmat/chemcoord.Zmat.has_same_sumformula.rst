@@ -1,6 +1,3 @@
-﻿:orphan:
-
-
 chemcoord.Zmat.has\_same\_sumformula
 ====================================
 

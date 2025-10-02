@@ -36,3 +36,7 @@
 - Enforce `ruff` and `mypy` checks as part of test suite
 
 - sphinx picks up type hints for the docstring
+
+- Fixed several broken links in the documentation and enforce that links work
+
+- enable bibtex in the documentation

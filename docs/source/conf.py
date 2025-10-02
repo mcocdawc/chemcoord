@@ -21,9 +21,12 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+import os
 from pathlib import Path
 
 import chemcoord as cc
+
+ON_RTD = os.environ.get("READTHEDOCS") == "True"
 
 # Get the directory where conf.py is located
 CONF_DIR = Path(__file__).parent
@@ -59,11 +62,11 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    "numpy": ("https://docs.scipy.org/doc/numpy/", None),
-    "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "ase": ("https://ase-lib.org/", None),
     "pandas": ("http://pandas.pydata.org/pandas-docs/stable/", None),
-    "sympy": ("http://docs.sympy.org/latest/", None),
-    "pymatgen": ("http://pymatgen.org/", None),
+    "sympy": ("https://docs.sympy.org/latest/", None),
+    "pymatgen": ("https://pymatgen.org/", None),
     "python": ("https://docs.python.org/3", None),
     "pyscf": ("https://pyscf.org/", None),
 }
@@ -160,10 +163,15 @@ html_theme = "sphinx_rtd_theme"
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "logo_only": True,
-    # "display_version": False,
-}
+if ON_RTD:
+    html_theme_options = {
+        "logo_only": True,
+        "display_version": False,
+    }
+else:
+    html_theme_options = {
+        "logo_only": True,
+    }
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -334,3 +342,15 @@ texinfo_documents = [
 
 
 bibtex_bibfiles = [str(CONF_DIR / "literature.bib")]
+
+
+nitpicky = True
+nitpick_ignore = []
+
+# taken from https://stackoverflow.com/questions/11417221/sphinx-autodoc-gives-warning-pyclass-reference-target-not-found-type-warning
+for line in open("nitpick-exceptions"):
+    if not line.strip() or line.startswith("#"):
+        continue
+    dtype, target = line.split(None, 1)
+    target = target.strip()
+    nitpick_ignore.append((dtype, target))

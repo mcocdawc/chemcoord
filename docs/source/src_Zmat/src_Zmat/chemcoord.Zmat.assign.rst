@@ -1,7 +1,5 @@
-﻿:orphan:
-
 chemcoord.Zmat.assign
-========================
+=====================
 
 .. currentmodule:: chemcoord
 

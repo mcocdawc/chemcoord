@@ -287,20 +287,17 @@ class CartesianIO(CartesianCore, GenericIO):
         """Write xyz-file
 
         Args:
-            buf (str, path object or file-like object):
-                File path or object, if None is provided the result is returned as
-                a string.
-            sort_index (bool): If sort_index is true, the
-                :class:`~chemcoord.Cartesian`
-                is sorted by the index before writing.
-            index (bool): Whether to print index (row) labels.
-            float_format (one-parameter function): Formatter function
-                to apply to column’s elements if they are floats.
-                The result of this function must be a unicode string.
-            overwrite (bool): May overwrite existing files.
+            buf: File path or object. If None, the result is returned as a
+                string.
+            sort_index: If True, the :class:`~chemcoord.Cartesian` is sorted
+                by the index before writing.
+            index: Whether to print index (row) labels.
+            float_format: Formatter function to apply to columns if they are
+                floats. The result must be a unicode string.
+            overwrite: May overwrite existing files.
 
         Returns:
-            formatted : string (or unicode, depending on data and options)
+            The formatted string (or unicode, depending on data and options).
         """
         if sort_index:
             molecule_string = (
@@ -355,7 +352,7 @@ class CartesianIO(CartesianCore, GenericIO):
         Reads xyz-files.
 
         Args:
-            buf (str, path object or file-like object):
+            buf :
                 This is passed on to :func:`pandas.read_table` and has the same
                 constraints.
                 Any valid string path is acceptable. The string could be a URL.
@@ -364,10 +361,10 @@ class CartesianIO(CartesianCore, GenericIO):
                 If you want to pass in a path object, pandas accepts any os.PathLike.
                 By file-like object, we refer to objects with a read() method,
                 such as a file handler (e.g. via builtin open function) or StringIO.
-            start_index (int):
-            nrows (int): Number of rows of file to read.
+            start_index :
+            nrows : Number of rows of file to read.
                 Note that the first two rows are implicitly excluded.
-            engine (str): Wrapper for the same argument of :func:`pandas.read_csv`.
+            engine : Wrapper for the same argument of :func:`pandas.read_csv`.
 
         Returns:
             Cartesian:

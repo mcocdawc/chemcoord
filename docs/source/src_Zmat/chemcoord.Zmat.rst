@@ -9,17 +9,30 @@
    .. rubric:: Constructors
 
    .. autosummary::
+      :toctree: src_Zmat
 
       ~Zmat.__init__
       ~Zmat.read_zmat
+      ~Zmat.copy
+
+   .. rubric:: Export and IO
+
+   .. autosummary::
+      :toctree: src_Zmat
+
+      ~Zmat.to_latex
+      ~Zmat.to_string
+      ~Zmat.to_xyz
+      ~Zmat.to_zmat
+      ~Zmat.write
 
    .. rubric:: Methods
 
    .. autosummary::
+      :toctree: src_Zmat
 
       ~Zmat.add_data
       ~Zmat.assign
-      ~Zmat.copy
       ~Zmat.get_cartesian
       ~Zmat.get_electron_number
       ~Zmat.get_grad_cartesian
@@ -31,19 +44,14 @@
       ~Zmat.sort_index
       ~Zmat.sort_values
       ~Zmat.subs
-      ~Zmat.to_latex
-      ~Zmat.to_string
-      ~Zmat.to_xyz
-      ~Zmat.to_zmat
-      ~Zmat.write
-
-
+      ~Zmat.change_numbering
 
 
 
    .. rubric:: Attributes
 
    .. autosummary::
+      :toctree: src_Zmat
 
       ~Zmat.columns
       ~Zmat.dtypes
