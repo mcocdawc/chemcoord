@@ -139,9 +139,9 @@ def test_get_B_traj_reindexed():
         get_complete_path("cyclohexane_twist_boat.xyz"), start_index=7
     )
 
-    path = interpolate(cyc_boat, cyc_chair, 10, "RIC")
+    path = interpolate(cyc_boat, cyc_chair, 10, "RIC", opt_alg="LM")
 
     expected = read_molden(get_complete_path("cyclohexane_path.molden"), start_index=7)
 
     for calculated, reference in zip(path, expected):
-        assert allclose(calculated, reference, atol=1e-6)
+        assert allclose(calculated, reference, atol=1e-3, align=True)

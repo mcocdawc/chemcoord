@@ -41,3 +41,38 @@ A collection of functions operating on instances of :class:`~chemcoord.Zmat`.
     ~TestOperators
     ~PureInternalMovement
     ~CleanDihedralOrientation
+
+
+Redundant Internal Coordinates (RICs)
+-------------------------------------
+
+The :class:`~chemcoord.RedundantInternalCoordinates` class which is used to represent
+a molecule in redundant internal coordinates, along with the related methods.
+And the :class:`~chemcoord.DeltaRedundantInternalCoordinates` class which is used
+to represent differences of RICs.
+
+.. currentmodule:: chemcoord
+
+.. autosummary::
+    :toctree: src_RIC
+
+    ~RedundantInternalCoordinates
+    ~DeltaRedundantInternalCoordinates
+
+
+RIC functions
+---------------
+
+A collection of functions operating on instances of
+:class:`~chemcoord.RedundantInternalCoordinates`
+or :class:`~chemcoord.DeltaRedundantInternalCoordinates`.
+
+
+.. currentmodule:: chemcoord.ric_functions
+
+.. autosummary::
+    :toctree: src_RIC_functions
+
+    ~RIC_interpolate
+    ~get_primitives_idx
+    ~DefaultWeights

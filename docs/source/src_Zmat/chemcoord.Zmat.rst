@@ -54,8 +54,6 @@
       :toctree: src_Zmat
 
       ~Zmat.columns
-      ~Zmat.d
-      ~Zmat.dihedral
       ~Zmat.dtypes
       ~Zmat.iloc
       ~Zmat.index
@@ -65,4 +63,3 @@
       ~Zmat.shape
       ~Zmat.unsafe_iloc
       ~Zmat.unsafe_loc
-      ~Zmat.metadata

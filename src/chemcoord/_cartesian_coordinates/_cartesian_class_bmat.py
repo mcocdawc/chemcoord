@@ -1,29 +1,65 @@
 from __future__ import annotations
 
+from enum import IntEnum
+from functools import partial
 from itertools import combinations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 import numpy as np
 from numba import njit, prange
 from numpy import cross, float64, int64
 from numpy.linalg import norm
 
+# had to put these here to avoid circular import
+from sortedcontainers import SortedSet
+
 from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
 )
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import COORDS
-from chemcoord._redundant_internal_coordinates.main import (
-    Primitives,
-    SetOfPrimitives,
-)
-from chemcoord.typing import BondDict, Matrix, Vector
+from chemcoord.exceptions import SingleUndefinedDihedral
+from chemcoord.typing import AtomIdx, BondDict, Matrix, Vector
 
 if TYPE_CHECKING:
     from chemcoord import Cartesian
     from chemcoord._redundant_internal_coordinates.main import (
         RedundantInternalCoordinates,
     )
+
+
+#: Unfortunately SortedSet is not a generic type, if it was, the primitives
+#: would be declared as
+#: ``SortedSet[tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]``
+Primitives: TypeAlias = SortedSet
+
+
+# the key prioritizes length, then sorts lexicographically
+SetOfPrimitives = partial(SortedSet, key=lambda x: (len(x), x))
+
+
+class BendType(IntEnum):
+    """enum to differentiate the in and out-of-plane bending coordinates
+
+    uw and vw planes are defined as in :cite:`in-out-of-plane-paper`"""
+
+    UW = 0
+    VW = 1
+
+
+class WhichHalf(IntEnum):
+    """enum to differentiate linearities happening in either half of a dihedral"""
+
+    first = 1
+    second = 2
+
+
+Coordinate: TypeAlias = (
+    tuple[AtomIdx, AtomIdx]
+    | tuple[AtomIdx, AtomIdx, AtomIdx]
+    | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]
+    | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx, BendType]
+)
 
 
 class CartesianBmat(CartesianCore):
@@ -36,13 +72,13 @@ class CartesianBmat(CartesianCore):
         coordinate, then by standard order based on the atoms' indices.
 
         Args:
-            coordinates (SortedSet[tuple]): default None, SortedSet of primitive
+            coordinates: default None, SortedSet of primitive
                 coordinates to use in the calculation. If None, calculates using the
                 get_primitive_coords method
-            use_lookup (bool): default False, if True, uses a lookup table for bond
+            use_lookup: default False, if True, uses a lookup table for bond
                 determination when generating primitive internal coordinates
         Returns:
-            SortedSet[tuple]: SortedSet of redundant internal coordinates
+            SortedSet of redundant internal coordinates
         """
         if bonds is None:
             bond_dict = self.get_bonds()
@@ -99,20 +135,21 @@ class CartesianBmat(CartesianCore):
         """Generate Wilson's B matrix for the current structure.
 
         Args:
-            internal_coordinates (SortedSet[tuple]): default None, SortedSet of
+            internal_coordinates: default None, SortedSet of
                 primitive internal coordinates to use in the calculation. If None,
                 calculates using the get_primitive_coords method
-            use_lookup (bool): default False, if True, uses a lookup table for bond
+            use_lookup: default False, if True, uses a lookup table for bond
                 determination when generating primitive internal coordinates
 
         Returns:
-            NDArray[float64]: Wilson's B matrix
+            Wilson's B matrix
         """
         if idx_internal_coords is None:
             idx_internal_coords = self.get_primitives_idx(bonds)
 
         return _jit_get_Wilson_B(
-            self.loc[:, COORDS].values, self._to_array(idx_internal_coords)
+            self.loc[:, COORDS].values,
+            self._to_array_nobending(idx_internal_coords),
         )
 
     def get_ric(
@@ -123,11 +160,14 @@ class CartesianBmat(CartesianCore):
         """Conversion to redundant internal coordinates
 
         Args:
-            internal_coordinates (SortedSet[tuple]): default None, SortedSet of
+            internal_coordinates: default None, SortedSet of
                 primitive coordinates to convert to. If None, calculates them using the
                 get_primitive_coords method
-            use_lookup (bool): default False, if True, uses a lookup table for bond
+            use_lookup: default False, if True, uses a lookup table for bond
                 determination when generating primitive internal coordinates
+
+        Returns:
+            Redundant internal coordinate representation of self
 
         """
         from chemcoord._redundant_internal_coordinates.main import (  # noqa: PLC0415
@@ -140,7 +180,8 @@ class CartesianBmat(CartesianCore):
 
         return RedundantInternalCoordinates(
             _jit_x_to_ric(
-                self.loc[:, COORDS].values, self._to_array(internal_coords_idx)
+                self.loc[:, COORDS].values,
+                self._to_array_full(internal_coords_idx),
             ),
             internal_coords_idx,
             self.copy(),  # type: ignore[arg-type]
@@ -158,9 +199,37 @@ class CartesianBmat(CartesianCore):
             }
         )
 
-    def _to_array(self, internal_coords_idx: Primitives) -> Matrix[int64]:
-        """Converts the index of the primitive internal coordinates to an array
+    def _to_array_bending(
+        self,
+        bending_coords: Primitives,
+    ) -> Matrix[int64]:
+        """Converts the index of the bending primitive internal coordinates to an array
         and changes to 0-based indexing.
+
+        The array is a rectangualar (n, 4) array, where n is the number of
+        bending coordinates. The last column denotes the number of defined columns and
+        the type of coordinate, i.e. (n=2) bond, (n=3) angle, (n=4) dihedral.
+
+        The bending coordinates are handeled differently from the others. If it is a
+        y-bending coordinate, then it will be in the first bending coordinate set and
+        the last column in the array will be 5, otherwise the last column becomes 6.
+
+        In addition, this function switches from the arbitrary flexible index of a
+        molecule to 0-based indexing.
+        """
+        bending_idx_data = np.empty((len(bending_coords), 4), dtype=int64)
+
+        for i, coordinate in enumerate(self._reindex_to_0(bending_coords)):
+            bending_idx_data[i, :] = coordinate
+
+        return bending_idx_data
+
+    def _to_array_nobending(
+        self,
+        internal_coords_idx: Primitives,
+    ) -> Matrix[int64]:
+        """Converts the index of the primitive internal coordinates aside from the
+        bending coordinates to an array and changes to 0-based indexing.
 
         The array is a rectangualar (n, 5) array, where n is the number of
         internal coordinates. The last column denotes the number of defined columns and
@@ -173,14 +242,114 @@ class CartesianBmat(CartesianCore):
         for i, coordinate in enumerate(self._reindex_to_0(internal_coords_idx)):
             internal_coord_idx_arr[i, : len(coordinate)] = coordinate
             internal_coord_idx_arr[i, 4] = len(coordinate)
+
+        return internal_coord_idx_arr
+
+    def _to_array_full(
+        self,
+        internal_coords_idx: Primitives,
+    ) -> Matrix[int64]:
+        """Converts the index of the primitive internal coordinates to an array
+        and changes to 0-based indexing.
+
+        The array is a rectangualar (n, 5) array, where n is the number of
+        internal coordinates. The last column denotes the number of defined columns and
+        the type of coordinate, i.e. (n=2) bond, (n=3) angle, (n=4) dihedral.
+
+        The bending coordinates are handeled differently. If it is a y-bending
+        coordinate, then it will be in the first bending coordinate set and the last
+        column in the array will be 5, otherwise the last column becomes 6.
+
+        In addition, this function switches from the arbitrary flexible index of a
+        molecule to 0-based indexing.
+        """
+
+        internal_coord_idx_arr = np.empty(
+            (
+                len(internal_coords_idx),
+                5,
+            ),
+            dtype=int64,
+        )
+
+        for i, coordinate in enumerate(self._reindex_to_0(internal_coords_idx)):
+            if _is_uw_bending_nonnumba(coordinate):
+                internal_coord_idx_arr[i, :4] = coordinate[:4]
+                internal_coord_idx_arr[i, 4] = 5
+            elif _is_vw_bending_nonnumba(coordinate):
+                internal_coord_idx_arr[i, :4] = coordinate[:4]
+                internal_coord_idx_arr[i, 4] = 6
+            else:
+                internal_coord_idx_arr[i, : len(coordinate)] = coordinate
+                internal_coord_idx_arr[i, 4] = len(coordinate)
+
         return internal_coord_idx_arr
 
     def _fix_undef_dihedrals(
-        self, coord_idx: Primitives
+        self,
+        coord_idx: Primitives,
+        tol: float = 5,
     ) -> tuple[Primitives, Primitives]:
+        """Finds linear dihedral coordinates (which are thus close to undefined-ness)
+        and replaces them with dihedrals constructed from the first non-collinear atom
+        replacing the bad end.
+
+        Args:
+            coord_idx: SortedSet of primitive coordinates to clean
+            tol: default 5, tolerance for collinear atom detection, in degrees.
+        Returns:
+            Tuple of SortedSet of cleaned redundant
+                internal coordinates and SortedSet of removed indices
+        """
         # getting rid of poorly-defined dihedrals because of linearity at the start
         new_coord_idx = coord_idx.copy()
         bad_indices = SetOfPrimitives()
+        for i, index in enumerate(coord_idx.copy()):
+            if _is_dihedral_nonnumba(index):
+                first_three = self.loc[index[:-1], COORDS].values
+                last_three = self.loc[index[1:], COORDS].values
+
+                # vectors making up the angle
+                normedu1 = _jit_normalize(first_three[0] - first_three[1])
+                normedv1 = _jit_normalize(first_three[2] - first_three[1])
+
+                normedu2 = _jit_normalize(last_three[0] - last_three[1])
+                normedv2 = _jit_normalize(last_three[2] - last_three[1])
+
+                angle1 = np.arccos(normedu1 @ normedv1)
+                angle2 = np.arccos(normedu2 @ normedv2)
+
+                if not (tol < angle1 * 180 / np.pi < (180 - tol)):
+                    bad_idx = index
+                    bad_indices.add(index)
+                    new_coord_idx.add(
+                        _correct_dihedral_idx(self, bad_idx, coord_idx, WhichHalf.first)  # type: ignore[arg-type]
+                    )
+                if not (tol < angle2 * 180 / np.pi < (180 - tol)):
+                    bad_idx = index
+                    bad_indices.add(index)
+                    new_coord_idx.add(
+                        _correct_dihedral_idx(
+                            self,  # type: ignore[arg-type]
+                            bad_idx,
+                            coord_idx,
+                            WhichHalf.second,
+                        )
+                    )
+
+        return (new_coord_idx, bad_indices)
+
+    def linearities(self, coord_idx: Primitives, tol: float = 5) -> list[tuple]:
+        """Finds linear dihedral coordinates (which are thus close to undefined-ness).
+
+        Args:
+            coord_idx: SortedSet of primitive coordinates to search
+            tol: default 5, tolerance for collinear atom detection, in degrees.
+        Returns:
+            List of tuples of linear dihedrals and 1 if the
+                linearity is in the first 3 atoms and 2 otherwise
+        """
+        linear_idx = []
         for i, index in enumerate(coord_idx.copy()):
             if len(index) == 4:
                 first_three = self.loc[index[:-1], COORDS].values
@@ -196,24 +365,17 @@ class CartesianBmat(CartesianCore):
                 angle1 = np.arccos(normedu1 @ normedv1)
                 angle2 = np.arccos(normedu2 @ normedv2)
 
-                if not (5 < angle1 * 180 / np.pi < 175):
-                    bad_idx = index
-                    bad_indices.add(index)
-                    new_coord_idx.add(
-                        _correct_dihedral_idx(self, bad_idx, coord_idx, 1)  # type: ignore[arg-type]
-                    )
-                if not (5 < angle2 * 180 / np.pi < 175):
-                    bad_idx = index
-                    bad_indices.add(index)
-                    new_coord_idx.add(
-                        _correct_dihedral_idx(self, bad_idx, coord_idx, 2)  # type: ignore[arg-type]
-                    )
-
-        return (new_coord_idx, bad_indices)
+                if not (tol < angle1 * 180 / np.pi < (180 - tol)):
+                    linear_idx.append((index, 1))
+                if not (tol < angle2 * 180 / np.pi < (180 - tol)):
+                    linear_idx.append((index, 2))
+        return linear_idx
 
 
 @njit(cache=True, nogil=True)
 def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
+    """Calculates Cartesian derivatives of a dihedral angle given 4 atom positions"""
+
     # vectors making up dihedral
     u = positions[0] - positions[1]
     w = positions[2] - positions[1]
@@ -255,6 +417,8 @@ def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
 
 @njit(cache=True, nogil=True)
 def _jit_angle_deriv(positions: Matrix) -> Matrix:
+    """Calculates Cartesian derivatives of an angle given 3 atom positions"""
+
     # vectors making up the angle
 
     u = positions[0] - positions[1]
@@ -279,69 +443,61 @@ def _jit_angle_deriv(positions: Matrix) -> Matrix:
 
 
 @njit(cache=True, nogil=True)
-def _jit_second_dihedral_deriv(positions: Matrix) -> Matrix:
-    # vectors making up dihedral
-    u = positions[0] - positions[1]
-    w = positions[2] - positions[1]
-    v = positions[3] - positions[2]
+def _jit_uw_deriv(positions: Matrix, axes: Matrix) -> Matrix:
+    i = positions[1]
+    j = positions[2]
+    k = positions[3]
 
-    normedu = _jit_normalize(u)
-    normedw = _jit_normalize(w)
-    normedv = _jit_normalize(v)
+    u = axes[0]
+    v = axes[1]
+    w = axes[2]
 
-    cosu = normedu @ normedw
-    # note this could be 0 if undefined dihedral
-    sinu = np.sqrt(1 - (normedu @ normedw) ** 2)
+    ddu_uw = np.array(
+        [
+            -1 / np.linalg.norm(j - i),
+            (1 / np.linalg.norm(j - i))
+            + ((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ v)),
+            -((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ v)),
+        ]
+    )
+    ddw_uw = np.array(
+        [
+            0,
+            -(k) @ u / np.linalg.norm((k - j) - ((k - j) @ v)),
+            (k) @ u / np.linalg.norm((k - j) - ((k - j) @ v)),
+        ]
+    )
 
-    cosv = -(normedv @ normedw)
-    # note this could be 0 if undefined dihedral
-    sinv = np.sqrt(1 - (normedv @ normedw) ** 2)
-
-    # catching cases where certain dihedrals are undefined
-    if np.isclose(sinu, 0.0) or np.isclose(sinv, 0.0):
-        raise ValueError("sinu or sinv is 0")
-    else:
-        return np.stack(
-            (
-                cross(normedu, normedw) / (norm(u) * (sinu**2)),
-                -cross(normedu, normedw) / (norm(u) * (sinu**2))
-                + (
-                    ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-                    - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-                ),
-                cross(normedv, normedw) / (norm(v) * (sinv**2))
-                - (
-                    ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-                    - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-                ),
-                -cross(normedv, normedw) / (norm(v) * (sinv**2)),
-            )
-        )
+    return axes.T @ np.vstack((ddu_uw, np.array([0.0, 0.0, 0.0]), ddw_uw))
 
 
 @njit(cache=True, nogil=True)
-def _jit_second_angle_deriv(positions: Matrix) -> Matrix:
-    # vectors making up the angle
+def _jit_vw_deriv(positions: Matrix, axes: Matrix) -> Matrix:
+    i = positions[1]
+    j = positions[2]
+    k = positions[3]
 
-    u = positions[0] - positions[1]
-    v = positions[2] - positions[1]
+    u = axes[0]
+    v = axes[1]
+    w = axes[2]
 
-    normedu = _jit_normalize(u)
-    normedv = _jit_normalize(v)
+    ddv_vw = np.array(
+        [
+            -1 / np.linalg.norm(j - i),
+            (1 / np.linalg.norm(j - i))
+            + ((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ u)),
+            -((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ u)),
+        ]
+    )
+    ddw_vw = np.array(
+        [
+            0,
+            -(k) @ v / np.linalg.norm((k - j) - ((k - j) @ u)),
+            (k) @ v / np.linalg.norm((k - j) - ((k - j) @ u)),
+        ]
+    )
 
-    w = cross(u, v)
-
-    # if they were parallel
-    if np.allclose(w, 0.0):
-        w = cross(normedu, np.array([1, -1, 1]))
-    # if u and [1, -1, 1] were parallel
-    if np.allclose(w, 0.0):
-        w = cross(normedu, np.array([-1, 1, 1]))
-
-    normedw = _jit_normalize(w)
-    A = cross(normedu, normedw) / norm(u)
-    B = cross(normedw, normedv) / norm(v)
-    return np.stack((A, -(A + B), B))
+    return axes.T @ np.vstack((np.array([0.0, 0.0, 0.0]), ddv_vw, ddw_vw))
 
 
 @njit(parallel=True, cache=True, nogil=True)
@@ -349,18 +505,20 @@ def _jit_get_Wilson_B(
     position_arr: Matrix[float64],
     internal_coord_arr: Matrix[int64],
 ) -> Matrix[float64]:
-    """Jit-compiled Wilson's B matrix generator.
+    """Jit-compiled Wilson's B matrix generator, sans bending coordinates.
+
+    procedure from: :cite:`B_matrix`
 
     Args:
-        position_arr (Matrix): array of cartesian coordinate locations of the
+        position_arr: array of cartesian coordinate locations of the
             atoms in the Cartesian
-        internal_coord_arr (Matrix): array of internal coordinates, followed by the
+        internal_coord_arr: array of internal coordinates, followed by the
             length of the coordinate. If the coordinate is not a dihedral, there are
             unused numbers in the 4th, or 3rd and 4th, places to ensure a
             rectangular array
 
     Returns:
-        Matrix[float64]: Wilson's B matrix
+        Wilson's B matrix
     """
 
     # initialize B matrix
@@ -374,7 +532,7 @@ def _jit_get_Wilson_B(
         coord = internal_coord_arr[i, :]
 
         # distances
-        if coord[-1] == 2:
+        if _is_bond(coord):
             # get positions of participating atoms
             positions = position_arr[coord[:2]]
 
@@ -386,7 +544,7 @@ def _jit_get_Wilson_B(
                 B_matrix[i, j + 3 * coord[1]] = -normedu[j]
 
         # angles
-        elif coord[-1] == 3:
+        elif _is_angle(coord):
             # get positions of participating atoms
             positions = position_arr[coord[:3]]
 
@@ -396,7 +554,7 @@ def _jit_get_Wilson_B(
                 B_matrix[i, j + 3 * coord[:3]] = angle_derivs[:3, j]
 
         # dihedrals
-        else:
+        elif _is_dihedral(coord):
             # get positions of participating atoms
             positions = position_arr[coord[:4]]
 
@@ -405,7 +563,167 @@ def _jit_get_Wilson_B(
             for j in prange(3):  # type: ignore[attr-defined]
                 B_matrix[i, j + 3 * coord[:4]] = dihedral_derivs[:4, j]
 
+        elif _is_uw_bending(coord):
+            positions = position_arr[coord[:4]]
+
+            axes = _jit_get_axes(position_arr, coord[:4])
+
+            uw_derivs = _jit_uw_deriv(positions, axes)
+
+            for j in prange(3):  # type: ignore[attr-defined]
+                B_matrix[i, j + 3 * coord[1:4]] = uw_derivs[:, j]
+
+        elif _is_vw_bending(coord):
+            positions = position_arr[coord[:4]]
+
+            axes = _jit_get_axes(position_arr, coord[:4])
+
+            vw_derivs = _jit_vw_deriv(positions, axes)
+
+            for j in prange(3):  # type: ignore[attr-defined]
+                B_matrix[i, j + 3 * coord[1:4]] = vw_derivs[:, j]
+
     return B_matrix
+
+
+def _jit_get_Wilson_B_bending(
+    position_arr: Matrix[float64],
+    bending_coords: Matrix[int64],
+) -> Matrix[float64]:
+    """Jit-compiled Wilson's B matrix generator for bending coordinates.
+
+    procedure derived from: Miller, K.J., Hinde, R.J. and Anderson, J. (1989),
+    First and second derivative matrix elements for the stretching, bending,
+    and torsional energy. J. Comput. Chem., 10: 63-76. https://doi.org/10.1002/jcc.540100107
+
+    Args:
+        position_arr: array of cartesian coordinate locations of the
+            atoms in the Cartesian
+        internal_coord_arr: array of bending coordinates
+
+    Returns:
+        Wilson's B matrix
+    """
+    B_matrix = np.zeros((2 * len(bending_coords), position_arr.size))
+    for n, coord in enumerate(bending_coords):
+        axes = _jit_get_axes(position_arr, coord)
+        u = axes[0]
+        v = axes[1]
+        w = axes[2]
+
+        # this is R_y from the textbook
+        # get positions of participating atoms
+        positions = position_arr[coord]
+        i = positions[1]
+        j = positions[2]
+        k = positions[3]
+
+        ddu_uw = np.array(
+            [
+                -1 / np.linalg.norm(j - i),
+                (1 / np.linalg.norm(j - i))
+                + ((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ v)),
+                -((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ v)),
+            ]
+        )
+        ddw_uw = np.array(
+            [
+                0,
+                -(k) @ u / np.linalg.norm((k - j) - ((k - j) @ v)),
+                (k) @ u / np.linalg.norm((k - j) - ((k - j) @ v)),
+            ]
+        )
+
+        ddv_vw = np.array(
+            [
+                -1 / np.linalg.norm(j - i),
+                (1 / np.linalg.norm(j - i))
+                + ((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ u)),
+                -((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ u)),
+            ]
+        )
+        ddw_vw = np.array(
+            [
+                0,
+                -(k) @ v / np.linalg.norm((k - j) - ((k - j) @ u)),
+                (k) @ v / np.linalg.norm((k - j) - ((k - j) @ u)),
+            ]
+        )
+
+        for l in prange(3):  # type: ignore[attr-defined]
+            B_matrix[n, 3 * coord[l + 1] : 3 * coord[l + 1] + 3] = axes.T @ np.array(
+                [ddu_uw[l], 0, ddw_uw[l]]
+            )
+
+            B_matrix[
+                n + len(bending_coords), 3 * coord[l + 1] : 3 * coord[l + 1] + 3
+            ] = axes.T @ np.array([0, ddv_vw[l], ddw_vw[l]])
+
+    return B_matrix
+
+
+@njit(parallel=True, cache=True, nogil=True)
+def _jit_get_axes(
+    cart_positions: Matrix[float64], idx: Vector[int64]
+) -> Matrix[float64]:
+    """Jit-compiled bending coordinate reference frame calculator.
+
+    Args:
+        cart_positions: array of cartesian coordinate locations of the
+            atoms in the Cartesian
+        idx: array of the bending coordinate
+
+    Returns:
+        Bending coordinate reference frame
+    """
+    h = cart_positions[idx[0]]
+    i = cart_positions[idx[1]]
+    j = cart_positions[idx[2]]
+
+    u = _jit_normalize(np.cross((h - i), (j - i)))
+    w = _jit_normalize(j - i)
+    v = np.cross(w, u)
+
+    return np.stack((u, v, w))
+
+
+@njit(parallel=True, cache=True, nogil=True)
+def _jit_x_to_plane_coords_nonlinear(
+    cart_positions: Matrix[float64], idx: Vector[int64]
+) -> Vector[float64]:
+    """Jit-compiled method to get an in/out-of-plane bending coordinate from cartesian
+    coordinates
+
+    .. note:: This function implicitly assumes that `internal_coords_idx`
+        is for a 0-indexed molecule.
+
+    Args:
+        cart_positions: array of cartesian coordinate locations of the
+            atoms in the Cartesian
+        idx: Vector containing the relevant atomic indices for the bending
+            coordinates
+
+    Returns:
+        Array of bending coordinate values
+    """
+
+    # technically inefficient to do this twice but makes it easier the other time we use
+    # _jit_get_axes
+    j = cart_positions[idx[2]]
+    k = cart_positions[idx[3]]
+
+    axes = _jit_get_axes(cart_positions, idx)
+    u = axes[0]
+    v = axes[1]
+    w = axes[2]
+
+    uw_proj = _jit_normalize((k - j) - ((k - j) @ v) * v)
+    vw_proj = _jit_normalize((k - j) - ((k - j) @ u) * u)
+
+    alpha_uw = np.pi - np.arctan2(uw_proj @ u, uw_proj @ w)
+    alpha_vw = np.pi - np.arctan2(vw_proj @ v, vw_proj @ w)
+
+    return np.array([alpha_uw, alpha_vw])
 
 
 @njit(parallel=True, cache=True, nogil=True)
@@ -418,15 +736,15 @@ def _jit_x_to_ric(
         is for a 0-indexed molecule.
 
     Args:
-        cart_positions (Matrix): array of cartesian coordinate locations of the
+        cart_positions: array of cartesian coordinate locations of the
             atoms in the Cartesian
-        internal_coords_idx (Matrix): array of internal coordinates, followed by the
+        internal_coords_idx: array of internal coordinates, followed by the
             length of the coordinate. If the coordinate is not a dihedral, there are
             unused numbers in the 4th, or 3rd and 4th, places to ensure a
             rectangular array
 
     Returns:
-        Vector[float64]: array of internal coordinate values
+        Array of internal coordinate values
     """
     internal_coordinates = np.empty(len(internal_coords_idx))
 
@@ -437,7 +755,7 @@ def _jit_x_to_ric(
         # separate cases for distances, angles, and dihedrals
 
         # distances
-        if coord[-1] == 2:
+        if _is_bond(coord):
             # get positions of participating atoms
             positions = cart_positions[coord[:2]]
 
@@ -445,7 +763,7 @@ def _jit_x_to_ric(
             internal_coordinates[i] = norm(u)
 
         # angles
-        elif coord[-1] == 3:
+        elif _is_angle(coord):
             # get positions of participating atoms
             positions = cart_positions[coord[:3]]
 
@@ -456,7 +774,7 @@ def _jit_x_to_ric(
             internal_coordinates[i] = np.arccos(normedu @ normedv)
 
         # dihedrals
-        else:
+        elif _is_dihedral(coord):
             # get positions of participating atoms
             positions = cart_positions[coord[:4]]
 
@@ -473,33 +791,49 @@ def _jit_x_to_ric(
 
             if not np.isclose(uw, 1.0) and not np.isclose(wv, 1.0):
                 internal_coordinates[i] = np.arctan2(x, y)
+            elif np.isclose(uw, 1.0):
+                raise SingleUndefinedDihedral(coord[:-1], 1)
             else:
-                raise ValueError("sinu or sinv is 0")
+                raise SingleUndefinedDihedral(coord[:-1], 2)
+
+        elif _is_uw_bending(coord):
+            internal_coordinates[i] = _jit_x_to_plane_coords_nonlinear(
+                cart_positions, coord[:4]
+            )[0]
+        elif _is_vw_bending(coord):
+            internal_coordinates[i] = _jit_x_to_plane_coords_nonlinear(
+                cart_positions, coord[:4]
+            )[1]
 
     return internal_coordinates
 
 
-def _clean_dihedral(delta_c: Vector[float64], coord_idx: Primitives) -> Vector[float64]:
-    return np.array(
-        [
-            coord_val if len(idx) != 4 else np.mod(coord_val + np.pi, 2 * np.pi) - np.pi
-            for idx, coord_val in zip(coord_idx, delta_c)
-        ]
-    )  # type: ignore[return-value]
-
-
 def _correct_dihedral_idx(
     struct: Cartesian,
-    bad_idx: tuple[int, int, int, int],
+    bad_idx: tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx],
     old_idx: Primitives,
     which_half: int,
-) -> tuple[int, int, int, int]:
+    tol: float = 5,
+) -> tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]:
+    """Finds a suitable redefinition of a given linear dihedral coordinate
+
+    Args:
+        struct: Cartesian containing the given dihedral
+        bad_idx: tuple containing the dihedral to be
+            replaced
+        old_idx: SortedSet of primitive coordinates pre-cleaning
+        which_half: int representing which half of the dihedral is linear
+        tol: default 5, tolerance for collinear atom detection, in degrees.
+    Returns:
+        Tuple of the new dihedral
+    """
+
     # to check that new index is not already used
 
-    if which_half == 1:
-        origin = struct._get_origin(bad_idx[0])
+    if which_half == WhichHalf.first:
         distances = [
-            (i, struct.get_distance_to(origin).loc[i, "distance"]) for i in struct.index
+            (i, struct.get_distance_to(bad_idx[0]).loc[i, "distance"])
+            for i in struct.index
         ]
         distances.sort(key=lambda x: x[1])
         for index, _ in distances:
@@ -513,7 +847,7 @@ def _correct_dihedral_idx(
                 angle = np.arccos(normedu @ normedv)
 
                 if (
-                    not (angle < 5 * np.pi / 180) | (angle > 175 * np.pi / 180)
+                    (tol < angle * 180 / np.pi < (180 - tol))  # fmt: skip
                     and tuple([index] + list(bad_idx[1:])) not in old_idx
                 ):
                     return tuple([index] + list(bad_idx[1:]))
@@ -522,9 +856,9 @@ def _correct_dihedral_idx(
         )
 
     else:
-        origin = struct._get_origin(bad_idx[3])
         distances = [
-            (i, struct.get_distance_to(origin).loc[i, "distance"]) for i in struct.index
+            (i, struct.get_distance_to(bad_idx[3]).loc[i, "distance"])
+            for i in struct.index
         ]
         distances.sort(key=lambda x: x[1])
         for index, _ in distances:
@@ -537,11 +871,53 @@ def _correct_dihedral_idx(
 
                 angle = np.arccos(normedu @ normedv)
 
+                # NOTE: is the check that it is not in the old_idx neccessary? If it is,
+                # then the new one is fully redundant.
                 if (
-                    (5 < angle * 180 / np.pi < 175)  # fmt: skip
+                    (tol < angle * 180 / np.pi < (180 - tol))  # fmt: skip
                     and tuple(list(bad_idx[:-1]) + [index]) not in old_idx
                 ):
                     return tuple(list(bad_idx[:-1]) + [index])
         raise RuntimeError(
             f"No suitable redifinition of poorly-defined dihedral {bad_idx}"
         )
+
+
+@njit(cache=True)
+def _is_bond(coord: Vector) -> bool:
+    return coord[-1] == 2
+
+
+@njit(cache=True)
+def _is_angle(coord: Vector) -> bool:
+    return coord[-1] == 3
+
+
+@njit(cache=True)
+def _is_dihedral(coord: Vector) -> bool:
+    return coord[-1] == 4
+
+
+@njit(cache=True)
+def _is_uw_bending(coord: Vector) -> bool:
+    return coord[-1] == 5
+
+
+@njit(cache=True)
+def _is_vw_bending(coord: Vector) -> bool:
+    return coord[-1] == 6
+
+
+@njit(cache=True)
+def _is_uw_bending_nonnumba(coord: Coordinate) -> bool:
+    return len(coord) == 5 and coord[-1] == BendType.UW
+
+
+@njit(cache=True)
+def _is_vw_bending_nonnumba(coord: Coordinate) -> bool:
+    return len(coord) == 5 and coord[-1] == BendType.VW
+
+
+@njit(cache=True)
+def _is_dihedral_nonnumba(coord: Coordinate) -> bool:
+    return len(coord) == 4

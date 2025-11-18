@@ -1,7 +1,5 @@
-:orphan:
-
 chemcoord.Cartesian.get\_primitives\_idx
-==========================================
+========================================
 
 .. currentmodule:: chemcoord
 

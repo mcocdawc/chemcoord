@@ -192,7 +192,7 @@ def test_Wilson_B():
 
 
 def test_transformation():
-    cs = molecule1.get_ric()
+    qs = molecule1.get_ric()
     expected = np.array(
         [
             1.5356843,
@@ -305,4 +305,4 @@ def test_transformation():
             -1.01833403,
         ]
     )
-    assert np.allclose(cs.q, expected)
+    assert np.allclose(qs.q, expected)

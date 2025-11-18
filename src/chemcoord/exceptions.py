@@ -82,3 +82,23 @@ class IllegalArgumentCombination(ValueError):
     """Raised if the combination of correctly typed arguments is invalid."""
 
     pass
+
+
+class UndefinedDihedral(UndefinedCoordinateSystem):
+    """Raised when a linearity occurs such that the related dihedral is ill-defined"""
+
+    def __init__(self, bad_idxs):
+        self.bad_idxs = bad_idxs
+
+    def __str__(self):
+        return f"Indices {list(self.bad_idxs)} contain linearities"
+
+
+class SingleUndefinedDihedral(UndefinedCoordinateSystem):
+    """Raised when a linearity occurs such that the related dihedral is ill-defined"""
+
+    def __init__(self, bad_idx, which_half):
+        self.bad_idxs = [(tuple([int(idx) for idx in bad_idx]), which_half)]
+
+    def __str__(self):
+        return f"Index {list(self.bad_idxs)} contains a linearity"

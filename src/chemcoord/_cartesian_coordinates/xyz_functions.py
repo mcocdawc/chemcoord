@@ -20,6 +20,7 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
     normalize,
 )
+from chemcoord._cartesian_coordinates._cartesian_class_bmat import Primitives
 from chemcoord._cartesian_coordinates._cartesian_class_core import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord._utilities._decorators import njit
@@ -683,15 +684,16 @@ def interpolate(
     end: Cartesian,
     N: int,
     coord: Literal["cart", "zmat", "RIC"] = "zmat",
+    coord_idx: None | Primitives = None,
+    opt_alg: Literal["gauss", "LM"] = "gauss",
 ) -> list[Cartesian]:
     """Interpolate between start and end structure.
 
     Args:
-        start :
-        end :
-        N : Number of structures to interpolate between.
-        coord :
-            Interpolate in Cartesian, Z-matrix,
+        start: Starting structure.
+        end: Ending structure.
+        N: Number of structures to interpolate between.
+        coord: Interpolate in Cartesian, Z-matrix,
             or redundant internal coordinate (RIC) space.
     """
     from chemcoord._redundant_internal_coordinates.main import (  # noqa: PLC0415
@@ -703,7 +705,11 @@ def interpolate(
     elif coord == "zmat":
         return _zmat_interpolate(start, end, N)
     elif coord == "RIC":
-        return _fix_trans_rot(start, end, RIC_interpolate(start, end, N))
+        return _fix_trans_rot(
+            start,
+            end,
+            RIC_interpolate(start, end, N, opt_alg=opt_alg, coord_idx=coord_idx),
+        )
     else:
         assert_never(f"coord must be either 'cart', 'zmat', or 'RIC'; not {coord}")
 
