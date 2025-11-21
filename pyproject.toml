@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chemcoord"
+version = "2.1.2"
+description = "Python module for dealing with chemical coordinates."
+readme = "README.rst"
+requires-python = ">=3.10"
+license = "LGPL-3.0-or-later"
+authors = [
+  { name = "Oskar Weser", email = "oskar.weser@gmail.com" },
+]
+keywords = [
+  "chemcoord",
+  "transformation",
+  "cartesian",
+  "internal",
+  "chemistry",
+  "zmatrix",
+  "xyz",
+  "zmat",
+  "coordinates",
+  "coordinate system",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "Operating System :: Unix",
+  "Operating System :: POSIX",
+  "Operating System :: Microsoft :: Windows",
+  "Natural Language :: English",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+
+dependencies = [
+  "numpy>=1.0",
+  "pandas>=1.0",
+  "numba>=0.35",
+  "sortedcontainers",
+  "sympy",
+  "six",
+  "pymatgen",
+  "typing_extensions",
+  "ordered-set",
+  "attrs",
+  "cattrs",
+  "joblib",
+  "PyYAML",
+]
+
+[project.urls]
+Homepage = "https://github.com/mcocdawc/chemcoord"
+Documentation = "https://chemcoord.readthedocs.io/en/v2.1.2/"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
