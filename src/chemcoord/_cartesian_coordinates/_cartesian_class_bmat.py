@@ -18,7 +18,7 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
 )
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import COORDS
-from chemcoord.exceptions import SingleUndefinedDihedral
+from chemcoord.exceptions import UndefinedDihedral
 from chemcoord.typing import AtomIdx, BondDict, Matrix, Vector
 
 if TYPE_CHECKING:
@@ -177,11 +177,20 @@ class CartesianBmat(CartesianCore):
         if internal_coords_idx is None:
             internal_coords_idx = self.get_primitives_idx(bonds=bonds)
 
+        ric_values, exceptions = _jit_x_to_ric(
+            self.loc[:, COORDS].values,
+            self._to_array_full(internal_coords_idx),
+        )
+
+        if np.any(exceptions[:, -1]):
+            exception_list = []
+            for coordinate in exceptions:
+                if coordinate[-1] != 0:
+                    exception_list.append(tuple(coordinate[:-1]))
+            raise UndefinedDihedral(exception_list)
+
         return RedundantInternalCoordinates(
-            _jit_x_to_ric(
-                self.loc[:, COORDS].values,
-                self._to_array_full(internal_coords_idx),
-            ),
+            ric_values,
             internal_coords_idx,
             self.copy(),  # type: ignore[arg-type]
         )
@@ -728,7 +737,7 @@ def _jit_x_to_plane_coords_nonlinear(
 @njit(parallel=True, cache=True, nogil=True)
 def _jit_x_to_ric(
     cart_positions: Matrix[float64], internal_coords_idx: Matrix[int64]
-) -> Vector[float64]:
+) -> tuple[Vector[float64], Matrix[int64]]:
     """Jit-compiled conversion between cartesian coordinates and internal coordinates
 
     .. note:: This function implicitly assumes that `internal_coords_idx`
@@ -746,8 +755,9 @@ def _jit_x_to_ric(
         Array of internal coordinate values
     """
     internal_coordinates = np.empty(len(internal_coords_idx))
+    bad_coordinates = np.zeros((len(internal_coords_idx), 5), dtype=int64)
 
-    for i in range(len(internal_coords_idx)):  # type: ignore[attr-defined]
+    for i in prange(len(internal_coords_idx)):  # type: ignore[attr-defined]
         # get ith internal coordinate
         coord = internal_coords_idx[i]
 
@@ -790,10 +800,9 @@ def _jit_x_to_ric(
 
             if not np.isclose(uw, 1.0) and not np.isclose(wv, 1.0):
                 internal_coordinates[i] = np.arctan2(x, y)
-            elif np.isclose(uw, 1.0):
-                raise SingleUndefinedDihedral(coord[:-1], 1)
             else:
-                raise SingleUndefinedDihedral(coord[:-1], 2)
+                bad_coordinates[i, :-1] = coord[:-1]
+                bad_coordinates[i, -1] = True
 
         elif _is_uw_bending_array(coord):
             internal_coordinates[i] = _jit_x_to_plane_coords_nonlinear(
@@ -804,7 +813,7 @@ def _jit_x_to_ric(
                 cart_positions, coord[:4]
             )[1]
 
-    return internal_coordinates
+    return internal_coordinates, bad_coordinates
 
 
 def _correct_dihedral_idx(

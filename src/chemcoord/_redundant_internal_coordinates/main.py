@@ -17,7 +17,7 @@ from typing_extensions import Self
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import BendType
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord.configuration import settings
-from chemcoord.exceptions import SingleUndefinedDihedral
+from chemcoord.exceptions import UndefinedDihedral
 from chemcoord.typing import ArithmeticOther, AtomIdx, BondDict, Matrix, Real, Vector
 
 Coordinate: TypeAlias = (
@@ -742,7 +742,7 @@ def RIC_interpolate(
         for mode in strategies:
             try:
                 return run_interpolate(mode)
-            except (ValueError, SingleUndefinedDihedral):
+            except (ValueError, UndefinedDihedral):
                 if mode != "from_end":
                     warn(f"{mode} scheduling failed; attempting next strategy")
         else:  # noqa: PLW0120
