@@ -203,6 +203,94 @@ class RedundantInternalCoordinates:
 
         return new, lam
 
+    def _gauss_newton_opt(
+        self, start_guess: Cartesian, max_iter: int, W: Matrix, rtol: float, atol: float
+    ) -> Cartesian:
+        from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
+            allclose,
+        )
+
+        previous = start_guess
+
+        converged = False
+        i = 0
+        while not converged:
+            if (i := i + 1) > max_iter:
+                raise ValueError(f"Not converged after {max_iter} iterations.")
+
+            B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+
+            q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
+
+            Δq = (self - q_current).minimize_dihedral()
+
+            Δx = lstsq(W @ B, W @ Δq.delta_q, rcond=-1)[0]
+            Δx = Δx.reshape(len(previous), 3)
+
+            new = _linesearch(B, Δq.delta_q, Δx, self, previous)
+
+            converged = allclose(
+                new,
+                previous,
+                rtol=rtol,
+                atol=atol,
+                align=True,
+            )
+            previous = previous.align(new)[1]
+
+        if i > 100:
+            warn(f"The transformation to cartesian coordinates took {i} iterations.")
+
+        return new
+
+    def _levenberg_marquardt_opt(
+        self,
+        start_guess: Cartesian,
+        max_iter: int,
+        W: Matrix,
+        rtol: float,
+        atol: float,
+        start_lam: float = 1e-5,
+        nu: float = 1.5,
+        reduction_factor: float = 10,
+    ) -> Cartesian:
+        from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
+            allclose,
+        )
+
+        previous = start_guess
+
+        converged = False
+        i = 0
+
+        lam = start_lam
+        while not converged:
+            assert previous is not None
+            if (i := i + 1) > max_iter:
+                raise ValueError(f"Not converged after {max_iter} iterations.")
+
+            B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+
+            q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
+
+            Δq = (self - q_current).minimize_dihedral()
+
+            new, lam = self._lambda_cycle(previous, B, W, lam, nu, reduction_factor, Δq)
+
+            converged = allclose(
+                new,
+                previous,
+                rtol=rtol,
+                atol=atol,
+                align=True,
+            )
+            previous = previous.align(new)[1]
+
+        if i > 100:
+            warn(f"The transformation to cartesian coordinates took {i} iterations.")
+
+        return new
+
     def get_cartesian(
         self,
         *,
@@ -210,7 +298,7 @@ class RedundantInternalCoordinates:
         rtol: float = 1e-5,
         atol: float = 1e-8,
         max_iter: int = 100,
-        opt_alg: Literal["gauss", "LM"] = "gauss",
+        opt_alg: Literal["LM", "gauss"] = "LM",
         weights: Vector[np.floating] | Sequence[float] | None = None,
         default_weights: DefaultWeights | Mapping[str, float] | None = None,
     ) -> Cartesian:
@@ -218,20 +306,24 @@ class RedundantInternalCoordinates:
         with Wilson's B matrix to converge to said structure.
 
         Args:
-            start_guess: default None, starting guess for the
-                physical structure. If None is given, uses self.reference
+            start_guess: default :class:`None`, starting guess for the
+                physical structure. If :class:`None` is given, uses self.reference
             rtol: default 1e-5, relative tolerance for convergence
             atol: default 1e-8, absolute tolerance for convergence
             max_iter: default 100, maximum allowed iterations for convergence
-            weights: default None, weights for weighted least-squares to
-                approximate delta_x from delta_q
+            opt_alg: default 'LM', either Levenberg-Marquardt or Gauss-Newton, the
+                optimization algorithm used to generate :class:`~chemcoord.Cartesian`
+                representations via :meth:`~.RedundantInternalCoordinates.get_cartesian`
+            weights: default :class:`None`, weights used for each internal coordinate in
+                the weighted least-squares step. A higher value means that that
+                coordinate will be more likely to change linearly. Using values far
+                above 1 can cause instability
+            default_weights: default
+                {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
+                the weights which each type of coordinate default to
         Returns:
             Closest physical structure to self, aligned to start_guess
         """
-
-        from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
-            allclose,
-        )
 
         if start_guess is None:
             start_guess = self.reference
@@ -256,67 +348,15 @@ class RedundantInternalCoordinates:
             )
         else:
             assert weights is not None
+
         W = np.diag(weights)  # type: ignore[arg-type]
 
-        previous = start_guess
-        converged = False
-        i = 0
-
-        if opt_alg == "gauss":
-            while not converged:
-                assert previous is not None
-                if (i := i + 1) > max_iter:
-                    raise ValueError(f"Not converged after {max_iter} iterations.")
-
-                B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
-
-                q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
-
-                Δq = (self - q_current).minimize_dihedral()
-
-                Δx = lstsq(W @ B, W @ Δq.delta_q, rcond=-1)[0]
-                Δx = Δx.reshape(len(previous), 3)
-
-                new = _linesearch(B, Δq.delta_q, Δx, self, previous)
-
-                converged = allclose(
-                    new,
-                    previous,
-                    rtol=rtol,
-                    atol=atol,
-                    align=True,
-                )
-                previous = previous.align(new)[1]
-        elif opt_alg == "LM":
-            lam = 1e-5
-            nu = 1.5
-            reduction_factor = 10
-            while not converged:
-                assert previous is not None
-                if (i := i + 1) > max_iter:
-                    raise ValueError(f"Not converged after {max_iter} iterations.")
-
-                B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
-
-                q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
-
-                Δq = (self - q_current).minimize_dihedral()
-
-                new, lam = self._lambda_cycle(
-                    previous, B, W, lam, nu, reduction_factor, Δq
-                )
-
-                converged = allclose(
-                    new,
-                    previous,
-                    rtol=rtol,
-                    atol=atol,
-                    align=True,
-                )
-                previous = previous.align(new)[1]
-
-        if i > 100:
-            warn(f"The transformation to cartesian coordinates took {i} iterations.")
+        if opt_alg == "LM":
+            new = self._levenberg_marquardt_opt(start_guess, max_iter, W, rtol, atol)
+        elif opt_alg == "gauss":
+            new = self._gauss_newton_opt(start_guess, max_iter, W, rtol, atol)
+        else:
+            assert_never(opt_alg)
 
         return start_guess.align(new)[1] + start_guess.get_centroid()
 
@@ -455,7 +495,7 @@ def get_primitives_idx(
     Args:
         start: starting structure
         end: ending structure
-        bonds: default None, optional specification of connectivity. If not
+        bonds: default :class:`None`, optional specification of connectivity. If not
             specified, generated automatically
         linearity_thrshld: default 5, tolerance for linearity, in degrees
     Returns:
@@ -513,21 +553,21 @@ def _get_start_guess(
     start: Cartesian,
     end: Cartesian,
     N: int,
-    in_seed: Cartesian | Sequence[Cartesian] | None,
+    seeds: Cartesian | Sequence[Cartesian] | None,
 ) -> list[Cartesian]:
     from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
         interpolate,
     )
 
-    if in_seed is None:
+    if seeds is None:
         try:
             return interpolate(start, end, N, coord="zmat")
         except Exception:  # noqa: E722
             return interpolate(start, end, N, coord="cart")
-    elif isinstance(in_seed, Cartesian):
-        return [in_seed for _ in range(N)]
+    elif isinstance(seeds, Cartesian):
+        return [seeds for _ in range(N)]
     else:
-        return list(in_seed)
+        return list(seeds)
 
 
 def _find_joint_bond_dict(
@@ -558,16 +598,15 @@ def RIC_interpolate(
     end: Cartesian,
     N: int,
     *,
-    opt_alg: Literal["gauss", "LM"] = "gauss",
+    opt_alg: Literal["gauss", "LM"] = "LM",
     coord_idx: Primitives | None = None,
     max_iter: int = 500,
-    in_seed: Cartesian | Sequence[Cartesian] | None = None,
+    seeds: Cartesian | Sequence[Cartesian] | None = None,
     bond_dict: BondDict | None = None,
     linearity_thrshld: float = 5,
     schedule: Literal[
-        "automatic", "frozen_str", "from_start", "from_end"
+        "automatic", "independent", "from_both", "from_start", "from_end"
     ] = "automatic",
-    parallel: bool = False,
     rtol: float = 1e-4,
     atol: float = 1e-8,
     weights: Vector[np.floating] | Sequence[float] | None = None,
@@ -579,55 +618,42 @@ def RIC_interpolate(
         start: starting structure
         end: ending structure
         N: number of images, including start and end (so minimum 2)
-        coord_idx: default None, optional specification of internal coordinate set
-            to use
-        bending_coords: default None, optional specification of bending coordinates
-            to use
-        weights: default None, weights used for each internal coordinate in the
-            weighted least-squares step. A higher value means that that coordinate
-            will be more likely to change linearly. Changing these too much or using
-            values far above 1 can cause instability
+        opt_alg: default 'LM', either Levenberg-Marquardt or Gauss-Newton, the
+            optimization algorithm used to generate :class:`~chemcoord.Cartesian`
+            representations of :class:`~.RedundantInternalCoordinates` via
+            :meth:`~.RedundantInternalCoordinates.get_cartesian`
+        coord_idx: default :class:`None`, optional specification of internal coordinate
+            set to use
         max_iter: default 500, maximum number of steps for the
             :meth:`~.RedundantInternalCoordinates.get_cartesian` optimization cycle
-        seed: default :class:`None`, specifies the seed value for the
+        seeds: default :class:`None`, specifies the seed value for the
             :meth:`~.RedundantInternalCoordinates.get_cartesian` optimization cycle.
             Can be set to one :class:`~chemcoord.Cartesian`, which is used for each
-            image, or to a sequence of :class:`~chemcoord.Cartesian` of length N
-        bond_dict: default None, optional specification of connectivity. If not
-            specified, generated automatically. NOTE: this connects disconnecteds
+            image, or to a sequence of :class:`~chemcoord.Cartesian` of length N.
+            If it is :class:`None`, it uses appropiate method-dependent seeds, e.g. for
+            ``"from_start"`` it uses the previous, converged solution.
+        bond_dict: default :class:`None`, optional specification of connectivity. If not
+            specified, generated automatically. NOTE: this connects disconnected
             fragments in both start and end with a bond between the closest two
             atoms in each fragment
         linearity_thrshld: default 5, tolerance for linearity, in degrees
         schedule: default "automatic", the scheduling to be used when generating the
-            path. Can be "frozen_str" which builds it from the endpoints in,
+            path. Can be "from_both" which builds it from the endpoints in,
             "from_start", or "from_end". "automatic" attempts each in that order,
             returning the first one to succeed
-        parallel: default True, whether to create images using parallelization.
-            Should have no effect on the results of "frozen_str", but for
-            "from_start" and "from_end" True generates the interpolated internal
-            coordinates all at once, while False re-generates them after each
-            physical structure is generated, producing a path that is much more
-            likely to converge at each step but that is not expected to be
-            time-reversal invariant. If True, "from_start" and "from_end" should be
-            identical
-        rtol: default 1e-3, relative tolerance for convergence
+        rtol: default 1e-4, relative tolerance for convergence
         atol: default 1e-8, absolute tolerance for convergence
+        weights: default :class:`None`, weights used for each internal coordinate in the
+            weighted least-squares step. A higher value means that that coordinate
+            will be more likely to change linearly. Using values far above 1 can cause
+            instability
         default_weights: default
             {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
             the weights which each type of coordinate default to
 
     Returns:
-        tuple containing the generated interpolation in the first slot, and the list
-        of targeted internal coordinate values in the second
+        The generated path as list of :class:`~chemcoord.Cartesian`.
     """
-
-    if parallel and schedule in {"from_start", "from_end", "frozen_str"}:
-        raise ValueError(
-            'The schedules "from_start", "from_end", "frozen_str" '
-            "are inherently serial, do not use parallel."
-        )
-
-    seeds = _get_start_guess(start, end, N, in_seed)
 
     def to_cart(
         q: RedundantInternalCoordinates,
@@ -643,9 +669,25 @@ def RIC_interpolate(
             opt_alg=opt_alg,
         )
 
-    if schedule == "frozen_str":
-        return _RIC_interpolate_frozen_str(
-            start, end, N, seeds, to_cart, linearity_thrshld, bond_dict
+    if schedule == "independent":
+        seeds = _get_start_guess(start, end, N, seeds)
+
+        if coord_idx is None:
+            coord_idx = get_primitives_idx(
+                start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
+            )
+
+        return _RIC_interpolate_indpdt(start, end, N, coord_idx, to_cart, seeds)
+
+    elif schedule == "from_both":
+        return _RIC_interpolate_from_both(
+            start,
+            end,
+            N,
+            to_cart,
+            linearity_thrshld,
+            bond_dict,
+            seeds,
         )
 
     elif schedule == "from_start":
@@ -653,7 +695,7 @@ def RIC_interpolate(
             coord_idx = get_primitives_idx(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
-        return _RIC_interpolate_from_start(start, end, N, coord_idx, to_cart)
+        return _RIC_interpolate_from_start(start, end, N, coord_idx, to_cart, seeds)
 
     elif schedule == "from_end":
         # from_end is simply from_start but end and start are swapped.
@@ -662,15 +704,18 @@ def RIC_interpolate(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
         return list(
-            reversed(_RIC_interpolate_from_start(end, start, N, coord_idx, to_cart))
+            reversed(
+                _RIC_interpolate_from_start(end, start, N, coord_idx, to_cart, seeds)
+            )
         )
 
     elif schedule == "automatic":
-        AutoSchedules: TypeAlias = Literal["frozen_str", "from_start", "from_end"]
+        AutoSchedules: TypeAlias = Literal[
+            "independent", "from_both", "from_start", "from_end"
+        ]
 
         def run_interpolate(
             auto_schedule: AutoSchedules,
-            auto_parallel: bool,
         ) -> list[Cartesian]:
             return RIC_interpolate(
                 start,
@@ -680,23 +725,23 @@ def RIC_interpolate(
                 coord_idx=coord_idx,
                 weights=weights,
                 max_iter=max_iter,
-                in_seed=seeds,
+                seeds=seeds,
                 bond_dict=bond_dict,
                 linearity_thrshld=linearity_thrshld,
                 schedule=auto_schedule,
-                parallel=auto_parallel,
                 rtol=rtol,
                 atol=atol,
             )
 
-        strategies: Final[Sequence[tuple[AutoSchedules, bool]]] = [
-            ("frozen_str", False),
-            ("from_start", False),
-            ("from_end", False),
+        strategies: Final[Sequence[AutoSchedules]] = [
+            "independent",
+            "from_both",
+            "from_start",
+            "from_end",
         ]
-        for mode, par in strategies:
+        for mode in strategies:
             try:
-                return run_interpolate(mode, par)
+                return run_interpolate(mode)
             except (ValueError, SingleUndefinedDihedral):
                 if mode != "from_end":
                     warn(f"{mode} scheduling failed; attempting next strategy")
@@ -718,18 +763,15 @@ def _RIC_interpolate_indpdt(
     N: int,
     coord_idx: Primitives,
     to_cart: RIC_ToCartesian,
-    parallel: bool,
     seeds: Sequence[Cartesian],
 ) -> list[Cartesian]:
     q1, q2 = start.get_ric(coord_idx), end.get_ric(coord_idx)
     Δq = (q2 - q1).minimize_dihedral()
     Qs = [q1 + i * Δq / (N - 1) for i in range(N)]
-    if parallel:
-        return Parallel(n_jobs=settings.defaults.n_worker)(
-            delayed(to_cart)(q, seed) for q, seed in zip(Qs, seeds)
-        )
-    else:
-        return [to_cart(q, seed) for (q, seed) in zip(Qs, seeds)]
+
+    return Parallel(n_jobs=settings.defaults.n_worker)(
+        delayed(to_cart)(q, seed) for q, seed in zip(Qs, seeds)
+    )
 
 
 def _RIC_interpolate_from_start(
@@ -738,6 +780,7 @@ def _RIC_interpolate_from_start(
     N: int,
     coord_idx: Primitives,
     to_cart: RIC_ToCartesian,
+    seeds: Cartesian | Sequence[Cartesian] | None,
 ) -> list[Cartesian]:
     q1 = start.get_ric(coord_idx)
     q2: Final = end.get_ric(coord_idx)
@@ -747,19 +790,28 @@ def _RIC_interpolate_from_start(
         q1 = path[i - 1].get_ric(coord_idx)
         Δq = (q2 - q1).minimize_dihedral()
 
-        path.append(to_cart(q1 + Δq / (N - i), path[-1]))
+        if seeds is None:
+            seed = path[-1]
+        elif isinstance(seeds, Sequence):
+            seed = seeds[i]
+        else:
+            seed = seeds
+
+        path.append(to_cart(q1 + Δq / (N - i), seed))
 
     path.append(end)
+
     return path
 
 
-def _RIC_interpolate_frozen_str_new(
+def _RIC_interpolate_from_both(
     start: Cartesian,
     end: Cartesian,
     N: int,
     to_cart: RIC_ToCartesian,
     linearity_thrshld: float,
     bond_dict: BondDict | None,
+    seeds: Cartesian | Sequence[Cartesian] | None,
 ) -> list[Cartesian]:
     from_start, from_end = [start], [end]
     coord_idx = get_primitives_idx(
@@ -773,56 +825,29 @@ def _RIC_interpolate_frozen_str_new(
     for i in range((N - 1) // 2):
         n_to_add = N - 2 * (i + 1)
         x1, x2 = from_start[-1], from_end[-1]
+
         coord_idx = get_primitives_idx(
             x1, x2, bonds=bond_dict, linearity_thrshld=linearity_thrshld
         )
+
         q1, q2 = x1.get_ric(coord_idx), x2.get_ric(coord_idx)
         Δq = (q2 - q1).minimize_dihedral()
 
-        from_start.append(to_cart(q1 + Δq / (n_to_add + 1), from_start[-1]))
+        if seeds is None:
+            start_seed = from_start[-1]
+            end_seed = from_end[-1]
+        elif isinstance(seeds, Sequence):
+            start_seed = seeds[i]
+            end_seed = seeds[-(i + 1)]
+        else:
+            start_seed = seeds
+            end_seed = seeds
+
+        from_start.append(to_cart(q1 + Δq / (n_to_add + 1), start_seed))
         if is_even or i < last_iter:  # skip final from_end on odd N
-            from_end.append(to_cart(q1 + Δq * n_to_add / (n_to_add + 1), from_end[-1]))
+            from_end.append(to_cart(q1 + Δq * n_to_add / (n_to_add + 1), end_seed))
 
     return from_start + list(reversed(from_end))
-
-
-def _RIC_interpolate_frozen_str(
-    start: Cartesian,
-    end: Cartesian,
-    N: int,
-    seeds: Sequence[Cartesian],
-    to_cart: RIC_ToCartesian,
-    linearity_thrshld: float,
-    bond_dict: BondDict | None,
-) -> list[Cartesian]:
-    coord_idx = get_primitives_idx(
-        start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
-    )
-
-    q1, q2 = start.get_ric(coord_idx), end.get_ric(coord_idx)
-    Δq = (q2 - q1).minimize_dihedral()
-
-    next_q = q1 + (Δq * 1 / (N - 1))
-    penultimate_q = q1 + (Δq * (N - 2) / (N - 1))
-
-    next = to_cart(next_q, seeds[1])
-    penultimate = to_cart(penultimate_q, seeds[-2])
-
-    if N == 4:
-        return [start, next, penultimate, end]
-    elif N == 3:
-        return [start, next, end]
-    else:
-        center = _RIC_interpolate_frozen_str(
-            next,
-            penultimate,
-            N - 2,
-            seeds=seeds[1:-1],
-            to_cart=to_cart,
-            linearity_thrshld=linearity_thrshld,
-            bond_dict=bond_dict,
-        )
-        return [start, next] + center[1:-1] + [penultimate, end]
 
 
 def _correct_order(coord: Coordinate) -> Coordinate:

@@ -72,11 +72,12 @@ class CartesianBmat(CartesianCore):
         coordinate, then by standard order based on the atoms' indices.
 
         Args:
-            coordinates: default None, SortedSet of primitive
+            coordinates: default :class:`None`, SortedSet of primitive
                 coordinates to use in the calculation. If None, calculates using the
                 get_primitive_coords method
-            use_lookup: default False, if True, uses a lookup table for bond
-                determination when generating primitive internal coordinates
+            bonds: default :class:`None`, mapping containing bonding information.
+                Generates a new mapping via :meth:`~Cartesian.get_bonds` if
+                :class:`None` is provided
         Returns:
             SortedSet of redundant internal coordinates
         """
@@ -135,11 +136,10 @@ class CartesianBmat(CartesianCore):
         """Generate Wilson's B matrix for the current structure.
 
         Args:
-            internal_coordinates: default None, SortedSet of
+            idx_internal_coords: default None, SortedSet of
                 primitive internal coordinates to use in the calculation. If None,
                 calculates using the get_primitive_coords method
-            use_lookup: default False, if True, uses a lookup table for bond
-                determination when generating primitive internal coordinates
+            bonds: default :class:`None`, mapping containing bonding information.
 
         Returns:
             Wilson's B matrix
@@ -160,11 +160,10 @@ class CartesianBmat(CartesianCore):
         """Conversion to redundant internal coordinates
 
         Args:
-            internal_coordinates: default None, SortedSet of
+            internal_coord_idx: default None, SortedSet of
                 primitive coordinates to convert to. If None, calculates them using the
                 get_primitive_coords method
-            use_lookup: default False, if True, uses a lookup table for bond
-                determination when generating primitive internal coordinates
+            bonds: default :class:`None`, mapping containing bonding information.
 
         Returns:
             Redundant internal coordinate representation of self
@@ -194,7 +193,7 @@ class CartesianBmat(CartesianCore):
 
         return SetOfPrimitives(
             {
-                tuple(index_to_rownum[index] for index in coordinate_idx)
+                _reindex_to_0_inner(coordinate_idx, index_to_rownum)
                 for coordinate_idx in internal_coords_idx
             }
         )
@@ -273,10 +272,10 @@ class CartesianBmat(CartesianCore):
         )
 
         for i, coordinate in enumerate(self._reindex_to_0(internal_coords_idx)):
-            if _is_uw_bending_nonnumba(coordinate):
+            if _is_uw_bending_tuple(coordinate):
                 internal_coord_idx_arr[i, :4] = coordinate[:4]
                 internal_coord_idx_arr[i, 4] = 5
-            elif _is_vw_bending_nonnumba(coordinate):
+            elif _is_vw_bending_tuple(coordinate):
                 internal_coord_idx_arr[i, :4] = coordinate[:4]
                 internal_coord_idx_arr[i, 4] = 6
             else:
@@ -305,7 +304,7 @@ class CartesianBmat(CartesianCore):
         new_coord_idx = coord_idx.copy()
         bad_indices = SetOfPrimitives()
         for i, index in enumerate(coord_idx.copy()):
-            if _is_dihedral_nonnumba(index):
+            if _is_dihedral_tuple(index):
                 first_three = self.loc[index[:-1], COORDS].values
                 last_three = self.loc[index[1:], COORDS].values
 
@@ -532,7 +531,7 @@ def _jit_get_Wilson_B(
         coord = internal_coord_arr[i, :]
 
         # distances
-        if _is_bond(coord):
+        if _is_bond_array(coord):
             # get positions of participating atoms
             positions = position_arr[coord[:2]]
 
@@ -544,7 +543,7 @@ def _jit_get_Wilson_B(
                 B_matrix[i, j + 3 * coord[1]] = -normedu[j]
 
         # angles
-        elif _is_angle(coord):
+        elif _is_angle_array(coord):
             # get positions of participating atoms
             positions = position_arr[coord[:3]]
 
@@ -554,7 +553,7 @@ def _jit_get_Wilson_B(
                 B_matrix[i, j + 3 * coord[:3]] = angle_derivs[:3, j]
 
         # dihedrals
-        elif _is_dihedral(coord):
+        elif _is_dihedral_array(coord):
             # get positions of participating atoms
             positions = position_arr[coord[:4]]
 
@@ -563,7 +562,7 @@ def _jit_get_Wilson_B(
             for j in prange(3):  # type: ignore[attr-defined]
                 B_matrix[i, j + 3 * coord[:4]] = dihedral_derivs[:4, j]
 
-        elif _is_uw_bending(coord):
+        elif _is_uw_bending_array(coord):
             positions = position_arr[coord[:4]]
 
             axes = _jit_get_axes(position_arr, coord[:4])
@@ -573,7 +572,7 @@ def _jit_get_Wilson_B(
             for j in prange(3):  # type: ignore[attr-defined]
                 B_matrix[i, j + 3 * coord[1:4]] = uw_derivs[:, j]
 
-        elif _is_vw_bending(coord):
+        elif _is_vw_bending_array(coord):
             positions = position_arr[coord[:4]]
 
             axes = _jit_get_axes(position_arr, coord[:4])
@@ -755,7 +754,7 @@ def _jit_x_to_ric(
         # separate cases for distances, angles, and dihedrals
 
         # distances
-        if _is_bond(coord):
+        if _is_bond_array(coord):
             # get positions of participating atoms
             positions = cart_positions[coord[:2]]
 
@@ -763,7 +762,7 @@ def _jit_x_to_ric(
             internal_coordinates[i] = norm(u)
 
         # angles
-        elif _is_angle(coord):
+        elif _is_angle_array(coord):
             # get positions of participating atoms
             positions = cart_positions[coord[:3]]
 
@@ -774,7 +773,7 @@ def _jit_x_to_ric(
             internal_coordinates[i] = np.arccos(normedu @ normedv)
 
         # dihedrals
-        elif _is_dihedral(coord):
+        elif _is_dihedral_array(coord):
             # get positions of participating atoms
             positions = cart_positions[coord[:4]]
 
@@ -796,11 +795,11 @@ def _jit_x_to_ric(
             else:
                 raise SingleUndefinedDihedral(coord[:-1], 2)
 
-        elif _is_uw_bending(coord):
+        elif _is_uw_bending_array(coord):
             internal_coordinates[i] = _jit_x_to_plane_coords_nonlinear(
                 cart_positions, coord[:4]
             )[0]
-        elif _is_vw_bending(coord):
+        elif _is_vw_bending_array(coord):
             internal_coordinates[i] = _jit_x_to_plane_coords_nonlinear(
                 cart_positions, coord[:4]
             )[1]
@@ -812,7 +811,7 @@ def _correct_dihedral_idx(
     struct: Cartesian,
     bad_idx: tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx],
     old_idx: Primitives,
-    which_half: int,
+    which_half: WhichHalf,
     tol: float = 5,
 ) -> tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]:
     """Finds a suitable redefinition of a given linear dihedral coordinate
@@ -822,7 +821,7 @@ def _correct_dihedral_idx(
         bad_idx: tuple containing the dihedral to be
             replaced
         old_idx: SortedSet of primitive coordinates pre-cleaning
-        which_half: int representing which half of the dihedral is linear
+        which_half: represents which half of the dihedral is linear
         tol: default 5, tolerance for collinear atom detection, in degrees.
     Returns:
         Tuple of the new dihedral
@@ -883,41 +882,58 @@ def _correct_dihedral_idx(
         )
 
 
+def _reindex_to_0_inner(
+    coordinate_idx: Coordinate, index_to_rownum: dict
+) -> Coordinate:
+    if _is_bending_tuple(coordinate_idx):
+        return tuple(
+            [index_to_rownum[index] for index in coordinate_idx[:-1]]
+            + [coordinate_idx[-1]]
+        )
+    else:
+        return tuple(index_to_rownum[index] for index in coordinate_idx)
+
+
 @njit(cache=True)
-def _is_bond(coord: Vector) -> bool:
+def _is_bond_array(coord: Vector) -> bool:
     return coord[-1] == 2
 
 
 @njit(cache=True)
-def _is_angle(coord: Vector) -> bool:
+def _is_angle_array(coord: Vector) -> bool:
     return coord[-1] == 3
 
 
 @njit(cache=True)
-def _is_dihedral(coord: Vector) -> bool:
+def _is_dihedral_array(coord: Vector) -> bool:
     return coord[-1] == 4
 
 
 @njit(cache=True)
-def _is_uw_bending(coord: Vector) -> bool:
+def _is_uw_bending_array(coord: Vector) -> bool:
     return coord[-1] == 5
 
 
 @njit(cache=True)
-def _is_vw_bending(coord: Vector) -> bool:
+def _is_vw_bending_array(coord: Vector) -> bool:
     return coord[-1] == 6
 
 
 @njit(cache=True)
-def _is_uw_bending_nonnumba(coord: Coordinate) -> bool:
+def _is_uw_bending_tuple(coord: Coordinate) -> bool:
     return len(coord) == 5 and coord[-1] == BendType.UW
 
 
 @njit(cache=True)
-def _is_vw_bending_nonnumba(coord: Coordinate) -> bool:
+def _is_vw_bending_tuple(coord: Coordinate) -> bool:
     return len(coord) == 5 and coord[-1] == BendType.VW
 
 
 @njit(cache=True)
-def _is_dihedral_nonnumba(coord: Coordinate) -> bool:
+def _is_bending_tuple(coord: Coordinate) -> bool:
+    return _is_uw_bending_tuple(coord) or _is_vw_bending_tuple(coord)
+
+
+@njit(cache=True)
+def _is_dihedral_tuple(coord: Coordinate) -> bool:
     return len(coord) == 4

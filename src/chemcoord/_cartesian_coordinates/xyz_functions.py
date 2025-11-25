@@ -685,7 +685,7 @@ def interpolate(
     N: int,
     coord: Literal["cart", "zmat", "RIC"] = "zmat",
     coord_idx: None | Primitives = None,
-    opt_alg: Literal["gauss", "LM"] = "gauss",
+    opt_alg: Literal["gauss", "LM"] = "LM",
 ) -> list[Cartesian]:
     """Interpolate between start and end structure.
 
