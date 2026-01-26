@@ -11,7 +11,7 @@ EMAIL = "oskar.weser@gmail.com"
 URL = "https://github.com/mcocdawc/chemcoord"
 INSTALL_REQUIRES = [
     "numpy>=1.0",
-    "pandas>=1.0",
+    "pandas>=1.0,<3.0.0",
     "numba>=0.35",
     "sortedcontainers",
     "sympy",
