@@ -64,7 +64,7 @@ extensions = [
 intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "ase": ("https://ase-lib.org/", None),
-    "pandas": ("http://pandas.pydata.org/pandas-docs/stable/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/version/2.3/", None),
     "sympy": ("https://docs.sympy.org/latest/", None),
     "pymatgen": ("https://pymatgen.org/", None),
     "python": ("https://docs.python.org/3", None),
