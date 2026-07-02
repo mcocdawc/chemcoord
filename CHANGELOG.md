@@ -44,6 +44,12 @@
     static analysis tools. This replaces the `tests/testsuite_requirements.txt`
     and `tests/static_analysis_requirements.txt` files, which have been removed.
 
+- Fixed `mypy` errors surfaced by newer `pandas-stubs`/`numpy` versions so that
+    `mypy src/ tests/` passes cleanly again.
+
+- Moved the `mypy` configuration from `mypy.ini` into `pyproject.toml`
+    (`[tool.mypy]`); the `mypy.ini` file has been removed.
+
 - sphinx picks up type hints for the docstring.
 
 - Fixed several broken links in the documentation and enforce that links work.

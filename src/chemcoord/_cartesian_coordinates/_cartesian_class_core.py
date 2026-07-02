@@ -348,7 +348,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         bond_array = self._jit_give_bond_array(
             frag_pos, frag_bond_radii, self_bonding_allowed=self_bonding_allowed
         )
-        a, b = ([convert_index[i] for i in a] for a in bond_array.nonzero())
+        a, b = (
+            [convert_index[AtomIdx(int(i))] for i in a] for a in bond_array.nonzero()
+        )
         for row, index in enumerate(a):
             bond_dict[index].add(b[row])
 
@@ -1162,8 +1164,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
 
         def calculate_inertia_tensor(molecule: Self) -> tuple[Matrix, Matrix, Matrix]:
-            masses = molecule.loc[:, "mass"].values
-            pos = molecule.loc[:, COORDS].values
+            masses = np.asarray(molecule.loc[:, "mass"].values)
+            pos = np.asarray(molecule.loc[:, COORDS].values)
             inertia = np.sum(
                 masses[:, None, None]
                 * (

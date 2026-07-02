@@ -81,3 +81,54 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.mypy]
+no_implicit_optional = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+follow_untyped_imports = true
+
+# explicitly blacklist files, this means we can easily add in stricter type checks
+# by removing them from the blacklist
+[[tool.mypy.overrides]]
+module = [
+  "chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper",
+  "chemcoord._cartesian_coordinates._cartesian_class_symmetry",
+  "chemcoord._cartesian_coordinates._cart_transformation",
+  "chemcoord._cartesian_coordinates._indexers",
+  "chemcoord.constants",
+  "chemcoord.exceptions",
+  "chemcoord._generic_classes.generic_core",
+  "chemcoord._generic_classes.generic_IO",
+  "chemcoord._zmat_internal_coordinates._indexers",
+  "chemcoord._zmat_internal_coordinates._zmat_class_core",
+  "chemcoord._zmat_internal_coordinates._zmat_class_io",
+  "chemcoord._zmat_internal_coordinates.zmat_class_main",
+  "chemcoord._zmat_internal_coordinates._zmat_class_pandas_wrapper",
+  "chemcoord._zmat_internal_coordinates.zmat_functions",
+  "chemcoord._zmat_internal_coordinates._zmat_transformation",
+  "chemcoord._utilities._decorators",
+  "chemcoord._utilities._print_versions",
+  "chemcoord._utilities._temporary_deprecation_workarounds",
+  "chemcoord",
+  "setup",
+  "tests.*",
+]
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+# TODO: whenever the following packages have stubs available,
+#   stop ignoring them.
+[[tool.mypy.overrides]]
+module = [
+  "numba.*",
+  "ConfigParser.*",
+  "setuptools.*",
+  "h5py.*",
+  "sortedcontainers.*",
+  "sympy.*",
+  "ruamel.*",
+  "pyscf.*",
+  "ase.*",
+]
+ignore_missing_imports = true

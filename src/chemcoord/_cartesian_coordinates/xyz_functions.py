@@ -388,7 +388,7 @@ def allclose(
     Returns:
         True if all coordinates are close, False otherwise.
     """
-    return isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None)
+    return bool(isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None))
 
 
 def concat(

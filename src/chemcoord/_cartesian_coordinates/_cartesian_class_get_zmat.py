@@ -306,7 +306,7 @@ class CartesianGetZmat(CartesianCore):
                             a = full_table.loc[b, "b"]  # type: ignore[assignment]
                             d = full_table.index[2]
                     else:
-                        a, d = full_table.loc[b, ["b", "a"]]  # type: ignore[assignment,index,list-item]
+                        a, d = full_table.loc[b, ["b", "a"]]  # type: ignore[assignment,index,list-item,str-unpack,misc]
 
                 if len(constr_table) >= 1:
                     constr_table.iloc[0, :] = b, a, d  # type: ignore[assignment]
@@ -339,7 +339,7 @@ class CartesianGetZmat(CartesianCore):
         angles = self.get_angle_degrees(c_table.iloc[3:, :].values)
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
         rename = c_table.index[3:]
-        return [rename[i] for i in problem_index]
+        return [rename[int(i)] for i in problem_index]
 
     def correct_dihedral(
         self,
@@ -368,11 +368,11 @@ class CartesianGetZmat(CartesianCore):
         c_table = construction_table.copy()
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
-            b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]  # type: ignore[list-item,index]
+            b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]  # type: ignore[list-item,index,str-unpack,misc]
             # TODO remove this print
             print(">>>>>>>>", i, b, a, problem_d, "remove this print afterwards")
             try:
-                c_table.loc[i, "d"] = (
+                c_table.loc[i, "d"] = (  # type: ignore[index]
                     sorted_bond_dict[a] - {b, a, problem_d} - set(c_table.index[loc_i:])  # type: ignore[index,misc]
                 )[0]
             except IndexError:
