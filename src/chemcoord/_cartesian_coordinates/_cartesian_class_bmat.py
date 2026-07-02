@@ -207,31 +207,6 @@ class CartesianBmat(CartesianCore):
             }
         )
 
-    def _to_array_bending(
-        self,
-        bending_coords: Primitives,
-    ) -> Matrix[int64]:
-        """Converts the index of the bending primitive internal coordinates to an array
-        and changes to 0-based indexing.
-
-        The array is a rectangualar (n, 4) array, where n is the number of
-        bending coordinates. The last column denotes the number of defined columns and
-        the type of coordinate, i.e. (n=2) bond, (n=3) angle, (n=4) dihedral.
-
-        The bending coordinates are handeled differently from the others. If it is a
-        y-bending coordinate, then it will be in the first bending coordinate set and
-        the last column in the array will be 5, otherwise the last column becomes 6.
-
-        In addition, this function switches from the arbitrary flexible index of a
-        molecule to 0-based indexing.
-        """
-        bending_idx_data = np.empty((len(bending_coords), 4), dtype=int64)
-
-        for i, coordinate in enumerate(self._reindex_to_0(bending_coords)):
-            bending_idx_data[i, :] = coordinate
-
-        return bending_idx_data
-
     def _to_array_nobending(
         self,
         internal_coords_idx: Primitives,
@@ -594,83 +569,14 @@ def _jit_get_Wilson_B(
     return B_matrix
 
 
-def _jit_get_Wilson_B_bending(
-    position_arr: Matrix[float64],
-    bending_coords: Matrix[int64],
-) -> Matrix[float64]:
-    """Jit-compiled Wilson's B matrix generator for bending coordinates.
-
-    procedure derived from: Miller, K.J., Hinde, R.J. and Anderson, J. (1989),
-    First and second derivative matrix elements for the stretching, bending,
-    and torsional energy. J. Comput. Chem., 10: 63-76. https://doi.org/10.1002/jcc.540100107
-
-    Args:
-        position_arr: array of cartesian coordinate locations of the
-            atoms in the Cartesian
-        internal_coord_arr: array of bending coordinates
-
-    Returns:
-        Wilson's B matrix
-    """
-    B_matrix = np.zeros((2 * len(bending_coords), position_arr.size))
-    for n, coord in enumerate(bending_coords):
-        axes = _jit_get_axes(position_arr, coord)
-        u = axes[0]
-        v = axes[1]
-        w = axes[2]
-
-        # this is R_y from the textbook
-        # get positions of participating atoms
-        positions = position_arr[coord]
-        i = positions[1]
-        j = positions[2]
-        k = positions[3]
-
-        ddu_uw = np.array(
-            [
-                -1 / np.linalg.norm(j - i),
-                (1 / np.linalg.norm(j - i))
-                + ((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ v)),
-                -((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ v)),
-            ]
-        )
-        ddw_uw = np.array(
-            [
-                0,
-                -(k) @ u / np.linalg.norm((k - j) - ((k - j) @ v)),
-                (k) @ u / np.linalg.norm((k - j) - ((k - j) @ v)),
-            ]
-        )
-
-        ddv_vw = np.array(
-            [
-                -1 / np.linalg.norm(j - i),
-                (1 / np.linalg.norm(j - i))
-                + ((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ u)),
-                -((k) @ w) / np.linalg.norm((k - j) - ((k - j) @ u)),
-            ]
-        )
-        ddw_vw = np.array(
-            [
-                0,
-                -(k) @ v / np.linalg.norm((k - j) - ((k - j) @ u)),
-                (k) @ v / np.linalg.norm((k - j) - ((k - j) @ u)),
-            ]
-        )
-
-        for l in prange(3):  # type: ignore[attr-defined]
-            B_matrix[n, 3 * coord[l + 1] : 3 * coord[l + 1] + 3] = axes.T @ np.array(
-                [ddu_uw[l], 0, ddw_uw[l]]
-            )
-
-            B_matrix[
-                n + len(bending_coords), 3 * coord[l + 1] : 3 * coord[l + 1] + 3
-            ] = axes.T @ np.array([0, ddv_vw[l], ddw_vw[l]])
-
-    return B_matrix
-
-
-@njit(parallel=True, cache=True, nogil=True)
+# NOTE: no ``parallel=True`` here. This function operates on a single bending
+# coordinate (fixed-size arrays) and has no ``prange`` loop, so parallelisation
+# brings no benefit. More importantly, it is called from within the ``prange``
+# loops of ``_jit_get_Wilson_B`` and ``_jit_x_to_ric``; marking it
+# ``parallel=True`` would create a nested parallel region, which crashes the
+# (non-threadsafe) ``workqueue`` threading layer numba falls back to when
+# neither TBB nor OpenMP is available.
+@njit(cache=True, nogil=True)
 def _jit_get_axes(
     cart_positions: Matrix[float64], idx: Vector[int64]
 ) -> Matrix[float64]:
@@ -695,7 +601,11 @@ def _jit_get_axes(
     return np.stack((u, v, w))
 
 
-@njit(parallel=True, cache=True, nogil=True)
+# NOTE: no ``parallel=True`` here (see ``_jit_get_axes``): it has no ``prange``
+# loop and is called from within the ``prange`` loop of ``_jit_x_to_ric``, so
+# making it parallel would nest parallel regions and crash the ``workqueue``
+# threading layer.
+@njit(cache=True, nogil=True)
 def _jit_x_to_plane_coords_nonlinear(
     cart_positions: Matrix[float64], idx: Vector[int64]
 ) -> Vector[float64]:

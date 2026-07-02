@@ -33,6 +33,8 @@ py:class chemcoord._zmat_internal_coordinates._indexers._Safe_ILoc
 py:class chemcoord._zmat_internal_coordinates._indexers._Unsafe_Loc
 py:class chemcoord._zmat_internal_coordinates._indexers._Unsafe_ILoc
 py:class pymatgen.analyzer.symmetry.PointGroupAnalyzer
+# ase no longer publishes a fetchable intersphinx inventory (see conf.py)
+py:class ase.atoms.Atoms
 py:class typing_extensions.Self
 py:class Primitives
 py:class BondDict

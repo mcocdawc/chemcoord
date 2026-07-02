@@ -57,8 +57,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Testing infrastructure: test runner, coverage, static analysis and type stubs.
-# These are the additional requirements on top of the runtime dependencies above.
 test = [
   "pytest",
   "pytest-cov",
@@ -69,6 +67,12 @@ test = [
   # ase-stubs does not publish wheels for Python 3.12+ yet.
   "ase-stubs; python_version < '3.12'",
   "pandas-stubs",
+  "pyscf",
+]
+doc = [
+  "sphinx-rtd-theme",
+  "sphinxcontrib.bibtex",
+  "ase",
   "pyscf",
 ]
 

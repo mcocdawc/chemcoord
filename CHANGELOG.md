@@ -11,6 +11,15 @@
 
 - fixed bug where get_bonds with modified atom data only worked with 0-indexed molecules (the default).
 
+- Fixed a crash (`Numba workqueue threading layer is terminating: Concurrent access
+    has been detected`) when computing redundant internal coordinates (RICs) or
+    Wilson B-matrices for molecules with bending coordinates. The inner
+    `numba` helpers (`_jit_get_axes`, `_jit_x_to_plane_coords_nonlinear`) were
+    marked ``parallel=True`` despite containing no ``prange`` loop, which created a
+    nested parallel region when called from the outer parallel loops. This aborted
+    the process whenever `numba` falls back to the non-threadsafe ``workqueue``
+    threading layer (i.e. when neither TBB nor OpenMP is available).
+
 
 ## New features
 

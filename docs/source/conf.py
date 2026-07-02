@@ -63,7 +63,11 @@ extensions = [
 
 intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "ase": ("https://ase-lib.org/", None),
+    # NOTE: ase intersphinx is intentionally omitted. ase moved to
+    # https://ase-lib.org/ and no longer publishes a fetchable ``objects.inv``
+    # (the old wiki.fysik.dtu.dk location is gone too), so keeping it here only
+    # produced a "failed to reach inventory" warning on every build. The handful
+    # of ``ase.atoms.Atoms`` references are listed in ``nitpick-exceptions``.
     "pandas": ("http://pandas.pydata.org/pandas-docs/stable/", None),
     "sympy": ("https://docs.sympy.org/latest/", None),
     "pymatgen": ("https://pymatgen.org/", None),
@@ -355,3 +359,30 @@ for line in open("nitpick-exceptions"):
     dtype, target = line.split(None, 1)
     target = target.strip()
     nitpick_ignore.append((dtype, target))
+
+
+# autodoc renders type hints using pandas' *canonical* module paths
+# (e.g. ``pandas.core.frame.DataFrame``), but pandas' intersphinx inventory only
+# exposes the public aliases (``pandas.DataFrame``). Remap the internal paths to
+# the public ones so the cross-references resolve to real links instead of
+# emitting "reference target not found" warnings.
+_REFERENCE_ALIASES = {
+    "pandas.core.frame.DataFrame": "pandas.DataFrame",
+    "pandas.core.series.Series": "pandas.Series",
+    "pandas.core.indexes.base.Index": "pandas.Index",
+}
+
+
+def _resolve_internal_aliases(app, env, node, contnode):
+    """Redirect known internal class paths to their public aliases."""
+    from sphinx.ext.intersphinx import missing_reference
+
+    target = node.get("reftarget")
+    if target in _REFERENCE_ALIASES:
+        node["reftarget"] = _REFERENCE_ALIASES[target]
+        return missing_reference(app, env, node, contnode)
+    return None
+
+
+def setup(app):
+    app.connect("missing-reference", _resolve_internal_aliases)
