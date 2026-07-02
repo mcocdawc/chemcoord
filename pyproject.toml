@@ -56,6 +56,21 @@ dependencies = [
   "PyYAML",
 ]
 
+[project.optional-dependencies]
+# Testing infrastructure: test runner, coverage, static analysis and type stubs.
+# These are the additional requirements on top of the runtime dependencies above.
+test = [
+  "pytest",
+  "pytest-cov",
+  "mypy",
+  "ruff",
+  "pylint",
+  "types-simplejson",
+  "ase-stubs",
+  "pandas-stubs",
+  "pyscf",
+]
+
 [project.urls]
 Homepage = "https://github.com/mcocdawc/chemcoord"
 Documentation = "https://chemcoord.readthedocs.io/en/v2.1.2/"

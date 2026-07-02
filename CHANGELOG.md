@@ -39,6 +39,11 @@
 
 - Enforced `ruff` and `mypy` checks as part of test suite.
 
+- Added an optional `test` dependency group (`pip install .[test]`) that installs
+    the testing infrastructure: `pytest`, `mypy`, the type stubs and the other
+    static analysis tools. This replaces the `tests/testsuite_requirements.txt`
+    and `tests/static_analysis_requirements.txt` files, which have been removed.
+
 - sphinx picks up type hints for the docstring.
 
 - Fixed several broken links in the documentation and enforce that links work.

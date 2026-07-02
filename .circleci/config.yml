@@ -6,10 +6,7 @@ analysis: &analysis
       - checkout
       - run:
           name: Install chemcoord
-          command: pip3 install .
-      - run:
-          name: Install infrastructure
-          command: pip3 install -r tests/static_analysis_requirements.txt
+          command: pip3 install '.[test]'
       - run:
           name: Check trailing whitespace
           command: git diff-tree --check $(git hash-object -t tree /dev/null)  HEAD -- '(exclude)docs/make.bat'
@@ -29,10 +26,7 @@ run_tests: &run_tests
       - checkout
       - run:
           name: Install chemcoord
-          command: pip3 install .
-      - run:
-          name: Install infrastructure
-          command: pip3 install -r tests/testsuite_requirements.txt
+          command: pip3 install '.[test]'
       - run:
           name: Running tests
           command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
