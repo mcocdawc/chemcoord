@@ -1,14 +1,11 @@
 import itertools
 import os
 
-import pandas as pd
 import pytest
 
 import chemcoord as cc
 from chemcoord.exceptions import UndefinedCoordinateSystem
 from chemcoord.xyz_functions import allclose
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

@@ -49,6 +49,7 @@
       ~Cartesian.cut_cuboid
       ~Cartesian.cut_sphere
       ~Cartesian.fragmentate
+      ~Cartesian.get_Wilson_B
       ~Cartesian.get_align_transf
       ~Cartesian.get_angle_degrees
       ~Cartesian.get_ase_atoms
@@ -67,7 +68,9 @@
       ~Cartesian.get_grad_zmat
       ~Cartesian.get_inertia
       ~Cartesian.get_pointgroup
+      ~Cartesian.get_primitives_idx
       ~Cartesian.get_pymatgen_molecule
+      ~Cartesian.get_ric
       ~Cartesian.get_shortest_distance
       ~Cartesian.get_total_mass
       ~Cartesian.get_without

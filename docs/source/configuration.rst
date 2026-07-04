@@ -40,3 +40,4 @@ The possible settings and their defaults are:
     ~Defaults.atomic_radius_data
     ~Defaults.viewer
     ~Defaults.list_viewer_file
+    ~Defaults.n_worker

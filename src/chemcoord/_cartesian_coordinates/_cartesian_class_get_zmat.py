@@ -20,8 +20,8 @@ from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
     COORDS,
 )
-from chemcoord._internal_coordinates.zmat_class_main import Zmat
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
+from chemcoord._zmat_internal_coordinates.zmat_class_main import Zmat
 from chemcoord.exceptions import (
     ERR_CODE_OK,
     ERR_CODE_InvalidReference,
@@ -164,7 +164,11 @@ class CartesianGetZmat(CartesianCore):
             work_bond_dict = new_work_bond_dict
             _modify_priority(work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient="index")
-        output = output.loc[order_of_def, ["b", "a", "d"]]
+        # ``b``, ``a`` and ``d`` mix integer atom indices with string labels for
+        # the absolute references. Force ``object`` dtype so that pandas >= 3
+        # does not infer a strict ``StringDtype`` that rejects later integer
+        # assignments.
+        output = output.loc[order_of_def, ["b", "a", "d"]].astype(object)
         return output
 
     def get_construction_table(
@@ -306,7 +310,7 @@ class CartesianGetZmat(CartesianCore):
                             a = full_table.loc[b, "b"]  # type: ignore[assignment]
                             d = full_table.index[2]
                     else:
-                        a, d = full_table.loc[b, ["b", "a"]]  # type: ignore[assignment,index,list-item]
+                        a, d = full_table.loc[b, ["b", "a"]]  # type: ignore[assignment,index,list-item,str-unpack,misc]
 
                 if len(constr_table) >= 1:
                     constr_table.iloc[0, :] = b, a, d  # type: ignore[assignment]
@@ -339,7 +343,7 @@ class CartesianGetZmat(CartesianCore):
         angles = self.get_angle_degrees(c_table.iloc[3:, :].values)
         problem_index = np.nonzero((175 < angles) | (angles < 5))[0]
         rename = c_table.index[3:]
-        return [rename[i] for i in problem_index]
+        return [rename[int(i)] for i in problem_index]
 
     def correct_dihedral(
         self,
@@ -368,9 +372,9 @@ class CartesianGetZmat(CartesianCore):
         c_table = construction_table.copy()
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
-            b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]  # type: ignore[list-item,index]
+            b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]  # type: ignore[list-item,index,str-unpack,misc]
             try:
-                c_table.loc[i, "d"] = (
+                c_table.loc[i, "d"] = (  # type: ignore[index]
                     sorted_bond_dict[a] - {b, a, problem_d} - set(c_table.index[loc_i:])  # type: ignore[index,misc]
                 )[0]
             except IndexError:
@@ -444,7 +448,7 @@ class CartesianGetZmat(CartesianCore):
             raise ValueError(message(i=i))
         for k in range(3):
             if k < row:
-                A[k] = self.loc[c_table.iloc[row, k], COORDS]  # type: ignore[index]
+                A[k] = self.loc[c_table.iloc[row, k], COORDS]  # type: ignore[call-overload,index]
             else:
                 A[k] = abs_refs[c_table.iloc[row, k]]  # type: ignore[index]
         v1, v2 = A[2] - A[1], A[1] - A[0]
@@ -539,13 +543,18 @@ class CartesianGetZmat(CartesianCore):
             A new instance of :class:`Zmat`.
         """
         c_table = construction_table
+        # ``b``, ``a`` and ``d`` hold a mix of integer atom indices and string
+        # labels for the absolute references (``'origin'``, ``'e_x'``, ...), so
+        # they must be ``object`` dtype. Under pandas >= 3 a numpy ``str`` dtype
+        # is inferred as the strict ``StringDtype``, which rejects the integer
+        # indices; ``object`` keeps the pandas 2 behaviour.
         dtypes = [
-            ("atom", str),
-            ("b", str),
+            ("atom", object),
+            ("b", object),
             ("bond", float),
-            ("a", str),
+            ("a", object),
             ("angle", float),
-            ("d", str),
+            ("d", object),
             ("dihedral", float),
         ]
 
@@ -772,7 +781,7 @@ class CartesianGetZmat(CartesianCore):
 
     def to_zmat(self, *args, **kwargs) -> Zmat:  # type: ignore[no-untyped-def]
         """Deprecated, use :meth:`~Cartesian.get_zmat`."""
-        message = "Will be removed in the future. Please use give_zmat."
+        message = "Will be removed in the future. Please use get_zmat."
         with warnings.catch_warnings():
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)

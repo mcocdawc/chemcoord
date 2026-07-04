@@ -7,7 +7,7 @@ from typing_extensions import Self
 
 import chemcoord.constants as constants
 from chemcoord._generic_classes.generic_IO import GenericIO
-from chemcoord._internal_coordinates._zmat_class_core import ZmatCore
+from chemcoord._zmat_internal_coordinates._zmat_class_core import ZmatCore
 from chemcoord.exceptions import InvalidReference, UndefinedCoordinateSystem
 from chemcoord.typing import (
     FloatFormatType,
@@ -19,10 +19,6 @@ from chemcoord.typing import (
 class ZmatIO(ZmatCore, GenericIO):
     def __repr__(self) -> str:
         return self._frame.__repr__()
-
-    #  def _abs_ref_formatter(
-    #      self, format_as: Literal["raw", "string", "latex"] = "string"
-    #  ) -> Self:
 
     def _abs_ref_formatter(self, format_as="string"):
         out = self.copy()

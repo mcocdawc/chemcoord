@@ -10,7 +10,13 @@ def replace_without_warn(df, *replace_args, **replace_kwargs):
     We can remove this warning filter in the future.
     """
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=FutureWarning)
+        # Scope the filter narrowly to the known downcasting message so that
+        # unrelated FutureWarnings are still surfaced.
+        warnings.filterwarnings(
+            "ignore",
+            category=FutureWarning,
+            message=".*Downcasting behavior.*",
+        )
         return df.replace(*replace_args, **replace_kwargs)
 
 

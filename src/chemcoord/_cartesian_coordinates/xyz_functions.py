@@ -12,6 +12,8 @@ from typing import Literal, overload
 import numpy as np
 import pandas as pd
 import sympy
+from joblib import Parallel, delayed
+from numba import njit
 from pandas.core.frame import DataFrame
 from typing_extensions import assert_never
 
@@ -19,11 +21,11 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
     normalize,
 )
+from chemcoord._cartesian_coordinates._cartesian_class_bmat import Primitives
 from chemcoord._cartesian_coordinates._cartesian_class_core import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
-from chemcoord._internal_coordinates.zmat_class_main import Zmat
-from chemcoord._internal_coordinates.zmat_functions import _zmat_interpolate
-from chemcoord._utilities._decorators import njit
+from chemcoord._zmat_internal_coordinates.zmat_class_main import Zmat
+from chemcoord._zmat_internal_coordinates.zmat_functions import _zmat_interpolate
 from chemcoord.configuration import settings
 from chemcoord.typing import Matrix, PathLike, Real, Tensor4D, Vector
 
@@ -162,7 +164,7 @@ def read_multiple_xyz(inputfile: PathLike, start_index: int = 0) -> list[Cartesi
     Returns:
         A list of Cartesian objects.
     """
-    with open(inputfile, "r") as f:
+    with open(inputfile) as f:
         strings = f.readlines()
         cartesians = []
         finished = False
@@ -336,14 +338,13 @@ def isclose(
     """Compare two molecules for numerical equality.
 
     Args:
-        a: First molecule.
-        b: Second molecule.
-        align: If True, a and b are prealigned along their principal axes of
-            inertia and moved to their barycenters before comparing.
-        rtol: Relative tolerance for the numerical equality comparison (see
-            ``numpy.isclose``).
-        atol: Absolute tolerance for the numerical equality comparison (see
-            ``numpy.isclose``).
+        a :
+        b :
+        align (bool): b is aligned unto a before comparing.
+        rtol : Relative tolerance for the numerical equality comparison
+            look into :func:`numpy.isclose` for further explanation.
+        atol : Relative tolerance for the numerical equality comparison
+            look into :func:`numpy.isclose` for further explanation.
     """
     # The pandas documentation says about the arguments to all(axis=...)
     #   None : reduce all axes, return a scalar
@@ -357,8 +358,7 @@ def isclose(
         raise ValueError(message)
 
     if align:
-        a = a.get_inertia()["transformed_Cartesian"]
-        b = b.get_inertia()["transformed_Cartesian"]
+        a, b = a.align(b)
     A, B = a.loc[:, COORDS].values, b.loc[a.index, COORDS].values
 
     out = pd.DataFrame(index=a.index, columns=["atom"] + COORDS, dtype=bool)
@@ -377,19 +377,18 @@ def allclose(
     """Compare two molecules for numerical equality.
 
     Args:
-        a: First molecule.
-        b: Second molecule.
-        align: If True, a and b are prealigned along their principal axes of
-            inertia and moved to their barycenters before comparing.
-        rtol: Relative tolerance for the numerical equality comparison (see
-            ``numpy.allclose``).
-        atol: Absolute tolerance for the numerical equality comparison (see
-            ``numpy.allclose``).
+        a (Cartesian):
+        b (Cartesian):
+        align (bool): b is aligned unto a before comparing.
+        rtol (float): Relative tolerance for the numerical equality comparison
+            look into :func:`numpy.allclose` for further explanation.
+        atol (float): Relative tolerance for the numerical equality comparison
+            look into :func:`numpy.allclose` for further explanation.
 
     Returns:
         True if all coordinates are close, False otherwise.
     """
-    return isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None)
+    return bool(isclose(a, b, align=align, rtol=rtol, atol=atol).all(axis=None))
 
 
 def concat(
@@ -435,13 +434,54 @@ def get_rotation_matrix(axis: Sequence[float], angle: float) -> Matrix[np.float6
     Returns:
         The rotation matrix as a numpy array.
     """
-    vaxis = normalize(np.asarray(axis))
+    vaxis = normalize(np.asarray(axis))  # type: ignore[arg-type]
     if not (vaxis.shape) == (3,):
         raise ValueError("axis.shape has to be 3")
     return _jit_get_rotation_matrix(vaxis, angle)
 
 
-@njit
+def get_rotation_params(
+    R: Matrix[np.float64], radian: bool = True
+) -> tuple[Vector[np.float64], float]:
+    """Convert a 3x3 rotation matrix to axis-angle representation.
+
+    Args:
+        R : A 3x3 rotation matrix.
+        radian : Use radian or degrees.
+
+    Returns:
+        axis : A 3-element unit vector representing the rotation axis.
+        angle : The rotation angle in radians.
+    """
+    # Ensure R is a valid rotation matrix
+    if R.shape != (3, 3):
+        raise ValueError("Input must be a 3x3 matrix.")
+
+    # Compute the angle from the trace of the matrix
+    angle = np.arccos(np.clip((np.trace(R) - 1) / 2, -1.0, 1.0))
+    angle_out = angle if radian else float(angle * 180 / np.pi)
+
+    if np.isclose(angle, 0):
+        # No rotation: return arbitrary axis
+        return np.array([1.0, 0.0, 0.0]), 0.0  # type: ignore[return-value]
+    elif np.isclose(angle, np.pi):
+        # 180-degree rotation: special case
+        # Use the diagonal elements to find axis
+        R_plus_I = R + np.eye(3)
+        axis = np.sqrt(np.maximum(R_plus_I.diagonal() / 2, 0))
+        # Resolve sign ambiguity
+        axis = axis / np.linalg.norm(axis)
+        return axis, angle_out
+    else:
+        # General case
+        axis = np.array([R[2, 1] - R[1, 2], R[0, 2] - R[2, 0], R[1, 0] - R[0, 1]]) / (
+            2 * np.sin(angle)
+        )
+        axis = axis / np.linalg.norm(axis)
+        return axis, angle_out
+
+
+@njit(cache=True)
 def _jit_get_rotation_matrix(
     axis: Vector[np.float64], angle: Real
 ) -> Matrix[np.float64]:
@@ -495,9 +535,9 @@ def orthonormalize_righthanded(basis: Matrix[np.floating]) -> Matrix[np.float64]
         A right handed orthonormalized basis as a numpy array.
     """
     v1, v2 = basis[:, 0], basis[:, 1]
-    e1 = normalize(v1)
+    e1 = normalize(v1)  # type: ignore[arg-type]
     e3 = normalize(np.cross(e1, v2))
-    e2 = normalize(np.cross(e3, e1))
+    e2 = normalize(np.cross(e3, e1))  # type: ignore[arg-type]
     return np.array([e1, e2, e3]).T
 
 
@@ -556,13 +596,17 @@ def apply_grad_zmat_tensor(
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
 
+    # ``b``, ``a`` and ``d`` hold a mix of integer atom indices and string
+    # labels for the absolute references, so they must be ``object`` dtype.
+    # Under pandas >= 3 a numpy ``str`` dtype is inferred as the strict
+    # ``StringDtype``, which rejects the integer indices.
     dtypes = [
-        ("atom", str),
-        ("b", str),
+        ("atom", object),
+        ("b", object),
         ("bond", float),
-        ("a", str),
+        ("a", object),
         ("angle", float),
-        ("d", str),
+        ("d", object),
         ("dihedral", float),
     ]
 
@@ -594,8 +638,59 @@ def _cart_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesia
     return [start + i * Delta for i in range(N)]
 
 
+def _fix_trans_rot(
+    start: Cartesian, end: Cartesian, path: Sequence[Cartesian]
+) -> list[Cartesian]:
+    """Interpolate rotational/translational degrees of freedom.
+
+    This function is particularly important for interpolations in redundant
+    internal coordinates.
+    If ``path`` contains images that are interpolated purely based on
+    internal degrees of freedom, then it is often desired
+    to also interpolate the translational/rotational degrees of freedom as well.
+
+    It is assumed, that ``start`` and ``end`` are the same as
+    ``path[0]`` and ``path[-1]``, up to translation/rotation.
+    """
+    if not (
+        allclose(start, path[0], align=True, atol=1e-4)
+        and allclose(end, path[-1], align=True, atol=1e-4)
+    ):
+        raise ValueError(
+            "start and end have to align with the start and end of path "
+            "(up to translation/rotation of course. )"
+        )
+    # We find the translation from start to end
+    v = end.get_barycenter() - start.get_barycenter()
+    # We find the rotation from start unto end.
+    R = end.get_align_transf(start, mass_weight=True)
+    axis, angle = get_rotation_params(R)
+
+    # Note that all images of the path are translated to their barycenter
+    # and (mass-weighted) aligned unto start
+    path = [start.align(m, mass_weight=True)[1] for m in path]
+    offset = start.get_barycenter()
+    N = len(path)
+
+    def f(t: float, image: Cartesian) -> Cartesian:
+        return (
+            get_rotation_matrix(axis, angle * t) @ image  # type: ignore[arg-type]
+            + offset
+            + v * t
+        )
+
+    return Parallel(n_jobs=settings.defaults.n_worker)(
+        delayed(f)(i / (N - 1), m) for i, m in enumerate(path)
+    )
+
+
 def interpolate(
-    start: Cartesian, end: Cartesian, N: int, coord: Literal["cart", "zmat"] = "zmat"
+    start: Cartesian,
+    end: Cartesian,
+    N: int,
+    coord: Literal["cart", "zmat", "RIC"] = "zmat",
+    coord_idx: None | Primitives = None,
+    opt_alg: Literal["gauss", "LM"] = "LM",
 ) -> list[Cartesian]:
     """Interpolate between start and end structure.
 
@@ -603,11 +698,55 @@ def interpolate(
         start: Starting structure.
         end: Ending structure.
         N: Number of structures to interpolate between.
-        coord: Interpolate either in cartesian or zmatrix space.
+        coord: Interpolate in Cartesian, Z-matrix,
+            or redundant internal coordinate (RIC) space.
+
+    References:
+        The Z-matrix interpolation is described in :cite:`weser_automated_2023`,
+        the redundant internal coordinate (RIC) interpolation in
+        :cite:`whelpley_efficient_2026`. If you use this function, please cite
+        the reference matching the ``coord`` you use.
     """
+    from chemcoord._redundant_internal_coordinates.main import (  # noqa: PLC0415
+        RIC_interpolate,
+    )
+
     if coord == "cart":
         return _cart_interpolate(start, end, N)
     elif coord == "zmat":
         return _zmat_interpolate(start, end, N)
+    elif coord == "RIC":
+        return _fix_trans_rot(
+            start,
+            end,
+            RIC_interpolate(start, end, N, opt_alg=opt_alg, coord_idx=coord_idx),
+        )
     else:
-        assert_never(f"coord must be either 'cart' or 'zmat', not {coord}")
+        assert_never(f"coord must be either 'cart', 'zmat', or 'RIC'; not {coord}")
+
+
+def get_reaction_coordinate(path: Sequence[Cartesian]) -> Vector[np.float64]:
+    r"""Compute the reaction coordinate for a path.
+
+    The reaction coordinate :math:`\chi_k` of the k-th image of n images in total
+    is given by:
+
+
+    .. math::
+
+        \chi_k = \frac{\sum_0^k ||x_{i + 1} - x_{i}||}{\sum_0^n ||x_{i + 1} - x_{i}||}
+
+    Args:
+        path :
+    """
+
+    if len(path) < 2:
+        raise ValueError("path must contain at least two images")
+
+    def difference(m1: Cartesian, m2: Cartesian) -> float:
+        return float(np.sqrt(((m2 - m1).loc[:, ["x", "y", "z"]].values ** 2).sum()))
+
+    steps = np.cumsum([0] + [difference(m2, m1) for m2, m1 in zip(path[1:], path)])
+    if steps[-1] == 0:
+        raise ValueError("path has zero total displacement")
+    return steps / steps[-1]

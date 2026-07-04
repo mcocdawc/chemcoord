@@ -1,12 +1,9 @@
 import os
 
-import pandas as pd
 import pytest
 
 import chemcoord as cc
 from chemcoord.exceptions import InvalidReference
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

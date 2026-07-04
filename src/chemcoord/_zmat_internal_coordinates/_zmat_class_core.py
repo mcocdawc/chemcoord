@@ -9,22 +9,25 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
+from numba import njit
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
 from pandas.core.series import Series
 from typing_extensions import Self
 
-import chemcoord._internal_coordinates._indexers as indexers
-import chemcoord._internal_coordinates._zmat_transformation as transformation
+import chemcoord._zmat_internal_coordinates._indexers as indexers
+import chemcoord._zmat_internal_coordinates._zmat_transformation as transformation
 import chemcoord.constants as constants
 from chemcoord._cartesian_coordinates._cart_transformation import (
     _jit_normalize,
     get_ref_pos,
 )
 from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord._internal_coordinates._zmat_class_pandas_wrapper import PandasWrapper
-from chemcoord._utilities._decorators import Appender, njit
+from chemcoord._utilities._decorators import Appender
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
+from chemcoord._zmat_internal_coordinates._zmat_class_pandas_wrapper import (
+    PandasWrapper,
+)
 from chemcoord.exceptions import (
     ERR_CODE_OK,
     ERR_CODE_InvalidReference,
@@ -462,16 +465,12 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         new = self.copy()
 
-        def convert_d(d: Series) -> Series:
-            r = d % 360
-            return r - (r // 180) * 360
+        def convert_d(d: Series) -> Vector[np.float64]:
+            return np.mod(d + 180, 360) - 180  # type: ignore[return-value]
 
         new.unsafe_loc[:, "dihedral"] = convert_d(new.loc[:, "dihedral"])
         return new
 
-    # python 3.x is so much butter than 2.7
-    # https://www.python.org/dev/peps/pep-3102/
-    # def subs(self, *args, perform_checks=True):
     def subs(self, *args, **kwargs) -> Self:
         """Substitute a symbolic expression in ``['bond', 'angle', 'dihedral']``
 
@@ -581,7 +580,16 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 "Due to a bug in pandas it is necessary to have integer columns"
             )
         c_table = c_table.replace(self.index, new_index)
-        c_table = c_table.replace({v: k for k, v in constants.int_label.items()})
+        # Map the absolute-reference sentinel integers back to their string
+        # labels. This changes the column dtype from int to object, which under
+        # pandas >= 3 triggers an ``IndexError`` in the internal ``replace_list``
+        # code path unless the frame is already ``object`` dtype. Casting up front
+        # avoids the bug (the sentinel ints and the string labels are disjoint, so
+        # the replacement stays unambiguous). ``replace_without_warn`` silences the
+        # pandas 2.x downcasting ``FutureWarning`` this int->str replace emits.
+        c_table = replace_without_warn(
+            c_table.astype(object), {v: k for k, v in constants.int_label.items()}
+        )
 
         out = self.copy()
         out.unsafe_loc[:, ["b", "a", "d"]] = c_table
@@ -781,7 +789,9 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         c_table = self._extract_c_table()
 
-        C = self.loc[:, ["bond", "angle", "dihedral"]].values.T
+        # ``.values`` may return a read-only array under pandas >= 3
+        # (copy-on-write), so take a writable copy before mutating in place.
+        C = self.loc[:, ["bond", "angle", "dihedral"]].values.T.copy()
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
         err, row, positions = transformation.get_X(C, c_table)
@@ -932,9 +942,14 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             .values.T
         )
 
+        # ``.values`` may return a read-only array under pandas >= 3
+        # (copy-on-write), so ensure ``C`` is a writable copy before the
+        # in-place mutation below.
         C = zmat.loc[:, ["bond", "angle", "dihedral"]].values.T
         if C.dtype == np.dtype("i8"):
             C = C.astype("f8")
+        else:
+            C = C.copy()
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
         grad_X = transformation.get_grad_X(C, c_table, chain=chain)
@@ -961,7 +976,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             grad_X = drop_dummies(grad_X, self)
 
         if as_function:
-            from chemcoord._internal_coordinates.zmat_functions import (  # noqa: PLC0415
+            from chemcoord._zmat_internal_coordinates.zmat_functions import (  # noqa: PLC0415
                 apply_grad_cartesian_tensor,
             )
 
@@ -978,7 +993,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return self.get_cartesian(*args, **kwargs)
 
 
-@njit
+@njit(cache=True)
 def _jit_get_normal(vectors: Matrix) -> Vector:
     BA = vectors[:, 1] - vectors[:, 0]
     if np.allclose(BA, 0.0):
@@ -990,7 +1005,7 @@ def _jit_get_normal(vectors: Matrix) -> Vector:
     return _jit_normalize(N)
 
 
-@njit
+@njit(cache=True)
 def _jit_different_orientations(
     X_ref: Matrix, X_new: Matrix, c_table: Matrix
 ) -> Vector:
@@ -1005,5 +1020,5 @@ def _jit_different_orientations(
 
 
 def _complementary_dihedral(dihedral: Series) -> Series:
-    r = (dihedral + 180) % 360
+    r = np.mod(dihedral + 180, 360)
     return r - (r // 180) * 360

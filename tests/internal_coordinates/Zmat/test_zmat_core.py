@@ -5,14 +5,11 @@ from os.path import join
 from typing import Final
 
 import numpy as np
-import pandas as pd
 import pytest
 from sympy import Symbol
 
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():
@@ -103,7 +100,7 @@ def test_pure_internal_move():
         assert cc.xyz_functions.allclose(m, ref.align(m, mass_weight=True)[1])
 
 
-def test_MeOH_Furan_interpolation():
+def test_MeOH_Furan_interpolation() -> None:
     start = cc.Cartesian.read_xyz(
         join(STRUCTURE_PATH, "MeOH_Furan_start.xyz"), start_index=1
     )

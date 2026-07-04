@@ -1,10 +1,6 @@
 import os
 
-import pandas as pd
-
 import chemcoord as cc
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

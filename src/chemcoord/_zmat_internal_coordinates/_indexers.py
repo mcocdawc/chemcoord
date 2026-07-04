@@ -281,14 +281,15 @@ class _Unsafe_base:
                     indexer[key[0], key[1]] = value
                 else:
                     indexer[key] = value
-        except FutureWarning:
+        except (FutureWarning, TypeError):
             # We have the situation where value is of different type than
             #  the columns we assign to.
             # This happens for example when assigning sympy objects,
             #  i.e. symbolic variables, to a float column.
-            # Currently this is not a problem in pandas and only raises a FutureWarning
-            #  (as of version 2.2.), but to be futureproof make an explicit cast.
-            # The `except FutureWarning:` has likely to become `except TypeError:` then.
+            # Up to pandas 2.2 this only raised a ``FutureWarning``; since
+            #  pandas 3 the same assignment raises a ``TypeError`` instead.
+            # In both cases we recover by explicitly casting the target
+            #  column(s) to ``object`` and retrying the assignment.
             if isinstance(key, tuple):
                 if type(key[1]) is not str and is_iterable(key[1]):
                     self.molecule._frame = self.molecule._frame.astype(

@@ -7,6 +7,7 @@ from typing import Any, Final, Literal, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
+from numba import njit
 from ordered_set import OrderedSet
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
@@ -22,7 +23,6 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
 )
 from chemcoord._cartesian_coordinates._indexers import QueryFunction
 from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
 from chemcoord.constants import RestoreElementData, elements
 from chemcoord.exceptions import PhysicalMeaning
@@ -300,7 +300,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return new
 
     @staticmethod
-    @njit
+    @njit(cache=True)
     def _jit_give_bond_array(
         pos: Matrix[np.floating],
         bond_radii: Vector[np.floating],
@@ -343,12 +343,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             )
 
         frag_pos = positions[fragment_indices, :]
-        frag_bond_radii = bond_radii[fragment_indices]
+        frag_bond_radii = cast(Vector[np.floating], bond_radii[fragment_indices])
 
         bond_array = self._jit_give_bond_array(
             frag_pos, frag_bond_radii, self_bonding_allowed=self_bonding_allowed
         )
-        a, b = ([convert_index[i] for i in a] for a in bond_array.nonzero())
+        a, b = (
+            [convert_index[AtomIdx(int(i))] for i in a] for a in bond_array.nonzero()
+        )
         for row, index in enumerate(a):
             bond_dict[index].add(b[row])
 
@@ -417,8 +419,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             elif callable(modify_element_data):
                 elements.loc[:, data_col] = used_vdW_r.map(modify_element_data)  # type: ignore[arg-type]
             elif isinstance(modify_element_data, Mapping):
-                elements.loc[:, data_col].update(modify_element_data)  # type: ignore[arg-type]
-                # assert False, elements.loc["C", atomic_radius_data]
+                # ``Series.update`` mutates in place, but under pandas >= 3
+                # copy-on-write ``elements.loc[:, data_col]`` is a copy, so the
+                # update would be lost. Update a copy and assign it back.
+                updated = used_vdW_r.copy()
+                updated.update(pd.Series(modify_element_data))
+                elements.loc[:, data_col] = updated
             elif modify_element_data is None:
                 pass
             else:
@@ -675,7 +681,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         elif isinstance(origin, (int, np.integer)):
             return cast(Vector[np.float64], self.loc[origin, COORDS].values)
         else:
-            return np.asarray(origin, dtype="f8")
+            return cast(Vector[np.float64], np.asarray(origin, dtype="f8"))
 
     def cut_sphere(
         self,
@@ -808,8 +814,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], COORDS].values
-            b_pos = self.loc[indices[:, 1], COORDS].values
+            i_pos = self.loc[indices[:, 0], COORDS].values  # type: ignore[index]
+            b_pos = self.loc[indices[:, 1], COORDS].values  # type: ignore[index]
         return np.linalg.norm(i_pos - b_pos, axis=1)
 
     def get_angle_degrees(
@@ -844,9 +850,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], COORDS].values
-            b_pos = self.loc[indices[:, 1], COORDS].values
-            a_pos = self.loc[indices[:, 2], COORDS].values
+            i_pos = self.loc[indices[:, 0], COORDS].values  # type: ignore[index]
+            b_pos = self.loc[indices[:, 1], COORDS].values  # type: ignore[index]
+            a_pos = self.loc[indices[:, 2], COORDS].values  # type: ignore[index]
 
         BI, BA = i_pos - b_pos, a_pos - b_pos
         bi, ba = (v / np.linalg.norm(v, axis=1)[:, None] for v in (BI, BA))
@@ -890,10 +896,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             indices = np.array(indices)
             if len(indices.shape) == 1:
                 indices = indices[None, :]
-            i_pos = self.loc[indices[:, 0], COORDS].values
-            b_pos = self.loc[indices[:, 1], COORDS].values
-            a_pos = self.loc[indices[:, 2], COORDS].values
-            d_pos = self.loc[indices[:, 3], COORDS].values
+            i_pos = self.loc[indices[:, 0], COORDS].values  # type: ignore[index]
+            b_pos = self.loc[indices[:, 1], COORDS].values  # type: ignore[index]
+            a_pos = self.loc[indices[:, 2], COORDS].values  # type: ignore[index]
+            d_pos = self.loc[indices[:, 3], COORDS].values  # type: ignore[index]
 
         IB = b_pos - i_pos
         BA = a_pos - b_pos
@@ -1080,7 +1086,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         )
 
     @staticmethod
-    @njit
+    @njit(cache=True)
     def _jit_pairwise_distances(
         pos1: Matrix[np.floating], pos2: Matrix[np.floating]
     ) -> Matrix[np.float64]:
@@ -1121,7 +1127,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         pos2 = other.loc[:, COORDS].values
         D = self._jit_pairwise_distances(pos1, pos2)
         i, j = np.unravel_index(D.argmin(), D.shape)
-        return AtomIdx(self.index[i]), AtomIdx(other.index[j]), float(D[i, j])  # type: ignore[call-overload]
+        return AtomIdx(int(self.index[i])), AtomIdx(int(other.index[j])), float(D[i, j])  # type: ignore[call-overload]
 
     def get_inertia(self) -> dict[str, Any]:
         """Calculate the inertia tensor and transforms along
@@ -1162,8 +1168,8 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
 
         def calculate_inertia_tensor(molecule: Self) -> tuple[Matrix, Matrix, Matrix]:
-            masses = molecule.loc[:, "mass"].values
-            pos = molecule.loc[:, COORDS].values
+            masses = np.asarray(molecule.loc[:, "mass"].values)
+            pos = np.asarray(molecule.loc[:, COORDS].values)
             inertia = np.sum(
                 masses[:, None, None]
                 * (
@@ -1241,13 +1247,14 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         pos = self.loc[:, COORDS].values.astype("f8")
         out = np.empty((len(indices), 3))
-        indices = np.array([rename.get(i, i) for i in indices], dtype="i8")
+        indices = np.array([rename.get(i, i) for i in indices], dtype="i8")  # type: ignore[assignment]
+        assert isinstance(indices, np.ndarray)
 
         normal = indices > constants.keys_below_are_abs_refs
         out[normal] = pos[indices[normal]]
 
         for row, i in zip(np.nonzero(~normal), indices[~normal]):
-            out[row] = constants.absolute_refs[i]
+            out[row] = constants.absolute_refs[i]  # type: ignore[index]
 
         self.index = old_index
         return out

@@ -1,0 +1,145 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chemcoord"
+version = "2.2.0"
+description = "Python module for dealing with chemical coordinates."
+readme = "README.rst"
+requires-python = ">=3.10"
+license = "LGPL-3.0-or-later"
+authors = [
+  { name = "Oskar Weser", email = "oskar.weser@gmail.com" },
+]
+keywords = [
+  "chemcoord",
+  "transformation",
+  "cartesian",
+  "internal",
+  "chemistry",
+  "zmatrix",
+  "xyz",
+  "zmat",
+  "coordinates",
+  "coordinate system",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "Operating System :: Unix",
+  "Operating System :: POSIX",
+  "Operating System :: Microsoft :: Windows",
+  "Natural Language :: English",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+
+dependencies = [
+  "numpy>=1.23",
+  "pandas>=2.0",
+  "numba>=0.66",
+  "sortedcontainers",
+  "sympy",
+  "pymatgen",
+  "typing_extensions",
+  "ordered-set",
+  "attrs",
+  "cattrs",
+  "joblib",
+  "PyYAML",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-cov",
+  "mypy",
+  "ruff",
+  "pylint",
+  "types-simplejson",
+  # ase-stubs does not publish wheels for Python 3.12+ yet.
+  "ase-stubs; python_version < '3.12'",
+  "pandas-stubs",
+  "pyscf",
+]
+doc = [
+  "sphinx-rtd-theme",
+  "sphinxcontrib.bibtex",
+  "ase",
+  "pyscf",
+]
+
+[project.urls]
+Homepage = "https://github.com/mcocdawc/chemcoord"
+Documentation = "https://chemcoord.readthedocs.io/en/v2.2.0/"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Ship the PEP 561 marker so downstream type checkers pick up chemcoord's types.
+[tool.setuptools.package-data]
+chemcoord = ["py.typed"]
+"chemcoord._cartesian_coordinates" = ["py.typed"]
+"chemcoord._zmat_internal_coordinates" = ["py.typed"]
+"chemcoord._redundant_internal_coordinates" = ["py.typed"]
+"chemcoord._generic_classes" = ["py.typed"]
+"chemcoord._utilities" = ["py.typed"]
+
+[tool.mypy]
+no_implicit_optional = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+follow_untyped_imports = true
+
+# explicitly blacklist files, this means we can easily add in stricter type checks
+# by removing them from the blacklist
+[[tool.mypy.overrides]]
+module = [
+  "chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper",
+  "chemcoord._cartesian_coordinates._cartesian_class_symmetry",
+  "chemcoord._cartesian_coordinates._cart_transformation",
+  "chemcoord._cartesian_coordinates._indexers",
+  "chemcoord.constants",
+  "chemcoord.exceptions",
+  "chemcoord._generic_classes.generic_core",
+  "chemcoord._generic_classes.generic_IO",
+  "chemcoord._zmat_internal_coordinates._indexers",
+  "chemcoord._zmat_internal_coordinates._zmat_class_core",
+  "chemcoord._zmat_internal_coordinates._zmat_class_io",
+  "chemcoord._zmat_internal_coordinates.zmat_class_main",
+  "chemcoord._zmat_internal_coordinates._zmat_class_pandas_wrapper",
+  "chemcoord._zmat_internal_coordinates.zmat_functions",
+  "chemcoord._zmat_internal_coordinates._zmat_transformation",
+  "chemcoord._utilities._decorators",
+  "chemcoord._utilities._print_versions",
+  "chemcoord._utilities._temporary_deprecation_workarounds",
+  "chemcoord",
+  "tests.*",
+]
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+# TODO: whenever the following packages have stubs available,
+#   stop ignoring them.
+[[tool.mypy.overrides]]
+module = [
+  "ConfigParser.*",
+  "setuptools.*",
+  "h5py.*",
+  "sortedcontainers.*",
+  "sympy.*",
+  "ruamel.*",
+  "pyscf.*",
+  "ase.*",
+]
+ignore_missing_imports = true

@@ -19,6 +19,12 @@ class Defaults:
     #: Which filetype to use when viewing a list of molecules.
     list_viewer_file: Literal["molden", "xyz"] = "molden"
 
+    #: Number of workers for ``joblib`` processbased parallelism.
+    #:
+    #: .. note:: a value of :python:`-1` (default) uses all available threads, as per
+    #:      `joblib <https://joblib.readthedocs.io/en/latest/generated/joblib.Parallel.html>`_.
+    n_worker: int = -1
+
 
 @define(hash=True, kw_only=True)
 class Settings:

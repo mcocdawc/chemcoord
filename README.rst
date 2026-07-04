@@ -6,7 +6,7 @@ chemcoord: A python module for coordinates of molecules
    :widths: 25 25
    :header-rows: 0
 
-   * - .. image:: https://raw.githubusercontent.com/mcocdawc/chemcoord/v2.1.2/docs/source/_static/logo/chemcoord_logo.png
+   * - .. image:: https://raw.githubusercontent.com/mcocdawc/chemcoord/v2.2.0/docs/source/_static/logo/chemcoord_logo.png
               :align: center
               :width: 140
               :alt: Chemcoord logo
@@ -125,6 +125,23 @@ publication, please acknowledge it by citing.
         keywords = {analytical gradients, geometry optimization, non-linear constraints, transition state search, Z-matrix},
         doi = {10.1002/jcc.27029},
         year = {2023}
+    }
+
+
+The redundant internal coordinate (RIC) interpolation algorithm, exposed via
+``chemcoord.ric_functions.RIC_interpolate``, is described in
+`this paper <https://chemrxiv.org/doi/full/10.26434/chemrxiv.15005488/v1>`__.
+If you use it, please cite:
+
+::
+
+    @article{whelpley_efficient_2026,
+        author = {Whelpley, Noah and Van Voorhis, Troy and Weser, Oskar},
+        title = {Efficient, Black-Box Estimation of Reaction Paths via Redundant Internal Coordinate Interpolation},
+        year = {2026},
+        journal = {ChemRxiv},
+        doi = {10.26434/chemrxiv.15005488},
+        url = {https://chemrxiv.org/doi/full/10.26434/chemrxiv.15005488/v1}
     }
 
 

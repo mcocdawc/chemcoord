@@ -4,7 +4,7 @@ import numpy as np
 import sympy
 
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
-from chemcoord._internal_coordinates.zmat_class_main import Zmat
+from chemcoord._zmat_internal_coordinates.zmat_class_main import Zmat
 from chemcoord.typing import Tensor4D
 
 
