@@ -585,9 +585,10 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         # pandas >= 3 triggers an ``IndexError`` in the internal ``replace_list``
         # code path unless the frame is already ``object`` dtype. Casting up front
         # avoids the bug (the sentinel ints and the string labels are disjoint, so
-        # the replacement stays unambiguous).
-        c_table = c_table.astype(object).replace(
-            {v: k for k, v in constants.int_label.items()}
+        # the replacement stays unambiguous). ``replace_without_warn`` silences the
+        # pandas 2.x downcasting ``FutureWarning`` this int->str replace emits.
+        c_table = replace_without_warn(
+            c_table.astype(object), {v: k for k, v in constants.int_label.items()}
         )
 
         out = self.copy()
