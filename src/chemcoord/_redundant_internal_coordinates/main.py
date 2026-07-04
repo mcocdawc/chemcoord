@@ -17,7 +17,7 @@ from typing_extensions import Self, assert_never
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import BendType
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord.configuration import settings
-from chemcoord.exceptions import UndefinedDihedral
+from chemcoord.exceptions import PhysicalMeaning, UndefinedDihedral
 from chemcoord.typing import ArithmeticOther, AtomIdx, BondDict, Matrix, Real, Vector
 
 Coordinate: TypeAlias = (
@@ -562,7 +562,11 @@ def _get_start_guess(
     if seeds is None:
         try:
             return interpolate(start, end, N, coord="zmat")
-        except Exception:  # noqa: E722
+        except (PhysicalMeaning, ValueError):
+            # The Z-matrix interpolation can fail when the construction table has
+            # invalid/linear references or the transformation is singular
+            # (raised as ``PhysicalMeaning`` subclasses or ``ValueError``). In
+            # that case fall back to plain cartesian interpolation.
             return interpolate(start, end, N, coord="cart")
     elif isinstance(seeds, Cartesian):
         return [seeds for _ in range(N)]

@@ -4,12 +4,23 @@
 
 ## Bugfixes
 
+- Restored compatibility with pandas 3. Several assumptions that silently held
+    under pandas 2 now raise: `.values` returns read-only arrays (copy-on-write),
+    columns mixing integer atom indices with the absolute-reference string labels
+    (`'origin'`, `'e_x'`, ...) are no longer coerced to a strict `str` dtype,
+    `.replace` on such columns hit an internal error, and assigning symbolic
+    (sympy) values into a float column raises `TypeError` instead of warning.
+    All of these are handled now, so chemcoord runs on both pandas 2 and 3.
+
 - Ensured that xyz files are always read as floats, even if xyz coordinates are formatted as integers.
 
 - `to_molden` and similar functions accept now an `Iterable[Cartesian]`,
     previously `to_molden(zm.get_cartesian() for zm in zmatrices)` unexpectedly failed.
 
 - fixed bug where get_bonds with modified atom data only worked with 0-indexed molecules (the default).
+
+- Corrected the deprecation warning of `Cartesian.to_zmat`, which pointed to a
+    non-existent `give_zmat` method instead of `get_zmat`.
 
 - Fixed a crash (`Numba workqueue threading layer is terminating: Concurrent access
     has been detected`) when computing redundant internal coordinates (RICs) or

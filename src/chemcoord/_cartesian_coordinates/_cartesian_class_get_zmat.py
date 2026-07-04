@@ -781,7 +781,7 @@ class CartesianGetZmat(CartesianCore):
 
     def to_zmat(self, *args, **kwargs) -> Zmat:  # type: ignore[no-untyped-def]
         """Deprecated, use :meth:`~Cartesian.get_zmat`."""
-        message = "Will be removed in the future. Please use give_zmat."
+        message = "Will be removed in the future. Please use get_zmat."
         with warnings.catch_warnings():
             warnings.simplefilter("always")
             warnings.warn(message, DeprecationWarning)

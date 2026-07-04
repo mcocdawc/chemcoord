@@ -5,6 +5,7 @@ from textwrap import dedent
 from typing import TypeVar, overload
 
 import numba as nb
+from numba.core.typing.templates import Signature
 
 # # Substitution and Appender are derived from matplotlib.docstring (1.1.0)
 # # module http://matplotlib.org/users/license.html
@@ -112,13 +113,15 @@ def indent(text, indents=1):
 
 
 @overload
+def njit(f: Signature) -> Callable[[Function], Function]: ...
+@overload
 def njit(f: Function) -> Function: ...
 @overload
 def njit(**kwargs) -> Callable[[Function], Function]: ...
 
 
 def njit(
-    f: Function | None = None, **kwargs
+    f: Function | Signature | None = None, **kwargs
 ) -> Function | Callable[[Function], Function]:
     """
     Type-safe jit wrapper that caches the compiled function
