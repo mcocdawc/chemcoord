@@ -129,11 +129,24 @@ module = [
 disallow_untyped_defs = false
 check_untyped_defs = false
 
+# numba ships inconsistent type information across releases (untyped up to
+# ~0.61, shape-typed ``Dispatcher`` from 0.66 on). The shape-typed variant
+# produces false positives at every jitted call site, and the project treats
+# the jit boundary as untyped anyway (see the custom ``njit`` wrapper in
+# ``chemcoord._utilities._decorators``). Skip numba entirely so it is always
+# ``Any``, giving deterministic results independent of the installed version.
+[[tool.mypy.overrides]]
+module = [
+  "numba",
+  "numba.*",
+]
+follow_imports = "skip"
+ignore_missing_imports = true
+
 # TODO: whenever the following packages have stubs available,
 #   stop ignoring them.
 [[tool.mypy.overrides]]
 module = [
-  "numba.*",
   "ConfigParser.*",
   "setuptools.*",
   "h5py.*",
