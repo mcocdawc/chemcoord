@@ -419,7 +419,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             elif callable(modify_element_data):
                 elements.loc[:, data_col] = used_vdW_r.map(modify_element_data)  # type: ignore[arg-type]
             elif isinstance(modify_element_data, Mapping):
-                elements.loc[:, data_col].update(modify_element_data)  # type: ignore[arg-type]
+                # ``Series.update`` mutates in place, but under pandas >= 3
+                # copy-on-write ``elements.loc[:, data_col]`` is a copy, so the
+                # update would be lost. Update a copy and assign it back.
+                updated = used_vdW_r.copy()
+                updated.update(pd.Series(modify_element_data))
+                elements.loc[:, data_col] = updated
             elif modify_element_data is None:
                 pass
             else:

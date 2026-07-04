@@ -579,7 +579,15 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 "Due to a bug in pandas it is necessary to have integer columns"
             )
         c_table = c_table.replace(self.index, new_index)
-        c_table = c_table.replace({v: k for k, v in constants.int_label.items()})
+        # Map the absolute-reference sentinel integers back to their string
+        # labels. This changes the column dtype from int to object, which under
+        # pandas >= 3 triggers an ``IndexError`` in the internal ``replace_list``
+        # code path unless the frame is already ``object`` dtype. Casting up front
+        # avoids the bug (the sentinel ints and the string labels are disjoint, so
+        # the replacement stays unambiguous).
+        c_table = c_table.astype(object).replace(
+            {v: k for k, v in constants.int_label.items()}
+        )
 
         out = self.copy()
         out.unsafe_loc[:, ["b", "a", "d"]] = c_table
@@ -779,7 +787,9 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         c_table = self._extract_c_table()
 
-        C = self.loc[:, ["bond", "angle", "dihedral"]].values.T
+        # ``.values`` may return a read-only array under pandas >= 3
+        # (copy-on-write), so take a writable copy before mutating in place.
+        C = self.loc[:, ["bond", "angle", "dihedral"]].values.T.copy()
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
         err, row, positions = transformation.get_X(C, c_table)
@@ -930,9 +940,14 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             .values.T
         )
 
+        # ``.values`` may return a read-only array under pandas >= 3
+        # (copy-on-write), so ensure ``C`` is a writable copy before the
+        # in-place mutation below.
         C = zmat.loc[:, ["bond", "angle", "dihedral"]].values.T
         if C.dtype == np.dtype("i8"):
             C = C.astype("f8")
+        else:
+            C = C.copy()
         C[[1, 2], :] = np.radians(C[[1, 2], :])
 
         grad_X = transformation.get_grad_X(C, c_table, chain=chain)

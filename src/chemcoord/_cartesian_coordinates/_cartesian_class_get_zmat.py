@@ -164,7 +164,11 @@ class CartesianGetZmat(CartesianCore):
             work_bond_dict = new_work_bond_dict
             _modify_priority(work_bond_dict, user_defined)
         output = pd.DataFrame.from_dict(construction_table, orient="index")
-        output = output.loc[order_of_def, ["b", "a", "d"]]
+        # ``b``, ``a`` and ``d`` mix integer atom indices with string labels for
+        # the absolute references. Force ``object`` dtype so that pandas >= 3
+        # does not infer a strict ``StringDtype`` that rejects later integer
+        # assignments.
+        output = output.loc[order_of_def, ["b", "a", "d"]].astype(object)
         return output
 
     def get_construction_table(
@@ -539,13 +543,18 @@ class CartesianGetZmat(CartesianCore):
             A new instance of :class:`Zmat`.
         """
         c_table = construction_table
+        # ``b``, ``a`` and ``d`` hold a mix of integer atom indices and string
+        # labels for the absolute references (``'origin'``, ``'e_x'``, ...), so
+        # they must be ``object`` dtype. Under pandas >= 3 a numpy ``str`` dtype
+        # is inferred as the strict ``StringDtype``, which rejects the integer
+        # indices; ``object`` keeps the pandas 2 behaviour.
         dtypes = [
-            ("atom", str),
-            ("b", str),
+            ("atom", object),
+            ("b", object),
             ("bond", float),
-            ("a", str),
+            ("a", object),
             ("angle", float),
-            ("d", str),
+            ("d", object),
             ("dihedral", float),
         ]
 

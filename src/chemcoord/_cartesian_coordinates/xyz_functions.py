@@ -595,13 +595,17 @@ def apply_grad_zmat_tensor(
         message = "construction_table and cart_dist must use the same index"
         raise ValueError(message)
 
+    # ``b``, ``a`` and ``d`` hold a mix of integer atom indices and string
+    # labels for the absolute references, so they must be ``object`` dtype.
+    # Under pandas >= 3 a numpy ``str`` dtype is inferred as the strict
+    # ``StringDtype``, which rejects the integer indices.
     dtypes = [
-        ("atom", str),
-        ("b", str),
+        ("atom", object),
+        ("b", object),
         ("bond", float),
-        ("a", str),
+        ("a", object),
         ("angle", float),
-        ("d", str),
+        ("d", object),
         ("dihedral", float),
     ]
 
