@@ -369,8 +369,6 @@ class CartesianGetZmat(CartesianCore):
         for i in problem_index:
             loc_i = c_table.index.get_loc(i)
             b, a, problem_d = c_table.loc[i, ["b", "a", "d"]]  # type: ignore[list-item,index,str-unpack,misc]
-            # TODO remove this print
-            print(">>>>>>>>", i, b, a, problem_d, "remove this print afterwards")
             try:
                 c_table.loc[i, "d"] = (  # type: ignore[index]
                     sorted_bond_dict[a] - {b, a, problem_d} - set(c_table.index[loc_i:])  # type: ignore[index,misc]

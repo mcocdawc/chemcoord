@@ -24,6 +24,8 @@
 import os
 from pathlib import Path
 
+from sphinx.ext.intersphinx import missing_reference
+
 import chemcoord as cc
 
 ON_RTD = os.environ.get("READTHEDOCS") == "True"
@@ -375,7 +377,6 @@ _REFERENCE_ALIASES = {
 
 def _resolve_internal_aliases(app, env, node, contnode):
     """Redirect known internal class paths to their public aliases."""
-    from sphinx.ext.intersphinx import missing_reference
 
     target = node.get("reftarget")
     if target in _REFERENCE_ALIASES:

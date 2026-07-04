@@ -2,6 +2,9 @@
 *.py[cod]
 *.nb[ic]
 
+# type checker cache
+.mypy_cache/
+
 # C extensions
 *.so
 

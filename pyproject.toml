@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "chemcoord"
-version = "2.1.2"
+version = "2.2.0"
 description = "Python module for dealing with chemical coordinates."
 readme = "README.rst"
 requires-python = ">=3.10"
@@ -46,7 +46,6 @@ dependencies = [
   "numba>=0.35",
   "sortedcontainers",
   "sympy",
-  "six",
   "pymatgen",
   "typing_extensions",
   "ordered-set",
@@ -78,13 +77,22 @@ doc = [
 
 [project.urls]
 Homepage = "https://github.com/mcocdawc/chemcoord"
-Documentation = "https://chemcoord.readthedocs.io/en/v2.1.2/"
+Documentation = "https://chemcoord.readthedocs.io/en/v2.2.0/"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Ship the PEP 561 marker so downstream type checkers pick up chemcoord's types.
+[tool.setuptools.package-data]
+chemcoord = ["py.typed"]
+"chemcoord._cartesian_coordinates" = ["py.typed"]
+"chemcoord._zmat_internal_coordinates" = ["py.typed"]
+"chemcoord._redundant_internal_coordinates" = ["py.typed"]
+"chemcoord._generic_classes" = ["py.typed"]
+"chemcoord._utilities" = ["py.typed"]
 
 [tool.mypy]
 no_implicit_optional = true

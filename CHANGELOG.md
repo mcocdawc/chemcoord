@@ -1,4 +1,4 @@
-# Changelog for v2.1.2 -> v2.2.1
+# Changelog for v2.1.2 -> v2.2.0
 
 
 
@@ -64,3 +64,18 @@
 - Fixed several broken links in the documentation and enforce that links work.
 
 - enable bibtex in the documentation.
+
+- Removed a leftover debug `print` from `Cartesian.correct_dihedral`.
+
+- Removed the unused `six` runtime dependency and the unused `setuptools-scm`
+    build requirement.
+
+- Ship the PEP 561 `py.typed` markers explicitly (via `package-data` and
+    `MANIFEST.in`) so downstream type checkers reliably pick up chemcoord's types.
+
+- Raise a proper `ImportError` (instead of an `assert`, which is stripped under
+    `python -O`) when `to_pyscf_mole` is used without `pyscf` installed.
+
+- Removed dead code (`_fix_undef_dihedrals` and its now-unreachable helpers
+    `_correct_dihedral_idx`, `WhichHalf`, `_is_dihedral_tuple`) and several
+    commented-out code blocks.

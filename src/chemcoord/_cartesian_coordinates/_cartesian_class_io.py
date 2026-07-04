@@ -628,7 +628,8 @@ class CartesianIO(CartesianCore, GenericIO):
             Returns:
                 pyscf.gto.mole.Mole:
             """
-            assert pyscf is not None, "pyscf is not installed"
+            if pyscf is None:
+                raise ImportError("pyscf is not installed")
 
             mol = Mole()
             mol.atom = [

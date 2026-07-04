@@ -14,9 +14,6 @@ def get_sys_info():
 
     blob = []
 
-    # commit = cc._git_hash
-    # blob.append(('commit', commit))
-
     try:
         (sysname, _, release, _, machine, processor) = platform.uname()
         blob.extend(

@@ -22,7 +22,6 @@ from chemcoord.exceptions import UndefinedDihedral
 from chemcoord.typing import AtomIdx, BondDict, Matrix, Vector
 
 if TYPE_CHECKING:
-    from chemcoord import Cartesian
     from chemcoord._redundant_internal_coordinates.main import (
         RedundantInternalCoordinates,
     )
@@ -45,13 +44,6 @@ class BendType(IntEnum):
 
     UW = 0
     VW = 1
-
-
-class WhichHalf(IntEnum):
-    """enum to differentiate linearities happening in either half of a dihedral"""
-
-    first = 1
-    second = 2
 
 
 Coordinate: TypeAlias = (
@@ -267,60 +259,6 @@ class CartesianBmat(CartesianCore):
                 internal_coord_idx_arr[i, 4] = len(coordinate)
 
         return internal_coord_idx_arr
-
-    def _fix_undef_dihedrals(
-        self,
-        coord_idx: Primitives,
-        tol: float = 5,
-    ) -> tuple[Primitives, Primitives]:
-        """Finds linear dihedral coordinates (which are thus close to undefined-ness)
-        and replaces them with dihedrals constructed from the first non-collinear atom
-        replacing the bad end.
-
-        Args:
-            coord_idx: SortedSet of primitive coordinates to clean
-            tol: default 5, tolerance for collinear atom detection, in degrees.
-        Returns:
-            Tuple of SortedSet of cleaned redundant
-                internal coordinates and SortedSet of removed indices
-        """
-        # getting rid of poorly-defined dihedrals because of linearity at the start
-        new_coord_idx = coord_idx.copy()
-        bad_indices = SetOfPrimitives()
-        for i, index in enumerate(coord_idx.copy()):
-            if _is_dihedral_tuple(index):
-                first_three = self.loc[index[:-1], COORDS].values
-                last_three = self.loc[index[1:], COORDS].values
-
-                # vectors making up the angle
-                normedu1 = _jit_normalize(first_three[0] - first_three[1])
-                normedv1 = _jit_normalize(first_three[2] - first_three[1])
-
-                normedu2 = _jit_normalize(last_three[0] - last_three[1])
-                normedv2 = _jit_normalize(last_three[2] - last_three[1])
-
-                angle1 = np.arccos(normedu1 @ normedv1)
-                angle2 = np.arccos(normedu2 @ normedv2)
-
-                if not (tol < angle1 * 180 / np.pi < (180 - tol)):
-                    bad_idx = index
-                    bad_indices.add(index)
-                    new_coord_idx.add(
-                        _correct_dihedral_idx(self, bad_idx, coord_idx, WhichHalf.first)  # type: ignore[arg-type]
-                    )
-                if not (tol < angle2 * 180 / np.pi < (180 - tol)):
-                    bad_idx = index
-                    bad_indices.add(index)
-                    new_coord_idx.add(
-                        _correct_dihedral_idx(
-                            self,  # type: ignore[arg-type]
-                            bad_idx,
-                            coord_idx,
-                            WhichHalf.second,
-                        )
-                    )
-
-        return (new_coord_idx, bad_indices)
 
     def linearities(self, coord_idx: Primitives, tol: float = 5) -> list[tuple]:
         """Finds linear dihedral coordinates (which are thus close to undefined-ness).
@@ -726,81 +664,6 @@ def _jit_x_to_ric(
     return internal_coordinates, bad_coordinates
 
 
-def _correct_dihedral_idx(
-    struct: Cartesian,
-    bad_idx: tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx],
-    old_idx: Primitives,
-    which_half: WhichHalf,
-    tol: float = 5,
-) -> tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]:
-    """Finds a suitable redefinition of a given linear dihedral coordinate
-
-    Args:
-        struct: Cartesian containing the given dihedral
-        bad_idx: tuple containing the dihedral to be
-            replaced
-        old_idx: SortedSet of primitive coordinates pre-cleaning
-        which_half: represents which half of the dihedral is linear
-        tol: default 5, tolerance for collinear atom detection, in degrees.
-    Returns:
-        Tuple of the new dihedral
-    """
-
-    # to check that new index is not already used
-
-    if which_half == WhichHalf.first:
-        distances = [
-            (i, struct.get_distance_to(bad_idx[0]).loc[i, "distance"])
-            for i in struct.index
-        ]
-        distances.sort(key=lambda x: x[1])
-        for index, _ in distances:
-            if index not in bad_idx:
-                new_positions = struct.loc[[index] + list(bad_idx[1:-1]), COORDS].values
-
-                # vectors making up the angle
-                normedu = _jit_normalize(new_positions[0] - new_positions[1])
-                normedv = _jit_normalize(new_positions[2] - new_positions[1])
-
-                angle = np.arccos(normedu @ normedv)
-
-                if (
-                    (tol < angle * 180 / np.pi < (180 - tol))  # fmt: skip
-                    and tuple([index] + list(bad_idx[1:])) not in old_idx
-                ):
-                    return tuple([index] + list(bad_idx[1:]))
-        raise RuntimeError(
-            f"No suitable redifinition of poorly-defined dihedral {bad_idx}"
-        )
-
-    else:
-        distances = [
-            (i, struct.get_distance_to(bad_idx[3]).loc[i, "distance"])
-            for i in struct.index
-        ]
-        distances.sort(key=lambda x: x[1])
-        for index, _ in distances:
-            if index not in bad_idx:
-                new_positions = struct.loc[list(bad_idx[1:-1]) + [index], COORDS].values
-
-                # vectors making up the angle
-                normedu = _jit_normalize(new_positions[0] - new_positions[1])
-                normedv = _jit_normalize(new_positions[2] - new_positions[1])
-
-                angle = np.arccos(normedu @ normedv)
-
-                # NOTE: is the check that it is not in the old_idx neccessary? If it is,
-                # then the new one is fully redundant.
-                if (
-                    (tol < angle * 180 / np.pi < (180 - tol))  # fmt: skip
-                    and tuple(list(bad_idx[:-1]) + [index]) not in old_idx
-                ):
-                    return tuple(list(bad_idx[:-1]) + [index])
-        raise RuntimeError(
-            f"No suitable redifinition of poorly-defined dihedral {bad_idx}"
-        )
-
-
 def _reindex_to_0_inner(
     coordinate_idx: Coordinate, index_to_rownum: dict
 ) -> Coordinate:
@@ -851,8 +714,3 @@ def _is_vw_bending_tuple(coord: Coordinate) -> bool:
 @njit(cache=True)
 def _is_bending_tuple(coord: Coordinate) -> bool:
     return _is_uw_bending_tuple(coord) or _is_vw_bending_tuple(coord)
-
-
-@njit(cache=True)
-def _is_dihedral_tuple(coord: Coordinate) -> bool:
-    return len(coord) == 4

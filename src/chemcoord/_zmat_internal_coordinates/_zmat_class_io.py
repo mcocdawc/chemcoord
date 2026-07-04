@@ -20,10 +20,6 @@ class ZmatIO(ZmatCore, GenericIO):
     def __repr__(self) -> str:
         return self._frame.__repr__()
 
-    #  def _abs_ref_formatter(
-    #      self, format_as: Literal["raw", "string", "latex"] = "string"
-    #  ) -> Self:
-
     def _abs_ref_formatter(self, format_as="string"):
         out = self.copy()
         if format_as == "raw":

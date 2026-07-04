@@ -470,9 +470,6 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         new.unsafe_loc[:, "dihedral"] = convert_d(new.loc[:, "dihedral"])
         return new
 
-    # python 3.x is so much butter than 2.7
-    # https://www.python.org/dev/peps/pep-3102/
-    # def subs(self, *args, perform_checks=True):
     def subs(self, *args, **kwargs) -> Self:
         """Substitute a symbolic expression in ``['bond', 'angle', 'dihedral']``
 

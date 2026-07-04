@@ -420,7 +420,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 elements.loc[:, data_col] = used_vdW_r.map(modify_element_data)  # type: ignore[arg-type]
             elif isinstance(modify_element_data, Mapping):
                 elements.loc[:, data_col].update(modify_element_data)  # type: ignore[arg-type]
-                # assert False, elements.loc["C", atomic_radius_data]
             elif modify_element_data is None:
                 pass
             else:
