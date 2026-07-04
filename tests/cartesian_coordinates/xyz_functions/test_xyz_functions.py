@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import chemcoord as cc
@@ -13,8 +12,6 @@ from chemcoord.xyz_functions import (
     get_rotation_params,
     read_molden,
 )
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

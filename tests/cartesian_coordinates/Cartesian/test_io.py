@@ -1,12 +1,9 @@
 import os
 
-import pandas as pd
 import pytest
 
 from chemcoord import Cartesian
 from chemcoord.xyz_functions import allclose
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

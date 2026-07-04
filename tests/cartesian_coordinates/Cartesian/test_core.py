@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import pandas as pd
 import pytest
 import sympy
 
@@ -9,8 +8,6 @@ import chemcoord as cc
 from chemcoord._cartesian_coordinates.xyz_functions import get_rotation_matrix
 from chemcoord.exceptions import PhysicalMeaning
 from chemcoord.xyz_functions import allclose
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

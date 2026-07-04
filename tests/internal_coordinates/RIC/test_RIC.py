@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import pandas as pd
 
 from chemcoord import Cartesian
 from chemcoord._redundant_internal_coordinates.main import (
@@ -10,8 +9,6 @@ from chemcoord._redundant_internal_coordinates.main import (
 )
 from chemcoord.typing import AtomIdx
 from chemcoord.xyz_functions import allclose, read_multiple_xyz
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

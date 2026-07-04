@@ -5,14 +5,11 @@ from os.path import join
 from typing import Final
 
 import numpy as np
-import pandas as pd
 import pytest
 from sympy import Symbol
 
 import chemcoord as cc
 from chemcoord.xyz_functions import allclose
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():

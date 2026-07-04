@@ -1,12 +1,9 @@
 import os
 
 import numpy as np
-import pandas as pd
 from sortedcontainers import SortedSet
 
 from chemcoord import Cartesian
-
-pd.set_option("future.no_silent_downcasting", True)
 
 
 def get_script_path():
