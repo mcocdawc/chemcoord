@@ -740,8 +740,13 @@ def get_reaction_coordinate(path: Sequence[Cartesian]) -> Vector[np.float64]:
         path :
     """
 
+    if len(path) < 2:
+        raise ValueError("path must contain at least two images")
+
     def difference(m1: Cartesian, m2: Cartesian) -> float:
         return float(np.sqrt(((m2 - m1).loc[:, ["x", "y", "z"]].values ** 2).sum()))
 
     steps = np.cumsum([0] + [difference(m2, m1) for m2, m1 in zip(path[1:], path)])
+    if steps[-1] == 0:
+        raise ValueError("path has zero total displacement")
     return steps / steps[-1]

@@ -537,6 +537,7 @@ def _linesearch(
 
     backstep = 0
     while too_far:
+        backstep += 1
         new = previous + alpha * Δx
         q_new = new.get_ric(internal_coords_idx=current.primitives_idx)
         if norm(Δq) < alpha * t + norm((current - q_new).minimize_dihedral().delta_q):
