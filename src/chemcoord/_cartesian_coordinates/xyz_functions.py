@@ -699,6 +699,12 @@ def interpolate(
         N: Number of structures to interpolate between.
         coord: Interpolate in Cartesian, Z-matrix,
             or redundant internal coordinate (RIC) space.
+
+    References:
+        The Z-matrix interpolation is described in :cite:`weser_automated_2023`,
+        the redundant internal coordinate (RIC) interpolation in
+        :cite:`whelpley_efficient_2026`. If you use this function, please cite
+        the reference matching the ``coord`` you use.
     """
     from chemcoord._redundant_internal_coordinates.main import (  # noqa: PLC0415
         RIC_interpolate,

@@ -20,6 +20,11 @@ py:class Series
 py:class EngFormatter
 py:class pandas._typing.ReadCsvBuffer
 py:class pandas._typing.WriteBuffer
+# pandas >= 3 moved these typing aliases from ``pandas._typing`` to
+# ``pandas.api.typing.aliases``; keep both so the docs build on either version.
+py:class pandas.api.typing.aliases.SequenceNotStr
+py:class pandas.api.typing.aliases.ReadCsvBuffer
+py:class pandas.api.typing.aliases.WriteBuffer
 py:class chemcoord.typing.T_dtype_co
 py:class chemcoord._cartesian_coordinates._cartesian_class_core._T
 py:attr constants.elements

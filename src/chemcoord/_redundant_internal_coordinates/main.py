@@ -657,6 +657,10 @@ def RIC_interpolate(
 
     Returns:
         The generated path as list of :class:`~chemcoord.Cartesian`.
+
+    References:
+        The algorithm is described in :cite:`whelpley_efficient_2026`.
+        If you use this function, please cite it.
     """
 
     def to_cart(
