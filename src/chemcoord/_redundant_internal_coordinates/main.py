@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from functools import partial
 from itertools import combinations
-from typing import Final, Literal, Mapping, TypeAlias, assert_never, cast, overload
+from typing import Final, Literal, Mapping, TypeAlias, cast, overload
 from warnings import warn
 
 import numpy as np
@@ -12,7 +12,7 @@ from joblib import Parallel, delayed
 from numpy import float64
 from numpy.linalg import lstsq, norm
 from sortedcontainers import SortedSet
-from typing_extensions import Self
+from typing_extensions import Self, assert_never
 
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import BendType
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
