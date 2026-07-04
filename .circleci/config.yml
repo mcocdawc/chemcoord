@@ -18,7 +18,7 @@ analysis: &analysis
           command: ruff check
       - run:
           name: Type checking
-          command: mypy src/ tests/ | true
+          command: mypy src/ tests/
 
 
 run_tests: &run_tests
