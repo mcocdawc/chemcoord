@@ -24,6 +24,10 @@
 import os
 from pathlib import Path
 
+from docutils import nodes
+from sphinx.addnodes import pending_xref
+from sphinx.application import Sphinx
+from sphinx.environment import BuildEnvironment
 from sphinx.ext.intersphinx import missing_reference
 
 import chemcoord as cc
@@ -352,7 +356,7 @@ bibtex_bibfiles = [str(CONF_DIR / "literature.bib")]
 
 
 nitpicky = True
-nitpick_ignore = []
+nitpick_ignore: list[tuple[str, str]] = []
 
 # taken from https://stackoverflow.com/questions/11417221/sphinx-autodoc-gives-warning-pyclass-reference-target-not-found-type-warning
 for line in open("nitpick-exceptions"):
@@ -368,14 +372,19 @@ for line in open("nitpick-exceptions"):
 # exposes the public aliases (``pandas.DataFrame``). Remap the internal paths to
 # the public ones so the cross-references resolve to real links instead of
 # emitting "reference target not found" warnings.
-_REFERENCE_ALIASES = {
+_REFERENCE_ALIASES: dict[str, str] = {
     "pandas.core.frame.DataFrame": "pandas.DataFrame",
     "pandas.core.series.Series": "pandas.Series",
     "pandas.core.indexes.base.Index": "pandas.Index",
 }
 
 
-def _resolve_internal_aliases(app, env, node, contnode):
+def _resolve_internal_aliases(
+    app: Sphinx,
+    env: BuildEnvironment,
+    node: pending_xref,
+    contnode: nodes.TextElement,
+) -> nodes.reference | None:
     """Redirect known internal class paths to their public aliases."""
 
     target = node.get("reftarget")
@@ -385,5 +394,5 @@ def _resolve_internal_aliases(app, env, node, contnode):
     return None
 
 
-def setup(app):
+def setup(app: Sphinx) -> None:
     app.connect("missing-reference", _resolve_internal_aliases)
