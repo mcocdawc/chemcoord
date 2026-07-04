@@ -1,11 +1,11 @@
 import numba as nb
 import numpy as np
+from numba import njit
 from numba.core.types import f8
 from numba.extending import overload
 from numpy import arccos, arctan2, sqrt
 
 import chemcoord.constants as constants
-from chemcoord._utilities._decorators import njit
 from chemcoord.exceptions import ERR_CODE_OK, ERR_CODE_InvalidReference
 from chemcoord.typing import Matrix, Vector
 
@@ -15,7 +15,7 @@ def normalize(vector: Vector[np.floating]) -> Vector[np.float64]:
     return vector / np.linalg.norm(vector)
 
 
-@njit
+@njit(cache=True)
 def _jit_normalize(vector: Vector[np.floating]) -> Vector[np.float64]:
     """Normalizes a vector"""
     return vector / np.linalg.norm(vector)
@@ -54,12 +54,12 @@ def _get_ref_pos_impl(X, indices):  # noqa: ARG001
         raise AssertionError("Should not be here")
 
 
-@njit
+@njit(cache=True)
 def get_ref_pos(X, indices):
     return _stub_get_ref_pos(X, indices)
 
 
-@njit
+@njit(cache=True)
 def get_B(X, c_table, j):
     B = np.empty((3, 3))
     ref_pos = get_ref_pos(X, c_table[:, j])
@@ -76,7 +76,7 @@ def get_B(X, c_table, j):
     return (ERR_CODE_OK, B)
 
 
-@njit
+@njit(cache=True)
 def get_grad_B(X, c_table, j):
     grad_B = np.empty((3, 3, 3, 3))
     ref_pos = get_ref_pos(X, c_table[:, j])
@@ -1098,7 +1098,7 @@ def get_grad_B(X, c_table, j):
     return grad_B
 
 
-@njit(f8[:](f8[:]))
+@njit(f8[:](f8[:]), cache=True)
 def get_S_inv(v):
     x, y, z = v
     r = np.linalg.norm(v)
@@ -1109,7 +1109,7 @@ def get_S_inv(v):
     return np.array([r, alpha, delta])
 
 
-@njit(f8[:, :](f8[:]))
+@njit(f8[:, :](f8[:]), cache=True)
 def get_grad_S_inv(v):
     x, y, z = v
     grad_S_inv = np.zeros((3, 3))
@@ -1140,7 +1140,7 @@ def get_grad_S_inv(v):
     return grad_S_inv
 
 
-@njit
+@njit(cache=True)
 def get_T(X, c_table, j):
     err, B = get_B(X, c_table, j)
     if err == ERR_CODE_OK:
@@ -1151,7 +1151,7 @@ def get_T(X, c_table, j):
     return err, result
 
 
-@njit
+@njit(cache=True)
 def get_C(X: Matrix[np.floating], c_table) -> tuple[int, Matrix[np.float64]]:
     C = np.empty((3, c_table.shape[1]))
 
@@ -1164,7 +1164,7 @@ def get_C(X: Matrix[np.floating], c_table) -> tuple[int, Matrix[np.float64]]:
     return (ERR_CODE_OK, C)
 
 
-@njit
+@njit(cache=True)
 def get_grad_C(X, c_table):
     n_atoms = X.shape[1]
     grad_C = np.zeros((3, n_atoms, n_atoms, 3))

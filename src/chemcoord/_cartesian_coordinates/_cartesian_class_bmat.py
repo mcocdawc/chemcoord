@@ -487,7 +487,9 @@ def _jit_get_Wilson_B(
         elif _is_uw_bending_array(coord):
             positions = position_arr[coord[:4]]
 
-            axes = _jit_get_axes(position_arr, coord[:4])
+            # coord[:4] is a Matrix-typed slice; _jit_get_axes keeps its Vector
+            # signature for its other (genuinely 1-D) caller. numba boundary.
+            axes = _jit_get_axes(position_arr, coord[:4])  # type: ignore[arg-type]
 
             uw_derivs = _jit_uw_deriv(positions, axes)
 
@@ -497,7 +499,9 @@ def _jit_get_Wilson_B(
         elif _is_vw_bending_array(coord):
             positions = position_arr[coord[:4]]
 
-            axes = _jit_get_axes(position_arr, coord[:4])
+            # coord[:4] is a Matrix-typed slice; _jit_get_axes keeps its Vector
+            # signature for its other (genuinely 1-D) caller. numba boundary.
+            axes = _jit_get_axes(position_arr, coord[:4])  # type: ignore[arg-type]
 
             vw_derivs = _jit_vw_deriv(positions, axes)
 
@@ -676,28 +680,32 @@ def _reindex_to_0_inner(
         return tuple(index_to_rownum[index] for index in coordinate_idx)
 
 
+# NOTE: ``coord`` is a row of a 2-D ``internal_coord_arr`` (``Matrix``). numpy
+# does not narrow ``arr[i, :]`` to a 1-D ``Vector``, and ``np.ndarray`` is
+# invariant in its shape parameter, so these predicates annotate ``Matrix`` to
+# match what callers actually pass.
 @njit(cache=True)
-def _is_bond_array(coord: Vector) -> bool:
+def _is_bond_array(coord: Matrix) -> bool:
     return coord[-1] == 2
 
 
 @njit(cache=True)
-def _is_angle_array(coord: Vector) -> bool:
+def _is_angle_array(coord: Matrix) -> bool:
     return coord[-1] == 3
 
 
 @njit(cache=True)
-def _is_dihedral_array(coord: Vector) -> bool:
+def _is_dihedral_array(coord: Matrix) -> bool:
     return coord[-1] == 4
 
 
 @njit(cache=True)
-def _is_uw_bending_array(coord: Vector) -> bool:
+def _is_uw_bending_array(coord: Matrix) -> bool:
     return coord[-1] == 5
 
 
 @njit(cache=True)
-def _is_vw_bending_array(coord: Vector) -> bool:
+def _is_vw_bending_array(coord: Matrix) -> bool:
     return coord[-1] == 6
 
 

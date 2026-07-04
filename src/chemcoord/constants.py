@@ -15,8 +15,7 @@ from io import StringIO
 
 import numpy as np
 import pandas as pd
-
-from chemcoord._utilities._decorators import njit
+from numba import njit
 
 keys_below_are_abs_refs = -sys.maxsize + 100
 int_label = {
@@ -40,7 +39,7 @@ latex_repr = {
 }
 
 
-@njit
+@njit(cache=True)
 def _jit_absolute_refs(j):
     # Because dicts are not supported in numba :(
     if j == -sys.maxsize - 1:

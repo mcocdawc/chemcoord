@@ -43,51 +43,42 @@ molecule6 = Cartesian.read_xyz(
 molecule7 = Cartesian.read_xyz(get_complete_path("default_args_start.xyz"))
 molecule8 = Cartesian.read_xyz(get_complete_path("default_args_end.xyz"))
 
+# The reference path holds 80 images: 20 for each of the four schedules below.
+reference_path = read_multiple_xyz(get_complete_path("correct_path.xyz"))
 
-def test_path():
-    reference_path = read_multiple_xyz(get_complete_path("correct_path.xyz"))
 
-    path1 = RIC_interpolate(
+def _assert_ric_path(schedule, expected):
+    # ``expected`` doubles as the seed (the interpolation should reproduce it).
+    path = RIC_interpolate(
         molecule1,
         molecule2,
         20,
-        schedule="independent",
+        schedule=schedule,
         atol=1e-8,
-        seeds=reference_path[:20],
+        seeds=expected,
         opt_alg="LM",
     )
-    path2 = RIC_interpolate(
-        molecule1,
-        molecule2,
-        20,
-        schedule="from_both",
-        atol=1e-8,
-        seeds=reference_path[20:40],
-        opt_alg="LM",
-    )
-    path3 = RIC_interpolate(
-        molecule1,
-        molecule2,
-        20,
-        schedule="from_start",
-        atol=1e-8,
-        seeds=reference_path[40:60],
-        opt_alg="LM",
-    )
-    path4 = RIC_interpolate(
-        molecule1,
-        molecule2,
-        20,
-        schedule="from_end",
-        atol=1e-8,
-        seeds=reference_path[60:],
-        opt_alg="LM",
-    )
-
-    path = path1 + path2 + path3 + path4
-
-    for ref, just_read in zip(path, reference_path):
+    for ref, just_read in zip(path, expected):
         assert allclose(ref, just_read, atol=1e-4, align=True)
+
+
+# ``test_path`` was split per-schedule so pytest emits output between the
+# (numba-compilation-heavy) interpolations, keeping CI under its no-output
+# timeout. See https://github.com/mcocdawc/chemcoord for context.
+def test_path_independent():
+    _assert_ric_path("independent", reference_path[:20])
+
+
+def test_path_from_both():
+    _assert_ric_path("from_both", reference_path[20:40])
+
+
+def test_path_from_start():
+    _assert_ric_path("from_start", reference_path[40:60])
+
+
+def test_path_from_end():
+    _assert_ric_path("from_end", reference_path[60:])
 
 
 def test_back_forth_with_bending():

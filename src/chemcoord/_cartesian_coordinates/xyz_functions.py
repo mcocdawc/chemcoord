@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import sympy
 from joblib import Parallel, delayed
+from numba import njit
 from pandas.core.frame import DataFrame
 from typing_extensions import assert_never
 
@@ -23,7 +24,6 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import Primitives
 from chemcoord._cartesian_coordinates._cartesian_class_core import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
-from chemcoord._utilities._decorators import njit
 from chemcoord._zmat_internal_coordinates.zmat_class_main import Zmat
 from chemcoord._zmat_internal_coordinates.zmat_functions import _zmat_interpolate
 from chemcoord.configuration import settings
@@ -480,7 +480,7 @@ def get_rotation_params(
         return axis, angle if radian else angle * 180 / np.pi
 
 
-@njit
+@njit(cache=True)
 def _jit_get_rotation_matrix(
     axis: Vector[np.float64], angle: Real
 ) -> Matrix[np.float64]:

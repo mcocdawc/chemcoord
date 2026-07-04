@@ -9,6 +9,7 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
+from numba import njit
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
 from pandas.core.series import Series
@@ -22,7 +23,7 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
     get_ref_pos,
 )
 from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord._utilities._decorators import Appender, njit
+from chemcoord._utilities._decorators import Appender
 from chemcoord._utilities._temporary_deprecation_workarounds import replace_without_warn
 from chemcoord._zmat_internal_coordinates._zmat_class_pandas_wrapper import (
     PandasWrapper,
@@ -991,7 +992,7 @@ class ZmatCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return self.get_cartesian(*args, **kwargs)
 
 
-@njit
+@njit(cache=True)
 def _jit_get_normal(vectors: Matrix) -> Vector:
     BA = vectors[:, 1] - vectors[:, 0]
     if np.allclose(BA, 0.0):
@@ -1003,7 +1004,7 @@ def _jit_get_normal(vectors: Matrix) -> Vector:
     return _jit_normalize(N)
 
 
-@njit
+@njit(cache=True)
 def _jit_different_orientations(
     X_ref: Matrix, X_new: Matrix, c_table: Matrix
 ) -> Vector:

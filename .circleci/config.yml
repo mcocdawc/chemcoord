@@ -29,7 +29,10 @@ run_tests: &run_tests
           command: pip3 install '.[test]'
       - run:
           name: Running tests
-          command: python3 -m pytest -Werror --cov=./src/chemcoord tests/
+          # -v streams per-test output so cold numba JIT compilation does not
+          # look like a hang; no_output_timeout covers the slowest compile.
+          command: python3 -m pytest -Werror -v --cov=./src/chemcoord tests/
+          no_output_timeout: 20m
       - run:
           name: Prepare documentation
           command: pip3 install '.[doc]'

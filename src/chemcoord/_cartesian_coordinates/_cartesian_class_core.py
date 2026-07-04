@@ -7,6 +7,7 @@ from typing import Any, Final, Literal, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
+from numba import njit
 from ordered_set import OrderedSet
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
@@ -22,7 +23,6 @@ from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import (
 )
 from chemcoord._cartesian_coordinates._indexers import QueryFunction
 from chemcoord._generic_classes.generic_core import GenericCore
-from chemcoord._utilities._decorators import njit
 from chemcoord.configuration import settings
 from chemcoord.constants import RestoreElementData, elements
 from chemcoord.exceptions import PhysicalMeaning
@@ -300,7 +300,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         return new
 
     @staticmethod
-    @njit
+    @njit(cache=True)
     def _jit_give_bond_array(
         pos: Matrix[np.floating],
         bond_radii: Vector[np.floating],
@@ -1086,7 +1086,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         )
 
     @staticmethod
-    @njit
+    @njit(cache=True)
     def _jit_pairwise_distances(
         pos1: Matrix[np.floating], pos2: Matrix[np.floating]
     ) -> Matrix[np.float64]:
