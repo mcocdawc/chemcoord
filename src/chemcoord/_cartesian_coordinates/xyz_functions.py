@@ -459,6 +459,7 @@ def get_rotation_params(
 
     # Compute the angle from the trace of the matrix
     angle = np.arccos(np.clip((np.trace(R) - 1) / 2, -1.0, 1.0))
+    angle_out = angle if radian else float(angle * 180 / np.pi)
 
     if np.isclose(angle, 0):
         # No rotation: return arbitrary axis
@@ -470,14 +471,14 @@ def get_rotation_params(
         axis = np.sqrt(np.maximum(R_plus_I.diagonal() / 2, 0))
         # Resolve sign ambiguity
         axis = axis / np.linalg.norm(axis)
-        return axis, angle
+        return axis, angle_out
     else:
         # General case
         axis = np.array([R[2, 1] - R[1, 2], R[0, 2] - R[2, 0], R[1, 0] - R[0, 1]]) / (
             2 * np.sin(angle)
         )
         axis = axis / np.linalg.norm(axis)
-        return axis, angle if radian else angle * 180 / np.pi
+        return axis, angle_out
 
 
 @njit(cache=True)
