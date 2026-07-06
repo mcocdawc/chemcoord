@@ -10,7 +10,8 @@ from attrs import define, field
 from joblib import Parallel, delayed
 from numpy import float64
 from numpy.linalg import norm
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, diags
+from scipy.sparse import vstack as sparse_vstack
 from scipy.sparse.linalg import lsqr
 from typing_extensions import Self, assert_never
 
@@ -168,48 +169,42 @@ class RedundantInternalCoordinates:
 
         good_lam = False
 
-        D = np.diag(B.T @ W @ W @ B) * np.eye(len(B[0]))
+        # Invariants of the damped least-squares system, independent of lambda. The
+        # Wilson B matrix is banded, so ``W @ B`` and the augmented system stay sparse.
+        WB = W @ B
+        W_Δq = W @ Δq.delta_q
+        zeros = np.zeros(B.shape[1])
+        # diagonal of the (Gauss-Newton) approximate Hessian, used as LM damping
+        damping = (B.T @ W @ W @ B).diagonal()
 
-        lm_mat = np.vstack((W @ B, np.sqrt(start_lam) * D))
-        lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
+        def step(lam: float) -> Cartesian:
+            lm_mat = sparse_vstack((WB, diags(np.sqrt(lam) * damping)))
+            lm_vec = np.hstack((W_Δq, zeros))
+            Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
+            return previous + Δx.reshape(len(previous), 3)
 
-        Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
-        Δx = Δx.reshape(len(previous), 3)
-        new = previous + Δx
-        new_Δq = (
-            self - new.get_ric(internal_coords_idx=self.primitives_idx)
-        ).minimize_dihedral()
-        if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
+        def is_good(new: Cartesian) -> bool:
+            new_Δq = (
+                self - new.get_ric(internal_coords_idx=self.primitives_idx)
+            ).minimize_dihedral()
+            return bool(norm(new_Δq.delta_q) <= norm(Δq.delta_q))
+
+        new = step(start_lam)
+        if is_good(new):
             lam = start_lam
             good_lam = True
         else:
             lam = start_lam / reduction_factor
 
         if not good_lam:
-            lm_mat = np.vstack((W @ B, np.sqrt(lam) * D))
-            lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
-
-            Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
-            Δx = Δx.reshape(len(previous), 3)
-            new = previous + Δx
-            new_Δq = (
-                self - new.get_ric(internal_coords_idx=self.primitives_idx)
-            ).minimize_dihedral()
-            if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
+            new = step(lam)
+            if is_good(new):
                 good_lam = True
             else:
                 lam *= nu**2
                 while not good_lam:
-                    lm_mat = np.vstack((W @ B, np.sqrt(lam) * D))
-                    lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
-
-                    Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
-                    Δx = Δx.reshape(len(previous), 3)
-                    new = previous + Δx
-                    new_Δq = (
-                        self - new.get_ric(internal_coords_idx=self.primitives_idx)
-                    ).minimize_dihedral()
-                    if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
+                    new = step(lam)
+                    if is_good(new):
                         good_lam = True
                     else:
                         lam *= nu
@@ -231,7 +226,7 @@ class RedundantInternalCoordinates:
             if (i := i + 1) > max_iter:
                 raise ValueError(f"Not converged after {max_iter} iterations.")
 
-            B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+            B = previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
 
             q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
 
@@ -282,7 +277,7 @@ class RedundantInternalCoordinates:
             if (i := i + 1) > max_iter:
                 raise ValueError(f"Not converged after {max_iter} iterations.")
 
-            B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+            B = previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
 
             q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
 
@@ -362,7 +357,9 @@ class RedundantInternalCoordinates:
         else:
             assert weights is not None
 
-        W = np.diag(weights)  # type: ignore[arg-type]
+        # W is diagonal; keeping it sparse lets ``W @ B`` stay sparse throughout the
+        # weighted least-squares solve (the Wilson B matrix is banded).
+        W = diags(np.asarray(weights))
 
         if opt_alg == "LM":
             new = self._levenberg_marquardt_opt(start_guess, max_iter, W, rtol, atol)

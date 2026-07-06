@@ -8,6 +8,7 @@ import numpy as np
 from numba import njit, prange
 from numpy import cross, float64, int64
 from numpy.linalg import norm
+from scipy.sparse import csr_matrix
 
 # had to put these here to avoid circular import
 from sortedcontainers import SortedSet
@@ -141,6 +142,42 @@ class CartesianBmat(CartesianCore):
         return _jit_get_Wilson_B(
             self.loc[:, COORDS].values,
             self._to_array_nobending(idx_internal_coords),
+        )
+
+    def get_sparse_Wilson_B(
+        self,
+        idx_internal_coords: Primitives | None = None,
+        bonds: BondDict | None = None,
+    ) -> csr_matrix:
+        """Generate Wilson's B matrix as a sparse matrix for the current structure.
+
+        The Wilson B matrix is banded: every internal coordinate only couples the (at
+        most four) atoms defining it, so each row has at most twelve nonzero entries
+        irrespective of the system size. This builds the compressed sparse row
+        representation directly from coordinate triples, without ever allocating the
+        dense ``(n_coords, 3 * n_atoms)`` matrix. It is numerically identical to
+        :meth:`get_Wilson_B`.
+
+        Args:
+            idx_internal_coords: default None, SortedSet of
+                primitive internal coordinates to use in the calculation. If None,
+                calculates using the get_primitive_coords method
+            bonds: default :class:`None`, mapping containing bonding information.
+
+        Returns:
+            Wilson's B matrix as a :class:`scipy.sparse.csr_matrix`
+        """
+        if idx_internal_coords is None:
+            idx_internal_coords = self.get_primitives_idx(bonds)
+
+        position_arr = self.loc[:, COORDS].values
+        coord_arr = self._to_array_nobending(idx_internal_coords)
+        data, row, col = _jit_get_Wilson_B_coo(position_arr, coord_arr)
+        # drop the padding slots (row == -1) left for coordinates with < 12 nonzeros
+        keep = row.ravel() >= 0
+        return csr_matrix(
+            (data.ravel()[keep], (row.ravel()[keep], col.ravel()[keep])),
+            shape=(len(coord_arr), position_arr.size),
         )
 
     def get_ric(
@@ -508,6 +545,95 @@ def _jit_get_Wilson_B(
                 B_matrix[i, j + 3 * coord[1:4]] = vw_derivs[:, j]
 
     return B_matrix
+
+
+@njit(parallel=True, cache=True, nogil=True)
+def _jit_get_Wilson_B_coo(
+    position_arr: Matrix[float64],
+    internal_coord_arr: Matrix[int64],
+) -> tuple[Matrix[float64], Matrix[int64], Matrix[int64]]:
+    """Jit-compiled sparse (COO) Wilson's B matrix generator.
+
+    Computes exactly the same derivatives as :func:`_jit_get_Wilson_B`, but writes
+    them into ``(data, row, col)`` coordinate triples instead of a dense matrix. Each
+    internal coordinate involves at most four atoms, so every coordinate contributes
+    at most ``3 * 4 = 12`` nonzero entries.
+
+    Each coordinate ``i`` writes only into row ``i`` of the returned ``(n_coords, 12)``
+    arrays, so the ``prange`` loop is embarrassingly parallel (the write index ``i`` is
+    the loop variable, exactly as in :func:`_jit_get_Wilson_B`). Unused trailing slots
+    are marked with ``row == -1`` and are dropped by the caller when assembling the
+    sparse matrix.
+
+    Returns:
+        ``(data, row, col)`` as ``(n_coords, 12)`` arrays. Entries with ``row == -1``
+        are padding and must be discarded before building the sparse matrix.
+    """
+    n_coords = len(internal_coord_arr)
+    # A dihedral, the largest coordinate, couples 4 atoms, each contributing an (x, y,
+    # z) derivative, so a row has at most 4 * 3 = 12 nonzero entries.
+    max_nnz = 4 * 3
+
+    data = np.zeros((n_coords, max_nnz), dtype=float64)
+    row = np.full((n_coords, max_nnz), -1, dtype=int64)
+    col = np.zeros((n_coords, max_nnz), dtype=int64)
+
+    for i in prange(n_coords):  # type: ignore[attr-defined]
+        coord = internal_coord_arr[i, :]
+
+        # distances
+        if _is_bond_array(coord):
+            positions = position_arr[coord[:2]]
+            normedu = _jit_normalize(positions[0] - positions[1])
+            for j in range(3):
+                row[i, j] = i
+                col[i, j] = j + 3 * coord[0]
+                data[i, j] = normedu[j]
+                row[i, 3 + j] = i
+                col[i, 3 + j] = j + 3 * coord[1]
+                data[i, 3 + j] = -normedu[j]
+
+        # angles
+        elif _is_angle_array(coord):
+            positions = position_arr[coord[:3]]
+            angle_derivs = _jit_angle_deriv(positions)
+            for a in range(3):
+                for j in range(3):
+                    row[i, 3 * a + j] = i
+                    col[i, 3 * a + j] = j + 3 * coord[a]
+                    data[i, 3 * a + j] = angle_derivs[a, j]
+
+        # dihedrals
+        elif _is_dihedral_array(coord):
+            positions = position_arr[coord[:4]]
+            dihedral_derivs = _jit_dihedral_deriv(positions)
+            for a in range(4):
+                for j in range(3):
+                    row[i, 3 * a + j] = i
+                    col[i, 3 * a + j] = j + 3 * coord[a]
+                    data[i, 3 * a + j] = dihedral_derivs[a, j]
+
+        elif _is_uw_bending_array(coord):
+            positions = position_arr[coord[:4]]
+            axes = _jit_get_axes(position_arr, coord[:4])  # type: ignore[arg-type]
+            uw_derivs = _jit_uw_deriv(positions, axes)
+            for a in range(3):
+                for j in range(3):
+                    row[i, 3 * a + j] = i
+                    col[i, 3 * a + j] = j + 3 * coord[a + 1]
+                    data[i, 3 * a + j] = uw_derivs[a, j]
+
+        elif _is_vw_bending_array(coord):
+            positions = position_arr[coord[:4]]
+            axes = _jit_get_axes(position_arr, coord[:4])  # type: ignore[arg-type]
+            vw_derivs = _jit_vw_deriv(positions, axes)
+            for a in range(3):
+                for j in range(3):
+                    row[i, 3 * a + j] = i
+                    col[i, 3 * a + j] = j + 3 * coord[a + 1]
+                    data[i, 3 * a + j] = vw_derivs[a, j]
+
+    return data, row, col
 
 
 # NOTE: no ``parallel=True`` here. This function operates on a single bending
