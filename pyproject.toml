@@ -44,6 +44,7 @@ classifiers = [
 dependencies = [
   "numpy>=1.23",
   "pandas>=2.0",
+  "scipy",
   "numba>=0.66",
   "sortedcontainers",
   "sympy",

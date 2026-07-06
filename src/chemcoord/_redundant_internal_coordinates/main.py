@@ -9,7 +9,9 @@ import numpy as np
 from attrs import define, field
 from joblib import Parallel, delayed
 from numpy import float64
-from numpy.linalg import lstsq, norm
+from numpy.linalg import norm
+from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import lsqr
 from typing_extensions import Self, assert_never
 
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import (
@@ -27,6 +29,25 @@ Coordinate: TypeAlias = (
     | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]
     | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx, BendType]
 )
+
+
+def _sparse_lstsq(
+    A: Matrix, b: Vector, atol: float = 1e-12, btol: float = 1e-12
+) -> Vector[np.float64]:
+    """Solve the least-squares problem ``min_x ||A x - b||`` exploiting the sparsity
+    of the (banded) Wilson B matrix.
+
+    Every internal coordinate involves at most four atoms, so each row of the Wilson
+    B matrix (and of the Levenberg-Marquardt augmented system) has at most twelve
+    nonzero entries irrespective of the system size. Converting to a compressed
+    sparse row representation and using :func:`scipy.sparse.linalg.lsqr` is therefore
+    considerably cheaper than a dense SVD-based solve for larger systems, while
+    converging to the same minimum-norm least-squares solution. Started from the
+    default ``x0 = 0``, LSQR yields the minimum-norm solution for the rank-deficient
+    (rigid-body null space) Gauss-Newton system, matching :func:`numpy.linalg.lstsq`.
+    """
+    return lsqr(csr_matrix(A), b, atol=atol, btol=btol)[0]
+
 
 @define(frozen=True)
 class DefaultWeights:
@@ -152,7 +173,7 @@ class RedundantInternalCoordinates:
         lm_mat = np.vstack((W @ B, np.sqrt(start_lam) * D))
         lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
 
-        Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
+        Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
         Δx = Δx.reshape(len(previous), 3)
         new = previous + Δx
         new_Δq = (
@@ -168,7 +189,7 @@ class RedundantInternalCoordinates:
             lm_mat = np.vstack((W @ B, np.sqrt(lam) * D))
             lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
 
-            Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
+            Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
             Δx = Δx.reshape(len(previous), 3)
             new = previous + Δx
             new_Δq = (
@@ -182,7 +203,7 @@ class RedundantInternalCoordinates:
                     lm_mat = np.vstack((W @ B, np.sqrt(lam) * D))
                     lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
 
-                    Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
+                    Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
                     Δx = Δx.reshape(len(previous), 3)
                     new = previous + Δx
                     new_Δq = (
@@ -216,7 +237,7 @@ class RedundantInternalCoordinates:
 
             Δq = (self - q_current).minimize_dihedral()
 
-            Δx = lstsq(W @ B, W @ Δq.delta_q, rcond=-1)[0]
+            Δx = _sparse_lstsq(W @ B, W @ Δq.delta_q)
             Δx = Δx.reshape(len(previous), 3)
 
             new = _linesearch(B, Δq.delta_q, Δx, self, previous)
