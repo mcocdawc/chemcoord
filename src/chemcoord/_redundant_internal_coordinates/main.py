@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from functools import partial
 from itertools import combinations
 from typing import Final, Literal, Mapping, TypeAlias, cast, overload
 from warnings import warn
@@ -11,10 +10,12 @@ from attrs import define, field
 from joblib import Parallel, delayed
 from numpy import float64
 from numpy.linalg import lstsq, norm
-from sortedcontainers import SortedSet
 from typing_extensions import Self, assert_never
 
-from chemcoord._cartesian_coordinates._cartesian_class_bmat import BendType
+from chemcoord._cartesian_coordinates._cartesian_class_bmat import (
+    BendType,
+    Primitives,
+)
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord.configuration import settings
 from chemcoord.exceptions import PhysicalMeaning, UndefinedDihedral
@@ -26,15 +27,6 @@ Coordinate: TypeAlias = (
     | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]
     | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx, BendType]
 )
-
-#: Unfortunately SortedSet is not a generic type, if it was, the primitives
-#: would be declared as
-#: ``SortedSet[tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]``
-Primitives: TypeAlias = SortedSet
-
-# the key prioritizes length, then sorts lexicographically
-SetOfPrimitives = partial(SortedSet, key=lambda x: (len(x), x))
-
 
 @define(frozen=True)
 class DefaultWeights:

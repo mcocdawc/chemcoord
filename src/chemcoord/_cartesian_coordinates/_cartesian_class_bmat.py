@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import IntEnum
-from functools import partial
 from itertools import combinations
 from typing import TYPE_CHECKING, TypeAlias
 
@@ -33,8 +32,7 @@ if TYPE_CHECKING:
 Primitives: TypeAlias = SortedSet
 
 
-# the key prioritizes length, then sorts lexicographically
-SetOfPrimitives = partial(SortedSet, key=lambda x: (len(x), x))
+SetOfPrimitives = SortedSet
 
 
 class BendType(IntEnum):
@@ -60,8 +58,9 @@ class CartesianBmat(CartesianCore):
     ) -> Primitives:
         """Generate set of redundant internal coordinates for the system.
         Stored in a sortedcontainers.SortedSet to maintain order while
-        being able to use Python's union operator. Sorted by length of
-        coordinate, then by standard order based on the atoms' indices.
+        being able to use Python's union operator. Sorted by the natural
+        ordering of the coordinate tuples, i.e. lexicographically by atom
+        index (which compares shorter, prefix-matching tuples first).
 
         Args:
             coordinates: default :class:`None`, SortedSet of primitive
@@ -96,7 +95,7 @@ class CartesianBmat(CartesianCore):
     ) -> Primitives:
         """This function calculated the primitive internal coordinates
         purely based on chemical connectivity and does not connect fragments."""
-        idx_primitive_coords = SetOfPrimitives()
+        idx_primitive_coords = []
 
         if bonds is None:
             bonds = self.get_bonds()
@@ -110,15 +109,15 @@ class CartesianBmat(CartesianCore):
         # TODO early returns (purely for  performance)
         for atom1 in self.index:
             for atom2 in bonds[atom1]:
-                idx_primitive_coords.add(canonicalize(atom1, atom2))
+                idx_primitive_coords.append(canonicalize(atom1, atom2))
                 for atom3 in bonds[atom2] - {atom1}:
-                    idx_primitive_coords.add(canonicalize(atom1, atom2, atom3))
+                    idx_primitive_coords.append(canonicalize(atom1, atom2, atom3))
                     for atom4 in bonds[atom3] - {atom1, atom2}:
-                        idx_primitive_coords.add(
+                        idx_primitive_coords.append(
                             canonicalize(atom1, atom2, atom3, atom4)
                         )
 
-        return idx_primitive_coords
+        return SetOfPrimitives(idx_primitive_coords)
 
     def get_Wilson_B(
         self,
