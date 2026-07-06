@@ -72,6 +72,23 @@ publication, please acknowledge it by citing.
     }
 
 
+The redundant internal coordinate (RIC) interpolation algorithm, exposed via
+``chemcoord.ric_functions.RIC_interpolate``, is described in
+`this paper <https://chemrxiv.org/doi/full/10.26434/chemrxiv.15005488/v1>`__.
+If you use it, please cite:
+
+::
+
+    @article{whelpley_efficient_2026,
+        author = {Whelpley, Noah and Van Voorhis, Troy and Weser, Oskar},
+        title = {Efficient, Black-Box Estimation of Reaction Paths via Redundant Internal Coordinate Interpolation},
+        year = {2026},
+        journal = {ChemRxiv},
+        doi = {10.26434/chemrxiv.15005488},
+        url = {https://chemrxiv.org/doi/full/10.26434/chemrxiv.15005488/v1}
+    }
+
+
 My (Oskar Weser) master thesis including a more detailed derivation of implemented equations and
 the mathematical background can be found
 `here <https://github.com/mcocdawc/chemcoord/blob/master/docs/source/_static/master_thesis_oskar_weser_chemcoord.pdf>`__.
