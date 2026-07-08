@@ -155,7 +155,7 @@ class RedundantInternalCoordinates:
     def _lambda_cycle(
         self,
         previous: Cartesian,
-        B: Matrix,
+        B: csr_matrix,
         W: Matrix,
         start_lam: float,
         nu: float,
@@ -232,8 +232,8 @@ class RedundantInternalCoordinates:
 
             Δq = (self - q_current).minimize_dihedral()
 
-            Δx = _sparse_lstsq(W @ B, W @ Δq.delta_q)
-            Δx = Δx.reshape(len(previous), 3)
+            Δx_flat = _sparse_lstsq(W @ B, W @ Δq.delta_q)
+            Δx = Δx_flat.reshape(len(previous), 3)
 
             new = _linesearch(B, Δq.delta_q, Δx, self, previous)
 
@@ -530,9 +530,9 @@ def get_primitives_idx(
 
 
 def _linesearch(
-    B: Matrix,
+    B: csr_matrix,
     Δq: Vector,
-    Δx: Vector,
+    Δx: Matrix,
     current: RedundantInternalCoordinates,
     previous: Cartesian,
     alpha: float = 1.0,
