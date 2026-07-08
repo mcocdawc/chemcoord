@@ -12,6 +12,7 @@ from ordered_set import OrderedSet
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
 from pandas.core.series import Series
+from scipy.spatial import KDTree
 from sortedcontainers import SortedSet
 from typing_extensions import Self, assert_never
 
@@ -1085,26 +1086,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             missing_part.fragmentate(bond_dict=bond_dict), key=len, reverse=True
         )
 
-    @staticmethod
-    @njit(cache=True)
-    def _jit_pairwise_distances(
-        pos1: Matrix[np.floating], pos2: Matrix[np.floating]
-    ) -> Matrix[np.float64]:
-        """Optimized function for calculating the distance between each pair
-        of points in positions1 and positions2.
-
-        Does use python mode as fallback, if a scalar and not an array is
-        given.
-        """
-        n1 = pos1.shape[0]
-        n2 = pos2.shape[0]
-        D = np.empty((n1, n2))
-
-        for i in range(n1):
-            for j in range(n2):
-                D[i, j] = np.sqrt(((pos1[i] - pos2[j]) ** 2).sum())
-        return D
-
     def get_shortest_distance(self, other: Self) -> tuple[AtomIdx, AtomIdx, float]:
         """Calculate the shortest distance between self and other
 
@@ -1125,9 +1106,90 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         pos1 = self.loc[:, COORDS].values
         pos2 = other.loc[:, COORDS].values
-        D = self._jit_pairwise_distances(pos1, pos2)
-        i, j = np.unravel_index(D.argmin(), D.shape)
-        return AtomIdx(int(self.index[i])), AtomIdx(int(other.index[j])), float(D[i, j])  # type: ignore[call-overload]
+        # For every atom in ``self`` find the nearest atom in ``other`` via a KD-tree.
+        # This is O((n1 + n2) log n2) and never materialises the dense n1 x n2 matrix.
+        dist, j_of_i = KDTree(pos2).query(pos1)
+        i = int(dist.argmin())
+        j = int(j_of_i[i])
+        return AtomIdx(int(self.index[i])), AtomIdx(int(other.index[j])), float(dist[i])
+
+    def _fragment_connecting_bonds(
+        self, bond_dict: BondDict | None = None
+    ) -> list[tuple[AtomIdx, AtomIdx]]:
+        """Minimal set of inter-fragment bonds that makes the molecular graph connected.
+
+        Computes a Euclidean minimum spanning tree over the fragments (the
+        disconnected components of the bond graph): every returned bond joins the
+        two *closest* atoms of the two fragments it connects, and only ``F - 1``
+        bonds are returned for ``F`` fragments -- just enough to make the whole
+        system a single connected component, without the ``C(F, 2)`` redundant
+        long-range bonds of an all-pairs connection.
+
+        A single global :class:`scipy.spatial.KDTree` supplies the nearest-neighbour
+        candidate edges and a union-find (Kruskal) pass keeps the shortest edges that
+        merge two still-disconnected fragments. Returns an empty list for a
+        single-fragment system.
+
+        Args:
+            bond_dict: default :class:`None`, connectivity used to determine the
+                fragments. Passed straight to :meth:`fragmentate` so ``get_bonds``
+                is not recomputed if the caller already has it.
+        """
+        fragments = cast(
+            "list[set[AtomIdx]]",
+            self.fragmentate(give_only_index=True, bond_dict=bond_dict),
+        )
+        n_frag = len(fragments)
+        if n_frag == 1:
+            return []
+
+        pos = self.loc[:, COORDS].values
+        labels = self.index.to_numpy()
+        n_atoms = len(labels)
+        row_of_label = {label: row for row, label in enumerate(labels)}
+        frag_of = np.empty(n_atoms, dtype=int)
+        for frag_id, index_set in enumerate(fragments):
+            for label in index_set:
+                frag_of[row_of_label[label]] = frag_id
+
+        # union-find over the fragments
+        parent = list(range(n_frag))
+
+        def find(a: int) -> int:
+            while parent[a] != a:
+                parent[a] = parent[parent[a]]
+                a = parent[a]
+            return a
+
+        tree = KDTree(pos)
+        bonds: list[tuple[AtomIdx, AtomIdx]] = []
+        # Start with a small neighbourhood; grow it only if it fails to span every
+        # fragment. ``k = n_atoms`` is the complete graph and always spans.
+        k = min(n_atoms, 5)
+        while len(bonds) < n_frag - 1:
+            dist, idx = tree.query(pos, k=k)
+            # dist/idx have shape (n_atoms, k); column 0 is the atom itself.
+            candidates = [
+                (float(dist[row_a, col]), row_a, int(idx[row_a, col]))
+                for row_a in range(n_atoms)
+                for col in range(1, k)
+                if frag_of[row_a] != frag_of[int(idx[row_a, col])]
+            ]
+            candidates.sort()
+            for _, row_a, row_b in candidates:
+                root_a, root_b = find(frag_of[row_a]), find(frag_of[row_b])
+                if root_a != root_b:
+                    parent[root_a] = root_b
+                    bonds.append(
+                        (AtomIdx(int(labels[row_a])), AtomIdx(int(labels[row_b])))
+                    )
+                    if len(bonds) == n_frag - 1:
+                        break
+            if len(bonds) < n_frag - 1:
+                if k >= n_atoms:
+                    break  # complete graph inspected; nothing more can be added
+                k = min(n_atoms, k * 2)
+        return bonds
 
     def get_inertia(self) -> dict[str, Any]:
         """Calculate the inertia tensor and transforms along

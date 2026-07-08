@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from itertools import combinations
 from typing import Final, Literal, Mapping, TypeAlias, cast, overload
 from warnings import warn
 
@@ -593,16 +592,8 @@ def _find_joint_bond_dict(
         k: bonds_1.get(k, set()) | bonds_2.get(k, set())
         for k in (bonds_1.keys() | bonds_2.keys())
     }
-    start_fragments = start.fragmentate()
-    end_fragments = end.fragmentate()
-    if len(start_fragments) != 1:
-        for fragment_pair in combinations(start_fragments, 2):
-            index1, index2, _ = fragment_pair[0].get_shortest_distance(fragment_pair[1])
-            bonds[index1].add(index2)
-            bonds[index2].add(index1)
-    if len(end_fragments) != 1:
-        for fragment_pair in combinations(end_fragments, 2):
-            index1, index2, _ = fragment_pair[0].get_shortest_distance(fragment_pair[1])
+    for molecule in (start, end):
+        for index1, index2 in molecule._fragment_connecting_bonds():
             bonds[index1].add(index2)
             bonds[index2].add(index1)
     return bonds

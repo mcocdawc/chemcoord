@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import IntEnum
-from itertools import combinations
 from typing import TYPE_CHECKING, TypeAlias
 
 import numpy as np
@@ -81,14 +80,9 @@ class CartesianBmat(CartesianCore):
             bond_dict = {i_atom: set(connected) for i_atom, connected in bonds.items()}
 
         if connect_fragments:
-            fragments = self.fragmentate()
-            if len(fragments) != 1:
-                for fragment_pair in combinations(fragments, 2):
-                    index1, index2, _ = fragment_pair[0].get_shortest_distance(
-                        fragment_pair[1]
-                    )
-                    bond_dict[index1].add(index2)
-                    bond_dict[index2].add(index1)
+            for index1, index2 in self._fragment_connecting_bonds(bond_dict):
+                bond_dict[index1].add(index2)
+                bond_dict[index2].add(index1)
         return self._get_primitives_single_molecule(bond_dict)
 
     def _get_primitives_single_molecule(
