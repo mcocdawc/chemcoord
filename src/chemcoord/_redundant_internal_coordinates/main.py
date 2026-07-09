@@ -11,7 +11,7 @@ from numpy import float64
 from numpy.linalg import norm
 from scipy.sparse import csr_matrix, diags
 from scipy.sparse import vstack as sparse_vstack
-from scipy.sparse.linalg import lsqr
+from scipy.sparse.linalg import lsmr
 from typing_extensions import Self, assert_never
 
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import (
@@ -31,8 +31,16 @@ Coordinate: TypeAlias = (
 )
 
 
+# Upper bound on the number of LSMR iterations per linear solve. The augmented
+# Levenberg-Marquardt system is ill-conditioned, so without a cap LSMR chases the
+# stopping tolerance for thousands of iterations. Since every solve is only one
+# inexact step of the outer Gauss-Newton/LM loop, a bounded, approximate solution is
+# enough and keeps each iteration cheap.
+_LSTSQ_MAX_ITER: Final = 200
+
+
 def _sparse_lstsq(
-    A: Matrix, b: Vector, atol: float = 1e-12, btol: float = 1e-12
+    A: Matrix, b: Vector, atol: float = 1e-8, btol: float = 1e-8
 ) -> Vector[np.float64]:
     """Solve the least-squares problem ``min_x ||A x - b||`` exploiting the sparsity
     of the (banded) Wilson B matrix.
@@ -40,13 +48,19 @@ def _sparse_lstsq(
     Every internal coordinate involves at most four atoms, so each row of the Wilson
     B matrix (and of the Levenberg-Marquardt augmented system) has at most twelve
     nonzero entries irrespective of the system size. Converting to a compressed
-    sparse row representation and using :func:`scipy.sparse.linalg.lsqr` is therefore
+    sparse row representation and using :func:`scipy.sparse.linalg.lsmr` is therefore
     considerably cheaper than a dense SVD-based solve for larger systems, while
     converging to the same minimum-norm least-squares solution. Started from the
-    default ``x0 = 0``, LSQR yields the minimum-norm solution for the rank-deficient
+    default ``x0 = 0``, LSMR yields the minimum-norm solution for the rank-deficient
     (rigid-body null space) Gauss-Newton system, matching :func:`numpy.linalg.lstsq`.
+
+    LSMR is preferred over LSQR here because it is more robust on the ill-conditioned
+    augmented LM system and typically reaches an equivalent solution in fewer
+    iterations. The tolerances are ``1e-8`` (rather than machine precision): the outer
+    loop only converges to ``rtol=1e-5``/``atol=1e-8``, so solving each linear
+    subproblem to twelve digits is wasted work.
     """
-    return lsqr(csr_matrix(A), b, atol=atol, btol=btol)[0]
+    return lsmr(csr_matrix(A), b, atol=atol, btol=btol, maxiter=_LSTSQ_MAX_ITER)[0]
 
 
 @define(frozen=True)
