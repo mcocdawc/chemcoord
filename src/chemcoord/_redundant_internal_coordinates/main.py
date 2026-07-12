@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from functools import partial
 from itertools import combinations
 from typing import Final, Literal, Mapping, TypeAlias, cast, overload
 from warnings import warn
@@ -10,11 +9,16 @@ import numpy as np
 from attrs import define, field
 from joblib import Parallel, delayed
 from numpy import float64
-from numpy.linalg import lstsq, norm
-from sortedcontainers import SortedSet
+from numpy.linalg import norm
+from scipy.sparse import csr_matrix, diags
+from scipy.sparse import vstack as sparse_vstack
+from scipy.sparse.linalg import lsqr
 from typing_extensions import Self, assert_never
 
-from chemcoord._cartesian_coordinates._cartesian_class_bmat import BendType
+from chemcoord._cartesian_coordinates._cartesian_class_bmat import (
+    BendType,
+    Primitives,
+)
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord.configuration import settings
 from chemcoord.exceptions import PhysicalMeaning, UndefinedDihedral
@@ -27,13 +31,23 @@ Coordinate: TypeAlias = (
     | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx, BendType]
 )
 
-#: Unfortunately SortedSet is not a generic type, if it was, the primitives
-#: would be declared as
-#: ``SortedSet[tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]``
-Primitives: TypeAlias = SortedSet
 
-# the key prioritizes length, then sorts lexicographically
-SetOfPrimitives = partial(SortedSet, key=lambda x: (len(x), x))
+def _sparse_lstsq(
+    A: Matrix, b: Vector, atol: float = 1e-12, btol: float = 1e-12
+) -> Vector[np.float64]:
+    """Solve the least-squares problem ``min_x ||A x - b||`` exploiting the sparsity
+    of the (banded) Wilson B matrix.
+
+    Every internal coordinate involves at most four atoms, so each row of the Wilson
+    B matrix (and of the Levenberg-Marquardt augmented system) has at most twelve
+    nonzero entries irrespective of the system size. Converting to a compressed
+    sparse row representation and using :func:`scipy.sparse.linalg.lsqr` is therefore
+    considerably cheaper than a dense SVD-based solve for larger systems, while
+    converging to the same minimum-norm least-squares solution. Started from the
+    default ``x0 = 0``, LSQR yields the minimum-norm solution for the rank-deficient
+    (rigid-body null space) Gauss-Newton system, matching :func:`numpy.linalg.lstsq`.
+    """
+    return lsqr(csr_matrix(A), b, atol=atol, btol=btol)[0]
 
 
 @define(frozen=True)
@@ -155,48 +169,44 @@ class RedundantInternalCoordinates:
 
         good_lam = False
 
-        D = np.diag(B.T @ W @ W @ B) * np.eye(len(B[0]))
+        # Invariants of the damped least-squares system, independent of lambda. The
+        # Wilson B matrix is banded, so ``W @ B`` and the augmented system stay sparse.
+        WB = W @ B
+        W_Δq = W @ Δq.delta_q
+        zeros = np.zeros(B.shape[1])
+        # diagonal of the (Gauss-Newton) approximate Hessian, used as LM damping
+        damping = (B.T @ W @ W @ B).diagonal()
 
-        lm_mat = np.vstack((W @ B, np.sqrt(start_lam) * D))
-        lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
+        def step(lam: float) -> Cartesian:
+            lm_mat = sparse_vstack((WB, diags(np.sqrt(lam) * damping)))
+            lm_vec = np.hstack((W_Δq, zeros))
+            # ``_sparse_lstsq`` forwards the (sparse) augmented system straight into
+            # ``csr_matrix``/``lsqr``; the scipy sparse stubs do not model this.
+            Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]  # type: ignore[arg-type]
+            return previous + Δx.reshape(len(previous), 3)
 
-        Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
-        Δx = Δx.reshape(len(previous), 3)
-        new = previous + Δx
-        new_Δq = (
-            self - new.get_ric(internal_coords_idx=self.primitives_idx)
-        ).minimize_dihedral()
-        if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
+        def is_good(new: Cartesian) -> bool:
+            new_Δq = (
+                self - new.get_ric(internal_coords_idx=self.primitives_idx)
+            ).minimize_dihedral()
+            return bool(norm(new_Δq.delta_q) <= norm(Δq.delta_q))
+
+        new = step(start_lam)
+        if is_good(new):
             lam = start_lam
             good_lam = True
         else:
             lam = start_lam / reduction_factor
 
         if not good_lam:
-            lm_mat = np.vstack((W @ B, np.sqrt(lam) * D))
-            lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
-
-            Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
-            Δx = Δx.reshape(len(previous), 3)
-            new = previous + Δx
-            new_Δq = (
-                self - new.get_ric(internal_coords_idx=self.primitives_idx)
-            ).minimize_dihedral()
-            if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
+            new = step(lam)
+            if is_good(new):
                 good_lam = True
             else:
                 lam *= nu**2
                 while not good_lam:
-                    lm_mat = np.vstack((W @ B, np.sqrt(lam) * D))
-                    lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
-
-                    Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
-                    Δx = Δx.reshape(len(previous), 3)
-                    new = previous + Δx
-                    new_Δq = (
-                        self - new.get_ric(internal_coords_idx=self.primitives_idx)
-                    ).minimize_dihedral()
-                    if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
+                    new = step(lam)
+                    if is_good(new):
                         good_lam = True
                     else:
                         lam *= nu
@@ -218,16 +228,18 @@ class RedundantInternalCoordinates:
             if (i := i + 1) > max_iter:
                 raise ValueError(f"Not converged after {max_iter} iterations.")
 
-            B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+            B = previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
 
             q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
 
             Δq = (self - q_current).minimize_dihedral()
 
-            Δx = lstsq(W @ B, W @ Δq.delta_q, rcond=-1)[0]
-            Δx = Δx.reshape(len(previous), 3)
+            # B and W are sparse (banded Wilson B and diagonal weights); the scipy
+            # sparse stubs do not describe these matmuls, so mypy sees a mismatch.
+            Δx = _sparse_lstsq(W @ B, W @ Δq.delta_q)  # type: ignore[arg-type]
+            Δx = Δx.reshape(len(previous), 3)  # type: ignore[assignment]
 
-            new = _linesearch(B, Δq.delta_q, Δx, self, previous)
+            new = _linesearch(B, Δq.delta_q, Δx, self, previous)  # type: ignore[arg-type]
 
             converged = allclose(
                 new,
@@ -269,13 +281,13 @@ class RedundantInternalCoordinates:
             if (i := i + 1) > max_iter:
                 raise ValueError(f"Not converged after {max_iter} iterations.")
 
-            B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+            B = previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
 
             q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
 
             Δq = (self - q_current).minimize_dihedral()
 
-            new, lam = self._lambda_cycle(previous, B, W, lam, nu, reduction_factor, Δq)
+            new, lam = self._lambda_cycle(previous, B, W, lam, nu, reduction_factor, Δq)  # type: ignore[arg-type]
 
             converged = allclose(
                 new,
@@ -349,12 +361,16 @@ class RedundantInternalCoordinates:
         else:
             assert weights is not None
 
-        W = np.diag(weights)  # type: ignore[arg-type]
+        # W is diagonal; keeping it sparse lets ``W @ B`` stay sparse throughout the
+        # weighted least-squares solve (the Wilson B matrix is banded).
+        W = diags(np.asarray(weights))
 
+        # W is a sparse ``dia_array``; the solvers treat it purely as a matrix in
+        # sparse matmuls, which the scipy sparse stubs do not describe.
         if opt_alg == "LM":
-            new = self._levenberg_marquardt_opt(start_guess, max_iter, W, rtol, atol)
+            new = self._levenberg_marquardt_opt(start_guess, max_iter, W, rtol, atol)  # type: ignore[arg-type]
         elif opt_alg == "gauss":
-            new = self._gauss_newton_opt(start_guess, max_iter, W, rtol, atol)
+            new = self._gauss_newton_opt(start_guess, max_iter, W, rtol, atol)  # type: ignore[arg-type]
         else:
             assert_never(opt_alg)
 

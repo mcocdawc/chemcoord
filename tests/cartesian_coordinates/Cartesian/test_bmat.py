@@ -149,6 +149,9 @@ def test_primitive_coordinates():
 
 def test_Wilson_B():
     B_mat = molecule3.get_Wilson_B()
+    # each row corresponds to a primitive; ``expected`` is recorded in the order
+    # the primitives had when written (grouped by tuple length, then lexicographic).
+    recorded_order = sorted(molecule3.get_primitives_idx(), key=lambda x: (len(x), x))
     expected = np.array(
         [
             [-1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -185,11 +188,16 @@ def test_Wilson_B():
             ],
         ]
     )
-    assert np.allclose(B_mat, expected)
+    expected_by_coord = dict(zip(recorded_order, expected))
+    current_order = molecule3.get_primitives_idx()
+    assert np.allclose(B_mat, [expected_by_coord[c] for c in current_order])
 
 
 def test_transformation():
     qs = molecule1.get_ric()
+    # ``expected`` is recorded in the order the primitives had when written:
+    # grouped by tuple length, then lexicographic. Compare order-independently.
+    recorded_order = sorted(qs.primitives_idx, key=lambda x: (len(x), x))
     expected = np.array(
         [
             1.5356843,
@@ -302,4 +310,5 @@ def test_transformation():
             -1.01833403,
         ]
     )
-    assert np.allclose(qs.q, expected)
+    expected_by_coord = dict(zip(recorded_order, expected))
+    assert np.allclose(qs.q, [expected_by_coord[c] for c in qs.primitives_idx])
