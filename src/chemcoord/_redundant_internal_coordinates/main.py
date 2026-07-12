@@ -180,7 +180,9 @@ class RedundantInternalCoordinates:
         def step(lam: float) -> Cartesian:
             lm_mat = sparse_vstack((WB, diags(np.sqrt(lam) * damping)))
             lm_vec = np.hstack((W_Δq, zeros))
-            Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
+            # ``_sparse_lstsq`` forwards the (sparse) augmented system straight into
+            # ``csr_matrix``/``lsqr``; the scipy sparse stubs do not model this.
+            Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]  # type: ignore[arg-type]
             return previous + Δx.reshape(len(previous), 3)
 
         def is_good(new: Cartesian) -> bool:
@@ -232,10 +234,12 @@ class RedundantInternalCoordinates:
 
             Δq = (self - q_current).minimize_dihedral()
 
-            Δx = _sparse_lstsq(W @ B, W @ Δq.delta_q)
-            Δx = Δx.reshape(len(previous), 3)
+            # B and W are sparse (banded Wilson B and diagonal weights); the scipy
+            # sparse stubs do not describe these matmuls, so mypy sees a mismatch.
+            Δx = _sparse_lstsq(W @ B, W @ Δq.delta_q)  # type: ignore[arg-type]
+            Δx = Δx.reshape(len(previous), 3)  # type: ignore[assignment]
 
-            new = _linesearch(B, Δq.delta_q, Δx, self, previous)
+            new = _linesearch(B, Δq.delta_q, Δx, self, previous)  # type: ignore[arg-type]
 
             converged = allclose(
                 new,
@@ -283,7 +287,7 @@ class RedundantInternalCoordinates:
 
             Δq = (self - q_current).minimize_dihedral()
 
-            new, lam = self._lambda_cycle(previous, B, W, lam, nu, reduction_factor, Δq)
+            new, lam = self._lambda_cycle(previous, B, W, lam, nu, reduction_factor, Δq)  # type: ignore[arg-type]
 
             converged = allclose(
                 new,
@@ -361,10 +365,12 @@ class RedundantInternalCoordinates:
         # weighted least-squares solve (the Wilson B matrix is banded).
         W = diags(np.asarray(weights))
 
+        # W is a sparse ``dia_array``; the solvers treat it purely as a matrix in
+        # sparse matmuls, which the scipy sparse stubs do not describe.
         if opt_alg == "LM":
-            new = self._levenberg_marquardt_opt(start_guess, max_iter, W, rtol, atol)
+            new = self._levenberg_marquardt_opt(start_guess, max_iter, W, rtol, atol)  # type: ignore[arg-type]
         elif opt_alg == "gauss":
-            new = self._gauss_newton_opt(start_guess, max_iter, W, rtol, atol)
+            new = self._gauss_newton_opt(start_guess, max_iter, W, rtol, atol)  # type: ignore[arg-type]
         else:
             assert_never(opt_alg)
 
