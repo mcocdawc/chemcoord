@@ -1,4 +1,6 @@
 import os
+import platform
+import sys
 
 import numpy as np
 
@@ -30,6 +32,25 @@ def get_complete_path(structure):
     return os.path.join(STRUCTURES, structure)
 
 
+def get_reference_path(name):
+    """Return the path to a golden reference file, preferring a platform-specific
+    variant when one exists.
+
+    The RIC back-transformation solves a rank-deficient (rigid-body null space)
+    least-squares problem iteratively, so it converges to a slightly different (but
+    equally valid) structure depending on the BLAS/LAPACK build. The committed default
+    references were generated on x86-64 Linux; macOS on Apple Silicon converges ~1e-3
+    away from them -- deterministic and thread-count invariant on that platform, but
+    past the 1e-4 tolerance. A ``<stem>.macos_arm<ext>`` variant is used there instead.
+    """
+    if sys.platform == "darwin" and platform.machine() == "arm64":
+        stem, ext = os.path.splitext(name)
+        variant = f"{stem}.macos_arm{ext}"
+        if os.path.exists(get_complete_path(variant)):
+            return get_complete_path(variant)
+    return get_complete_path(name)
+
+
 molecule1 = Cartesian.read_xyz(get_complete_path("cyclohexane_chair.xyz"))
 molecule2 = Cartesian.read_xyz(get_complete_path("cyclohexane_twist_boat.xyz"))
 molecule3 = Cartesian.read_xyz(get_complete_path("peroxide.xyz"))
@@ -44,7 +65,7 @@ molecule7 = Cartesian.read_xyz(get_complete_path("default_args_start.xyz"))
 molecule8 = Cartesian.read_xyz(get_complete_path("default_args_end.xyz"))
 
 # The reference path holds 80 images: 20 for each of the four schedules below.
-reference_path = read_multiple_xyz(get_complete_path("correct_path.xyz"))
+reference_path = read_multiple_xyz(get_reference_path("correct_path.xyz"))
 
 
 def _assert_ric_path(schedule, expected):
@@ -118,7 +139,7 @@ def test_nonzero_start():
 
 
 def test_default_args():
-    correct_path = get_complete_path("default_args_path.xyz")
+    correct_path = get_reference_path("default_args_path.xyz")
 
     reference_path = read_multiple_xyz(correct_path)
 

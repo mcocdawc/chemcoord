@@ -38,6 +38,15 @@ Coordinate: TypeAlias = (
 # enough and keeps each iteration cheap.
 _LSTSQ_MAX_ITER: Final = 200
 
+# Bounds for the Levenberg-Marquardt damping ``lam``. It is shrunk after every
+# accepted step (drifting back toward fast Gauss-Newton) and only grown when the
+# damped direction admits no descent, so these are loose safety rails rather than
+# tuned values. ``_LM_MAX_DAMPING_STEPS`` caps how often ``lam`` may be grown within
+# a single outer iteration before giving up.
+_LM_MIN_LAMBDA: Final = 1e-14
+_LM_MAX_LAMBDA: Final = 1e6
+_LM_MAX_DAMPING_STEPS: Final = 30
+
 
 def _sparse_lstsq(
     A: Matrix, b: Vector, atol: float = 1e-8, btol: float = 1e-8
@@ -61,6 +70,19 @@ def _sparse_lstsq(
     subproblem to twelve digits is wasted work.
     """
     return lsmr(csr_matrix(A), b, atol=atol, btol=btol, maxiter=_LSTSQ_MAX_ITER)[0]
+
+
+def _dense_lstsq(A: Matrix, b: Vector) -> Vector[np.float64]:
+    """Dense counterpart of :func:`_sparse_lstsq`, kept so that the dense and sparse
+    back-transformations can be run side by side (see ``coord="RIC_dense"`` in
+    :func:`~chemcoord.xyz_functions.interpolate`).
+
+    Uses :func:`numpy.linalg.lstsq` with ``rcond=-1`` on the dense
+    :meth:`~chemcoord.Cartesian.get_Wilson_B` matrix. Started from the implicit zero
+    guess it returns the minimum-norm least-squares solution for the rank-deficient
+    (rigid-body null space) Gauss-Newton system, matching :func:`_sparse_lstsq`.
+    """
+    return np.linalg.lstsq(np.asarray(A), np.asarray(b), rcond=-1)[0]
 
 
 @define(frozen=True)
@@ -168,68 +190,77 @@ class RedundantInternalCoordinates:
     def _lambda_cycle(
         self,
         previous: Cartesian,
-        B: csr_matrix,
+        B: csr_matrix | Matrix,
         W: Matrix,
         start_lam: float,
         nu: float,
         reduction_factor: float,
         Δq: DeltaRedundantInternalCoordinates,
+        sparse: bool = True,
     ) -> tuple[Cartesian, float]:
-        """This gets the best choice of lambda for a Levenberg-Marquardt optimization
-        step.
+        """Take a single damped Gauss-Newton (Levenberg-Marquardt) step.
+
+        The damped search direction for the current ``lam`` is refined with a
+        backtracking line search (:func:`_linesearch`): an over-shooting full step is
+        *shortened* rather than the direction being rotated toward gradient descent by
+        an ever-growing ``lam``. Plain lambda-only acceptance stalls badly near the
+        solution -- once ``lam`` ratchets up it never recovers and the residual only
+        crawls, so on large systems the outer loop never converges within ``max_iter``
+        -- whereas shortening the good Gauss-Newton direction keeps the fast
+        convergence rate.
+
+        ``lam`` is decreased after every accepted step (drifting back toward the fast
+        Gauss-Newton regime) and only increased when even the damped direction admits
+        no descent, which restores the regularisation that makes LM more robust than
+        plain Gauss-Newton. The returned ``lam`` seeds the next outer iteration.
 
         see: https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm"""
 
-        good_lam = False
-
-        # Invariants of the damped least-squares system, independent of lambda. The
-        # Wilson B matrix is banded, so ``W @ B`` and the augmented system stay sparse.
+        # Invariants of the damped least-squares system, independent of lambda. In the
+        # sparse path the Wilson B matrix is banded, so ``W @ B`` and the augmented
+        # system stay sparse.
         WB = W @ B
         W_Δq = W @ Δq.delta_q
         zeros = np.zeros(B.shape[1])
         # diagonal of the (Gauss-Newton) approximate Hessian, used as LM damping
         damping = (B.T @ W @ W @ B).diagonal()
 
-        def step(lam: float) -> Cartesian:
-            lm_mat = sparse_vstack((WB, diags(np.sqrt(lam) * damping)))
-            lm_vec = np.hstack((W_Δq, zeros))
-            Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
-            return previous + Δx.reshape(len(previous), 3)
+        lstsq = _sparse_lstsq if sparse else _dense_lstsq
 
-        def is_good(new: Cartesian) -> bool:
-            new_Δq = (
-                self - new.get_ric(internal_coords_idx=self.primitives_idx)
-            ).minimize_dihedral()
-            return bool(norm(new_Δq.delta_q) <= norm(Δq.delta_q))
-
-        new = step(start_lam)
-        if is_good(new):
-            lam = start_lam
-            good_lam = True
-        else:
-            lam = start_lam / reduction_factor
-
-        if not good_lam:
-            new = step(lam)
-            if is_good(new):
-                good_lam = True
+        lam = start_lam
+        new = previous
+        for _ in range(_LM_MAX_DAMPING_STEPS):
+            if sparse:
+                lm_mat = sparse_vstack((WB, diags(np.sqrt(lam) * damping)))
             else:
-                lam *= nu**2
-                while not good_lam:
-                    new = step(lam)
-                    if is_good(new):
-                        good_lam = True
-                    else:
-                        lam *= nu
+                lm_mat = np.vstack((WB, np.diag(np.sqrt(lam) * damping)))
+            lm_vec = np.hstack((W_Δq, zeros))
+            Δx = lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
+            Δx = Δx.reshape(len(previous), 3)
+            try:
+                new = _linesearch(B, Δq.delta_q, Δx, self, previous)
+            except ValueError:
+                # No descent along this direction: damp harder and retry.
+                lam = min(lam * nu, _LM_MAX_LAMBDA)
+                continue
+            return new, max(lam / reduction_factor, _LM_MIN_LAMBDA)
 
         return new, lam
 
     def _gauss_newton_opt(
-        self, start_guess: Cartesian, max_iter: int, W: Matrix, rtol: float, atol: float
+        self,
+        start_guess: Cartesian,
+        max_iter: int,
+        W: Matrix,
+        rtol: float,
+        atol: float,
+        sparse: bool = True,
     ) -> Cartesian:
         from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
             allclose,
         )
+
+        lstsq = _sparse_lstsq if sparse else _dense_lstsq
 
         previous = start_guess
 
@@ -239,13 +270,17 @@ class RedundantInternalCoordinates:
             if (i := i + 1) > max_iter:
                 raise ValueError(f"Not converged after {max_iter} iterations.")
 
-            B = previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
+            B: csr_matrix | Matrix = (
+                previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
+                if sparse
+                else previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+            )
 
             q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
 
             Δq = (self - q_current).minimize_dihedral()
 
-            Δx_flat = _sparse_lstsq(W @ B, W @ Δq.delta_q)
+            Δx_flat = lstsq(W @ B, W @ Δq.delta_q)
             Δx = Δx_flat.reshape(len(previous), 3)
 
             new = _linesearch(B, Δq.delta_q, Δx, self, previous)
@@ -274,6 +309,7 @@ class RedundantInternalCoordinates:
         start_lam: float = 1e-5,
         nu: float = 1.5,
         reduction_factor: float = 10,
+        sparse: bool = True,
     ) -> Cartesian:
         from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
             allclose,
@@ -290,13 +326,19 @@ class RedundantInternalCoordinates:
             if (i := i + 1) > max_iter:
                 raise ValueError(f"Not converged after {max_iter} iterations.")
 
-            B = previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
+            B: csr_matrix | Matrix = (
+                previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
+                if sparse
+                else previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+            )
 
             q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
 
             Δq = (self - q_current).minimize_dihedral()
 
-            new, lam = self._lambda_cycle(previous, B, W, lam, nu, reduction_factor, Δq)
+            new, lam = self._lambda_cycle(
+                previous, B, W, lam, nu, reduction_factor, Δq, sparse=sparse
+            )
 
             converged = allclose(
                 new,
@@ -322,6 +364,7 @@ class RedundantInternalCoordinates:
         opt_alg: Literal["LM", "gauss"] = "LM",
         weights: Vector[np.floating] | Sequence[float] | None = None,
         default_weights: DefaultWeights | Mapping[str, float] | None = None,
+        sparse: bool = True,
     ) -> Cartesian:
         """Finds the closest physical structure to self. Uses an iterative algorithm
         with Wilson's B matrix to converge to said structure.
@@ -342,6 +385,11 @@ class RedundantInternalCoordinates:
             default_weights: default
                 {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
                 the weights which each type of coordinate default to
+            sparse: default :class:`True`, whether to use the sparse linear-algebra
+                back-transformation (sparse Wilson B matrix and ``lsmr``) or the dense
+                one (dense Wilson B matrix and :func:`numpy.linalg.lstsq`). Both paths
+                are numerically equivalent; the sparse one scales better with system
+                size. Exposed mainly to compare the two side by side.
         Returns:
             Closest physical structure to self, aligned to start_guess
         """
@@ -370,14 +418,19 @@ class RedundantInternalCoordinates:
         else:
             assert weights is not None
 
-        # W is diagonal; keeping it sparse lets ``W @ B`` stay sparse throughout the
-        # weighted least-squares solve (the Wilson B matrix is banded).
-        W = diags(np.asarray(weights))
+        # W is diagonal. In the sparse path keeping it sparse lets ``W @ B`` stay sparse
+        # throughout the weighted least-squares solve (the Wilson B matrix is banded);
+        # in the dense path W must be a dense diagonal so ``W @ B`` stays a dense array.
+        W = diags(np.asarray(weights)) if sparse else np.diag(np.asarray(weights))
 
         if opt_alg == "LM":
-            new = self._levenberg_marquardt_opt(start_guess, max_iter, W, rtol, atol)
+            new = self._levenberg_marquardt_opt(
+                start_guess, max_iter, W, rtol, atol, sparse=sparse
+            )
         elif opt_alg == "gauss":
-            new = self._gauss_newton_opt(start_guess, max_iter, W, rtol, atol)
+            new = self._gauss_newton_opt(
+                start_guess, max_iter, W, rtol, atol, sparse=sparse
+            )
         else:
             assert_never(opt_alg)
 
@@ -543,7 +596,7 @@ def get_primitives_idx(
 
 
 def _linesearch(
-    B: csr_matrix,
+    B: csr_matrix | Matrix,
     Δq: Vector,
     Δx: Matrix,
     current: RedundantInternalCoordinates,
@@ -631,6 +684,7 @@ def RIC_interpolate(
     atol: float = 1e-8,
     weights: Vector[np.floating] | Sequence[float] | None = None,
     default_weights: DefaultWeights | Mapping[str, float] | None = None,
+    sparse: bool = True,
 ) -> list[Cartesian]:
     """Generates an N-image interpolation between start and end.
 
@@ -670,6 +724,11 @@ def RIC_interpolate(
         default_weights: default
             {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
             the weights which each type of coordinate default to
+        sparse: default :class:`True`, whether the back-transformation of each image via
+            :meth:`~.RedundantInternalCoordinates.get_cartesian` uses the sparse
+            (sparse Wilson B + ``lsmr``) or dense (dense Wilson B +
+            :func:`numpy.linalg.lstsq`) linear algebra. Both are numerically equivalent;
+            the sparse path scales better. Mainly useful for comparing the two.
 
     Returns:
         The generated path as list of :class:`~chemcoord.Cartesian`.
@@ -691,6 +750,7 @@ def RIC_interpolate(
             rtol=rtol,
             atol=atol,
             opt_alg=opt_alg,
+            sparse=sparse,
         )
 
     if schedule == "independent":
@@ -755,6 +815,7 @@ def RIC_interpolate(
                 schedule=auto_schedule,
                 rtol=rtol,
                 atol=atol,
+                sparse=sparse,
             )
 
         strategies: Final[Sequence[AutoSchedules]] = [

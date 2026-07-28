@@ -688,7 +688,7 @@ def interpolate(
     start: Cartesian,
     end: Cartesian,
     N: int,
-    coord: Literal["cart", "zmat", "RIC"] = "zmat",
+    coord: Literal["cart", "zmat", "RIC", "RIC_sparse", "RIC_dense"] = "zmat",
     coord_idx: None | Primitives = None,
     opt_alg: Literal["gauss", "LM"] = "LM",
 ) -> list[Cartesian]:
@@ -698,8 +698,12 @@ def interpolate(
         start: Starting structure.
         end: Ending structure.
         N: Number of structures to interpolate between.
-        coord: Interpolate in Cartesian, Z-matrix,
-            or redundant internal coordinate (RIC) space.
+        coord: Interpolate in Cartesian (``"cart"``), Z-matrix (``"zmat"``), or
+            redundant internal coordinate (RIC) space. ``"RIC_sparse"`` (aliased by
+            ``"RIC"``) uses the sparse back-transformation (sparse Wilson B + ``lsmr``);
+            ``"RIC_dense"`` uses the dense one (dense Wilson B +
+            :func:`numpy.linalg.lstsq`). The two RIC variants are numerically
+            equivalent and exist to be compared side by side.
 
     References:
         The Z-matrix interpolation is described in :cite:`weser_automated_2023`,
@@ -715,14 +719,17 @@ def interpolate(
         return _cart_interpolate(start, end, N)
     elif coord == "zmat":
         return _zmat_interpolate(start, end, N)
-    elif coord == "RIC":
+    elif coord == "RIC" or coord == "RIC_sparse" or coord == "RIC_dense":
+        sparse = coord != "RIC_dense"
         return _fix_trans_rot(
             start,
             end,
-            RIC_interpolate(start, end, N, opt_alg=opt_alg, coord_idx=coord_idx),
+            RIC_interpolate(
+                start, end, N, opt_alg=opt_alg, coord_idx=coord_idx, sparse=sparse
+            ),
         )
     else:
-        assert_never(f"coord must be either 'cart', 'zmat', or 'RIC'; not {coord}")
+        assert_never(coord)
 
 
 def get_reaction_coordinate(path: Sequence[Cartesian]) -> Vector[np.float64]:
