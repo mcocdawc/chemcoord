@@ -118,6 +118,7 @@ class CartesianBmat(CartesianCore):
         self,
         idx_internal_coords: Primitives | None = None,
         bonds: BondDict | None = None,
+        coord_arr: Matrix[int64] | None = None,
     ) -> Matrix:
         """Generate Wilson's B matrix for the current structure.
 
@@ -126,6 +127,11 @@ class CartesianBmat(CartesianCore):
                 primitive internal coordinates to use in the calculation. If None,
                 calculates using the get_primitive_coords method
             bonds: default :class:`None`, mapping containing bonding information.
+            coord_arr: default :class:`None`, the pre-computed 0-based integer array of
+                the (non-bending) coordinate indices, as returned by
+                :meth:`_to_array_nobending`. Reusing a cached array avoids recomputing
+                the reindexing on every call when this structure's index and
+                ``idx_internal_coords`` are unchanged, e.g. in an optimization loop.
 
         Returns:
             Wilson's B matrix
@@ -133,15 +139,18 @@ class CartesianBmat(CartesianCore):
         if idx_internal_coords is None:
             idx_internal_coords = self.get_primitives_idx(bonds)
 
+        if coord_arr is None:
+            coord_arr = self._to_array_nobending(idx_internal_coords)
         return _jit_get_Wilson_B(
             self.loc[:, COORDS].values,
-            self._to_array_nobending(idx_internal_coords),
+            coord_arr,
         )
 
     def get_sparse_Wilson_B(
         self,
         idx_internal_coords: Primitives | None = None,
         bonds: BondDict | None = None,
+        coord_arr: Matrix[int64] | None = None,
     ) -> csr_matrix:
         """Generate Wilson's B matrix as a sparse matrix for the current structure.
 
@@ -157,6 +166,11 @@ class CartesianBmat(CartesianCore):
                 primitive internal coordinates to use in the calculation. If None,
                 calculates using the get_primitive_coords method
             bonds: default :class:`None`, mapping containing bonding information.
+            coord_arr: default :class:`None`, the pre-computed 0-based integer array of
+                the (non-bending) coordinate indices, as returned by
+                :meth:`_to_array_nobending`. Reusing a cached array avoids recomputing
+                the reindexing on every call when this structure's index and
+                ``idx_internal_coords`` are unchanged, e.g. in an optimization loop.
 
         Returns:
             Wilson's B matrix as a :class:`scipy.sparse.csr_matrix`
@@ -165,7 +179,8 @@ class CartesianBmat(CartesianCore):
             idx_internal_coords = self.get_primitives_idx(bonds)
 
         position_arr = self.loc[:, COORDS].values
-        coord_arr = self._to_array_nobending(idx_internal_coords)
+        if coord_arr is None:
+            coord_arr = self._to_array_nobending(idx_internal_coords)
         data, row, col = _jit_get_Wilson_B_coo(position_arr, coord_arr)
         # drop the padding slots (row == -1) left for coordinates with < 12 nonzeros
         keep = row.ravel() >= 0
@@ -178,6 +193,7 @@ class CartesianBmat(CartesianCore):
         self,
         internal_coords_idx: Primitives | None = None,
         bonds: BondDict | None = None,
+        coord_arr: Matrix[int64] | None = None,
     ) -> RedundantInternalCoordinates:
         """Conversion to redundant internal coordinates
 
@@ -186,6 +202,11 @@ class CartesianBmat(CartesianCore):
                 primitive coordinates to convert to. If None, calculates them using the
                 get_primitive_coords method
             bonds: default :class:`None`, mapping containing bonding information.
+            coord_arr: default :class:`None`, the pre-computed 0-based integer array of
+                the coordinate indices, as returned by :meth:`_to_array_full`. Reusing a
+                cached array avoids recomputing the reindexing on every call when this
+                structure's index and ``internal_coords_idx`` are unchanged (e.g. within
+                an optimization loop).
 
         Returns:
             Redundant internal coordinate representation of self
@@ -199,9 +220,11 @@ class CartesianBmat(CartesianCore):
         if internal_coords_idx is None:
             internal_coords_idx = self.get_primitives_idx(bonds=bonds)
 
+        if coord_arr is None:
+            coord_arr = self._to_array_full(internal_coords_idx)
         ric_values, exceptions = _jit_x_to_ric(
             self.loc[:, COORDS].values,
-            self._to_array_full(internal_coords_idx),
+            coord_arr,
         )
 
         if np.any(exceptions[:, -1]):

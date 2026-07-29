@@ -85,6 +85,28 @@ def _dense_lstsq(A: Matrix, b: Vector) -> Vector[np.float64]:
     return np.linalg.lstsq(np.asarray(A), np.asarray(b), rcond=-1)[0]
 
 
+def _cached_coord_arrays(
+    structure: Cartesian, primitives_idx: Primitives
+) -> tuple[Matrix, Matrix]:
+    """Pre-compute the 0-based reindexed coordinate arrays for ``primitives_idx``.
+
+    :meth:`~chemcoord.Cartesian.get_sparse_Wilson_B` /
+    :meth:`~chemcoord.Cartesian.get_Wilson_B` (via ``_to_array_nobending``) and
+    :meth:`~chemcoord.Cartesian.get_ric` (via ``_to_array_full``) otherwise rebuild
+    these integer index arrays on every call -- the dominant cost of the
+    back-transformation for large systems. Within an optimization loop the atom index
+    order and the primitive set are constant, so the arrays can be computed once here
+    and fed back in through the methods' ``coord_arr`` argument.
+
+    Returns the ``(nobending, full)`` arrays, for the Wilson B and RIC calls
+    respectively.
+    """
+    return (
+        structure._to_array_nobending(primitives_idx),
+        structure._to_array_full(primitives_idx),
+    )
+
+
 @define(frozen=True)
 class DefaultWeights:
     """Default weights for the cost function in the weighted least-squares."""
@@ -197,6 +219,7 @@ class RedundantInternalCoordinates:
         reduction_factor: float,
         Δq: DeltaRedundantInternalCoordinates,
         sparse: bool = True,
+        ric_coord_arr: Matrix | None = None,
     ) -> tuple[Cartesian, float]:
         """Take a single damped Gauss-Newton (Levenberg-Marquardt) step.
 
@@ -238,7 +261,9 @@ class RedundantInternalCoordinates:
             Δx = lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
             Δx = Δx.reshape(len(previous), 3)
             try:
-                new = _linesearch(B, Δq.delta_q, Δx, self, previous)
+                new = _linesearch(
+                    B, Δq.delta_q, Δx, self, previous, ric_coord_arr=ric_coord_arr
+                )
             except ValueError:
                 # No descent along this direction: damp harder and retry.
                 lam = min(lam * nu, _LM_MAX_LAMBDA)
@@ -262,7 +287,12 @@ class RedundantInternalCoordinates:
 
         lstsq = _sparse_lstsq if sparse else _dense_lstsq
 
-        previous = start_guess
+        # The 0-based reindexed coordinate arrays depend only on the atom index order
+        # and the primitive set, not on the coordinate values, so they are invariant
+        # across the optimization. ``sort_index`` fixes the order that ``align`` (called
+        # every iteration) also produces, keeping the cached arrays valid throughout.
+        previous = start_guess.sort_index()
+        nobending_arr, full_arr = _cached_coord_arrays(previous, self.primitives_idx)
 
         converged = False
         i = 0
@@ -270,20 +300,23 @@ class RedundantInternalCoordinates:
             if (i := i + 1) > max_iter:
                 raise ValueError(f"Not converged after {max_iter} iterations.")
 
-            B: csr_matrix | Matrix = (
-                previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
-                if sparse
-                else previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+            get_wilson_B = (
+                previous.get_sparse_Wilson_B if sparse else previous.get_Wilson_B
+            )
+            B: csr_matrix | Matrix = get_wilson_B(
+                self.primitives_idx, coord_arr=nobending_arr
             )
 
-            q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
+            q_current = previous.get_ric(self.primitives_idx, coord_arr=full_arr)
 
             Δq = (self - q_current).minimize_dihedral()
 
             Δx_flat = lstsq(W @ B, W @ Δq.delta_q)
             Δx = Δx_flat.reshape(len(previous), 3)
 
-            new = _linesearch(B, Δq.delta_q, Δx, self, previous)
+            new = _linesearch(
+                B, Δq.delta_q, Δx, self, previous, ric_coord_arr=full_arr
+            )
 
             converged = allclose(
                 new,
@@ -315,7 +348,10 @@ class RedundantInternalCoordinates:
             allclose,
         )
 
-        previous = start_guess
+        # See ``_gauss_newton_opt``: cache the value-independent reindexed coordinate
+        # arrays once, in the sorted order that ``align`` keeps stable each iteration.
+        previous = start_guess.sort_index()
+        nobending_arr, full_arr = _cached_coord_arrays(previous, self.primitives_idx)
 
         converged = False
         i = 0
@@ -326,18 +362,20 @@ class RedundantInternalCoordinates:
             if (i := i + 1) > max_iter:
                 raise ValueError(f"Not converged after {max_iter} iterations.")
 
-            B: csr_matrix | Matrix = (
-                previous.get_sparse_Wilson_B(idx_internal_coords=self.primitives_idx)
-                if sparse
-                else previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
+            get_wilson_B = (
+                previous.get_sparse_Wilson_B if sparse else previous.get_Wilson_B
+            )
+            B: csr_matrix | Matrix = get_wilson_B(
+                self.primitives_idx, coord_arr=nobending_arr
             )
 
-            q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
+            q_current = previous.get_ric(self.primitives_idx, coord_arr=full_arr)
 
             Δq = (self - q_current).minimize_dihedral()
 
             new, lam = self._lambda_cycle(
-                previous, B, W, lam, nu, reduction_factor, Δq, sparse=sparse
+                previous, B, W, lam, nu, reduction_factor, Δq, sparse=sparse,
+                ric_coord_arr=full_arr,
             )
 
             converged = allclose(
@@ -605,6 +643,7 @@ def _linesearch(
     c: float = 1e-4,
     tau: float = 0.5,
     max_iter: int = 100,
+    ric_coord_arr: Matrix | None = None,
 ) -> Cartesian:
     # NOTE: alpha is a backtracking-line-search scalar
     # see: https://en.wikipedia.org/wiki/Backtracking_line_search
@@ -615,7 +654,9 @@ def _linesearch(
     while too_far:
         backstep += 1
         new = previous + alpha * Δx
-        q_new = new.get_ric(internal_coords_idx=current.primitives_idx)
+        q_new = new.get_ric(
+            internal_coords_idx=current.primitives_idx, coord_arr=ric_coord_arr
+        )
         if norm(Δq) < alpha * t + norm((current - q_new).minimize_dihedral().delta_q):
             alpha *= tau
         else:
