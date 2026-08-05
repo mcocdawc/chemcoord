@@ -81,7 +81,7 @@ class CartesianBmat(CartesianCore):
             bond_dict = {i_atom: set(connected) for i_atom, connected in bonds.items()}
 
         if connect_fragments:
-            fragments = self.fragmentate()
+            fragments = self.fragmentate(bond_dict=bond_dict)
             if len(fragments) != 1:
                 for fragment_pair in combinations(fragments, 2):
                     index1, index2, _ = fragment_pair[0].get_shortest_distance(
