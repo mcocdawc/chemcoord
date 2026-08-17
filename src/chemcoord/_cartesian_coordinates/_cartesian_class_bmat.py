@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from enum import IntEnum
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, NewType, TypeAlias
 
 import numpy as np
 from numba import njit, prange
 from numpy import cross, float64, int64
 from numpy.linalg import norm
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_array
 
 # had to put these here to avoid circular import
 from sortedcontainers import SortedSet
@@ -26,13 +26,16 @@ if TYPE_CHECKING:
     )
 
 
+#: Nominal type for a set of primitive internal coordinates.
 #: Unfortunately SortedSet is not a generic type, if it was, the primitives
 #: would be declared as
 #: ``SortedSet[tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]``
-Primitives: TypeAlias = SortedSet
+Primitives = NewType("Primitives", SortedSet)
 
-
-SetOfPrimitives = SortedSet
+#: Runtime constructor for :data:`Primitives`. Kept separate from ``Primitives``
+#: because a ``NewType``'s ``__call__`` is the identity function and would not
+#: actually build a ``SortedSet``.
+_SetOfPrimitives = SortedSet
 
 
 class BendType(IntEnum):
@@ -112,7 +115,7 @@ class CartesianBmat(CartesianCore):
                             canonicalize(atom1, atom2, atom3, atom4)
                         )
 
-        return SetOfPrimitives(idx_primitive_coords)
+        return Primitives(_SetOfPrimitives(idx_primitive_coords))
 
     def get_Wilson_B(
         self,
@@ -151,7 +154,7 @@ class CartesianBmat(CartesianCore):
         idx_internal_coords: Primitives | None = None,
         bonds: BondDict | None = None,
         coord_arr: Matrix[int64] | None = None,
-    ) -> csr_matrix:
+    ) -> csr_array:
         """Generate Wilson's B matrix as a sparse matrix for the current structure.
 
         The Wilson B matrix is banded: every internal coordinate only couples the (at
@@ -173,7 +176,7 @@ class CartesianBmat(CartesianCore):
                 ``idx_internal_coords`` are unchanged, e.g. in an optimization loop.
 
         Returns:
-            Wilson's B matrix as a :class:`scipy.sparse.csr_matrix`
+            Wilson's B matrix as a :class:`scipy.sparse.csr_array`
         """
         if idx_internal_coords is None:
             idx_internal_coords = self.get_primitives_idx(bonds)
@@ -184,7 +187,7 @@ class CartesianBmat(CartesianCore):
         data, row, col = _jit_get_Wilson_B_coo(position_arr, coord_arr)
         # drop the padding slots (row == -1) left for coordinates with < 12 nonzeros
         keep = row.ravel() >= 0
-        return csr_matrix(
+        return csr_array(
             (data.ravel()[keep], (row.ravel()[keep], col.ravel()[keep])),
             shape=(len(coord_arr), position_arr.size),
         )
@@ -245,11 +248,13 @@ class CartesianBmat(CartesianCore):
         contiguously from 0 to n - 1."""
         index_to_rownum = {index: row for row, index in enumerate(self.index)}
 
-        return SetOfPrimitives(
-            {
-                _reindex_to_0_inner(coordinate_idx, index_to_rownum)
-                for coordinate_idx in internal_coords_idx
-            }
+        return Primitives(
+            _SetOfPrimitives(
+                {
+                    _reindex_to_0_inner(coordinate_idx, index_to_rownum)
+                    for coordinate_idx in internal_coords_idx
+                }
+            )
         )
 
     def _to_array_nobending(

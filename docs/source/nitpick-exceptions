@@ -42,6 +42,7 @@ py:class pymatgen.analyzer.symmetry.PointGroupAnalyzer
 py:class ase.atoms.Atoms
 py:class typing_extensions.Self
 py:class Primitives
+py:class chemcoord._cartesian_coordinates._cartesian_class_bmat.Primitives
 py:class BondDict
 py:class chemcoord._cartesian_coordinates._cartesian_class_bmat.BendType
 py:class Vector

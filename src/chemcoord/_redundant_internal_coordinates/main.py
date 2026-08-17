@@ -9,7 +9,7 @@ from attrs import define, field
 from joblib import Parallel, delayed
 from numpy import float64
 from numpy.linalg import norm
-from scipy.sparse import csr_matrix, diags
+from scipy.sparse import csr_array, diags_array
 from scipy.sparse import vstack as sparse_vstack
 from scipy.sparse.linalg import lsmr
 from typing_extensions import Self, assert_never
@@ -88,7 +88,7 @@ def _sparse_lstsq(
     loop only converges to ``rtol=1e-5``/``atol=1e-8``, so solving each linear
     subproblem to twelve digits is wasted work.
     """
-    return lsmr(csr_matrix(A), b, atol=atol, btol=btol, maxiter=_LSTSQ_MAX_ITER)[0]
+    return lsmr(csr_array(A), b, atol=atol, btol=btol, maxiter=_LSTSQ_MAX_ITER)[0]
 
 
 def _dense_lstsq(A: Matrix, b: Vector) -> Vector[np.float64]:
@@ -231,7 +231,7 @@ class RedundantInternalCoordinates:
     def _lambda_cycle(
         self,
         previous: Cartesian,
-        B: csr_matrix | Matrix,
+        B: csr_array | Matrix,
         W: Matrix,
         start_lam: float,
         nu: float,
@@ -273,7 +273,7 @@ class RedundantInternalCoordinates:
         new = previous
         for _ in range(_LM_MAX_DAMPING_STEPS):
             if sparse:
-                lm_mat = sparse_vstack((WB, diags(np.sqrt(lam) * damping)))
+                lm_mat = sparse_vstack((WB, diags_array(np.sqrt(lam) * damping)))
             else:
                 lm_mat = np.vstack((WB, np.diag(np.sqrt(lam) * damping)))
             lm_vec = np.hstack((W_Δq, zeros))
@@ -294,7 +294,7 @@ class RedundantInternalCoordinates:
     def _full_step_cycle(
         self,
         previous: Cartesian,
-        B: csr_matrix | Matrix,
+        B: csr_array | Matrix,
         W: Matrix,
         start_lam: float,
         nu: float,
@@ -326,7 +326,7 @@ class RedundantInternalCoordinates:
 
         def step(lam: float) -> Cartesian:
             if sparse:
-                lm_mat = sparse_vstack((WB, diags(np.sqrt(lam) * damping)))
+                lm_mat = sparse_vstack((WB, diags_array(np.sqrt(lam) * damping)))
             else:
                 lm_mat = np.vstack((WB, np.diag(np.sqrt(lam) * damping)))
             Δx = lstsq(lm_mat, np.hstack((W_Δq, zeros)))[: 3 * len(self.reference)]
@@ -394,7 +394,7 @@ class RedundantInternalCoordinates:
             get_wilson_B = (
                 previous.get_sparse_Wilson_B if sparse else previous.get_Wilson_B
             )
-            B: csr_matrix | Matrix = get_wilson_B(
+            B: csr_array | Matrix = get_wilson_B(
                 self.primitives_idx, coord_arr=nobending_arr
             )
 
@@ -462,7 +462,7 @@ class RedundantInternalCoordinates:
             get_wilson_B = (
                 previous.get_sparse_Wilson_B if sparse else previous.get_Wilson_B
             )
-            B: csr_matrix | Matrix = get_wilson_B(
+            B: csr_array | Matrix = get_wilson_B(
                 self.primitives_idx, coord_arr=nobending_arr
             )
 
@@ -566,7 +566,7 @@ class RedundantInternalCoordinates:
         # W is diagonal. In the sparse path keeping it sparse lets ``W @ B`` stay sparse
         # throughout the weighted least-squares solve (the Wilson B matrix is banded);
         # in the dense path W must be a dense diagonal so ``W @ B`` stays a dense array.
-        W = diags(np.asarray(weights)) if sparse else np.diag(np.asarray(weights))
+        W = diags_array(np.asarray(weights)) if sparse else np.diag(np.asarray(weights))
 
         if opt_alg == "LM":
 
@@ -755,11 +755,11 @@ def get_primitives_idx(
         start_and_end.add(ordered_lin + (BendType.UW,))
         start_and_end.add(ordered_lin + (BendType.VW,))
         start_and_end.discard(linearity[0])
-    return start_and_end
+    return Primitives(start_and_end)
 
 
 def _linesearch(
-    B: csr_matrix | Matrix,
+    B: csr_array | Matrix,
     Δq: Vector,
     Δx: Matrix,
     current: RedundantInternalCoordinates,

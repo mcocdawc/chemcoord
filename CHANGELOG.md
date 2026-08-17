@@ -1,3 +1,60 @@
+# Changelog for v2.2.0 -> unreleased
+
+
+## Bugfixes
+
+- `Cartesian.get_primitives_idx` now passes a custom `bonds` mapping through to the
+    fragment detection. Previously `connect_fragments=True` re-derived the connectivity
+    with `fragmentate()`, silently ignoring the user-supplied `bonds`.
+
+- Made the RIC back-transformation seed-stable, i.e. `x(q(x)) == x`. The
+    Levenberg-Marquardt line search backtracks the step length toward zero near an
+    overshoot, which the outer loop misread as convergence and accepted a non-minimum.
+    On the stepwise interpolation schedules this error compounded.
+
+
+## New features
+
+- Added a sparse back-transformation from redundant internal coordinates. Wilson's
+    B matrix is banded -- every internal coordinate couples at most four atoms -- so it
+    is now available in compressed sparse row form via the new
+    `Cartesian.get_sparse_Wilson_B`, and the least-squares solve uses
+    `scipy.sparse.linalg.lsmr` instead of a dense SVD. This is numerically equivalent
+    to the dense path but scales considerably better with system size.
+
+    It is selected with the new `sparse` argument (default `True`) of
+    `RedundantInternalCoordinates.get_cartesian` and `ric_functions.RIC_interpolate`,
+    and via `coord="RIC_sparse"` / `coord="RIC_dense"` in `xyz_functions.interpolate`,
+    where `coord="RIC"` is an alias for the sparse variant.
+
+- Added the `lm_step` argument (`"auto"`, `"full_step"`, `"line_search"`) to
+    `RedundantInternalCoordinates.get_cartesian`, `ric_functions.RIC_interpolate`, and
+    `xyz_functions.interpolate`. It selects the Levenberg-Marquardt step control of the
+    back-transformation: `"full_step"` is seed-stable but can stall on large, stiff
+    systems, `"line_search"` is robust but not seed-stable, and the default `"auto"`
+    runs the former and falls back to the latter if it has not converged in time.
+
+
+## Performance
+
+- Made `Cartesian.get_primitives_idx` considerably faster.
+
+- The 0-based reindexed coordinate arrays are now computed once and cached across the
+    RIC optimization loop instead of being rebuilt on every iteration, which was the
+    dominant cost of the back-transformation for large systems.
+
+
+## Infrastructure
+
+- Migrated the sparse linear algebra from the legacy `scipy.sparse` matrix API
+    (`csr_matrix`, `diags`) to the array API (`csr_array`, `diags_array`).
+    `Cartesian.get_sparse_Wilson_B` therefore returns a `scipy.sparse.csr_array`.
+    This raises the minimum required `scipy` version to 1.11.
+
+- The set of primitive internal coordinates is now the nominal type
+    `Primitives = NewType("Primitives", SortedSet)` instead of a plain type alias.
+
+
 # Changelog for v2.1.2 -> v2.2.0
 
 
