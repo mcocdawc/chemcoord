@@ -526,7 +526,7 @@ class RedundantInternalCoordinates:
             default_weights: default
                 {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
                 the weights which each type of coordinate default to
-            sparse: default :class:`True`, whether to use the sparse linear-algebra
+            sparse: default ``True``, whether to use the sparse linear-algebra
                 back-transformation (sparse Wilson B matrix and ``lsmr``) or the dense
                 one (dense Wilson B matrix and :func:`numpy.linalg.lstsq`). Both paths
                 are numerically equivalent; the sparse one scales better with system
@@ -896,7 +896,7 @@ def RIC_interpolate(
         default_weights: default
             {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
             the weights which each type of coordinate default to
-        sparse: default :class:`True`, whether the back-transformation of each image via
+        sparse: default ``True``, whether the back-transformation of each image via
             :meth:`~.RedundantInternalCoordinates.get_cartesian` uses the sparse
             (sparse Wilson B + ``lsmr``) or dense (dense Wilson B +
             :func:`numpy.linalg.lstsq`) linear algebra. Both are numerically equivalent;

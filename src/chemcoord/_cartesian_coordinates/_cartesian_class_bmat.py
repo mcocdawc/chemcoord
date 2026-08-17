@@ -132,7 +132,7 @@ class CartesianBmat(CartesianCore):
             bonds: default :class:`None`, mapping containing bonding information.
             coord_arr: default :class:`None`, the pre-computed 0-based integer array of
                 the (non-bending) coordinate indices, as returned by
-                :meth:`_to_array_nobending`. Reusing a cached array avoids recomputing
+                ``_to_array_nobending``. Reusing a cached array avoids recomputing
                 the reindexing on every call when this structure's index and
                 ``idx_internal_coords`` are unchanged, e.g. in an optimization loop.
 
@@ -171,7 +171,7 @@ class CartesianBmat(CartesianCore):
             bonds: default :class:`None`, mapping containing bonding information.
             coord_arr: default :class:`None`, the pre-computed 0-based integer array of
                 the (non-bending) coordinate indices, as returned by
-                :meth:`_to_array_nobending`. Reusing a cached array avoids recomputing
+                ``_to_array_nobending``. Reusing a cached array avoids recomputing
                 the reindexing on every call when this structure's index and
                 ``idx_internal_coords`` are unchanged, e.g. in an optimization loop.
 
@@ -206,7 +206,7 @@ class CartesianBmat(CartesianCore):
                 get_primitive_coords method
             bonds: default :class:`None`, mapping containing bonding information.
             coord_arr: default :class:`None`, the pre-computed 0-based integer array of
-                the coordinate indices, as returned by :meth:`_to_array_full`. Reusing a
+                the coordinate indices, as returned by ``_to_array_full``. Reusing a
                 cached array avoids recomputing the reindexing on every call when this
                 structure's index and ``internal_coords_idx`` are unchanged (e.g. within
                 an optimization loop).

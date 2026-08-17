@@ -46,4 +46,6 @@ py:class chemcoord._cartesian_coordinates._cartesian_class_bmat.Primitives
 py:class BondDict
 py:class chemcoord._cartesian_coordinates._cartesian_class_bmat.BendType
 py:class Vector
+py:class Matrix
+py:class int64
 py:class float64
