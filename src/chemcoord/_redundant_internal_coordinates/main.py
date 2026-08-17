@@ -355,8 +355,8 @@ class RedundantInternalCoordinates:
                 return new, lam
             if lam >= _LM_MAX_LAMBDA:
                 # At maximal damping the step is vanishingly small (``new ~ previous``),
-                # so we are effectively at a stationary point of this cycle. Accept it --
-                # the outer loop's ``new == previous`` check then trips. This never
+                # so we are effectively at a stationary point of this cycle.
+                # The outer loop's ``new == previous`` check then trips. This never
                 # raises (matching the classic unbounded LM lambda growth); the outer
                 # loop's ``max_iter`` is what signals non-convergence and, under
                 # ``lm_step="auto"``, triggers the switch to the line search.
@@ -405,9 +405,7 @@ class RedundantInternalCoordinates:
             Δx_flat = lstsq(W @ B, W @ Δq.delta_q)
             Δx = Δx_flat.reshape(len(previous), 3)
 
-            new = _linesearch(
-                B, Δq.delta_q, Δx, self, previous, ric_coord_arr=full_arr
-            )
+            new = _linesearch(B, Δq.delta_q, Δx, self, previous, ric_coord_arr=full_arr)
 
             converged = allclose(
                 new,
@@ -471,7 +469,14 @@ class RedundantInternalCoordinates:
             Δq = (self - q_current).minimize_dihedral()
 
             new, lam = cycle(
-                previous, B, W, lam, nu, reduction_factor, Δq, sparse=sparse,
+                previous,
+                B,
+                W,
+                lam,
+                nu,
+                reduction_factor,
+                Δq,
+                sparse=sparse,
                 ric_coord_arr=full_arr,
             )
 
@@ -962,9 +967,7 @@ def RIC_interpolate(
         # The path is built end->start and then reversed, so a per-image ``seeds``
         # sequence (indexed in the final start->end order) has to be reversed too --
         # otherwise every image is seeded with its mirror image's guess.
-        inner_seeds = (
-            list(reversed(seeds)) if isinstance(seeds, Sequence) else seeds
-        )
+        inner_seeds = list(reversed(seeds)) if isinstance(seeds, Sequence) else seeds
         return list(
             reversed(
                 _RIC_interpolate_from_start(

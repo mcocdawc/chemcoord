@@ -733,7 +733,12 @@ def interpolate(
             start,
             end,
             RIC_interpolate(
-                start, end, N, opt_alg=opt_alg, coord_idx=coord_idx, sparse=sparse,
+                start,
+                end,
+                N,
+                opt_alg=opt_alg,
+                coord_idx=coord_idx,
+                sparse=sparse,
                 lm_step=lm_step,
             ),
         )
