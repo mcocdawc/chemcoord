@@ -30,6 +30,18 @@ Coordinate: TypeAlias = (
     | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx, BendType]
 )
 
+#: Which Levenberg-Marquardt step control the back-transformation uses.
+#: ``"full_step"`` is the seed-stable full damped step (``x(q(x)) == x``) that can stall
+#: on large, stiff systems; ``"line_search"`` is the robust backtracking variant that
+#: scales but is not seed-stable on flat/degenerate minima; ``"auto"`` (default) runs
+#: ``"full_step"`` first and switches to ``"line_search"`` if it has not converged after
+#: :data:`_LM_AUTO_SWITCH_ITER` iterations.
+LMStep: TypeAlias = Literal["auto", "full_step", "line_search"]
+
+#: Type of a single LM step cycle (``_lambda_cycle`` / ``_full_step_cycle``): it maps
+#: the current state to ``(new_cartesian, lam)``.
+_LMCycle: TypeAlias = Callable[..., tuple["Cartesian", float]]
+
 
 # Upper bound on the number of LSMR iterations per linear solve. The augmented
 # Levenberg-Marquardt system is ill-conditioned, so without a cap LSMR chases the
@@ -46,6 +58,13 @@ _LSTSQ_MAX_ITER: Final = 200
 _LM_MIN_LAMBDA: Final = 1e-14
 _LM_MAX_LAMBDA: Final = 1e6
 _LM_MAX_DAMPING_STEPS: Final = 30
+
+# In the default ``lm_step="auto"`` back-transformation the seed-stable full-step LM is
+# tried first and, if it has not converged after this many outer iterations, the solve
+# switches to the robust (line-search) variant. The full step stalls on large, stiff
+# systems (the residual only creeps down), so this bounds the wasted effort before the
+# fallback takes over.
+_LM_AUTO_SWITCH_ITER: Final = 50
 
 
 def _sparse_lstsq(
@@ -272,6 +291,78 @@ class RedundantInternalCoordinates:
 
         return new, lam
 
+    def _full_step_cycle(
+        self,
+        previous: Cartesian,
+        B: csr_matrix | Matrix,
+        W: Matrix,
+        start_lam: float,
+        nu: float,
+        reduction_factor: float,
+        Δq: DeltaRedundantInternalCoordinates,
+        sparse: bool = True,
+        ric_coord_arr: Matrix | None = None,
+    ) -> tuple[Cartesian, float]:
+        """Take a single *full* damped Levenberg-Marquardt step (no line search).
+
+        This is the classic LM lambda-adaptation: take the full damped step; if it
+        decreases the residual, accept it; otherwise grow ``lam`` (more damping -> a
+        shorter, more gradient-like step) and re-solve until it does. Because the step
+        is never shortened by a separate scalar, the outer loop's ``new == previous``
+        test only trips at a genuine stationary point, so this variant is *seed-stable*:
+        ``x(q(x)) == x``. It is, however, prone to stalling on large, stiff systems
+        where the residual only creeps down -- hence the ``line_search`` alternative.
+
+        Same signature/return as :meth:`_lambda_cycle` so the two are interchangeable as
+        the ``cycle`` of :meth:`_levenberg_marquardt_opt`.
+
+        see: https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm"""
+        WB = W @ B
+        W_Δq = W @ Δq.delta_q
+        zeros = np.zeros(B.shape[1])
+        damping = (B.T @ W @ W @ B).diagonal()
+        lstsq = _sparse_lstsq if sparse else _dense_lstsq
+        base = norm(Δq.delta_q)
+
+        def step(lam: float) -> Cartesian:
+            if sparse:
+                lm_mat = sparse_vstack((WB, diags(np.sqrt(lam) * damping)))
+            else:
+                lm_mat = np.vstack((WB, np.diag(np.sqrt(lam) * damping)))
+            Δx = lstsq(lm_mat, np.hstack((W_Δq, zeros)))[: 3 * len(self.reference)]
+            return previous + Δx.reshape(len(previous), 3)
+
+        def decreases(cand: Cartesian) -> bool:
+            new_Δq = (
+                self
+                - cand.get_ric(
+                    internal_coords_idx=self.primitives_idx, coord_arr=ric_coord_arr
+                )
+            ).minimize_dihedral()
+            return bool(norm(new_Δq.delta_q) <= base)
+
+        new = step(start_lam)
+        if decreases(new):
+            return new, start_lam
+        lam = start_lam / reduction_factor
+        new = step(lam)
+        if decreases(new):
+            return new, lam
+        lam *= nu**2
+        while True:
+            new = step(lam)
+            if decreases(new):
+                return new, lam
+            if lam >= _LM_MAX_LAMBDA:
+                # At maximal damping the step is vanishingly small (``new ~ previous``),
+                # so we are effectively at a stationary point of this cycle. Accept it --
+                # the outer loop's ``new == previous`` check then trips. This never
+                # raises (matching the classic unbounded LM lambda growth); the outer
+                # loop's ``max_iter`` is what signals non-convergence and, under
+                # ``lm_step="auto"``, triggers the switch to the line search.
+                return new, lam
+            lam = min(lam * nu, _LM_MAX_LAMBDA)
+
     def _gauss_newton_opt(
         self,
         start_guess: Cartesian,
@@ -339,17 +430,23 @@ class RedundantInternalCoordinates:
         W: Matrix,
         rtol: float,
         atol: float,
+        cycle: _LMCycle,
         start_lam: float = 1e-5,
         nu: float = 1.5,
         reduction_factor: float = 10,
         sparse: bool = True,
     ) -> Cartesian:
+        """Outer Levenberg-Marquardt loop. ``cycle`` supplies a single step and is
+        either :meth:`_full_step_cycle` (seed-stable) or :meth:`_lambda_cycle` (robust
+        line search); both share the same signature and ``(new, lam)`` return."""
         from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
             allclose,
         )
 
-        # See ``_gauss_newton_opt``: cache the value-independent reindexed coordinate
-        # arrays once, in the sorted order that ``align`` keeps stable each iteration.
+        # The 0-based reindexed coordinate arrays depend only on the atom index order
+        # and the primitive set, not on the coordinate values, so they are invariant
+        # across the optimization. ``sort_index`` fixes the order that ``align`` (called
+        # every iteration) also produces, keeping the cached arrays valid throughout.
         previous = start_guess.sort_index()
         nobending_arr, full_arr = _cached_coord_arrays(previous, self.primitives_idx)
 
@@ -373,7 +470,7 @@ class RedundantInternalCoordinates:
 
             Δq = (self - q_current).minimize_dihedral()
 
-            new, lam = self._lambda_cycle(
+            new, lam = cycle(
                 previous, B, W, lam, nu, reduction_factor, Δq, sparse=sparse,
                 ric_coord_arr=full_arr,
             )
@@ -403,6 +500,7 @@ class RedundantInternalCoordinates:
         weights: Vector[np.floating] | Sequence[float] | None = None,
         default_weights: DefaultWeights | Mapping[str, float] | None = None,
         sparse: bool = True,
+        lm_step: LMStep = "auto",
     ) -> Cartesian:
         """Finds the closest physical structure to self. Uses an iterative algorithm
         with Wilson's B matrix to converge to said structure.
@@ -428,6 +526,15 @@ class RedundantInternalCoordinates:
                 one (dense Wilson B matrix and :func:`numpy.linalg.lstsq`). Both paths
                 are numerically equivalent; the sparse one scales better with system
                 size. Exposed mainly to compare the two side by side.
+            lm_step: default ``"auto"``, the Levenberg-Marquardt step control (only used
+                when ``opt_alg="LM"``). ``"full_step"`` takes the full damped step and
+                adapts the damping -- it is *seed-stable* (``x(q(x)) == x``) but can
+                stall on large, stiff systems. ``"line_search"`` shortens an overshoot
+                by backtracking -- it scales to large systems but is not seed-stable on
+                flat/degenerate minima. ``"auto"`` runs ``"full_step"`` first and, if it
+                has not converged within a bounded number of iterations, restarts the
+                solve with ``"line_search"`` -- giving seed-stability whenever the
+                full step converges and robustness otherwise.
         Returns:
             Closest physical structure to self, aligned to start_guess
         """
@@ -462,9 +569,27 @@ class RedundantInternalCoordinates:
         W = diags(np.asarray(weights)) if sparse else np.diag(np.asarray(weights))
 
         if opt_alg == "LM":
-            new = self._levenberg_marquardt_opt(
-                start_guess, max_iter, W, rtol, atol, sparse=sparse
-            )
+
+            def run_lm(step_cycle: _LMCycle, n_iter: int) -> Cartesian:
+                return self._levenberg_marquardt_opt(
+                    start_guess, n_iter, W, rtol, atol, step_cycle, sparse=sparse
+                )
+
+            if lm_step == "full_step":
+                new = run_lm(self._full_step_cycle, max_iter)
+            elif lm_step == "line_search":
+                new = run_lm(self._lambda_cycle, max_iter)
+            elif lm_step == "auto":
+                # Prefer the seed-stable full step; fall back to the robust line search
+                # only if it has not converged within the bounded budget.
+                try:
+                    new = run_lm(
+                        self._full_step_cycle, min(max_iter, _LM_AUTO_SWITCH_ITER)
+                    )
+                except ValueError:
+                    new = run_lm(self._lambda_cycle, max_iter)
+            else:
+                assert_never(lm_step)
         elif opt_alg == "gauss":
             new = self._gauss_newton_opt(
                 start_guess, max_iter, W, rtol, atol, sparse=sparse
@@ -726,6 +851,7 @@ def RIC_interpolate(
     weights: Vector[np.floating] | Sequence[float] | None = None,
     default_weights: DefaultWeights | Mapping[str, float] | None = None,
     sparse: bool = True,
+    lm_step: LMStep = "auto",
 ) -> list[Cartesian]:
     """Generates an N-image interpolation between start and end.
 
@@ -770,6 +896,10 @@ def RIC_interpolate(
             (sparse Wilson B + ``lsmr``) or dense (dense Wilson B +
             :func:`numpy.linalg.lstsq`) linear algebra. Both are numerically equivalent;
             the sparse path scales better. Mainly useful for comparing the two.
+        lm_step: default ``"auto"``, the Levenberg-Marquardt step control passed to
+            :meth:`~.RedundantInternalCoordinates.get_cartesian` for each image. See
+            there; ``"auto"`` prefers the seed-stable full step and falls back to the
+            robust line search when it does not converge.
 
     Returns:
         The generated path as list of :class:`~chemcoord.Cartesian`.
@@ -792,6 +922,7 @@ def RIC_interpolate(
             atol=atol,
             opt_alg=opt_alg,
             sparse=sparse,
+            lm_step=lm_step,
         )
 
     if schedule == "independent":
@@ -828,9 +959,17 @@ def RIC_interpolate(
             coord_idx = get_primitives_idx(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
+        # The path is built end->start and then reversed, so a per-image ``seeds``
+        # sequence (indexed in the final start->end order) has to be reversed too --
+        # otherwise every image is seeded with its mirror image's guess.
+        inner_seeds = (
+            list(reversed(seeds)) if isinstance(seeds, Sequence) else seeds
+        )
         return list(
             reversed(
-                _RIC_interpolate_from_start(end, start, N, coord_idx, to_cart, seeds)
+                _RIC_interpolate_from_start(
+                    end, start, N, coord_idx, to_cart, inner_seeds
+                )
             )
         )
 
@@ -857,6 +996,7 @@ def RIC_interpolate(
                 rtol=rtol,
                 atol=atol,
                 sparse=sparse,
+                lm_step=lm_step,
             )
 
         strategies: Final[Sequence[AutoSchedules]] = [

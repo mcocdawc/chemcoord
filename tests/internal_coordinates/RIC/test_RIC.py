@@ -1,6 +1,4 @@
 import os
-import platform
-import sys
 
 import numpy as np
 
@@ -32,25 +30,6 @@ def get_complete_path(structure):
     return os.path.join(STRUCTURES, structure)
 
 
-def get_reference_path(name):
-    """Return the path to a golden reference file, preferring a platform-specific
-    variant when one exists.
-
-    The RIC back-transformation solves a rank-deficient (rigid-body null space)
-    least-squares problem iteratively, so it converges to a slightly different (but
-    equally valid) structure depending on the BLAS/LAPACK build. The committed default
-    references were generated on x86-64 Linux; macOS on Apple Silicon converges ~1e-3
-    away from them -- deterministic and thread-count invariant on that platform, but
-    past the 1e-4 tolerance. A ``<stem>.macos_arm<ext>`` variant is used there instead.
-    """
-    if sys.platform == "darwin" and platform.machine() == "arm64":
-        stem, ext = os.path.splitext(name)
-        variant = f"{stem}.macos_arm{ext}"
-        if os.path.exists(get_complete_path(variant)):
-            return get_complete_path(variant)
-    return get_complete_path(name)
-
-
 molecule1 = Cartesian.read_xyz(get_complete_path("cyclohexane_chair.xyz"))
 molecule2 = Cartesian.read_xyz(get_complete_path("cyclohexane_twist_boat.xyz"))
 molecule3 = Cartesian.read_xyz(get_complete_path("peroxide.xyz"))
@@ -65,7 +44,7 @@ molecule7 = Cartesian.read_xyz(get_complete_path("default_args_start.xyz"))
 molecule8 = Cartesian.read_xyz(get_complete_path("default_args_end.xyz"))
 
 # The reference path holds 80 images: 20 for each of the four schedules below.
-reference_path = read_multiple_xyz(get_reference_path("correct_path.xyz"))
+reference_path = read_multiple_xyz(get_complete_path("correct_path.xyz"))
 
 
 def _assert_ric_path(schedule, expected):
@@ -109,6 +88,19 @@ def test_back_forth_with_bending():
     assert allclose(test_cartesian, molecule4, align=True)
 
 
+def test_back_forth_large_molecule():
+    # 1A8I is a ~7500-atom protein. This exercises the RIC back-transformation at that
+    # scale and confirms it is seed-stable there (x(q(x)) == x): the default
+    # ``lm_step="auto"`` uses the seed-stable full LM step, which reproduces the
+    # structure it started from. (The molecule is read inside the test to keep it out
+    # of module-import time.)
+    molecule = Cartesian.read_xyz(get_complete_path("1A8I.xyz"))
+    idx = get_primitives_idx(molecule, molecule)
+    q = molecule.get_ric(internal_coords_idx=idx)
+    test_cartesian = q.get_cartesian()
+    assert allclose(test_cartesian, molecule, align=True)
+
+
 def test_set_coord():
     idx = get_primitives_idx(molecule4, molecule4)
     q = molecule4.get_ric(internal_coords_idx=idx)
@@ -139,7 +131,7 @@ def test_nonzero_start():
 
 
 def test_default_args():
-    correct_path = get_reference_path("default_args_path.xyz")
+    correct_path = get_complete_path("default_args_path.xyz")
 
     reference_path = read_multiple_xyz(correct_path)
 

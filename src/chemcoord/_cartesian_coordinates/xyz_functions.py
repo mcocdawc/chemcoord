@@ -691,6 +691,7 @@ def interpolate(
     coord: Literal["cart", "zmat", "RIC", "RIC_sparse", "RIC_dense"] = "zmat",
     coord_idx: None | Primitives = None,
     opt_alg: Literal["gauss", "LM"] = "LM",
+    lm_step: Literal["auto", "full_step", "line_search"] = "auto",
 ) -> list[Cartesian]:
     """Interpolate between start and end structure.
 
@@ -704,6 +705,13 @@ def interpolate(
             ``"RIC_dense"`` uses the dense one (dense Wilson B +
             :func:`numpy.linalg.lstsq`). The two RIC variants are numerically
             equivalent and exist to be compared side by side.
+        lm_step: default ``"auto"``, the Levenberg-Marquardt step control for the RIC
+            back-transformation (only relevant for the ``"RIC"*`` coords with
+            ``opt_alg="LM"``). ``"full_step"`` is seed-stable (``x(q(x)) == x``) but can
+            stall on large systems; ``"line_search"`` is robust but not seed-stable on
+            degenerate minima; ``"auto"`` prefers ``"full_step"`` and falls back to
+            ``"line_search"`` if it does not converge. See
+            :meth:`~.RedundantInternalCoordinates.get_cartesian`.
 
     References:
         The Z-matrix interpolation is described in :cite:`weser_automated_2023`,
@@ -725,7 +733,8 @@ def interpolate(
             start,
             end,
             RIC_interpolate(
-                start, end, N, opt_alg=opt_alg, coord_idx=coord_idx, sparse=sparse
+                start, end, N, opt_alg=opt_alg, coord_idx=coord_idx, sparse=sparse,
+                lm_step=lm_step,
             ),
         )
     else:

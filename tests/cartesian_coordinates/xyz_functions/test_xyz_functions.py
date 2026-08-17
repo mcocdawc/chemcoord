@@ -1,6 +1,4 @@
 import os
-import platform
-import sys
 
 import numpy as np
 import pytest
@@ -33,24 +31,6 @@ def get_structure_path(script_path):
 def get_complete_path(structure):
     STRUCTURES = get_structure_path(get_script_path())
     return os.path.join(STRUCTURES, structure)
-
-
-def get_reference_path(name):
-    """Return the path to a golden reference file, preferring a platform-specific
-    variant when one exists.
-
-    The RIC back-transformation solves a rank-deficient least-squares problem
-    iteratively, so it converges to a slightly different (but equally valid) structure
-    depending on the BLAS/LAPACK build. The committed default references were generated
-    on x86-64 Linux; macOS on Apple Silicon converges elsewhere. A
-    ``<stem>.macos_arm<ext>`` variant is used there instead when present.
-    """
-    if sys.platform == "darwin" and platform.machine() == "arm64":
-        stem, ext = os.path.splitext(name)
-        variant = f"{stem}.macos_arm{ext}"
-        if os.path.exists(get_complete_path(variant)):
-            return get_complete_path(variant)
-    return get_complete_path(name)
 
 
 STRUCTURES = get_structure_path(get_script_path())
@@ -158,7 +138,7 @@ def test_get_B_traj_reindexed():
 
     path = interpolate(cyc_boat, cyc_chair, 10, "RIC", opt_alg="LM")
 
-    expected = read_molden(get_reference_path("cyclohexane_path.molden"), start_index=7)
+    expected = read_molden(get_complete_path("cyclohexane_path.molden"), start_index=7)
 
     for calculated, reference in zip(path, expected):
         assert allclose(calculated, reference, atol=1e-3, align=True)
