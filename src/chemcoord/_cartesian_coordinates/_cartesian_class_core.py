@@ -1240,7 +1240,9 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 ),
                 axis=0,
             )
-            diag_inertia, eig_v = np.linalg.eig(inertia)
+            # The inertia tensor is real symmetric, so its spectrum is real by
+            # construction.
+            diag_inertia, eig_v = np.linalg.eigh(inertia)
             sorted_index = np.argsort(diag_inertia)
             diag_inertia = diag_inertia[sorted_index]
             eig_v = eig_v[:, sorted_index]

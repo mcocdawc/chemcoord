@@ -318,8 +318,15 @@ def test_cut_cuboid():
 def test_get_inertia():
     A = molecule.get_inertia()
     eig, t_mol = A["eigenvectors"], A["transformed_Cartesian"]
+    # ``eigenvectors`` contains the principal axes as columns, i.e. it is the basis of
+    # the principal-axis frame expressed in the old basis. Transforming into that frame
+    # is therefore done with the transpose (compare :meth:`Cartesian.basistransform`).
+    assert np.allclose(eig.T @ eig, np.identity(3))
+    assert np.allclose(
+        eig.T @ A["inertia_tensor"] @ eig, np.diag(A["diag_inertia_tensor"])
+    )
     assert cc.xyz_functions.allclose(
-        eig @ (molecule - molecule.get_barycenter()), t_mol
+        eig.T @ (molecule - molecule.get_barycenter()), t_mol
     )
 
     molecule2 = get_rotation_matrix([1, 1, 1], 72) @ molecule

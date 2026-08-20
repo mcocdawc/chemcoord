@@ -104,6 +104,18 @@ def _dense_lstsq(A: Matrix, b: Vector) -> Vector[np.float64]:
     return np.linalg.lstsq(np.asarray(A), np.asarray(b), rcond=-1)[0]
 
 
+def _as_vector(v: Matrix | Vector) -> Vector[float64]:
+    """Reassert the 1-D shape of an expression that is one-dimensional by construction.
+
+    Numpy's stubs type the result of a matrix-vector product and of
+    :func:`numpy.hstack` with the unspecified shape ``tuple[int, ...]``, which does not
+    typecheck against the strictly 1-D :data:`~chemcoord.typing.Vector`. (Depending on
+    the numpy version; the stubs became more precise in numpy 2.3.) Returns its argument
+    unchanged, it is purely a typing helper.
+    """
+    return cast(Vector[float64], v)
+
+
 def _cached_coord_arrays(
     structure: Cartesian, primitives_idx: Primitives
 ) -> tuple[Matrix, Matrix]:
@@ -266,6 +278,8 @@ class RedundantInternalCoordinates:
         zeros = np.zeros(B.shape[1])
         # diagonal of the (Gauss-Newton) approximate Hessian, used as LM damping
         damping = (B.T @ W @ W @ B).diagonal()
+        # right-hand side of the augmented system
+        lm_vec = _as_vector(np.hstack((W_Δq, zeros)))
 
         lstsq = _sparse_lstsq if sparse else _dense_lstsq
 
@@ -276,7 +290,6 @@ class RedundantInternalCoordinates:
                 lm_mat = sparse_vstack((WB, diags_array(np.sqrt(lam) * damping)))
             else:
                 lm_mat = np.vstack((WB, np.diag(np.sqrt(lam) * damping)))
-            lm_vec = np.hstack((W_Δq, zeros))
             Δx = lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
             Δx = Δx.reshape(len(previous), 3)
             try:
@@ -323,13 +336,15 @@ class RedundantInternalCoordinates:
         damping = (B.T @ W @ W @ B).diagonal()
         lstsq = _sparse_lstsq if sparse else _dense_lstsq
         base = norm(Δq.delta_q)
+        # right-hand side of the augmented system; independent of lambda
+        lm_vec = _as_vector(np.hstack((W_Δq, zeros)))
 
         def step(lam: float) -> Cartesian:
             if sparse:
                 lm_mat = sparse_vstack((WB, diags_array(np.sqrt(lam) * damping)))
             else:
                 lm_mat = np.vstack((WB, np.diag(np.sqrt(lam) * damping)))
-            Δx = lstsq(lm_mat, np.hstack((W_Δq, zeros)))[: 3 * len(self.reference)]
+            Δx = lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
             return previous + Δx.reshape(len(previous), 3)
 
         def decreases(cand: Cartesian) -> bool:
@@ -402,7 +417,7 @@ class RedundantInternalCoordinates:
 
             Δq = (self - q_current).minimize_dihedral()
 
-            Δx_flat = lstsq(W @ B, W @ Δq.delta_q)
+            Δx_flat = lstsq(W @ B, _as_vector(W @ Δq.delta_q))
             Δx = Δx_flat.reshape(len(previous), 3)
 
             new = _linesearch(B, Δq.delta_q, Δx, self, previous, ric_coord_arr=full_arr)

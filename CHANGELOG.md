@@ -12,6 +12,18 @@
     overshoot, which the outer loop misread as convergence and accepted a non-minimum.
     On the stepwise interpolation schedules this error compounded.
 
+- `Cartesian.get_inertia` now diagonalises the inertia tensor with `numpy.linalg.eigh`
+    instead of `numpy.linalg.eig`. The inertia tensor is real symmetric, but the general
+    LAPACK driver behind `eig` may -- depending on the BLAS/LAPACK implementation --
+    return complex arrays whose imaginary parts are round-off noise; these propagated
+    into the eigenvectors and the returned `Cartesian`. Note that the sign convention of
+    the returned eigenvectors may differ from before; both are valid principal axes.
+
+- The symmetry detection no longer fails with a `numpy.exceptions.ComplexWarning` when
+    warnings are turned into errors. `pymatgen`'s `PointGroupAnalyzer` diagonalises the
+    inertia tensor with `numpy.linalg.eig` as well and warns while discarding the
+    round-off imaginary parts; the warning is now silenced at the `pymatgen` boundary.
+
 
 ## New features
 
