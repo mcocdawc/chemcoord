@@ -4,6 +4,7 @@ import numpy as np
 
 from chemcoord import Cartesian
 from chemcoord._redundant_internal_coordinates.main import (
+    DefaultWeights,
     RIC_interpolate,
     get_primitives_idx,
 )
@@ -141,3 +142,20 @@ def test_default_args():
 
     for ref, just_read in zip(path, reference_path):
         assert allclose(ref, just_read, atol=1e-4, align=True)
+
+
+def test_documented_default_weights_mapping():
+    """The mapping spelled out in the ``default_weights`` docstrings must be usable.
+
+    It is forwarded verbatim to ``DefaultWeights(**mapping)``, so a wrong key there
+    is a ``TypeError`` for anyone copying it out of the docs.
+    """
+    documented = {"bond": 1.0, "angle": 0.1, "dihedral": 0.05, "bending": 0.01}
+
+    assert DefaultWeights(**documented) == DefaultWeights()
+
+    path = RIC_interpolate(molecule1, molecule2, 5, default_weights=documented)
+    reference = RIC_interpolate(molecule1, molecule2, 5)
+
+    for with_weights, without in zip(path, reference):
+        assert allclose(with_weights, without, atol=1e-6, align=True)

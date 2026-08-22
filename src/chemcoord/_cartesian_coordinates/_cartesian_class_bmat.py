@@ -727,10 +727,10 @@ def _jit_x_to_plane_coords_nonlinear(
     uw_proj = _jit_normalize((k - j) - ((k - j) @ v) * v)
     vw_proj = _jit_normalize((k - j) - ((k - j) @ u) * u)
 
-    alpha_uw = np.pi - np.arctan2(uw_proj @ u, uw_proj @ w)
-    alpha_vw = np.pi - np.arctan2(vw_proj @ v, vw_proj @ w)
+    α_uw = np.pi - np.arctan2(uw_proj @ u, uw_proj @ w)
+    α_vw = np.pi - np.arctan2(vw_proj @ v, vw_proj @ w)
 
-    return np.array([alpha_uw, alpha_vw])
+    return np.array([α_uw, α_vw])
 
 
 @njit(parallel=True, cache=True, nogil=True)

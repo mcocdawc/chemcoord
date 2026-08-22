@@ -3,6 +3,12 @@
 
 ## Bugfixes
 
+- The `default_weights` argument of `RedundantInternalCoordinates.get_cartesian` and
+    `ric_functions.RIC_interpolate` was documented with a `"length"` key, but the
+    `DefaultWeights` field is called `bond`. Passing the documented mapping raised
+    `TypeError: __init__() got an unexpected keyword argument 'length'`. The
+    docstrings now spell the key correctly.
+
 - `Cartesian.get_primitives_idx` now passes a custom `bonds` mapping through to the
     fragment detection. Previously `connect_fragments=True` re-derived the connectivity
     with `fragmentate()`, silently ignoring the user-supplied `bonds`.

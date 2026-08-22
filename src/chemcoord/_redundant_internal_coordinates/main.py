@@ -38,8 +38,8 @@ Coordinate: TypeAlias = (
 #: :data:`_LM_AUTO_SWITCH_ITER` iterations.
 LMStep: TypeAlias = Literal["auto", "full_step", "line_search"]
 
-#: Type of a single LM step cycle (``_lambda_cycle`` / ``_full_step_cycle``): it maps
-#: the current state to ``(new_cartesian, lam)``.
+#: Type of a single LM step cycle (``_λ_cycle`` / ``_full_step_cycle``): it maps
+#: the current state to ``(new_cartesian, λ)``.
 _LMCycle: TypeAlias = Callable[..., tuple["Cartesian", float]]
 
 
@@ -50,13 +50,13 @@ _LMCycle: TypeAlias = Callable[..., tuple["Cartesian", float]]
 # enough and keeps each iteration cheap.
 _LSTSQ_MAX_ITER: Final = 200
 
-# Bounds for the Levenberg-Marquardt damping ``lam``. It is shrunk after every
+# Bounds for the Levenberg-Marquardt damping ``λ``. It is shrunk after every
 # accepted step (drifting back toward fast Gauss-Newton) and only grown when the
 # damped direction admits no descent, so these are loose safety rails rather than
-# tuned values. ``_LM_MAX_DAMPING_STEPS`` caps how often ``lam`` may be grown within
+# tuned values. ``_LM_MAX_DAMPING_STEPS`` caps how often ``λ`` may be grown within
 # a single outer iteration before giving up.
-_LM_MIN_LAMBDA: Final = 1e-14
-_LM_MAX_LAMBDA: Final = 1e6
+_LM_MIN_λ: Final = 1e-14
+_LM_MAX_λ: Final = 1e6
 _LM_MAX_DAMPING_STEPS: Final = 30
 
 # In the default ``lm_step="auto"`` back-transformation the seed-stable full-step LM is
@@ -240,13 +240,13 @@ class RedundantInternalCoordinates:
             assert not isinstance(value, int)
             self.q[[self.coord_to_idx[_correct_order(coord)] for coord in key]] = value  # type: ignore[arg-type]
 
-    def _lambda_cycle(
+    def _λ_cycle(
         self,
         previous: Cartesian,
         B: csr_array | Matrix,
         W: Matrix,
-        start_lam: float,
-        nu: float,
+        start_λ: float,
+        damping_growth: float,
         reduction_factor: float,
         Δq: DeltaRedundantInternalCoordinates,
         sparse: bool = True,
@@ -254,42 +254,42 @@ class RedundantInternalCoordinates:
     ) -> tuple[Cartesian, float]:
         """Take a single damped Gauss-Newton (Levenberg-Marquardt) step.
 
-        The damped search direction for the current ``lam`` is refined with a
+        The damped search direction for the current ``λ`` is refined with a
         backtracking line search (:func:`_linesearch`): an over-shooting full step is
         *shortened* rather than the direction being rotated toward gradient descent by
-        an ever-growing ``lam``. Plain lambda-only acceptance stalls badly near the
-        solution -- once ``lam`` ratchets up it never recovers and the residual only
+        an ever-growing ``λ``. Plain λ-only acceptance stalls badly near the
+        solution -- once ``λ`` ratchets up it never recovers and the residual only
         crawls, so on large systems the outer loop never converges within ``max_iter``
         -- whereas shortening the good Gauss-Newton direction keeps the fast
         convergence rate.
 
-        ``lam`` is decreased after every accepted step (drifting back toward the fast
+        ``λ`` is decreased after every accepted step (drifting back toward the fast
         Gauss-Newton regime) and only increased when even the damped direction admits
         no descent, which restores the regularisation that makes LM more robust than
-        plain Gauss-Newton. The returned ``lam`` seeds the next outer iteration.
+        plain Gauss-Newton. The returned ``λ`` seeds the next outer iteration.
 
         see: https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm"""
 
-        # Invariants of the damped least-squares system, independent of lambda. In the
+        # Invariants of the damped least-squares system, independent of λ. In the
         # sparse path the Wilson B matrix is banded, so ``W @ B`` and the augmented
         # system stay sparse.
         WB = W @ B
         W_Δq = W @ Δq.delta_q
         zeros = np.zeros(B.shape[1])
         # diagonal of the (Gauss-Newton) approximate Hessian, used as LM damping
-        damping = (B.T @ W @ W @ B).diagonal()
+        damping_diag = (B.T @ W @ W @ B).diagonal()
         # right-hand side of the augmented system
         lm_vec = _as_vector(np.hstack((W_Δq, zeros)))
 
         lstsq = _sparse_lstsq if sparse else _dense_lstsq
 
-        lam = start_lam
+        λ = start_λ
         new = previous
         for _ in range(_LM_MAX_DAMPING_STEPS):
             if sparse:
-                lm_mat = sparse_vstack((WB, diags_array(np.sqrt(lam) * damping)))
+                lm_mat = sparse_vstack((WB, diags_array(np.sqrt(λ) * damping_diag)))
             else:
-                lm_mat = np.vstack((WB, np.diag(np.sqrt(lam) * damping)))
+                lm_mat = np.vstack((WB, np.diag(np.sqrt(λ) * damping_diag)))
             Δx = lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
             Δx = Δx.reshape(len(previous), 3)
             try:
@@ -298,19 +298,19 @@ class RedundantInternalCoordinates:
                 )
             except ValueError:
                 # No descent along this direction: damp harder and retry.
-                lam = min(lam * nu, _LM_MAX_LAMBDA)
+                λ = min(λ * damping_growth, _LM_MAX_λ)
                 continue
-            return new, max(lam / reduction_factor, _LM_MIN_LAMBDA)
+            return new, max(λ / reduction_factor, _LM_MIN_λ)
 
-        return new, lam
+        return new, λ
 
     def _full_step_cycle(
         self,
         previous: Cartesian,
         B: csr_array | Matrix,
         W: Matrix,
-        start_lam: float,
-        nu: float,
+        start_λ: float,
+        damping_growth: float,
         reduction_factor: float,
         Δq: DeltaRedundantInternalCoordinates,
         sparse: bool = True,
@@ -318,32 +318,32 @@ class RedundantInternalCoordinates:
     ) -> tuple[Cartesian, float]:
         """Take a single *full* damped Levenberg-Marquardt step (no line search).
 
-        This is the classic LM lambda-adaptation: take the full damped step; if it
-        decreases the residual, accept it; otherwise grow ``lam`` (more damping -> a
+        This is the classic LM λ-adaptation: take the full damped step; if it
+        decreases the residual, accept it; otherwise grow ``λ`` (more damping -> a
         shorter, more gradient-like step) and re-solve until it does. Because the step
         is never shortened by a separate scalar, the outer loop's ``new == previous``
         test only trips at a genuine stationary point, so this variant is *seed-stable*:
         ``x(q(x)) == x``. It is, however, prone to stalling on large, stiff systems
         where the residual only creeps down -- hence the ``line_search`` alternative.
 
-        Same signature/return as :meth:`_lambda_cycle` so the two are interchangeable as
+        Same signature/return as :meth:`_λ_cycle` so the two are interchangeable as
         the ``cycle`` of :meth:`_levenberg_marquardt_opt`.
 
         see: https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm"""
         WB = W @ B
         W_Δq = W @ Δq.delta_q
         zeros = np.zeros(B.shape[1])
-        damping = (B.T @ W @ W @ B).diagonal()
+        damping_diag = (B.T @ W @ W @ B).diagonal()
         lstsq = _sparse_lstsq if sparse else _dense_lstsq
         base = norm(Δq.delta_q)
-        # right-hand side of the augmented system; independent of lambda
+        # right-hand side of the augmented system; independent of λ
         lm_vec = _as_vector(np.hstack((W_Δq, zeros)))
 
-        def step(lam: float) -> Cartesian:
+        def step(λ: float) -> Cartesian:
             if sparse:
-                lm_mat = sparse_vstack((WB, diags_array(np.sqrt(lam) * damping)))
+                lm_mat = sparse_vstack((WB, diags_array(np.sqrt(λ) * damping_diag)))
             else:
-                lm_mat = np.vstack((WB, np.diag(np.sqrt(lam) * damping)))
+                lm_mat = np.vstack((WB, np.diag(np.sqrt(λ) * damping_diag)))
             Δx = lstsq(lm_mat, lm_vec)[: 3 * len(self.reference)]
             return previous + Δx.reshape(len(previous), 3)
 
@@ -356,27 +356,27 @@ class RedundantInternalCoordinates:
             ).minimize_dihedral()
             return bool(norm(new_Δq.delta_q) <= base)
 
-        new = step(start_lam)
+        new = step(start_λ)
         if decreases(new):
-            return new, start_lam
-        lam = start_lam / reduction_factor
-        new = step(lam)
+            return new, start_λ
+        λ = start_λ / reduction_factor
+        new = step(λ)
         if decreases(new):
-            return new, lam
-        lam *= nu**2
+            return new, λ
+        λ *= damping_growth**2
         while True:
-            new = step(lam)
+            new = step(λ)
             if decreases(new):
-                return new, lam
-            if lam >= _LM_MAX_LAMBDA:
+                return new, λ
+            if λ >= _LM_MAX_λ:
                 # At maximal damping the step is vanishingly small (``new ~ previous``),
                 # so we are effectively at a stationary point of this cycle.
                 # The outer loop's ``new == previous`` check then trips. This never
-                # raises (matching the classic unbounded LM lambda growth); the outer
+                # raises (matching the classic unbounded LM λ growth); the outer
                 # loop's ``max_iter`` is what signals non-convergence and, under
                 # ``lm_step="auto"``, triggers the switch to the line search.
-                return new, lam
-            lam = min(lam * nu, _LM_MAX_LAMBDA)
+                return new, λ
+            λ = min(λ * damping_growth, _LM_MAX_λ)
 
     def _gauss_newton_opt(
         self,
@@ -444,14 +444,14 @@ class RedundantInternalCoordinates:
         rtol: float,
         atol: float,
         cycle: _LMCycle,
-        start_lam: float = 1e-5,
-        nu: float = 1.5,
+        start_λ: float = 1e-5,
+        damping_growth: float = 1.5,
         reduction_factor: float = 10,
         sparse: bool = True,
     ) -> Cartesian:
         """Outer Levenberg-Marquardt loop. ``cycle`` supplies a single step and is
-        either :meth:`_full_step_cycle` (seed-stable) or :meth:`_lambda_cycle` (robust
-        line search); both share the same signature and ``(new, lam)`` return."""
+        either :meth:`_full_step_cycle` (seed-stable) or :meth:`_λ_cycle` (robust
+        line search); both share the same signature and ``(new, λ)`` return."""
         from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
             allclose,
         )
@@ -466,7 +466,7 @@ class RedundantInternalCoordinates:
         converged = False
         i = 0
 
-        lam = start_lam
+        λ = start_λ
         while not converged:
             assert previous is not None
             if (i := i + 1) > max_iter:
@@ -483,12 +483,12 @@ class RedundantInternalCoordinates:
 
             Δq = (self - q_current).minimize_dihedral()
 
-            new, lam = cycle(
+            new, λ = cycle(
                 previous,
                 B,
                 W,
-                lam,
-                nu,
+                λ,
+                damping_growth,
                 reduction_factor,
                 Δq,
                 sparse=sparse,
@@ -539,7 +539,7 @@ class RedundantInternalCoordinates:
                 coordinate will be more likely to change linearly. Using values far
                 above 1 can cause instability
             default_weights: default
-                {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
+                {"bond": 1.0, "angle": 0.1, "dihedral": 0.05, "bending": 0.01},
                 the weights which each type of coordinate default to
             sparse: default ``True``, whether to use the sparse linear-algebra
                 back-transformation (sparse Wilson B matrix and ``lsmr``) or the dense
@@ -598,7 +598,7 @@ class RedundantInternalCoordinates:
             if lm_step == "full_step":
                 new = run_lm(self._full_step_cycle, max_iter)
             elif lm_step == "line_search":
-                new = run_lm(self._lambda_cycle, max_iter)
+                new = run_lm(self._λ_cycle, max_iter)
             elif lm_step == "auto":
                 # Prefer the seed-stable full step; fall back to the robust line search
                 # only if it has not converged within the bounded budget.
@@ -607,7 +607,7 @@ class RedundantInternalCoordinates:
                         self._full_step_cycle, min(max_iter, _LM_AUTO_SWITCH_ITER)
                     )
                 except ValueError:
-                    new = run_lm(self._lambda_cycle, max_iter)
+                    new = run_lm(self._λ_cycle, max_iter)
             else:
                 assert_never(lm_step)
         elif opt_alg == "gauss":
@@ -784,13 +784,13 @@ def _linesearch(
     Δx: Matrix,
     current: RedundantInternalCoordinates,
     previous: Cartesian,
-    alpha: float = 1.0,
+    α: float = 1.0,
     c: float = 1e-4,
-    tau: float = 0.5,
+    τ: float = 0.5,
     max_iter: int = 100,
     ric_coord_arr: Matrix | None = None,
 ) -> Cartesian:
-    # NOTE: alpha is a backtracking-line-search scalar
+    # NOTE: α is a backtracking-line-search scalar
     # see: https://en.wikipedia.org/wiki/Backtracking_line_search
     too_far = True
     t = c * 2 * norm(B.T @ Δq)
@@ -798,12 +798,12 @@ def _linesearch(
     backstep = 0
     while too_far:
         backstep += 1
-        new = previous + alpha * Δx
+        new = previous + α * Δx
         q_new = new.get_ric(
             internal_coords_idx=current.primitives_idx, coord_arr=ric_coord_arr
         )
-        if norm(Δq) < alpha * t + norm((current - q_new).minimize_dihedral().delta_q):
-            alpha *= tau
+        if norm(Δq) < α * t + norm((current - q_new).minimize_dihedral().delta_q):
+            α *= τ
         else:
             too_far = False
         if backstep > max_iter:
@@ -909,7 +909,7 @@ def RIC_interpolate(
             will be more likely to change linearly. Using values far above 1 can cause
             instability
         default_weights: default
-            {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
+            {"bond": 1.0, "angle": 0.1, "dihedral": 0.05, "bending": 0.01},
             the weights which each type of coordinate default to
         sparse: default ``True``, whether the back-transformation of each image via
             :meth:`~.RedundantInternalCoordinates.get_cartesian` uses the sparse

@@ -634,8 +634,8 @@ def apply_grad_zmat_tensor(
 
 
 def _cart_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesian]:
-    Delta = (end - start) / (N - 1)
-    return [start + i * Delta for i in range(N)]
+    Δ = (end - start) / (N - 1)
+    return [start + i * Δ for i in range(N)]
 
 
 def _fix_trans_rot(
