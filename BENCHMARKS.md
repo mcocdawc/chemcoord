@@ -90,7 +90,89 @@ Without it, one overshoot raised the damping and nothing brought it back; with a
 solve that stalled `full_step` at 2000 outer iterations without converging. With the
 decay it matches the other two at 0.2 s.
 
-## 4. The iterative solve, and why it was replaced
+## 4. Comparison with published back-transformation algorithms
+
+**Caveat on faithfulness.** These are the *linear-solve kernels* of the published
+methods, not the published algorithms. The divide-and-conquer fragmentation of Billeter,
+Turner & Thiel (HDLC, 2000) and the specific scheme of Farkas & Schlegel (1998) are whole
+algorithms that were not reimplemented. In particular the "Nemeth-style" row below is a
+naive application of preconditioned CG with an incomplete factorisation to the singular
+internal-space matrix; the published method has machinery this lacks, so its failure here
+should be read as "the internal-space route needs that machinery", not as a verdict on
+their work.
+
+All kernels solve the same damped system `A = [W B; sqrt(lambda) D]`, `b = [W dq; 0]`
+with `lambda = 1e-5`, so the solution is unique and the relative error is well defined.
+Reference is a dense direct solve of the normal equations.
+
+MIL53_beta (99 atoms, 3N = 297, 659 internals):
+
+| kernel | time | rel. error | residual |
+|---|---|---|---|
+| Pulay/Fogarasi: dense `pinv(A Aᵀ)` | 0.094 s | 3.9e-12 | 6.060985e-04 |
+| dense LAPACK `lstsq` | 0.012 s | 5.6e-12 | 6.060985e-04 |
+| LSMR, cap 2000 | 0.044 s | 2.9e-04 | 6.060985e-04 |
+| LSMR to convergence | 0.056 s | 5.2e-10 | 6.060985e-04 |
+| Nemeth-style: PCG + ILU on `A Aᵀ` | 0.258 s | did not converge | — |
+| PCG + ILU on the normal equations | 0.001 s | 3.5e-08 | 6.060985e-04 |
+| **sparse LU on the normal equations** | **0.001 s** | **4.5e-12** | 6.060985e-04 |
+
+101M (1413 atoms, 3N = 4239, 5763 internals):
+
+| kernel | time | rel. error | residual |
+|---|---|---|---|
+| dense `pinv(A Aᵀ)` / dense `lstsq` | — | skipped: `A Aᵀ` dense is 0.8 GB | |
+| LSMR, cap 2000 | 0.215 s | 7.9e-03 | 2.270973e-03 |
+| LSMR to convergence | 0.681 s | 8.1e-08 | 2.270959e-03 |
+| Nemeth-style: PCG + ILU on `A Aᵀ` | 1.099 s | did not converge | — |
+| PCG + ILU on the normal equations | 0.384 s | 2.6e-04 | 2.270959e-03 |
+| **sparse LU on the normal equations** | **0.005 s** | **8.5e-12** | 2.270959e-03 |
+
+The structural reason the internal-space route is hard: `A Aᵀ` is `n_int x n_int` and its
+rank deficiency is the *redundancy* of the coordinate set. On cyclohexane, `B^T W^2 B` is
+54 x 54 with exactly 6 zero eigenvalues -- the rigid-body motions, confirmed by a
+1.000000 overlap with the translation/rotation span -- while `G = B W^2 B^T` is 108 x 108
+with **60** zero eigenvalues. The Cartesian-side matrix never sees the redundancy,
+because multiplying by `Bᵀ` projects onto the row space of B, and the LM damping lifts
+the remaining 6. That is what makes a plain direct factorisation viable with no
+pseudo-inverse and no preconditioner.
+
+### Scaling
+
+Direct factorisation of the normal equations, 1% of atoms perturbed:
+
+| structure | atoms | 3N | `N` nnz | fill-in | build | factorise | solve | LSMR @2000 |
+|---|---|---|---|---|---|---|---|---|
+| MIL53_beta | 99 | 297 | 10 319 | 2.6x | 0.000 s | 0.001 s | 0.000 s | 0.043 s |
+| 101M | 1 413 | 4 239 | 113 823 | 2.2x | 0.001 s | 0.005 s | 0.000 s | 0.215 s |
+| 1A8I | 7 454 | 22 362 | 596 862 | 3.0x | 0.006 s | 0.036 s | 0.001 s | 0.825 s |
+| 1B0P | 19 411 | 58 233 | 1 557 045 | 2.3x | 0.014 s | 0.077 s | 0.002 s | 1.961 s |
+| 1A2V | 33 726 | 101 178 | 2 738 718 | 2.9x | 0.029 s | 0.163 s | 0.005 s | 3.507 s |
+
+341x the atoms costs 163x the factorisation time -- linear scaling in practice, matching
+what the published linear-scaling methods achieve, but with a direct solver rather than a
+preconditioned iterative one. Fill-in stays at 2-3x at every size: `BᵀB` couples two
+atoms iff they share an internal coordinate, so its pattern is the molecular connectivity
+graph squared, which stays sparse and orders well.
+
+### References
+
+- P. Pulay and G. Fogarasi, *Geometry optimization in redundant internal coordinates*,
+  J. Chem. Phys. **96**, 2856 (1992).
+- J. Baker, A. Kessi, B. Delley, *The generation and use of delocalized internal
+  coordinates in geometry optimization*, J. Chem. Phys. **105**, 192 (1996).
+- O. Farkas and H. B. Schlegel, *Methods for geometry optimization of large molecules.
+  I. An O(N^2) algorithm for solving systems of linear equations for the transformation
+  of coordinates and forces*, J. Chem. Phys. **109**, 7100 (1998).
+- S. R. Billeter, A. J. Turner, W. Thiel, *Linear scaling geometry optimisation and
+  transition state search in hybrid delocalised internal coordinates*, Phys. Chem. Chem.
+  Phys. **2**, 2177 (2000).
+- K. Nemeth, O. Coulaud, G. Monard, J. G. Angyan, *Linear scaling algorithm for the
+  coordinate transformation problem of molecular geometry optimization*, J. Chem. Phys.
+  **113**, 5598 (2000); *An efficient method for the coordinate transformation problem of
+  massively three-dimensional networks*, J. Chem. Phys. **114**, 9747 (2001).
+
+## 5. The iterative solve, and why it was replaced
 
 All runs converged to the same outer-loop tolerance.
 
@@ -127,7 +209,7 @@ solve in this benchmark terminates on `maxiter`, never on tolerance. Over those 
 iterations the residual barely moves (`|Ax-b|` 2.401e-03 -> 2.271e-03); it is the
 solution vector that changes (`|x|` 0.418 -> 0.455).
 
-## 5. Levers that did not work
+## 6. Levers that did not work
 
 Same case, `line_search`:
 
@@ -140,7 +222,7 @@ Same case, `line_search`:
 The ill-conditioning comes from the redundancy of the coordinate set, not from column
 scaling or from the damping schedule.
 
-## 6. `line_search` vs `full_step` (with the iterative solve)
+## 7. `line_search` vs `full_step` (with the iterative solve)
 
 `line_search` is faster, but only by ~16% (1268 vs 1503 outer iterations). The step
 control cannot matter more than that while both strategies are handed the same
