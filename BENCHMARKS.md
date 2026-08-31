@@ -155,6 +155,50 @@ preconditioned iterative one. Fill-in stays at 2-3x at every size: `BᵀB` coupl
 atoms iff they share an internal coordinate, so its pattern is the molecular connectivity
 graph squared, which stays sparse and orders well.
 
+### `Gq = BBᵀ` against `Gx = BᵀB`, head to head
+
+Farkas and Schlegel state that "the factorization of `Gq = BBᵀ` is less demanding than
+the factorization of `Gx = BᵀB` in the screened Cholesky formalism". Both routes solve
+the same problem, regularised by the same ridge (1e-8) so each matrix is factorisable:
+
+```
+Gx route:  (BᵀB + eps I) dx = Bᵀ dq             (3N x 3N)
+Gq route:  (BBᵀ + eps I) y  = dq,  dx = Bᵀ y    (n_int x n_int)
+```
+
+Both converge to the minimum-norm least-squares solution; measured, they agree to
+1e-7 and give identical residuals, so the timings are comparable.
+
+| structure | atoms | matrix | dim | nnz | L+U nnz | fill | total time |
+|---|---|---|---|---|---|---|---|
+| MIL53_beta | 99 | `Gx` | 297 | 10 319 | 26 092 | 2.5x | **0.001 s** |
+| | | `Gq` | 659 | 65 349 | 160 041 | 2.4x | 0.007 s |
+| 101M | 1 413 | `Gx` | 4 239 | 113 823 | 282 825 | 2.5x | **0.007 s** |
+| | | `Gq` | 5 763 | 178 901 | 341 552 | 1.9x | 0.011 s |
+| 1A8I | 7 454 | `Gx` | 22 362 | 596 862 | 1 912 480 | 3.2x | **0.045 s** |
+| | | `Gq` | 30 037 | 903 633 | 1 969 622 | 2.2x | 0.054 s |
+| 1B0P | 19 411 | `Gx` | 58 233 | 1 557 045 | 3 804 541 | 2.4x | **0.099 s** |
+| | | `Gq` | 78 424 | 2 343 222 | 4 439 439 | 1.9x | 0.130 s |
+| 1A2V | 33 726 | `Gx` | 101 178 | 2 738 718 | 8 770 437 | 3.2x | **0.204 s** |
+| | | `Gq` | 139 038 | 4 316 954 | 9 902 118 | 2.3x | 0.262 s |
+
+`Gx` is faster at every size. The margin narrows sharply from small to medium systems
+(7.0x, 1.6x, 1.2x) and then settles at about 1.3x; `Gq` never overtakes.
+
+Their claim is not baseless, though, and the fill column shows why: `Gq` factorises
+*better per nonzero* at every size (1.9-2.4x against 2.4-3.2x). Despite being 34-38%
+larger in dimension and carrying 1.5-1.6x the nonzeros, its `L+U` is only 3-13% bigger.
+What sinks it here is that it starts from more nonzeros, not that it factorises worse.
+
+**Caveat.** This compares the two matrices under one general-purpose sparse LU with
+COLAMD ordering. It is *not* their algorithm. Their screening drops the rows with
+near-zero pivots -- the redundant ones -- which would shrink `Gq` from `n_int` to about
+`3N - 6`, i.e. to `Gx`'s dimension while keeping `Gq`'s better fill behaviour. On 1A2V
+that would mean dropping ~37 900 of 139 038 rows. They also stress that "proper
+reordering is essential for the efficiency of the factorization" and use a
+divide-and-conquer scheme after Nemeth et al. Either could flip this verdict, and
+neither is implemented here.
+
 ### Does the internal-coordinate weighting matter?
 
 `W` (bond 1.0, angle 0.1, dihedral 0.05, bending 0.01) only changes the answer when the
