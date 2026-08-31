@@ -172,7 +172,58 @@ graph squared, which stays sparse and orders well.
   **113**, 5598 (2000); *An efficient method for the coordinate transformation problem of
   massively three-dimensional networks*, J. Chem. Phys. **114**, 9747 (2001).
 
-## 5. The iterative solve, and why it was replaced
+## 5. Stability against increasingly perturbed seeds
+
+Every atom displaced by a clipped Gaussian of width sigma, then back-transformed from
+that seed towards the *original* structure's internals. `max|dx|` is measured against the
+original, so it answers "did we get the structure back", not merely "did it converge".
+Three seeds per point, `max_iter=2000`.
+
+MIL53_beta (99 atoms), direct sparse LU:
+
+| sigma [A] | start `\|dq\|` | converged | final `\|dq\|` | `max\|dx\|` vs original | time |
+|---|---|---|---|---|---|
+| 0.001 | 3.4e-02 | 3/3 | 1.6e-08 .. 2.2e-08 | 8.3e-09 .. 2.1e-08 | 0.1 s |
+| 0.01 | 3.4e-01 | 3/3 | 1.9e-08 .. 3.2e-08 | 7.5e-09 .. 1.7e-08 | 0.1 s |
+| 0.03 | 1.0e+00 | 3/3 | 2.4e-08 .. 2.8e-08 | 6.2e-09 .. 3.7e-08 | 0.1 s |
+| 0.1 | 3.4e+00 | 3/3 | 2.6e-08 .. 3.0e-08 | 3.5e-09 .. 2.0e-08 | 0.1 s |
+| 0.3 | 1.2e+01 | 3/3 | 1.4e-08 .. 3.6e-08 | 1.5e-08 .. 2.5e-08 | 0.1 s |
+| 0.5 | 2.1e+01 | 3/3 | 2.5e-08 .. **4.2e+00** | 2.0e-08 .. **1.5e+00** | 0.2 s |
+| 1.0 | 3.2e+01 | 3/3 | 4.2e+00 .. 6.8e+00 | 1.5e+00 .. 3.1e+00 | 0.3 s |
+
+101M (1413 atoms), direct sparse LU:
+
+| sigma [A] | start `\|dq\|` | converged | final `\|dq\|` | `max\|dx\|` vs original | iters | time |
+|---|---|---|---|---|---|---|
+| 0.001 | 9.8e-02 | 3/3 | 2.4e-13 .. 6.0e-13 | 2.2e-11 .. 8.9e-11 | < 100 | 0.2 s |
+| 0.01 | 9.8e-01 | 3/3 | 1.9e-13 .. 1.5e-12 | 1.0e-13 .. 2.2e-10 | < 100 | 0.2 s |
+| 0.03 | 2.9e+00 | 3/3 | 1.7e-13 .. 1.8e-13 | 9.2e-14 .. 4.0e-13 | < 100 | 0.2 s |
+| 0.1 | 9.7e+00 | 3/3 | 1.8e-13 .. 1.9e-13 | 2.3e-13 .. 1.1e-12 | < 100 | 0.2 s |
+| 0.3 | 3.1e+01 | 3/3 | 1.9e-13 .. 1.9e-13 | 2.3e-12 .. 3.9e-12 | < 100 | 0.2 s |
+| 0.5 | 5.5e+01 | 3/3 | **7.9e+00 .. 8.7e+00** | **2.7e+01 .. 4.4e+01** | 0 - 552 | 11.8 s |
+| 1.0 | 9.1e+01 | 2/3 | 2.2e+01 .. 2.4e+01 | 4.3e+01 .. 4.7e+01 | 473 - 709 | 20.8 s | 
+
+Three conclusions:
+
+**The basin is a property of the problem, not of the solver.** Running the identical
+MIL53 sweep with the old LSMR solver reproduces the recovery/failure pattern at *every*
+sigma, with the same final values -- perfect recovery to 0.3, the edge at 0.5 (two seeds
+of three), outside it at 1.0 -- and differs only in taking 4-8x as long. What sets the
+radius is the nonlinearity of the coordinate map, not the accuracy of the linear solve.
+
+**Inside the basin the solver decides the accuracy, and the margin is large.** On 101M at
+sigma = 0.01: LSMR reaches `max|dx|` = 2.8e-04 A in 580 iterations and 146 s; the direct
+solve reaches 1e-13 A in under 100 iterations and 0.2 s. Roughly 730x faster and nine
+orders of magnitude closer. Recovery stays at machine precision out to sigma = 0.3 A,
+where the starting residual is already 30.6.
+
+**Degradation is graceful.** Past the basin the solve still converges; it converges to a
+*different* structure, which the residual reports honestly (7.9e+00 rather than 1e-13).
+The one hard failure, at sigma = 1.0 on 101M, is an `UndefinedDihedral` raised by the
+coordinate definition when the perturbation makes three atoms collinear -- a property of
+the internal coordinate set, not of the back-transformation.
+
+## 6. The iterative solve, and why it was replaced
 
 All runs converged to the same outer-loop tolerance.
 
@@ -209,7 +260,7 @@ solve in this benchmark terminates on `maxiter`, never on tolerance. Over those 
 iterations the residual barely moves (`|Ax-b|` 2.401e-03 -> 2.271e-03); it is the
 solution vector that changes (`|x|` 0.418 -> 0.455).
 
-## 6. Levers that did not work
+## 7. Levers that did not work
 
 Same case, `line_search`:
 
@@ -222,7 +273,7 @@ Same case, `line_search`:
 The ill-conditioning comes from the redundancy of the coordinate set, not from column
 scaling or from the damping schedule.
 
-## 7. `line_search` vs `full_step` (with the iterative solve)
+## 8. `line_search` vs `full_step` (with the iterative solve)
 
 `line_search` is faster, but only by ~16% (1268 vs 1503 outer iterations). The step
 control cannot matter more than that while both strategies are handed the same
