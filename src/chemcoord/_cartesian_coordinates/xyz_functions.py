@@ -709,8 +709,8 @@ def interpolate(
             back-transformation (only relevant for the ``"RIC"*`` coords with
             ``opt_alg="LM"``). ``"full_step"`` is seed-stable (``x(q(x)) == x``) but can
             stall on large systems; ``"line_search"`` is robust but not seed-stable on
-            degenerate minima; ``"auto"`` prefers ``"full_step"`` and falls back to
-            ``"line_search"`` if it does not converge. See
+            degenerate minima; ``"auto"`` prefers ``"full_step"`` and warns while
+            falling back to ``"line_search"`` if it does not converge. See
             :meth:`~.RedundantInternalCoordinates.get_cartesian`.
 
     References:

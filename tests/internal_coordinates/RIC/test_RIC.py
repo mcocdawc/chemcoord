@@ -48,7 +48,82 @@ molecule8 = Cartesian.read_xyz(get_complete_path("default_args_end.xyz"))
 reference_path = read_multiple_xyz(get_complete_path("correct_path.xyz"))
 
 
-def _assert_ric_path(schedule, expected):
+def weight_vector(idx):
+    """``diag(W)`` for the default weights, in the order of ``idx``."""
+    default_weights = DefaultWeights()
+    return np.array([default_weights.get_weight(coord) for coord in idx])
+
+
+def weighted_residual(target, structure, idx, weights):
+    """``‖W Δq‖`` -- the quantity the back-transformation actually minimises."""
+    Δq = (target - structure.get_ric(internal_coords_idx=idx)).minimize_dihedral()
+    return np.linalg.norm(weights * Δq.delta_q)
+
+
+# The numbers below are a benchmark baseline, not only a regression guard. The
+# coordinate assertions say the path did not move; ``‖W Δq‖`` says how well the
+# back-transformation actually solved the problem it was given. Recording them here
+# means a future change to the optimizer shows up as a number that got better or
+# worse, rather than as a bare pass/fail. Lowering one is an improvement and should be
+# committed together with the change that caused it; raising one needs a reason. Do
+# not update them reflexively to make the suite green.
+#
+# The interpolation targets are only reconstructible for the ``independent`` schedule
+# (image ``i`` targets ``q1 + i·Δq/(N-1)``). ``from_start``/``from_both``/``from_end``
+# build each target from the *previously computed* image, so reproducing them here
+# would mean duplicating the schedule; those are tracked as the weighted deviation
+# from the reference image instead -- same metric, reference-relative rather than
+# target-relative.
+
+#: ‖W Δq‖ of each image of the ``independent`` schedule against its own target.
+INDEPENDENT_RESIDUALS = (
+    9.491e-16,
+    5.661e-03,
+    1.067e-02,
+    1.503e-02,
+    1.874e-02,
+    2.182e-02,
+    2.426e-02,
+    2.608e-02,
+    2.729e-02,
+    2.789e-02,
+    2.788e-02,
+    2.726e-02,
+    2.604e-02,
+    2.420e-02,
+    2.174e-02,
+    1.866e-02,
+    1.495e-02,
+    1.060e-02,
+    5.617e-03,
+    1.978e-15,
+)
+
+#: ‖W Δq‖ of each image of the ``test_default_args`` path against its own target.
+DEFAULT_ARGS_RESIDUALS = (
+    6.805e-08,
+    3.804e-02,
+    7.580e-02,
+    1.133e-01,
+    1.504e-01,
+    1.866e-01,
+    2.296e-01,
+    1.348e-01,
+    7.124e-02,
+    3.921e-15,
+)
+
+#: Bound on the weighted deviation from the reference image for the three schedules
+#: whose targets are path-dependent. Observed maxima are ~2.2e-6 for all three; the
+#: bound is an order of magnitude above that so BLAS differences do not flake it.
+PATH_DEPENDENT_DEVIATION = 1e-5
+
+#: ‖W Δq‖ of the ``x -> q(x) -> x`` round trips. Observed 5.4e-11 (MIL53_beta, with
+#: bending coordinates) and 2.2e-13 (1A8I, ~7500 atoms); bounded well above both.
+ROUND_TRIP_RESIDUAL = 1e-8
+
+
+def _assert_ric_path(schedule, expected, residuals=None):
     # ``expected`` doubles as the seed (the interpolation should reproduce it).
     path = RIC_interpolate(
         molecule1,
@@ -62,12 +137,28 @@ def _assert_ric_path(schedule, expected):
     for ref, just_read in zip(path, expected):
         assert allclose(ref, just_read, atol=1e-4, align=True)
 
+    idx = get_primitives_idx(molecule1, molecule2)
+    weights = weight_vector(idx)
+    if residuals is None:
+        # Path-dependent schedule: track the weighted deviation from the reference.
+        for ref, got in zip(expected, path):
+            Δq = (ref.get_ric(idx) - got.get_ric(idx)).minimize_dihedral()
+            assert np.linalg.norm(weights * Δq.delta_q) <= PATH_DEPENDENT_DEVIATION
+    else:
+        q1 = molecule1.get_ric(idx)
+        Δ = (molecule2.get_ric(idx) - q1).minimize_dihedral()
+        for i, (got, recorded) in enumerate(zip(path, residuals)):
+            target = q1 + i * Δ / (len(path) - 1)
+            assert (
+                weighted_residual(target, got, idx, weights) <= recorded * 1.05 + 1e-12
+            )
+
 
 # ``test_path`` was split per-schedule so pytest emits output between the
 # (numba-compilation-heavy) interpolations, keeping CI under its no-output
 # timeout. See https://github.com/mcocdawc/chemcoord for context.
 def test_path_independent():
-    _assert_ric_path("independent", reference_path[:20])
+    _assert_ric_path("independent", reference_path[:20], INDEPENDENT_RESIDUALS)
 
 
 def test_path_from_both():
@@ -87,6 +178,10 @@ def test_back_forth_with_bending():
     q = molecule4.get_ric(internal_coords_idx=idx)
     test_cartesian = q.get_cartesian()
     assert allclose(test_cartesian, molecule4, align=True)
+    assert (
+        weighted_residual(q, test_cartesian, idx, weight_vector(idx))
+        <= ROUND_TRIP_RESIDUAL
+    )
 
 
 def test_back_forth_large_molecule():
@@ -100,6 +195,10 @@ def test_back_forth_large_molecule():
     q = molecule.get_ric(internal_coords_idx=idx)
     test_cartesian = q.get_cartesian()
     assert allclose(test_cartesian, molecule, align=True)
+    assert (
+        weighted_residual(q, test_cartesian, idx, weight_vector(idx))
+        <= ROUND_TRIP_RESIDUAL
+    )
 
 
 def test_set_coord():
@@ -142,6 +241,14 @@ def test_default_args():
 
     for ref, just_read in zip(path, reference_path):
         assert allclose(ref, just_read, atol=1e-4, align=True)
+
+    idx = get_primitives_idx(molecule7, molecule8)
+    weights = weight_vector(idx)
+    q1 = molecule7.get_ric(idx)
+    Δ = (molecule8.get_ric(idx) - q1).minimize_dihedral()
+    for i, (got, recorded) in enumerate(zip(path, DEFAULT_ARGS_RESIDUALS)):
+        target = q1 + i * Δ / (len(path) - 1)
+        assert weighted_residual(target, got, idx, weights) <= recorded * 1.05 + 1e-12
 
 
 def test_documented_default_weights_mapping():

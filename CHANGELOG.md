@@ -45,12 +45,56 @@
     and via `coord="RIC_sparse"` / `coord="RIC_dense"` in `xyz_functions.interpolate`,
     where `coord="RIC"` is an alias for the sparse variant.
 
+- A back-transformation that does not converge now raises
+    `chemcoord.exceptions.ConvergenceError` instead of a bare `ValueError`, and a line
+    search that does not terminate raises the `ConvergenceError` subclass
+    `chemcoord.exceptions.LineSearchFailed`. Both still subclass `ValueError`, so
+    existing handlers keep working.
+
+    Both Levenberg-Marquardt steps now raise instead of returning a structure they
+    know is not a solution: the line-search step once it has exhausted its damping
+    steps, and the full step once no damping up to the cap decreases the residual. The
+    outer loop only checks whether the structure stopped moving, so both returns were
+    previously reported as convergence at a non-minimum. Under `lm_step="auto"` the
+    full step's raise is also what makes the fallback to the line search fire on that
+    path, rather than only when the iteration budget runs out.
+
+    Conversely, `ric_functions.RIC_interpolate(schedule="auto")` now only falls through
+    to the next scheduling strategy on a `ConvergenceError`. Previously it caught every
+    `ValueError`, so e.g. an invalid argument combination was retried three more times
+    and then reported as `RuntimeError: All scheduling strategies failed`.
+
+- The acceptance tests of the back-transformation now measure the *weighted* residual
+    `‖W Δq‖` -- the objective the damped least-squares step actually minimises --
+    instead of the unweighted `‖Δq‖`. With weights spanning 1.0 (bonds) to 0.01
+    (bendings) a step could improve the weighted objective while the unweighted norm
+    grew, and be rejected for it.
+
+    The Armijo threshold in the line search additionally uses the directional
+    derivative along the step, `c·α·(BᵀW²Δq)·Δx / ‖WΔq‖`, rather than the gradient norm
+    `2c‖BᵀΔq‖`. The old threshold did not scale with the step, so both sides of the
+    sufficient-decrease test were first order in `α` and `α` cancelled: the test was
+    scale invariant and a badly aligned direction failed it at *every* `α`, until `α`
+    underflowed the comparison and a step of ~1e-13 was accepted by rounding. The outer
+    loop then read the vanishing step as convergence. On a perturbed MIL53 structure
+    this returned a structure 4.2 A from the answer with `‖Δq‖ = 5.2`; it now converges
+    to `‖Δq‖ = 4.6e-06`.
+
+    The committed interpolation reference paths were regenerated accordingly. On
+    `default_args_path`, no image ends up with a worse weighted residual and five are
+    better by 0.2-0.7%; the `independent` schedule is unchanged. The path tests now
+    assert on the weighted residuals as well as on the coordinates, so the residuals are
+    tracked as a benchmark baseline for future work on the optimizer.
+
 - Added the `lm_step` argument (`"auto"`, `"full_step"`, `"line_search"`) to
     `RedundantInternalCoordinates.get_cartesian`, `ric_functions.RIC_interpolate`, and
     `xyz_functions.interpolate`. It selects the Levenberg-Marquardt step control of the
     back-transformation: `"full_step"` is seed-stable but can stall on large, stiff
     systems, `"line_search"` is robust but not seed-stable, and the default `"auto"`
-    runs the former and falls back to the latter if it has not converged in time.
+    runs the former and falls back to the latter if it has not converged in time. The
+    fallback warns -- the result is no longer seed-stable -- and is seeded with the last
+    iterate of the abandoned full-step run rather than restarting from the original
+    guess.
 
 
 ## Performance
@@ -60,6 +104,19 @@
 - The 0-based reindexed coordinate arrays are now computed once and cached across the
     RIC optimization loop instead of being rebuilt on every iteration, which was the
     dominant cost of the back-transformation for large systems.
+
+
+## Known issues
+
+- The dihedral rows of `Cartesian.get_Wilson_B` disagree with finite differences. For a
+    random unit direction and `h = 1e-7`, bond and angle rows match to 8 digits
+    (relative error ~2e-8) while dihedral rows are off by ~100% (relative error 0.92 on
+    `default_args_start`, 0.31 on `cyclohexane_chair`), the worst row in sign and by a
+    factor of ten. This degrades the RIC back-transformation on dihedral-rich systems:
+    the damped step is built from a model that is wrong for dihedrals, so its predicted
+    decrease does not materialise and the Levenberg-Marquardt damping is driven to its
+    cap. See the `todo` on `_jit_dihedral_deriv` for the explanations already ruled out.
+    Believed to predate this release; not yet confirmed against v2.2.0.
 
 
 ## Infrastructure

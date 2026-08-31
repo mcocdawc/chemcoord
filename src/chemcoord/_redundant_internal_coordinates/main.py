@@ -21,7 +21,11 @@ from chemcoord._redundant_internal_coordinates._backtransformation import (
     backtransform,
 )
 from chemcoord.configuration import settings
-from chemcoord.exceptions import PhysicalMeaning, UndefinedDihedral
+from chemcoord.exceptions import (
+    ConvergenceError,
+    PhysicalMeaning,
+    UndefinedDihedral,
+)
 from chemcoord.typing import ArithmeticOther, AtomIdx, BondDict, Real, Vector
 
 Coordinate: TypeAlias = (
@@ -177,11 +181,16 @@ class RedundantInternalCoordinates:
                 stall on large, stiff systems. ``"line_search"`` shortens an overshoot
                 by backtracking -- it scales to large systems but is not seed-stable on
                 flat/degenerate minima. ``"auto"`` runs ``"full_step"`` first and, if it
-                has not converged within a bounded number of iterations, restarts the
-                solve with ``"line_search"`` -- giving seed-stability whenever the
-                full step converges and robustness otherwise.
+                has not converged within a bounded number of iterations, warns and
+                continues the solve with ``"line_search"``, seeded with the last
+                iterate -- giving seed-stability whenever the full step converges and
+                robustness otherwise.
         Returns:
             Closest physical structure to self, aligned to start_guess
+
+        Raises:
+            ~chemcoord.exceptions.ConvergenceError: If the back-transformation does not
+                converge within ``max_iter`` iterations.
         """
 
         if start_guess is None:
@@ -599,7 +608,7 @@ def RIC_interpolate(
         for mode in strategies:
             try:
                 return run_interpolate(mode)
-            except (ValueError, UndefinedDihedral):
+            except (ConvergenceError, UndefinedDihedral):
                 if mode != "from_end":
                     warn(f"{mode} scheduling failed; attempting next strategy")
         else:  # noqa: PLW0120

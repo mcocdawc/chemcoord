@@ -353,7 +353,42 @@ class CartesianBmat(CartesianCore):
 
 @njit(cache=True, nogil=True)
 def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
-    """Calculates Cartesian derivatives of a dihedral angle given 4 atom positions"""
+    """Calculates Cartesian derivatives of a dihedral angle given 4 atom positions
+
+    .. todo::
+
+        These derivatives disagree with finite differences. Comparing
+        ``(get_ric(x + h*d) - get_ric(x)) / h`` against ``get_Wilson_B(x) @ d`` for a
+        random unit direction ``d`` and ``h = 1e-7`` (the difference wrapped with
+        ``minimize_dihedral``, so a 2*pi branch crossing does not pollute it)::
+
+                        default_args_start        cyclohexane_chair
+            bond        rel 2.7e-08 cos +1.0000   rel 4.5e-08 cos +1.0000
+            angle       rel 1.9e-08 cos +1.0000   rel 3.3e-08 cos +1.0000
+            dihedral    rel 9.2e-01 cos +0.4666   rel 3.1e-01 cos +0.9533
+
+        Bond and angle rows are exact to 8 digits; the dihedral rows are wrong by
+        ~100%, the worst one in sign and by a factor of ten (fd=+1.2513 vs B=-0.13299).
+
+        This degrades the RIC back-transformation on dihedral-rich systems: the damped
+        Levenberg-Marquardt step is built from a model that is wrong for dihedrals, so
+        its predicted decrease does not materialise, ``lambda`` is driven to
+        ``_LM_MAX_lambda`` and ``_full_step_cycle`` gives up (see the comment there).
+
+        Two explanations were tested and ruled out: it is not the ``minimize_dihedral``
+        wrap (the finite differences are wrapped and ``h`` is far too small for a branch
+        crossing), and it is not a row-ordering mismatch between ``_to_array_nobending``
+        and ``_to_array_full`` (both iterate ``_reindex_to_0`` in the same order; their
+        arrays differ only in the uninitialised ``np.empty`` padding of the unused slots
+        of bonds and angles). The most likely remaining cause is a sign-convention
+        disagreement between this function and the dihedral value computed by
+        ``_jit_x_to_ric``.
+
+        Believed to predate the sparse-B work, which only added
+        ``_jit_get_Wilson_B_coo`` around this same function -- not confirmed on
+        ``master``. Fixing it will change every converged structure and so needs its
+        own change, starting with that confirmation.
+    """
 
     # vectors making up dihedral
     u = positions[0] - positions[1]
@@ -727,10 +762,10 @@ def _jit_x_to_plane_coords_nonlinear(
     uw_proj = _jit_normalize((k - j) - ((k - j) @ v) * v)
     vw_proj = _jit_normalize((k - j) - ((k - j) @ u) * u)
 
-    α_uw = np.pi - np.arctan2(uw_proj @ u, uw_proj @ w)
-    α_vw = np.pi - np.arctan2(vw_proj @ v, vw_proj @ w)
+    alpha_uw = np.pi - np.arctan2(uw_proj @ u, uw_proj @ w)
+    alpha_vw = np.pi - np.arctan2(vw_proj @ v, vw_proj @ w)
 
-    return np.array([α_uw, α_vw])
+    return np.array([alpha_uw, alpha_vw])
 
 
 @njit(parallel=True, cache=True, nogil=True)

@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
+
 # Errorcodes are there for the jit_functions
 ERR_CODE_OK = 0
 
@@ -82,6 +89,28 @@ class IllegalArgumentCombination(ValueError):
     """Raised if the combination of correctly typed arguments is invalid."""
 
     pass
+
+
+class ConvergenceError(ValueError):
+    """Raised when an iterative solve does not converge.
+
+    Subclasses :class:`ValueError` because that is what the iterative solvers raised
+    before this exception existed.
+
+    May carry the attribute:
+
+    * ``last``: The most recent iterate, so that a fallback solver can resume from it
+      instead of restarting from the original guess.
+    """
+
+    def __init__(self, message: str = "", last: Cartesian | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.last = last
+
+
+class LineSearchFailed(ConvergenceError):
+    """Raised when a backtracking line search does not terminate."""
 
 
 class UndefinedDihedral(UndefinedCoordinateSystem):
