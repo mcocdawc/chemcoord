@@ -68,11 +68,21 @@ _LMCycle: TypeAlias = Callable[..., tuple["Cartesian", float]]
 
 
 # Upper bound on the number of LSMR iterations per linear solve. The augmented
-# Levenberg-Marquardt system is ill-conditioned, so without a cap LSMR chases the
-# stopping tolerance for thousands of iterations. Since every solve is only one
-# inexact step of the outer Gauss-Newton/LM loop, a bounded, approximate solution is
-# enough and keeps each iteration cheap.
-_LSTSQ_MAX_ITER: Final = 200
+# Levenberg-Marquardt system is ill-conditioned and rank-deficient, so LSMR converges
+# slowly: a representative 101M solve (a 10002 x 4239 system) needs ~3000 iterations to
+# reach its stopping tolerance, and every solve in that back-transformation hits this
+# cap rather than the tolerance.
+#
+# This is therefore not only a speed knob -- it sets the *accuracy floor* of the whole
+# back-transformation. Truncating the solve shortens every step, so the outer loop's
+# ``allclose(new, previous)`` test trips while the structure is still short of the
+# minimum, and no iteration budget recovers it. On the 101M benchmark the converged
+# structure is off by 1.3e-03 A at a cap of 200 and by 1.5e-04 A at 2000.
+#
+# 2000 buys that ~8x accuracy for ~2.8x the wall clock. It is a deliberate trade in
+# favour of accuracy: a caller who wants the old speed can still get it, but a caller
+# who wants a correct structure could not get one at 200. See BENCHMARKS.md.
+_LSTSQ_MAX_ITER: Final = 2000
 
 # Bounds for the Levenberg-Marquardt damping ``λ``. It is shrunk after every
 # accepted step (drifting back toward fast Gauss-Newton) and only grown when the
