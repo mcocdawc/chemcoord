@@ -39,7 +39,7 @@ from numpy import float64
 from numpy.linalg import norm
 from scipy.sparse import csr_array, diags_array
 from scipy.sparse import vstack as sparse_vstack
-from scipy.sparse.linalg import lsmr
+from scipy.sparse.linalg import lsmr, splu
 from typing_extensions import assert_never
 
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import Primitives
@@ -67,21 +67,10 @@ LMStep: TypeAlias = Literal["auto", "full_step", "line_search"]
 _LMCycle: TypeAlias = Callable[..., tuple["Cartesian", float]]
 
 
-# Upper bound on the number of LSMR iterations per linear solve. The augmented
-# Levenberg-Marquardt system is ill-conditioned and rank-deficient, so LSMR converges
-# slowly: a representative 101M solve (a 10002 x 4239 system) needs ~3000 iterations to
-# reach its stopping tolerance, and every solve in that back-transformation hits this
-# cap rather than the tolerance.
-#
-# This is therefore not only a speed knob -- it sets the *accuracy floor* of the whole
-# back-transformation. Truncating the solve shortens every step, so the outer loop's
-# ``allclose(new, previous)`` test trips while the structure is still short of the
-# minimum, and no iteration budget recovers it. On the 101M benchmark the converged
-# structure is off by 1.3e-03 A at a cap of 200 and by 1.5e-04 A at 2000.
-#
-# 2000 buys that ~8x accuracy for ~2.8x the wall clock. It is a deliberate trade in
-# favour of accuracy: a caller who wants the old speed can still get it, but a caller
-# who wants a correct structure could not get one at 200. See BENCHMARKS.md.
+# Iteration budget for the ``lsmr`` fallback in :func:`_sparse_lstsq`, used only when
+# the direct factorisation fails on a singular system. It is not reached in the test
+# suite. LSMR converges slowly on these systems -- a representative 101M solve needs
+# ~3000 iterations -- so this is a bound on wasted effort, not a tolerance.
 _LSTSQ_MAX_ITER: Final = 2000
 
 # Bounds for the Levenberg-Marquardt damping ``λ``. It is shrunk after every
@@ -107,22 +96,48 @@ def _sparse_lstsq(
     """Solve the least-squares problem ``min_x ||A x - b||`` exploiting the sparsity
     of the (banded) Wilson B matrix.
 
-    Every internal coordinate involves at most four atoms, so each row of the Wilson
-    B matrix (and of the Levenberg-Marquardt augmented system) has at most twelve
-    nonzero entries irrespective of the system size. Converting to a compressed
-    sparse row representation and using :func:`scipy.sparse.linalg.lsmr` is therefore
-    considerably cheaper than a dense SVD-based solve for larger systems, while
-    converging to the same minimum-norm least-squares solution. Started from the
-    default ``x0 = 0``, LSMR yields the minimum-norm solution for the rank-deficient
-    (rigid-body null space) Gauss-Newton system, matching :func:`numpy.linalg.lstsq`.
+    Every internal coordinate involves at most four atoms, so each row of the Wilson B
+    matrix has at most twelve nonzero entries irrespective of the system size, and the
+    Levenberg-Marquardt system ``A = [W B; sqrt(lambda) D]`` inherits that.
 
-    LSMR is preferred over LSQR here because it is more robust on the ill-conditioned
-    augmented LM system and typically reaches an equivalent solution in fewer
-    iterations. The tolerances are ``1e-8`` (rather than machine precision): the outer
-    loop only converges to ``rtol=1e-5``/``atol=1e-8``, so solving each linear
-    subproblem to twelve digits is wasted work.
+    Solved through the normal equations ``(AᵀA) x = Aᵀb`` with a direct sparse LU
+    factorisation. ``AᵀA`` is the much smaller ``(3 n_atoms, 3 n_atoms)`` matrix, and
+    for a molecule it is the (sparse) connectivity graph squared, so the factorisation
+    barely fills in -- 2.2x on a 1413-atom protein. Forming and factorising it costs
+    less than a single ``lsmr`` sweep:
+
+    ==================  ========  =============================
+    solver              time      relative error vs the exact x
+    ==================  ========  =============================
+    ``lsmr``, 2000 it   0.219 s   7.9e-03
+    this                0.007 s   8.1e-08
+    ==================  ========  =============================
+
+    (101M, a 10002 x 4239 augmented system; see ``BENCHMARKS.md``.) The iterative
+    alternative is a poor fit here: the system is ill-conditioned and rank-deficient by
+    the rigid-body null space, so ``lsmr`` needs ~3000 iterations to converge on that
+    example and every solve used to terminate on its iteration cap rather than on its
+    tolerance -- which truncated every step and set an accuracy floor for the whole
+    back-transformation.
+
+    Normal equations square the condition number, which is the usual reason to avoid
+    them. That is tolerable here because the Levenberg-Marquardt damping regularises the
+    system, and it is measured rather than assumed: the residual above is five orders of
+    magnitude below the iterative solve it replaces. Should the factorisation fail
+    anyway -- a singular ``AᵀA`` at vanishing damping -- this falls back to ``lsmr``.
+
+    ``atol``/``btol`` are kept for the fallback and for signature compatibility.
     """
-    return lsmr(csr_array(A), b, atol=atol, btol=btol, maxiter=_LSTSQ_MAX_ITER)[0]
+    sparse_A = csr_array(A)
+    N = (sparse_A.T @ sparse_A).tocsc()
+    rhs = _as_vector(sparse_A.T @ b)
+    try:
+        return cast(Vector[np.float64], splu(N).solve(rhs))
+    except RuntimeError:
+        # Singular normal equations: no damping left to regularise the rigid-body
+        # null space. Fall back to the iterative solve, which handles rank deficiency
+        # by returning the minimum-norm solution.
+        return lsmr(sparse_A, b, atol=atol, btol=btol, maxiter=_LSTSQ_MAX_ITER)[0]
 
 
 def _dense_lstsq(A: Matrix, b: Vector) -> Vector[np.float64]:
@@ -495,7 +510,12 @@ def _full_step_cycle(
 
     new = step(start_λ)
     if decreases(new):
-        return new, start_λ
+        # Decay λ on an accepted step, as classic LM does. Returning ``start_λ``
+        # unchanged lets λ ratchet: one overshoot raises it and nothing ever brings it
+        # back, so every later step is over-damped and the residual only creeps. That
+        # was harmless while the linear solve was truncated (steps were too short to
+        # overshoot), but with an exact solve it stalled the outer loop completely.
+        return new, max(start_λ / reduction_factor, _LM_MIN_λ)
     λ = start_λ / reduction_factor
     new = step(λ)
     if decreases(new):

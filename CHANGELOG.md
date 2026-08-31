@@ -131,6 +131,33 @@
 
 ## Performance
 
+- The linear solve inside the RIC back-transformation now uses a direct sparse LU
+    factorisation of the damped normal equations instead of the iterative
+    `scipy.sparse.linalg.lsmr`. `AᵀA` is the much smaller `(3 n_atoms, 3 n_atoms)`
+    matrix and, being a molecular connectivity graph squared, barely fills in -- 2.2x on
+    a 1413-atom protein. It is both faster and far more accurate: on a single 101M solve,
+    0.007 s and a relative error of 8e-08 against 0.219 s and 7.9e-03 for `lsmr` capped
+    at 2000 iterations.
+
+    The iterative solve was a poor fit. The system is ill-conditioned and rank-deficient
+    by the rigid-body null space, so `lsmr` needed ~3000 iterations to converge and every
+    solve terminated on its iteration cap rather than its tolerance. That truncated every
+    step, which set an accuracy floor for the whole back-transformation -- the outer loop
+    stopped because short steps stopped moving the structure, not because it had reached
+    the minimum.
+
+    End to end on 101M (1413 atoms), back-transforming a perturbed structure: previously
+    2.9e-05 in 55 s, now **1.8e-13 in 0.2 s**. `lsmr` is kept as a fallback for a singular
+    factorisation; it is not reached in the test suite. See `BENCHMARKS.md`.
+
+- `_full_step_cycle` now decays the Levenberg-Marquardt damping after an accepted step,
+    as classic LM does. Returning the damping unchanged let it ratchet: one overshoot
+    raised it and nothing brought it back, so every later step was over-damped. This was
+    harmless while the linear solve was truncated -- the steps were too short to overshoot
+    -- but with an exact solve it stalled `lm_step="full_step"` completely (2000 outer
+    iterations without converging on the 101M benchmark; 0.2 s with the decay).
+
+
 - Made `Cartesian.get_primitives_idx` considerably faster.
 
 - The 0-based reindexed coordinate arrays are now computed once and cached across the

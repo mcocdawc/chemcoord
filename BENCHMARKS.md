@@ -48,7 +48,49 @@ At `_LSTSQ_MAX_ITER = 200`, `max_iter=1000`:
 | `lm_step="auto"` fallbacks in `default_args` | 6 | **0** |
 | `default_args` residual sum | 0.999780 | **0.975518** |
 
-## 3. The LSMR cap: accuracy, not speed
+## 3. Direct sparse factorisation (current solver)
+
+The linear solve is a direct sparse LU of the damped normal equations,
+`(AᵀA) x = Aᵀb`, where `A = [W B; sqrt(lambda) D]` is the augmented
+Levenberg-Marquardt system. `AᵀA` is the much smaller `(3 n_atoms, 3 n_atoms)` matrix
+and, being a molecular connectivity graph squared, barely fills in.
+
+One representative 101M solve (augmented system 10002 x 4239, 58885 nonzeros;
+normal equations 4239 x 4239, 113823 nonzeros, density 6.3e-03):
+
+| solver | time | relative error vs the exact solution |
+|---|---|---|
+| `lsmr`, cap 2000 | 0.219 s | 7.9e-03 |
+| **`splu` on the normal equations** | **0.007 s** (0.006 factorise + 0.001 solve) | **8.1e-08** |
+| CG + Jacobi on the normal equations | 0.405 s | did not converge in 5000 iterations |
+
+L+U has 248802 nonzeros, a fill-in of 2.2x.
+
+End to end, back-transforming a perturbed 101M structure, `max_iter=2000`:
+
+| perturbation | `lm_step` | outer iters | `\|dq\|` | `max\|dx\|` | time |
+|---|---|---|---|---|---|
+| 1% of atoms, 0.1 A | all three | < 100 | 1.67e-12 | 2.25e-10 | 0.2 s |
+| all atoms, 0.01 A | all three | < 100 | 1.81e-13 | 6.40e-14 | 0.2 s |
+| all atoms, 0.1 A | all three | < 100 | 1.88e-13 | 5.99e-13 | 0.2 s |
+
+For comparison, the same "all atoms, 0.01 A" case took 2.9e-05 in 55 s with `lsmr`, and
+2.3e-03 in 80 s before the dihedral fix. With an exact solve the three `lm_step`
+strategies become indistinguishable -- the step control only ever mattered because it
+was compensating for a truncated direction.
+
+Normal equations square the condition number, which is the usual reason to avoid them.
+It is tolerable here because the LM damping regularises the system, and it is measured
+rather than assumed: the error above is five orders of magnitude below the iterative
+solve it replaced. `lsmr` remains as a fallback for a singular factorisation; across the
+test suite it is never reached (0 fallbacks in 49 solves).
+
+`_full_step_cycle` also needed the classic LM damping decay after an accepted step.
+Without it, one overshoot raised the damping and nothing brought it back; with an exact
+solve that stalled `full_step` at 2000 outer iterations without converging. With the
+decay it matches the other two at 0.2 s.
+
+## 4. The iterative solve, and why it was replaced
 
 All runs converged to the same outer-loop tolerance.
 
@@ -85,7 +127,7 @@ solve in this benchmark terminates on `maxiter`, never on tolerance. Over those 
 iterations the residual barely moves (`|Ax-b|` 2.401e-03 -> 2.271e-03); it is the
 solution vector that changes (`|x|` 0.418 -> 0.455).
 
-## 4. Levers that did not work
+## 5. Levers that did not work
 
 Same case, `line_search`:
 
@@ -98,7 +140,7 @@ Same case, `line_search`:
 The ill-conditioning comes from the redundancy of the coordinate set, not from column
 scaling or from the damping schedule.
 
-## 5. `line_search` vs `full_step`
+## 6. `line_search` vs `full_step` (with the iterative solve)
 
 `line_search` is faster, but only by ~16% (1268 vs 1503 outer iterations). The step
 control cannot matter more than that while both strategies are handed the same
