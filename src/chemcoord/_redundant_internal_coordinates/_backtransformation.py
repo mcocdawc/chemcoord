@@ -504,10 +504,12 @@ def _full_step_cycle(
             # ‖Δx‖=8.0e-12 and it moves +3.2e-15). Shrinking the step therefore cannot
             # help -- both sides shrink with it.
             #
-            # The cause is upstream, in the model itself: the dihedral rows of the
-            # Wilson B matrix disagree with finite differences by ~100% (bonds and
-            # angles agree to 8 digits). See the TODO at ``_jit_dihedral_deriv``. Until
-            # that is fixed, this branch is reachable on any dihedral-rich system.
+            # Every observed occurrence of this had one cause: the dihedral rows of
+            # the Wilson B matrix were wrong, so the model the step is built from did
+            # not describe the dihedrals it was stepping along. With that fixed the
+            # branch is no longer reached anywhere in the test suite (it used to fire
+            # 6 times on ``default_args`` alone), but it is kept as a genuine
+            # give-up signal rather than removed.
             #
             # Raise rather than return: the step here is ``new ~ previous``, which the
             # outer loop's purely geometric ``allclose(new, previous)`` cannot tell

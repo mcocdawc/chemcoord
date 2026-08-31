@@ -18,6 +18,38 @@
     overshoot, which the outer loop misread as convergence and accepted a non-minimum.
     On the stepwise interpolation schedules this error compounded.
 
+- Fixed the dihedral rows of `Cartesian.get_Wilson_B` (and of the new
+    `get_sparse_Wilson_B`, which shares the same kernel). The derivatives for the two
+    *central* atoms of a dihedral were wrong: the two contributions that make up their
+    shared term were subtracted where they must be added. The two terminal atoms were
+    always correct, and the error was equal and opposite between the central pair, so
+    the rows still summed to zero and the defect survived the obvious
+    translational-invariance check.
+
+    On H-O-O-H the dihedral row was `[0, 0, +1.414, 0, 0, -2.828, 0, 0, 0, 0, 0, +1.414]`
+    where finite differences give the symmetric
+    `[0, 0, +1.414, 0, 0, -1.414, 0, 0, -1.414, 0, 0, +1.414]`. Against finite
+    differences with `h = 1e-7`, the relative error of the dihedral block drops from
+    0.92 to 2.0e-07 on `default_args_start` and from 0.31 to 1.8e-08 on
+    `cyclohexane_chair` -- the accuracy the bond and angle blocks always had.
+
+    The RIC back-transformation was solving a linearised model that was wrong for
+    dihedrals, so its predicted decrease often did not materialise. With the fix, the
+    Levenberg-Marquardt damping is no longer driven to its cap anywhere in the test
+    suite (previously 6 times on the `default_args` interpolation alone), and
+    `lm_step="auto"` no longer needs its fallback there. Every image of that
+    interpolation ends up with a lower weighted residual (by up to 5%, 2.4% in total),
+    and a perturbed MIL53 structure that previously failed to converge now recovers to
+    3e-07 A. The committed reference paths and the recorded residual baselines were
+    regenerated accordingly.
+
+- `Cartesian.get_ric` no longer returns `NaN` for an angle that is exactly linear. The
+    dot product of two unit vectors is in `[-1, 1]` mathematically, but rounding can put
+    a collinear pair a few ulp outside it, and `arccos` then yields `NaN`. `MIL53_beta`
+    has an angle at exactly 180 degrees, which the back-transformation only reproduces
+    closely enough to trigger this now that the Wilson B fix above lets it converge.
+    The same clamp was added to the angles used for linearity detection.
+
 - `Cartesian.get_inertia` now diagonalises the inertia tensor with `numpy.linalg.eigh`
     instead of `numpy.linalg.eig`. The inertia tensor is real symmetric, but the general
     LAPACK driver behind `eig` may -- depending on the BLAS/LAPACK implementation --
@@ -104,19 +136,6 @@
 - The 0-based reindexed coordinate arrays are now computed once and cached across the
     RIC optimization loop instead of being rebuilt on every iteration, which was the
     dominant cost of the back-transformation for large systems.
-
-
-## Known issues
-
-- The dihedral rows of `Cartesian.get_Wilson_B` disagree with finite differences. For a
-    random unit direction and `h = 1e-7`, bond and angle rows match to 8 digits
-    (relative error ~2e-8) while dihedral rows are off by ~100% (relative error 0.92 on
-    `default_args_start`, 0.31 on `cyclohexane_chair`), the worst row in sign and by a
-    factor of ten. This degrades the RIC back-transformation on dihedral-rich systems:
-    the damped step is built from a model that is wrong for dihedrals, so its predicted
-    decrease does not materialise and the Levenberg-Marquardt damping is driven to its
-    cap. See the `todo` on `_jit_dihedral_deriv` for the explanations already ruled out.
-    Believed to predate this release; not yet confirmed against v2.2.0.
 
 
 ## Infrastructure

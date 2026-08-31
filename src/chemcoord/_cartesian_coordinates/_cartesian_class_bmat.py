@@ -341,8 +341,11 @@ class CartesianBmat(CartesianCore):
                 normedu2 = _jit_normalize(last_three[0] - last_three[1])
                 normedv2 = _jit_normalize(last_three[2] - last_three[1])
 
-                angle1 = np.arccos(normedu1 @ normedv1)
-                angle2 = np.arccos(normedu2 @ normedv2)
+                # Clamped for the same reason as in ``_jit_x_to_ric``: a collinear
+                # pair can land a few ulp outside the ``arccos`` domain, and this
+                # function exists precisely to find near-linear angles.
+                angle1 = np.arccos(np.clip(normedu1 @ normedv1, -1.0, 1.0))
+                angle2 = np.arccos(np.clip(normedu2 @ normedv2, -1.0, 1.0))
 
                 if not (tol < angle1 * 180 / np.pi < (180 - tol)):
                     linear_idx.append((index, 1))
@@ -355,39 +358,9 @@ class CartesianBmat(CartesianCore):
 def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
     """Calculates Cartesian derivatives of a dihedral angle given 4 atom positions
 
-    .. todo::
-
-        These derivatives disagree with finite differences. Comparing
-        ``(get_ric(x + h*d) - get_ric(x)) / h`` against ``get_Wilson_B(x) @ d`` for a
-        random unit direction ``d`` and ``h = 1e-7`` (the difference wrapped with
-        ``minimize_dihedral``, so a 2*pi branch crossing does not pollute it)::
-
-                        default_args_start        cyclohexane_chair
-            bond        rel 2.7e-08 cos +1.0000   rel 4.5e-08 cos +1.0000
-            angle       rel 1.9e-08 cos +1.0000   rel 3.3e-08 cos +1.0000
-            dihedral    rel 9.2e-01 cos +0.4666   rel 3.1e-01 cos +0.9533
-
-        Bond and angle rows are exact to 8 digits; the dihedral rows are wrong by
-        ~100%, the worst one in sign and by a factor of ten (fd=+1.2513 vs B=-0.13299).
-
-        This degrades the RIC back-transformation on dihedral-rich systems: the damped
-        Levenberg-Marquardt step is built from a model that is wrong for dihedrals, so
-        its predicted decrease does not materialise, ``lambda`` is driven to
-        ``_LM_MAX_lambda`` and ``_full_step_cycle`` gives up (see the comment there).
-
-        Two explanations were tested and ruled out: it is not the ``minimize_dihedral``
-        wrap (the finite differences are wrapped and ``h`` is far too small for a branch
-        crossing), and it is not a row-ordering mismatch between ``_to_array_nobending``
-        and ``_to_array_full`` (both iterate ``_reindex_to_0`` in the same order; their
-        arrays differ only in the uninitialised ``np.empty`` padding of the unused slots
-        of bonds and angles). The most likely remaining cause is a sign-convention
-        disagreement between this function and the dihedral value computed by
-        ``_jit_x_to_ric``.
-
-        Believed to predate the sparse-B work, which only added
-        ``_jit_get_Wilson_B_coo`` around this same function -- not confirmed on
-        ``master``. Fixing it will change every converged structure and so needs its
-        own change, starting with that confirmation.
+    Verified against finite differences: for a random unit displacement and
+    ``h = 1e-7``, ``(get_ric(x + h*d) - get_ric(x)) / h`` agrees with ``B @ d`` to
+    ~2e-08 on the dihedral rows, the same accuracy the bond and angle rows have.
     """
 
     # vectors making up dihedral
@@ -411,22 +384,21 @@ def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
     if np.isclose(sinu, 0.0) or np.isclose(sinv, 0.0):
         raise ValueError("sinu or sinv is 0")
     else:
-        return np.stack(
-            (
-                cross(normedu, normedw) / (norm(u) * (sinu**2)),
-                -cross(normedu, normedw) / (norm(u) * (sinu**2))
-                + (
-                    ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-                    - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-                ),
-                cross(normedv, normedw) / (norm(v) * (sinv**2))
-                - (
-                    ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-                    - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-                ),
-                -cross(normedv, normedw) / (norm(v) * (sinv**2)),
-            )
+        # Terminal-atom derivatives.
+        s_first = cross(normedu, normedw) / (norm(u) * (sinu**2))
+        s_last = -cross(normedv, normedw) / (norm(v) * (sinv**2))
+        # The central two atoms share one term, which enters the second atom with a
+        # plus and the third with a minus; their derivatives are otherwise minus the
+        # terminal ones, so that the four rows sum to zero (a rigid translation cannot
+        # change a dihedral). Computed once because holding the two copies in sync by
+        # hand is what went wrong before: the ``normedv`` half used to be subtracted
+        # rather than added, which left both central rows wrong -- and wrong by equal
+        # and opposite amounts, so the rows still summed to zero and the error hid
+        # from that check. See the note in the docstring.
+        shared = ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2))) + (
+            (cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2))
         )
+        return np.stack((s_first, -s_first + shared, -s_last - shared, s_last))
 
 
 @njit(cache=True, nogil=True)
@@ -814,7 +786,17 @@ def _jit_x_to_ric(
             normedu = _jit_normalize(positions[0] - positions[1])
             normedv = _jit_normalize(positions[2] - positions[1])
 
-            internal_coordinates[i] = np.arccos(normedu @ normedv)
+            # The dot product of two unit vectors is in [-1, 1] mathematically, but
+            # rounding can push a collinear pair a few ulp outside it and ``arccos``
+            # then returns NaN. Exactly linear angles do occur (MIL53_beta has one at
+            # 180 degrees), so clamp rather than hope.
+            # (``np.clip`` would read better but numba cannot compile it on a scalar.)
+            cos_angle = float(normedu @ normedv)
+            if cos_angle > 1.0:
+                cos_angle = 1.0
+            elif cos_angle < -1.0:
+                cos_angle = -1.0
+            internal_coordinates[i] = np.arccos(cos_angle)
 
         # dihedrals
         elif _is_dihedral_array(coord):

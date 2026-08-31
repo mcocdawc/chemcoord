@@ -172,16 +172,21 @@ def test_Wilson_B():
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0],
             [0.0, 1.0, 0.0, -5.0e-01, -1.5, 0.0, 5.0e-01, 5.0e-01, 0.0, 0.0, 0.0, 0.0],
             [0.0, 0.0, 0.0, -5.0e-01, -5.0e-01, 0.0, 5.0e-01, 1.5, 0.0, 0.0, -1.0, 0.0],
+            # The dihedral row. The two central atoms used to carry -2.82842712 and
+            # 0.0; both are wrong -- a rigid rotation of the H-O-O-H torsion moves the
+            # two oxygens equally, so the row is antisymmetric about the central bond.
+            # Finite differences agree with the values below to 2e-10. See the bugfix
+            # note on ``_jit_dihedral_deriv``.
             [
                 0.0,
                 0.0,
                 1.41421356,
                 0.0,
                 0.0,
-                -2.82842712,
+                -1.41421356,
                 0.0,
                 0.0,
-                0.0,
+                -1.41421356,
                 0.0,
                 0.0,
                 1.41421356,
