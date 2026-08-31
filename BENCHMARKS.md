@@ -155,7 +155,35 @@ preconditioned iterative one. Fill-in stays at 2-3x at every size: `BᵀB` coupl
 atoms iff they share an internal coordinate, so its pattern is the molecular connectivity
 graph squared, which stays sparse and orders well.
 
+### Prior art
+
+The approach used here is **not new**. Farkas and Schlegel (2003) already solve the
+coordinate transformation with a screened sparse Cholesky decomposition, and discuss
+exactly this matrix:
+
+> "Paizs et al. pointed out that any set of redundant internal coordinates could be
+> constructed from their complete, but non-redundant, subsets as linear combinations.
+> They also concluded that this also applies to matrices `BᵀB` and `BBᵀ`, and their
+> rows. The full Cholesky factorization of positive semi-definite matrices results in
+> zero diagonal values. Because of consequent divisions by zero, the full Cholesky
+> factorization ... can only be applied to positive definite matrices. The zero (or in
+> practice very small) diagonal values, however, indicate rows that can be pro[duced as
+> linear combinations of others]."
+
+They handle the semi-definiteness by *screening*: a near-zero pivot marks a redundant
+row, which is dropped. The only difference here is that the Levenberg-Marquardt damping
+`lambda D^2` already makes the matrix positive definite, so no screening is needed and a
+plain `splu` suffices. The measurements above are therefore a confirmation on this
+codebase, not a new method.
+
 ### References
+
+- LSMR, the solver replaced: D. C.-L. Fong and M. Saunders, *LSMR: An iterative
+  algorithm for sparse least-squares problems*, SIAM J. Sci. Comput. **33**, 2950 (2011),
+  arXiv:1006.0758. It is built on Golub-Kahan bidiagonalization and is analytically
+  equivalent to MINRES applied to the normal equations `AᵀA x = Aᵀb` -- so the old code
+  was already solving these normal equations, just iteratively. Its predecessor is LSQR:
+  C. C. Paige and M. A. Saunders, ACM Trans. Math. Softw. **8**, 43 (1982).
 
 - P. Pulay and G. Fogarasi, *Geometry optimization in redundant internal coordinates*,
   J. Chem. Phys. **96**, 2856 (1992).
@@ -167,6 +195,11 @@ graph squared, which stays sparse and orders well.
 - S. R. Billeter, A. J. Turner, W. Thiel, *Linear scaling geometry optimisation and
   transition state search in hybrid delocalised internal coordinates*, Phys. Chem. Chem.
   Phys. **2**, 2177 (2000).
+- O. Farkas and H. B. Schlegel, *Geometry optimization methods for modeling large
+  molecules*, J. Mol. Struct. THEOCHEM **666-667**, 31 (2003). Screened sparse Cholesky
+  for the coordinate transformation -- the prior art for what this branch does.
+- B. Paizs, J. Baker, S. Suhai, P. Pulay, *Geometry optimization of large biomolecules in
+  redundant internal coordinates*, J. Chem. Phys. **113**, 6566 (2000).
 - K. Nemeth, O. Coulaud, G. Monard, J. G. Angyan, *Linear scaling algorithm for the
   coordinate transformation problem of molecular geometry optimization*, J. Chem. Phys.
   **113**, 5598 (2000); *An efficient method for the coordinate transformation problem of
