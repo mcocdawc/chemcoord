@@ -155,6 +155,44 @@ preconditioned iterative one. Fill-in stays at 2-3x at every size: `BᵀB` coupl
 atoms iff they share an internal coordinate, so its pattern is the molecular connectivity
 graph squared, which stays sparse and orders well.
 
+### Does the internal-coordinate weighting matter?
+
+`W` (bond 1.0, angle 0.1, dihedral 0.05, bending 0.01) only changes the answer when the
+target `q` is **not realizable** by any structure. If some `x` has `q(x) = q`, the
+residual is zero and every positive-definite `W` has that `x` as a minimiser; if no such
+`x` exists, `W` chooses which compromise you land on.
+
+Cyclohexane, same seed, solved with the default weights and with uniform weights:
+
+| target | structures differ by |
+|---|---|
+| realizable (`q = q(m1)`, a real structure) | 3.1e-15 A -- identical |
+| unrealizable (interpolation midpoint) | **3.1e-02 A** |
+
+For the unrealizable target, the weighted residual `‖W dq‖` of each converged structure,
+scored under both weightings:
+
+| | under default `W` | under uniform `W` |
+|---|---|---|
+| solved with default `W` | **2.794573e-02** | 3.055156e-01 |
+| solved with uniform `W` | 7.294749e-02 | **2.786186e-01** |
+
+Each is the better structure under its own weighting, by a factor of 2.6 in the default
+case. So the weights are a real modelling choice for interpolation -- "distort dihedrals
+rather than bonds" -- and a no-op for an ordinary back-transformation.
+
+This is also why Farkas and Schlegel have no weighting at all (the word does not appear
+in the paper): in geometry optimization the target is a quasi-Newton step from a real
+structure, so the problem is effectively consistent and `W` would not change the answer.
+chemcoord's interpolation poses a genuinely inconsistent problem, where it does.
+
+Note also that they factorise the *internal-space* matrix by preference -- "the
+factorization of `Gq = BBᵀ` is less demanding than the factorization of `Gx = BᵀB` in the
+screened Cholesky formalism" -- which is the opposite of the choice made here. Their
+`B` is unweighted and their screening drops the redundant rows; with the LM damping the
+Cartesian-side matrix is positive definite and needs neither. The two routes have not
+been compared head to head on the same code.
+
 ### Prior art
 
 The approach used here is **not new**. Farkas and Schlegel (2003) already solve the
