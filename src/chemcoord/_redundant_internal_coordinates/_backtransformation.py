@@ -41,6 +41,7 @@ from scipy.sparse.linalg import lsmr, splu
 from typing_extensions import assert_never
 
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import Primitives
+from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord.exceptions import ConvergenceError, LineSearchFailed
 from chemcoord.typing import Matrix, Vector
@@ -152,6 +153,38 @@ def _cached_coord_arrays(
     )
 
 
+def _align_and_check(
+    previous: Cartesian, new: Cartesian, rtol: float, atol: float
+) -> tuple[Cartesian, bool]:
+    """Superimpose ``new`` onto ``previous`` and report whether it moved.
+
+    Returns the aligned ``new``, which becomes the next iterate, and whether the two
+    are numerically identical.
+
+    Both outer loops need the same Kabsch fit for two purposes -- deciding convergence
+    and producing the next iterate -- and the obvious spelling does it twice::
+
+        converged = allclose(new, previous, align=True)   # aligns internally
+        previous = previous.align(new)[1]                 # aligns again
+
+    Aligning is the single most expensive operation in the loop, so it is done once
+    here. Comparing the coordinate arrays directly also skips the boolean
+    :class:`~pandas.DataFrame` that :func:`~chemcoord.xyz_functions.isclose` builds to
+    answer a yes/no question, and its atom-label check, which is vacuous here because
+    both structures come from the same molecule.
+    """
+    previous_centered, new_aligned = previous.align(new)
+    converged = bool(
+        np.isclose(
+            previous_centered.loc[:, COORDS].values,
+            new_aligned.loc[:, COORDS].values,
+            rtol=rtol,
+            atol=atol,
+        ).all()
+    )
+    return new_aligned, converged
+
+
 def backtransform(
     q: RedundantInternalCoordinates,
     start_guess: Cartesian,
@@ -185,10 +218,6 @@ def _gauss_newton_opt(
     rtol: float,
     atol: float,
 ) -> Cartesian:
-    from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
-        allclose,
-    )
-
     # The 0-based reindexed coordinate arrays depend only on the atom index order
     # and the primitive set, not on the coordinate values, so they are invariant
     # across the optimization. ``sort_index`` fixes the order that ``align`` (called
@@ -215,14 +244,7 @@ def _gauss_newton_opt(
 
         new = _linesearch(B, Δq.delta_q, Δx, q, previous, W, ric_coord_arr=full_arr)
 
-        converged = allclose(
-            new,
-            previous,
-            rtol=rtol,
-            atol=atol,
-            align=True,
-        )
-        previous = previous.align(new)[1]
+        previous, converged = _align_and_check(previous, new, rtol, atol)
 
     if i > 100:
         warn(f"The transformation to cartesian coordinates took {i} iterations.")
@@ -242,10 +264,6 @@ def _levenberg_marquardt_opt(
     reduction_factor: float = 10,
 ) -> Cartesian:
     """Outer Levenberg-Marquardt loop, stepping with :func:`_line_search_cycle`."""
-    from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
-        allclose,
-    )
-
     # The 0-based reindexed coordinate arrays depend only on the atom index order
     # and the primitive set, not on the coordinate values, so they are invariant
     # across the optimization. ``sort_index`` fixes the order that ``align`` (called
@@ -282,14 +300,7 @@ def _levenberg_marquardt_opt(
             ric_coord_arr=full_arr,
         )
 
-        converged = allclose(
-            new,
-            previous,
-            rtol=rtol,
-            atol=atol,
-            align=True,
-        )
-        previous = previous.align(new)[1]
+        previous, converged = _align_and_check(previous, new, rtol, atol)
 
     if i > 100:
         warn(f"The transformation to cartesian coordinates took {i} iterations.")
