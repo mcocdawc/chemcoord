@@ -1468,15 +1468,34 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             tuple:
         """
-        if mass_weight:
-            m1 = (self - self.get_barycenter()).sort_index()
-            m2 = (other - other.get_barycenter()).sort_index()
-        else:
-            m1 = (self - self.get_centroid()).sort_index()
-            m2 = (other - other.get_centroid()).sort_index()
+        # Done on the coordinate arrays rather than through Cartesian arithmetic.
+        # The obvious spelling -- ``(self - self.get_centroid()).sort_index()`` and
+        # then ``transf @ m2`` -- is four ``Cartesian.copy()`` calls (each of which
+        # deep-copies the metadata) and eight ``.loc`` gets and sets, for three
+        # subtractions and one 3x3 rotation. Here the frames are built once, at the
+        # end. ``align`` is the dominant cost of the RIC back-transformation loop.
+        m1, m2 = self.sort_index(), other.sort_index()
+        pos1 = m1.loc[:, COORDS].values
+        pos2 = m2.loc[m1.index, COORDS].values
 
-        m2 = cast(Self, m1.get_align_transf(m2, mass_weight, centered=True) @ m2)
-        return m1, m2
+        if mass_weight:
+            mass1 = m1.add_data("mass").loc[:, "mass"].values
+            mass2 = m2.add_data("mass").loc[:, "mass"].values
+            centroid1 = (pos1 * mass1[:, None]).sum(axis=0) / mass1.sum()
+            centroid2 = (pos2 * mass2[:, None]).sum(axis=0) / mass2.sum()
+        else:
+            mass1 = None
+            centroid1 = pos1.mean(axis=0)
+            centroid2 = pos2.mean(axis=0)
+
+        pos1 = pos1 - centroid1
+        pos2 = pos2 - centroid2
+        rotation = xyz_functions.get_kabsch_rotation(pos1, pos2, mass1)
+
+        out1, out2 = m1.copy(), m2.copy()
+        out1.loc[:, COORDS] = pos1
+        out2.loc[:, COORDS] = (rotation @ pos2.T).T
+        return out1, out2
 
     def get_align_transf(
         self, other: Self, mass_weight: bool = False, centered: bool = False
