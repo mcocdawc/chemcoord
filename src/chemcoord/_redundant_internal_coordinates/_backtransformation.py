@@ -9,18 +9,17 @@ the structure stops moving.
 
 This module holds that solve and nothing else:
 
-* :func:`backtransform` -- the entry point, dispatching on ``opt_alg``/``lm_step``.
+* :func:`backtransform` -- the entry point, dispatching on ``opt_alg``.
   :meth:`~chemcoord.RedundantInternalCoordinates.get_cartesian` validates its
   arguments, builds the weight matrix ``W`` and then calls this.
 * :func:`_gauss_newton_opt` and :func:`_levenberg_marquardt_opt` -- the two outer
   loops, both iterating until :func:`~chemcoord.xyz_functions.allclose` reports that
   the structure no longer changes.
-* :func:`_line_search_cycle` and :func:`_full_step_cycle` -- the two interchangeable
-  Levenberg-Marquardt inner steps (see :data:`LMStep`).
+* :func:`_line_search_cycle` -- one damped Levenberg-Marquardt step.
 * :func:`_linesearch` -- Armijo backtracking, shared by the Gauss-Newton loop and
   :func:`_line_search_cycle`.
-* :func:`_sparse_lstsq` / :func:`_dense_lstsq` and the array caching helpers -- the
-  linear algebra underneath.
+* :func:`_sparse_lstsq` and the array caching helpers -- the linear algebra
+  underneath.
 
 The functions take the :class:`~chemcoord.RedundantInternalCoordinates` whose ``q`` is
 being realised as their leading argument. They only read ``q.primitives_idx`` /
@@ -30,8 +29,7 @@ imported for typing only and this module has no runtime dependency on its own pa
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Final, Literal, cast
 from warnings import warn
 
 import numpy as np
@@ -54,19 +52,6 @@ if TYPE_CHECKING:
     )
 
 
-#: Which Levenberg-Marquardt step control the back-transformation uses.
-#: ``"full_step"`` is the seed-stable full damped step (``x(q(x)) == x``) that can stall
-#: on large, stiff systems; ``"line_search"`` is the robust backtracking variant that
-#: scales but is not seed-stable on flat/degenerate minima; ``"auto"`` (default) runs
-#: ``"full_step"`` first and switches to ``"line_search"`` if it has not converged after
-#: :data:`_LM_AUTO_SWITCH_ITER` iterations.
-LMStep: TypeAlias = Literal["auto", "full_step", "line_search"]
-
-#: Type of a single LM step cycle (``_line_search_cycle`` / ``_full_step_cycle``):
-#: it maps the current state to ``(new_cartesian, λ)``.
-_LMCycle: TypeAlias = Callable[..., tuple["Cartesian", float]]
-
-
 # Iteration budget for the ``lsmr`` fallback in :func:`_sparse_lstsq`, used only when
 # the direct factorisation fails on a singular system. It is not reached in the test
 # suite. LSMR converges slowly on these systems -- a representative 101M solve needs
@@ -81,13 +66,6 @@ _LSTSQ_MAX_ITER: Final = 2000
 _LM_MIN_λ: Final = 1e-14
 _LM_MAX_λ: Final = 1e6
 _LM_MAX_DAMPING_STEPS: Final = 30
-
-# In the default ``lm_step="auto"`` back-transformation the seed-stable full-step LM is
-# tried first and, if it has not converged after this many outer iterations, the solve
-# switches to the robust (line-search) variant. The full step stalls on large, stiff
-# systems (the residual only creeps down), so this bounds the wasted effort before the
-# fallback takes over.
-_LM_AUTO_SWITCH_ITER: Final = 50
 
 
 def _sparse_lstsq(
@@ -140,19 +118,6 @@ def _sparse_lstsq(
         return lsmr(sparse_A, b, atol=atol, btol=btol, maxiter=_LSTSQ_MAX_ITER)[0]
 
 
-def _dense_lstsq(A: Matrix, b: Vector) -> Vector[np.float64]:
-    """Dense counterpart of :func:`_sparse_lstsq`, kept so that the dense and sparse
-    back-transformations can be run side by side (see ``coord="RIC_dense"`` in
-    :func:`~chemcoord.xyz_functions.interpolate`).
-
-    Uses :func:`numpy.linalg.lstsq` with ``rcond=-1`` on the dense
-    :meth:`~chemcoord.Cartesian.get_Wilson_B` matrix. Started from the implicit zero
-    guess it returns the minimum-norm least-squares solution for the rank-deficient
-    (rigid-body null space) Gauss-Newton system, matching :func:`_sparse_lstsq`.
-    """
-    return np.linalg.lstsq(np.asarray(A), np.asarray(b), rcond=-1)[0]
-
-
 def _as_vector(v: Matrix | Vector) -> Vector[float64]:
     """Reassert the 1-D shape of an expression that is one-dimensional by construction.
 
@@ -196,52 +161,18 @@ def backtransform(
     rtol: float,
     atol: float,
     opt_alg: Literal["LM", "gauss"],
-    sparse: bool,
-    lm_step: LMStep,
 ) -> Cartesian:
     """Iterate to the cartesian structure whose internal coordinates are ``q.q``.
 
-    ``W`` is the (already assembled) diagonal weight matrix over ``q.primitives_idx``;
-    it is sparse when ``sparse`` is set, so that ``W @ B`` stays sparse. The returned
-    structure is *not* yet aligned onto ``start_guess`` -- that is done by the caller,
+    ``W`` is the (already assembled) sparse diagonal weight matrix over
+    ``q.primitives_idx``, so that ``W @ B`` stays sparse. The returned structure is
+    *not* yet aligned onto ``start_guess`` -- that is done by the caller,
     :meth:`~chemcoord.RedundantInternalCoordinates.get_cartesian`.
     """
     if opt_alg == "LM":
-
-        def run_lm(
-            step_cycle: _LMCycle, n_iter: int, start: Cartesian | None = None
-        ) -> Cartesian:
-            return _levenberg_marquardt_opt(
-                q,
-                start if start is not None else start_guess,
-                n_iter,
-                W,
-                rtol,
-                atol,
-                step_cycle,
-                sparse=sparse,
-            )
-
-        if lm_step == "full_step":
-            return run_lm(_full_step_cycle, max_iter)
-        elif lm_step == "line_search":
-            return run_lm(_line_search_cycle, max_iter)
-        elif lm_step == "auto":
-            # Prefer the seed-stable full step; fall back to the robust line search
-            # only if it has not converged within the bounded budget. The failed run's
-            # last iterate seeds the fallback, so its work is not thrown away.
-            try:
-                return run_lm(_full_step_cycle, min(max_iter, _LM_AUTO_SWITCH_ITER))
-            except ConvergenceError as e:
-                warn(
-                    f"The seed-stable full Levenberg-Marquardt step gave up ({e}); "
-                    "falling back to the line-search step, which is not seed-stable."
-                )
-                return run_lm(_line_search_cycle, max_iter, start=e.last)
-        else:
-            assert_never(lm_step)
+        return _levenberg_marquardt_opt(q, start_guess, max_iter, W, rtol, atol)
     elif opt_alg == "gauss":
-        return _gauss_newton_opt(q, start_guess, max_iter, W, rtol, atol, sparse=sparse)
+        return _gauss_newton_opt(q, start_guess, max_iter, W, rtol, atol)
     else:
         assert_never(opt_alg)
 
@@ -253,13 +184,10 @@ def _gauss_newton_opt(
     W: Matrix,
     rtol: float,
     atol: float,
-    sparse: bool = True,
 ) -> Cartesian:
     from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
         allclose,
     )
-
-    lstsq = _sparse_lstsq if sparse else _dense_lstsq
 
     # The 0-based reindexed coordinate arrays depend only on the atom index order
     # and the primitive set, not on the coordinate values, so they are invariant
@@ -276,14 +204,13 @@ def _gauss_newton_opt(
                 f"Not converged after {max_iter} iterations.", last=previous
             )
 
-        get_wilson_B = previous.get_sparse_Wilson_B if sparse else previous.get_Wilson_B
-        B: csr_array | Matrix = get_wilson_B(q.primitives_idx, coord_arr=nobending_arr)
+        B = previous.get_sparse_Wilson_B(q.primitives_idx, coord_arr=nobending_arr)
 
         q_current = previous.get_ric(q.primitives_idx, coord_arr=full_arr)
 
         Δq = (q - q_current).minimize_dihedral()
 
-        Δx_flat = lstsq(W @ B, _as_vector(W @ Δq.delta_q))
+        Δx_flat = _sparse_lstsq(W @ B, _as_vector(W @ Δq.delta_q))
         Δx = Δx_flat.reshape(len(previous), 3)
 
         new = _linesearch(B, Δq.delta_q, Δx, q, previous, W, ric_coord_arr=full_arr)
@@ -310,15 +237,11 @@ def _levenberg_marquardt_opt(
     W: Matrix,
     rtol: float,
     atol: float,
-    cycle: _LMCycle,
     start_λ: float = 1e-5,
     damping_growth: float = 1.5,
     reduction_factor: float = 10,
-    sparse: bool = True,
 ) -> Cartesian:
-    """Outer Levenberg-Marquardt loop. ``cycle`` supplies a single step and is
-    either :func:`_full_step_cycle` (seed-stable) or :func:`_line_search_cycle` (robust
-    line search); both share the same signature and ``(new, λ)`` return."""
+    """Outer Levenberg-Marquardt loop, stepping with :func:`_line_search_cycle`."""
     from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
         allclose,
     )
@@ -341,14 +264,13 @@ def _levenberg_marquardt_opt(
                 f"Not converged after {max_iter} iterations.", last=previous
             )
 
-        get_wilson_B = previous.get_sparse_Wilson_B if sparse else previous.get_Wilson_B
-        B: csr_array | Matrix = get_wilson_B(q.primitives_idx, coord_arr=nobending_arr)
+        B = previous.get_sparse_Wilson_B(q.primitives_idx, coord_arr=nobending_arr)
 
         q_current = previous.get_ric(q.primitives_idx, coord_arr=full_arr)
 
         Δq = (q - q_current).minimize_dihedral()
 
-        new, λ = cycle(
+        new, λ = _line_search_cycle(
             q,
             previous,
             B,
@@ -357,7 +279,6 @@ def _levenberg_marquardt_opt(
             damping_growth,
             reduction_factor,
             Δq,
-            sparse=sparse,
             ric_coord_arr=full_arr,
         )
 
@@ -379,13 +300,12 @@ def _levenberg_marquardt_opt(
 def _line_search_cycle(
     q: RedundantInternalCoordinates,
     previous: Cartesian,
-    B: csr_array | Matrix,
+    B: csr_array,
     W: Matrix,
     start_λ: float,
     damping_growth: float,
     reduction_factor: float,
     Δq: DeltaRedundantInternalCoordinates,
-    sparse: bool = True,
     ric_coord_arr: Matrix | None = None,
 ) -> tuple[Cartesian, float]:
     """Take a single damped Gauss-Newton (Levenberg-Marquardt) step.
@@ -406,9 +326,8 @@ def _line_search_cycle(
 
     see: https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm"""
 
-    # Invariants of the damped least-squares system, independent of λ. In the
-    # sparse path the Wilson B matrix is banded, so ``W @ B`` and the augmented
-    # system stay sparse.
+    # Invariants of the damped least-squares system, independent of λ. The Wilson B
+    # matrix is banded, so ``W @ B`` and the augmented system stay sparse.
     WB = W @ B
     W_Δq = W @ Δq.delta_q
     zeros = np.zeros(B.shape[1])
@@ -417,15 +336,10 @@ def _line_search_cycle(
     # right-hand side of the augmented system
     lm_vec = _as_vector(np.hstack((W_Δq, zeros)))
 
-    lstsq = _sparse_lstsq if sparse else _dense_lstsq
-
     λ = start_λ
     for _ in range(_LM_MAX_DAMPING_STEPS):
-        if sparse:
-            lm_mat = sparse_vstack((WB, diags_array(np.sqrt(λ) * damping_diag)))
-        else:
-            lm_mat = np.vstack((WB, np.diag(np.sqrt(λ) * damping_diag)))
-        Δx = lstsq(lm_mat, lm_vec)[: 3 * len(q.reference)]
+        lm_mat = sparse_vstack((WB, diags_array(np.sqrt(λ) * damping_diag)))
+        Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(q.reference)]
         Δx = Δx.reshape(len(previous), 3)
         try:
             new = _linesearch(
@@ -446,115 +360,8 @@ def _line_search_cycle(
     )
 
 
-def _full_step_cycle(
-    q: RedundantInternalCoordinates,
-    previous: Cartesian,
-    B: csr_array | Matrix,
-    W: Matrix,
-    start_λ: float,
-    damping_growth: float,
-    reduction_factor: float,
-    Δq: DeltaRedundantInternalCoordinates,
-    sparse: bool = True,
-    ric_coord_arr: Matrix | None = None,
-) -> tuple[Cartesian, float]:
-    """Take a single *full* damped Levenberg-Marquardt step (no line search).
-
-    This is the classic LM λ-adaptation: take the full damped step; if it decreases
-    the residual, accept it; otherwise grow ``λ`` (more damping -> a shorter, more
-    gradient-like step) and re-solve until it does. The step is never shortened by a
-    separate scalar, which is what distinguishes it from :func:`_line_search_cycle`;
-    it is prone to stalling on large, stiff systems where the residual only creeps
-    down, hence that alternative.
-
-    This is the step that chemcoord used before :func:`_line_search_cycle` existed;
-    apart from the bounded ``λ`` it is the same algorithm.
-
-    Same signature/return as :func:`_line_search_cycle`, so the two are
-    interchangeable as the ``cycle`` of :func:`_levenberg_marquardt_opt`.
-
-    Raises:
-        ~chemcoord.exceptions.ConvergenceError: If no ``λ`` up to :data:`_LM_MAX_λ`
-            decreases the residual. See the comment at that branch: the step it would
-            otherwise return is indistinguishable from convergence to the outer loop.
-            Under ``lm_step="auto"`` this is what triggers the fallback.
-
-    see: https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm"""
-    WB = W @ B
-    W_Δq = W @ Δq.delta_q
-    zeros = np.zeros(B.shape[1])
-    damping_diag = (B.T @ W @ W @ B).diagonal()
-    lstsq = _sparse_lstsq if sparse else _dense_lstsq
-    base = norm(_as_vector(W @ Δq.delta_q))
-    # right-hand side of the augmented system; independent of λ
-    lm_vec = _as_vector(np.hstack((W_Δq, zeros)))
-
-    def step(λ: float) -> Cartesian:
-        if sparse:
-            lm_mat = sparse_vstack((WB, diags_array(np.sqrt(λ) * damping_diag)))
-        else:
-            lm_mat = np.vstack((WB, np.diag(np.sqrt(λ) * damping_diag)))
-        Δx = lstsq(lm_mat, lm_vec)[: 3 * len(q.reference)]
-        return previous + Δx.reshape(len(previous), 3)
-
-    def decreases(cand: Cartesian) -> bool:
-        # Compared in the weighted norm, i.e. the objective the damped step minimises,
-        # and *after* ``minimize_dihedral``.
-        new_Δq = (
-            q
-            - cand.get_ric(
-                internal_coords_idx=q.primitives_idx, coord_arr=ric_coord_arr
-            )
-        ).minimize_dihedral()
-        return bool(norm(_as_vector(W @ new_Δq.delta_q)) <= base)
-
-    new = step(start_λ)
-    if decreases(new):
-        # Decay λ on an accepted step, as classic LM does. Returning ``start_λ``
-        # unchanged lets λ ratchet: one overshoot raises it and nothing ever brings it
-        # back, so every later step is over-damped and the residual only creeps. That
-        # was harmless while the linear solve was truncated (steps were too short to
-        # overshoot), but with an exact solve it stalled the outer loop completely.
-        return new, max(start_λ / reduction_factor, _LM_MIN_λ)
-    λ = start_λ / reduction_factor
-    new = step(λ)
-    if decreases(new):
-        return new, λ
-    λ *= damping_growth**2
-    while True:
-        new = step(λ)
-        if decreases(new):
-            return new, λ
-        if λ >= _LM_MAX_λ:
-            # No λ up to the cap decreases the residual, even though the linear model
-            # predicts a decrease at every one of them. Measured over the cap events in
-            # the test suite: the predicted gain and the actual change are both first
-            # order in ``‖Δx‖`` and have opposite signs (at λ=1, ‖Δx‖=1.1e-5 and the
-            # residual moves +2.8e-9 where the model predicts -3.2e-9; at λ=1e6,
-            # ‖Δx‖=8.0e-12 and it moves +3.2e-15). Shrinking the step therefore cannot
-            # help -- both sides shrink with it.
-            #
-            # Every observed occurrence of this had one cause: the dihedral rows of
-            # the Wilson B matrix were wrong, so the model the step is built from did
-            # not describe the dihedrals it was stepping along. With that fixed the
-            # branch is no longer reached anywhere in the test suite (it used to fire
-            # 6 times on ``default_args`` alone), but it is kept as a genuine
-            # give-up signal rather than removed.
-            #
-            # Raise rather than return: the step here is ``new ~ previous``, which the
-            # outer loop's purely geometric ``allclose(new, previous)`` cannot tell
-            # apart from convergence, so returning it reports a non-minimum as solved.
-            # Raising is also what makes ``lm_step="auto"`` fall back on this path
-            # instead of only on the iteration budget.
-            raise ConvergenceError(
-                f"No decreasing step at the maximal damping λ = {_LM_MAX_λ}.",
-                last=previous,
-            )
-        λ = min(λ * damping_growth, _LM_MAX_λ)
-
-
 def _linesearch(
-    B: csr_array | Matrix,
+    B: csr_array,
     Δq: Vector,
     Δx: Matrix,
     current: RedundantInternalCoordinates,

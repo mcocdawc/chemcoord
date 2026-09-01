@@ -186,9 +186,8 @@ def test_back_forth_with_bending():
 
 def test_back_forth_large_molecule():
     # 1A8I is a ~7500-atom protein. This exercises the RIC back-transformation at that
-    # scale and confirms it is seed-stable there (x(q(x)) == x): the default
-    # ``lm_step="auto"`` uses the seed-stable full LM step, which reproduces the
-    # structure it started from. (The molecule is read inside the test to keep it out
+    # scale and confirms it is seed-stable there (x(q(x)) == x): seeded with a converged
+    # structure it reproduces it. (The molecule is read inside the test to keep it out
     # of module-import time.)
     molecule = Cartesian.read_xyz(get_complete_path("1A8I.xyz"))
     idx = get_primitives_idx(molecule, molecule)

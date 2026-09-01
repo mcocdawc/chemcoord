@@ -36,8 +36,8 @@
     The RIC back-transformation was solving a linearised model that was wrong for
     dihedrals, so its predicted decrease often did not materialise. With the fix, the
     Levenberg-Marquardt damping is no longer driven to its cap anywhere in the test
-    suite (previously 6 times on the `default_args` interpolation alone), and
-    `lm_step="auto"` no longer needs its fallback there. Every image of that
+    suite (previously 6 times on the `default_args` interpolation alone). Every image
+    of that
     interpolation ends up with a lower weighted residual (by up to 5%, 2.4% in total),
     and a perturbed MIL53 structure that previously failed to converge now recovers to
     3e-07 A. The committed reference paths and the recorded residual baselines were
@@ -72,10 +72,9 @@
     `scipy.sparse.linalg.lsmr` instead of a dense SVD. This is numerically equivalent
     to the dense path but scales considerably better with system size.
 
-    It is selected with the new `sparse` argument (default `True`) of
-    `RedundantInternalCoordinates.get_cartesian` and `ric_functions.RIC_interpolate`,
-    and via `coord="RIC_sparse"` / `coord="RIC_dense"` in `xyz_functions.interpolate`,
-    where `coord="RIC"` is an alias for the sparse variant.
+    It is the only path: the dense linear algebra was kept for a while to compare the
+    two side by side, and was removed once the comparison was recorded in
+    `BENCHMARKS.md`. `Cartesian.get_Wilson_B` remains as public API.
 
 - A back-transformation that does not converge now raises
     `chemcoord.exceptions.ConvergenceError` instead of a bare `ValueError`, and a line
@@ -83,13 +82,10 @@
     `chemcoord.exceptions.LineSearchFailed`. Both still subclass `ValueError`, so
     existing handlers keep working.
 
-    Both Levenberg-Marquardt steps now raise instead of returning a structure they
-    know is not a solution: the line-search step once it has exhausted its damping
-    steps, and the full step once no damping up to the cap decreases the residual. The
-    outer loop only checks whether the structure stopped moving, so both returns were
-    previously reported as convergence at a non-minimum. Under `lm_step="auto"` the
-    full step's raise is also what makes the fallback to the line search fire on that
-    path, rather than only when the iteration budget runs out.
+    The Levenberg-Marquardt step now raises once it has exhausted its damping steps,
+    instead of returning a structure it knows is not a solution. The outer loop only
+    checks whether the structure stopped moving, so that return was previously
+    reported as convergence at a non-minimum.
 
     Conversely, `ric_functions.RIC_interpolate(schedule="auto")` now only falls through
     to the next scheduling strategy on a `ConvergenceError`. Previously it caught every
@@ -118,15 +114,18 @@
     assert on the weighted residuals as well as on the coordinates, so the residuals are
     tracked as a benchmark baseline for future work on the optimizer.
 
-- Added the `lm_step` argument (`"auto"`, `"full_step"`, `"line_search"`) to
-    `RedundantInternalCoordinates.get_cartesian`, `ric_functions.RIC_interpolate`, and
-    `xyz_functions.interpolate`. It selects the Levenberg-Marquardt step control of the
-    back-transformation: `"full_step"` is seed-stable but can stall on large, stiff
-    systems, `"line_search"` is robust but not seed-stable, and the default `"auto"`
-    runs the former and falls back to the latter if it has not converged in time. The
-    fallback warns -- the result is no longer seed-stable -- and is seeded with the last
-    iterate of the abandoned full-step run rather than restarting from the original
-    guess.
+
+## New features
+
+- The back-transformation has a single Levenberg-Marquardt step control. An earlier
+    `lm_step` argument (`"auto"`, `"full_step"`, `"line_search"`) let callers choose,
+    because the two variants behaved differently -- but only because the truncated
+    iterative solve handed both a poor search direction. With the direct solve they are
+    the same algorithm in practice: identical residuals and wall clock on MIL53 and
+    101M at sigma 0.01/0.1/0.3 and on every interpolation schedule. The backtracking
+    variant is kept, being the more robust of the two where they do differ (it
+    converges on a 101M seed perturbed by sigma = 0.5, where the full step gives up),
+    and the `lm_step` argument is gone. None of it was ever released.
 
 
 ## Performance
@@ -149,13 +148,6 @@
     End to end on 101M (1413 atoms), back-transforming a perturbed structure: previously
     2.9e-05 in 55 s, now **1.8e-13 in 0.2 s**. `lsmr` is kept as a fallback for a singular
     factorisation; it is not reached in the test suite. See `BENCHMARKS.md`.
-
-- `_full_step_cycle` now decays the Levenberg-Marquardt damping after an accepted step,
-    as classic LM does. Returning the damping unchanged let it ratchet: one overshoot
-    raised it and nothing brought it back, so every later step was over-damped. This was
-    harmless while the linear solve was truncated -- the steps were too short to overshoot
-    -- but with an exact solve it stalled `lm_step="full_step"` completely (2000 outer
-    iterations without converging on the 101M benchmark; 0.2 s with the decay).
 
 
 - Made `Cartesian.get_primitives_idx` considerably faster.

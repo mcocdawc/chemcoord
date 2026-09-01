@@ -90,7 +90,35 @@ Without it, one overshoot raised the damping and nothing brought it back; with a
 solve that stalled `full_step` at 2000 outer iterations without converging. With the
 decay it matches the other two at 0.2 s.
 
-## 4. Comparison with published back-transformation algorithms
+## 4. Why there is only one Levenberg-Marquardt step
+
+The back-transformation used to expose `lm_step` (`"full_step"`, `"line_search"`,
+`"auto"`). The two variants existed because the truncated iterative solve handed both a
+poor search direction, and each compensated differently. With the direct solve they are
+the same algorithm in practice:
+
+| workload | `full_step` | `line_search` |
+|---|---|---|
+| MIL53 + 101M, sigma 0.01 / 0.1 / 0.3, two seeds each | identical `\|dq\|` to every digit, identical wall clock | |
+| cyclohexane `independent` | sum `\|W dq\|` = 0.354177 | 0.354177 |
+| cyclohexane `from_start` | 0.361596 | 0.361596 |
+| `default_args` interpolation | 0.975518 | 0.975518 |
+| **101M, sigma = 0.5** | **raises `ConvergenceError`** | **converges** |
+
+So the backtracking variant is never worse and is more robust at the hard end. It is
+also the cheaper one to keep: `_linesearch` has to stay regardless, because
+`_gauss_newton_opt` (`opt_alg="gauss"`) uses it, whereas keeping the full step would
+mean carrying both the Armijo helper and a separate lambda-adaptation. `lm_step` was
+removed along with `_full_step_cycle`, `_LMCycle`, `LMStep` and the auto-fallback,
+together with the `sparse` switch and the `"RIC_sparse"`/`"RIC_dense"` spellings, for a
+net -250 lines across the three modules.
+
+Worth recording because it nearly went the other way: the full step was *expected* to
+fail on interpolation, where the target `q` is unrealizable and no step can reduce the
+residual at the minimum. It does not -- the three interpolation rows above are identical.
+That reasoning would have picked the same variant for the wrong reason.
+
+## 5. Comparison with published back-transformation algorithms
 
 **Caveat on faithfulness.** These are the *linear-solve kernels* of the published
 methods, not the published algorithms. The divide-and-conquer fragmentation of Billeter,
@@ -287,7 +315,7 @@ codebase, not a new method.
   **113**, 5598 (2000); *An efficient method for the coordinate transformation problem of
   massively three-dimensional networks*, J. Chem. Phys. **114**, 9747 (2001).
 
-## 5. Stability against increasingly perturbed seeds
+## 6. Stability against increasingly perturbed seeds
 
 Every atom displaced by a clipped Gaussian of width sigma, then back-transformed from
 that seed towards the *original* structure's internals. `max|dx|` is measured against the
@@ -338,7 +366,7 @@ The one hard failure, at sigma = 1.0 on 101M, is an `UndefinedDihedral` raised b
 coordinate definition when the perturbation makes three atoms collinear -- a property of
 the internal coordinate set, not of the back-transformation.
 
-## 6. The iterative solve, and why it was replaced
+## 7. The iterative solve, and why it was replaced
 
 All runs converged to the same outer-loop tolerance.
 
@@ -375,7 +403,7 @@ solve in this benchmark terminates on `maxiter`, never on tolerance. Over those 
 iterations the residual barely moves (`|Ax-b|` 2.401e-03 -> 2.271e-03); it is the
 solution vector that changes (`|x|` 0.418 -> 0.455).
 
-## 7. Levers that did not work
+## 8. Levers that did not work
 
 Same case, `line_search`:
 
@@ -388,7 +416,7 @@ Same case, `line_search`:
 The ill-conditioning comes from the redundancy of the coordinate set, not from column
 scaling or from the damping schedule.
 
-## 8. `line_search` vs `full_step` (with the iterative solve)
+## 9. `line_search` vs `full_step` (with the iterative solve)
 
 `line_search` is faster, but only by ~16% (1268 vs 1503 outer iterations). The step
 control cannot matter more than that while both strategies are handed the same

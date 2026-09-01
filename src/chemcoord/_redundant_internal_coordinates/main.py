@@ -17,7 +17,6 @@ from chemcoord._cartesian_coordinates._cartesian_class_bmat import (
 )
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
 from chemcoord._redundant_internal_coordinates._backtransformation import (
-    LMStep,
     backtransform,
 )
 from chemcoord.configuration import settings
@@ -148,8 +147,6 @@ class RedundantInternalCoordinates:
         opt_alg: Literal["LM", "gauss"] = "LM",
         weights: Vector[np.floating] | Sequence[float] | None = None,
         default_weights: DefaultWeights | Mapping[str, float] | None = None,
-        sparse: bool = True,
-        lm_step: LMStep = "auto",
     ) -> Cartesian:
         """Finds the closest physical structure to self. Uses an iterative algorithm
         with Wilson's B matrix to converge to said structure.
@@ -170,21 +167,6 @@ class RedundantInternalCoordinates:
             default_weights: default
                 {"bond": 1.0, "angle": 0.1, "dihedral": 0.05, "bending": 0.01},
                 the weights which each type of coordinate default to
-            sparse: default ``True``, whether to use the sparse linear-algebra
-                back-transformation (sparse Wilson B matrix and ``lsmr``) or the dense
-                one (dense Wilson B matrix and :func:`numpy.linalg.lstsq`). Both paths
-                are numerically equivalent; the sparse one scales better with system
-                size. Exposed mainly to compare the two side by side.
-            lm_step: default ``"auto"``, the Levenberg-Marquardt step control (only used
-                when ``opt_alg="LM"``). ``"full_step"`` takes the full damped step and
-                adapts the damping -- it is *seed-stable* (``x(q(x)) == x``) but can
-                stall on large, stiff systems. ``"line_search"`` shortens an overshoot
-                by backtracking -- it scales to large systems but is not seed-stable on
-                flat/degenerate minima. ``"auto"`` runs ``"full_step"`` first and, if it
-                has not converged within a bounded number of iterations, warns and
-                continues the solve with ``"line_search"``, seeded with the last
-                iterate -- giving seed-stability whenever the full step converges and
-                robustness otherwise.
         Returns:
             Closest physical structure to self, aligned to start_guess
 
@@ -217,10 +199,9 @@ class RedundantInternalCoordinates:
         else:
             assert weights is not None
 
-        # W is diagonal. In the sparse path keeping it sparse lets ``W @ B`` stay sparse
-        # throughout the weighted least-squares solve (the Wilson B matrix is banded);
-        # in the dense path W must be a dense diagonal so ``W @ B`` stays a dense array.
-        W = diags_array(np.asarray(weights)) if sparse else np.diag(np.asarray(weights))
+        # W is diagonal, and kept sparse so that ``W @ B`` stays sparse throughout the
+        # weighted least-squares solve (the Wilson B matrix is banded).
+        W = diags_array(np.asarray(weights))
 
         new = backtransform(
             self,
@@ -230,8 +211,6 @@ class RedundantInternalCoordinates:
             rtol=rtol,
             atol=atol,
             opt_alg=opt_alg,
-            sparse=sparse,
-            lm_step=lm_step,
         )
         return start_guess.align(new)[1] + start_guess.get_centroid()
 
@@ -452,8 +431,6 @@ def RIC_interpolate(
     atol: float = 1e-8,
     weights: Vector[np.floating] | Sequence[float] | None = None,
     default_weights: DefaultWeights | Mapping[str, float] | None = None,
-    sparse: bool = True,
-    lm_step: LMStep = "auto",
 ) -> list[Cartesian]:
     """Generates an N-image interpolation between start and end.
 
@@ -493,15 +470,6 @@ def RIC_interpolate(
         default_weights: default
             {"bond": 1.0, "angle": 0.1, "dihedral": 0.05, "bending": 0.01},
             the weights which each type of coordinate default to
-        sparse: default ``True``, whether the back-transformation of each image via
-            :meth:`~.RedundantInternalCoordinates.get_cartesian` uses the sparse
-            (sparse Wilson B + ``lsmr``) or dense (dense Wilson B +
-            :func:`numpy.linalg.lstsq`) linear algebra. Both are numerically equivalent;
-            the sparse path scales better. Mainly useful for comparing the two.
-        lm_step: default ``"auto"``, the Levenberg-Marquardt step control passed to
-            :meth:`~.RedundantInternalCoordinates.get_cartesian` for each image. See
-            there; ``"auto"`` prefers the seed-stable full step and falls back to the
-            robust line search when it does not converge.
 
     Returns:
         The generated path as list of :class:`~chemcoord.Cartesian`.
@@ -523,8 +491,6 @@ def RIC_interpolate(
             rtol=rtol,
             atol=atol,
             opt_alg=opt_alg,
-            sparse=sparse,
-            lm_step=lm_step,
         )
 
     if schedule == "independent":
@@ -595,8 +561,6 @@ def RIC_interpolate(
                 schedule=auto_schedule,
                 rtol=rtol,
                 atol=atol,
-                sparse=sparse,
-                lm_step=lm_step,
             )
 
         strategies: Final[Sequence[AutoSchedules]] = [
