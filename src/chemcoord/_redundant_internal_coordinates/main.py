@@ -494,6 +494,10 @@ def RIC_interpolate(
         )
 
     if schedule == "independent":
+        # A single structure is repeated N times by ``_get_start_guess``, which is not a
+        # path and so cannot say which way round a dihedral travels; keep the shortest
+        # arc for it.
+        seeds_are_a_path = not isinstance(seeds, Cartesian)
         seeds = _get_start_guess(start, end, N, seeds)
 
         if coord_idx is None:
@@ -501,7 +505,9 @@ def RIC_interpolate(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
 
-        return _RIC_interpolate_indpdt(start, end, N, coord_idx, to_cart, seeds)
+        return _RIC_interpolate_indpdt(
+            start, end, N, coord_idx, to_cart, seeds, seeds_are_a_path
+        )
 
     elif schedule == "from_both":
         return _RIC_interpolate_from_both(
@@ -587,6 +593,43 @@ RIC_ToCartesian: TypeAlias = Callable[
 ]
 
 
+def _match_dihedral_branch(
+    Δq: DeltaRedundantInternalCoordinates,
+    coord_idx: Primitives,
+    seeds: Sequence[Cartesian],
+) -> DeltaRedundantInternalCoordinates:
+    """Put each dihedral of ``Δq`` on the 2π branch that ``seeds`` travels along.
+
+    A dihedral difference is only defined modulo 2π, and ``minimize_dihedral`` resolves
+    it to the shortest arc, independently for each coordinate. That is not always the
+    arc the molecule travels. For two structures close to being mirror images the
+    dihedrals flip sign, and for some of them the shortest arc runs the wrong way round;
+    interpolating along it asks for coordinate sets that no structure realises, so the
+    images stick near whichever endpoint they started from and the path jumps between
+    the two branches somewhere in the middle.
+
+    The seed path is a continuous motion between the same endpoints -- a Z-matrix
+    interpolation unless the caller supplied one -- so the change it accumulates in each
+    dihedral says which arc is meant. It has to be a path to say anything at all, which
+    is why the caller keeps the shortest arc when handed a single structure instead. In
+    that case this would in fact be a no-op -- ``minimize_dihedral`` leaves the shortest
+    arc in ``(-π, π]`` and no multiple of 2π brings such a value nearer to a seed that
+    travels nowhere -- but the guarantee should not rest on that.
+    """
+    dihedrals = [i for i, coord in enumerate(coord_idx) if _is_dihedral(coord)]
+    if not dihedrals:
+        return Δq
+
+    trajectory = np.array([seed.get_ric(coord_idx).q for seed in seeds])[:, dihedrals]
+    travelled = np.unwrap(trajectory, axis=0)[-1] - trajectory[0]
+    shortest = Δq.delta_q[dihedrals]
+
+    Δq.delta_q[dihedrals] = shortest + 2 * np.pi * np.round(
+        (travelled - shortest) / (2 * np.pi)
+    )
+    return Δq
+
+
 def _RIC_interpolate_indpdt(
     start: Cartesian,
     end: Cartesian,
@@ -594,9 +637,12 @@ def _RIC_interpolate_indpdt(
     coord_idx: Primitives,
     to_cart: RIC_ToCartesian,
     seeds: Sequence[Cartesian],
+    seeds_are_a_path: bool,
 ) -> list[Cartesian]:
     q1, q2 = start.get_ric(coord_idx), end.get_ric(coord_idx)
     Δq = (q2 - q1).minimize_dihedral()
+    if seeds_are_a_path:
+        Δq = _match_dihedral_branch(Δq, coord_idx, seeds)
     Qs = [q1 + i * Δq / (N - 1) for i in range(N)]
 
     return Parallel(n_jobs=settings.defaults.n_worker)(

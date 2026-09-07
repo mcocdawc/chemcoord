@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pytest
 
 from chemcoord import Cartesian
 from chemcoord._redundant_internal_coordinates.main import (
@@ -9,7 +10,7 @@ from chemcoord._redundant_internal_coordinates.main import (
     get_primitives_idx,
 )
 from chemcoord.typing import AtomIdx
-from chemcoord.xyz_functions import allclose, read_multiple_xyz
+from chemcoord.xyz_functions import allclose, interpolate, read_multiple_xyz
 
 
 def get_script_path():
@@ -265,3 +266,177 @@ def test_documented_default_weights_mapping():
 
     for with_weights, without in zip(path, reference):
         assert allclose(with_weights, without, atol=1e-6, align=True)
+
+
+def test_back_forth_shuffled_start_guess():
+    """A ``start_guess`` whose index is not sorted must give the same answer.
+
+    Nothing else passes one. The loop sorts it once, caches the reindexed ``coord_arr``
+    arrays against that order, and relies on every later operation preserving it.
+    """
+    idx = get_primitives_idx(molecule4, molecule4)
+    q = molecule4.get_ric(internal_coords_idx=idx)
+    weights = weight_vector(idx)
+
+    shuffled = molecule4.loc[np.random.RandomState(42).permutation(molecule4.index)]
+    assert not (shuffled.index == sorted(shuffled.index)).all()
+
+    from_shuffled = q.get_cartesian(start_guess=shuffled)
+    from_sorted = q.get_cartesian(start_guess=molecule4.sort_index())
+
+    assert allclose(from_shuffled, molecule4, align=True)
+    assert weighted_residual(q, from_shuffled, idx, weights) <= ROUND_TRIP_RESIDUAL
+    assert allclose(from_shuffled, from_sorted, align=True)
+
+
+def test_back_forth_singular_normal_equations():
+    """Peroxide is the case that makes the direct sparse factorisation fail.
+
+    ``_sparse_lstsq`` solves through the normal equations ``AᵀA x = Aᵀb``, and for a
+    molecule this small ``AᵀA`` is singular enough that SuperLU hits an *exactly* zero
+    pivot and raises. H-O-O-H has 12 cartesian degrees of freedom against 6 primitives
+    (3 bonds, 2 angles, 1 dihedral), so the rigid-body null space is half the solve
+    space. That fraction is ``6 / 3N``, i.e. it shrinks as ``2 / N``, which is why only
+    the smallest molecules reach it. Whether the pivot comes out *exactly* zero is
+    geometry dependent even at this size -- ammonia has the same 50% and factorises
+    fine -- so the ``lsmr`` fallback cannot be replaced by a size check.
+
+    Without that fallback, this raises ``RuntimeError: Factor is exactly singular``.
+    """
+    idx = get_primitives_idx(molecule3, molecule3)
+    q = molecule3.get_ric(internal_coords_idx=idx)
+    perturbed = molecule3 + np.random.default_rng(1).normal(
+        0, 0.05, (len(molecule3), 3)
+    )
+
+    out = q.get_cartesian(start_guess=perturbed, opt_alg="LM")
+
+    assert allclose(out, molecule3, align=True)
+    assert weighted_residual(q, out, idx, weight_vector(idx)) <= ROUND_TRIP_RESIDUAL
+
+
+@pytest.mark.parametrize("molecule", [molecule1, molecule4])
+def test_back_forth_gauss(molecule):
+    """``opt_alg="gauss"`` is public API and was otherwise never exercised.
+
+    Unlike the Levenberg-Marquardt path it adds no damping, so its ``AᵀA`` is
+    ``Bᵀ W² B`` -- singular by the six rigid-body motions at *every* iteration. That is
+    harmless, because the right-hand side ``Bᵀ W² Δq`` lies in the row space of ``B``
+    and is therefore orthogonal to that null space: the system stays consistent, and
+    two solutions differ only by a rigid-body motion, which changes no internal
+    coordinate and is removed by the per-iteration superposition anyway.
+    """
+    idx = get_primitives_idx(molecule, molecule)
+    q = molecule.get_ric(internal_coords_idx=idx)
+    perturbed = molecule + np.random.default_rng(2).normal(0, 0.05, (len(molecule), 3))
+
+    out = q.get_cartesian(start_guess=perturbed, opt_alg="gauss")
+
+    assert allclose(out, molecule, align=True)
+    assert weighted_residual(q, out, idx, weight_vector(idx)) <= ROUND_TRIP_RESIDUAL
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="undamped Gauss-Newton stalls on the 180 deg "
+    "dihedral branch; see the docstring",
+)
+def test_back_forth_gauss_on_a_flat_dihedral():
+    """Known limitation: ``opt_alg="gauss"`` does not converge on planar peroxide.
+
+    The committed geometry is planar, so its dihedral is exactly 180 deg -- sitting on
+    the 2*pi branch that ``minimize_dihedral`` wraps at, where the coordinate is at its
+    worst conditioned. Levenberg-Marquardt converges for every perturbation below; the
+    undamped Gauss-Newton step has nothing to regularise it and stalls, sometimes
+    *worse* for a smaller perturbation, which is the signature of the outer loop
+    stopping because the structure stopped moving rather than because it found the
+    minimum.
+
+    Several perturbations, because which of them stalls is decided at the 1e-15 level:
+    reordering the primitives is enough to flip any single one. Asserting that *all*
+    converge keeps the xfail stable while still reporting a genuine fix.
+
+    Strict, so that fixing it is noticed rather than silently absorbed. The cause is
+    the step control, not the sparse solver.
+    """
+    idx = get_primitives_idx(molecule3, molecule3)
+    q = molecule3.get_ric(internal_coords_idx=idx)
+    weights = weight_vector(idx)
+
+    for sigma in (0.01, 0.05, 0.1):
+        perturbed = molecule3 + np.random.default_rng(1).normal(
+            0, sigma, (len(molecule3), 3)
+        )
+        out = q.get_cartesian(start_guess=perturbed, opt_alg="gauss")
+        assert weighted_residual(q, out, idx, weights) <= ROUND_TRIP_RESIDUAL
+
+
+def test_get_ric_is_independent_of_row_order():
+    """``q[i]`` must belong to ``primitives_idx[i]`` whatever order the rows are in.
+
+    The row order of ``q`` comes from ``_reindex_to_0``, while ``primitives_idx`` keeps
+    the order the caller passed. Ordering the former by the reindexed labels makes the
+    two agree only for a frame whose rows are already sorted, and silently attaches
+    every value to the wrong coordinate for any other -- including the frames that
+    ``interpolate(..., coord="zmat")`` returns, which are the default RIC seeds.
+    """
+    idx = get_primitives_idx(molecule3, molecule3)
+    reference = molecule3.get_ric(internal_coords_idx=idx)
+
+    for seed in (0, 1, 2):
+        shuffled = molecule3.loc[
+            np.random.RandomState(seed).permutation(molecule3.index)
+        ]
+        assert list(shuffled.index) != list(molecule3.index)
+
+        q = shuffled.get_ric(internal_coords_idx=idx)
+
+        assert list(q.primitives_idx) == list(reference.primitives_idx)
+        assert np.allclose(q.q, reference.q, atol=1e-10)
+
+
+def test_get_ric_on_a_zmat_interpolated_frame():
+    """The zmat interpolation orders its rows by the construction table, not by label.
+
+    Those frames are what ``_get_start_guess`` hands the back-transformation, so a
+    row-order dependence in ``get_ric`` is reachable through the public interpolation.
+    """
+    seed = interpolate(molecule3, molecule3, 3, coord="zmat")[0]
+    assert list(seed.index) != sorted(seed.index)
+    assert allclose(seed, molecule3, align=True, atol=1e-8)
+
+    idx = get_primitives_idx(molecule3, molecule3)
+
+    assert np.allclose(
+        seed.get_ric(internal_coords_idx=idx).q,
+        molecule3.get_ric(internal_coords_idx=idx).q,
+        atol=1e-8,
+    )
+
+
+def test_interpolate_between_near_mirror_images():
+    """The path between two near mirror images must not jump.
+
+    MeOH/Furan differs between these two structures almost only in the dihedrals, which
+    flip sign. ``minimize_dihedral`` resolves each of them to the shortest arc
+    independently, and for one coordinate that is the wrong way round: the interpolated
+    targets are then unrealisable, the images stick near whichever endpoint they came
+    from, and the path steps 2.5 A in the middle while every other step is 0.15 A.
+    Refining does not help -- the jump is the same at N = 11, 21 and 41 -- because the
+    target path itself is discontinuous.
+    """
+    start = Cartesian.read_xyz(get_complete_path("MeOH_Furan_start.xyz"))
+    end = Cartesian.read_xyz(get_complete_path("MeOH_Furan_end.xyz"))
+    N = 11
+
+    path = RIC_interpolate(start, end, N, schedule="independent")
+
+    steps = [
+        np.linalg.norm(
+            (b - a).loc[:, ["x", "y", "z"]].values,
+            axis=1,
+        ).max()
+        for a, b in (x.align(y) for x, y in zip(path[:-1], path[1:]))
+    ]
+    assert max(steps) <= 2 * np.median(steps)
+    assert allclose(path[-1], end, align=True, atol=1e-3)

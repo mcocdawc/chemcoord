@@ -35,14 +35,16 @@ from warnings import warn
 import numpy as np
 from numpy import float64
 from numpy.linalg import norm
-from scipy.sparse import csr_array, diags_array
+from scipy.sparse import csc_array, csr_array, diags_array
 from scipy.sparse import vstack as sparse_vstack
+from scipy.sparse.csgraph import reverse_cuthill_mckee
 from scipy.sparse.linalg import lsmr, splu
 from typing_extensions import assert_never
 
 from chemcoord._cartesian_coordinates._cartesian_class_bmat import Primitives
 from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import COORDS
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
+from chemcoord._cartesian_coordinates.xyz_functions import get_kabsch_rotation
 from chemcoord.exceptions import ConvergenceError, LineSearchFailed
 from chemcoord.typing import Matrix, Vector
 
@@ -53,10 +55,12 @@ if TYPE_CHECKING:
     )
 
 
-# Iteration budget for the ``lsmr`` fallback in :func:`_sparse_lstsq`, used only when
-# the direct factorisation fails on a singular system. It is not reached in the test
-# suite. LSMR converges slowly on these systems -- a representative 101M solve needs
-# ~3000 iterations -- so this is a bound on wasted effort, not a tolerance.
+# Iteration budget for the ``lsmr`` fallback in :func:`_sparse_lstsq`, used when the
+# direct factorisation fails on a singular system -- which happens for molecules small
+# enough that the rigid-body null space is a large fraction of the solve space; see
+# :func:`_sparse_lstsq`. LSMR converges slowly on these systems -- a representative
+# 101M solve needs ~3000 iterations -- so this is a bound on wasted effort, not a
+# tolerance.
 _LSTSQ_MAX_ITER: Final = 2000
 
 # Bounds for the Levenberg-Marquardt damping ``λ``. It is shrunk after every
@@ -70,7 +74,11 @@ _LM_MAX_DAMPING_STEPS: Final = 30
 
 
 def _sparse_lstsq(
-    A: Matrix, b: Vector, atol: float = 1e-8, btol: float = 1e-8
+    A: Matrix,
+    b: Vector,
+    perm: Vector[np.int32] | None = None,
+    atol: float = 1e-8,
+    btol: float = 1e-8,
 ) -> Vector[np.float64]:
     """Solve the least-squares problem ``min_x ||A x - b||`` exploiting the sparsity
     of the (banded) Wilson B matrix.
@@ -81,9 +89,9 @@ def _sparse_lstsq(
 
     Solved through the normal equations ``(AᵀA) x = Aᵀb`` with a direct sparse LU
     factorisation. ``AᵀA`` is the much smaller ``(3 n_atoms, 3 n_atoms)`` matrix, and
-    for a molecule it is the (sparse) connectivity graph squared, so the factorisation
-    barely fills in -- 2.2x on a 1413-atom protein. Forming and factorising it costs
-    less than a single ``lsmr`` sweep:
+    for a molecule it is the (sparse) connectivity graph squared, so under the ordering
+    from :func:`_fill_reducing_permutation` it barely fills in -- 1.35x on a 1413-atom
+    protein. Forming and factorising it costs less than a single ``lsmr`` sweep:
 
     ==================  ========  =============================
     solver              time      relative error vs the exact x
@@ -102,20 +110,47 @@ def _sparse_lstsq(
     Normal equations square the condition number, which is the usual reason to avoid
     them. That is tolerable here because the Levenberg-Marquardt damping regularises the
     system, and it is measured rather than assumed: the residual above is five orders of
-    magnitude below the iterative solve it replaces. Should the factorisation fail
-    anyway -- a singular ``AᵀA`` at vanishing damping -- this falls back to ``lsmr``.
+    magnitude below the iterative solve it replaces.
+
+    ``AᵀA`` is in fact singular in ordinary use -- it has the six rigid-body motions in
+    its null space, and ``opt_alg="gauss"`` adds no damping to lift them -- but that is
+    harmless: ``Aᵀb`` is ``Bᵀ W² Δq``, which lies in the row space of ``B`` and so is
+    orthogonal to that null space. The system stays consistent, and two solutions differ
+    only by a rigid-body motion, which changes no internal coordinate.
+
+    What the ``lsmr`` fallback is for is the factorisation failing outright on an
+    *exactly* zero pivot. That is not a theoretical case: it happens on small molecules,
+    where the null space is a large fraction of the ``3 n_atoms`` solve space. The
+    fraction is ``6 / 3 n_atoms``, i.e. it decays as ``2 / n_atoms`` -- half the space
+    for peroxide, 11% for cyclohexane, 0.1% for a 1413-atom protein -- so only the
+    smallest molecules reach it. Whether the pivot comes out exactly zero is geometry
+    dependent even there (peroxide fails, ammonia at the same 50% does not), so the
+    fallback cannot be replaced by a size check.
+
+    ``perm`` is a fill-reducing symmetric permutation of ``AᵀA``, from
+    :func:`_fill_reducing_permutation`. Without one, SuperLU falls back on its own
+    COLAMD ordering, which is far better than nothing -- the natural atom order fills in
+    62x on a 7454-atom protein against COLAMD's 3.0x -- but is not tuned for a symmetric
+    matrix. The permutation is a property of the sparsity pattern alone, so the caller
+    computes it once per back-transformation rather than per solve.
 
     ``atol``/``btol`` are kept for the fallback and for signature compatibility.
     """
     sparse_A = csr_array(A)
-    N = (sparse_A.T @ sparse_A).tocsc()
+    N = (sparse_A.T @ sparse_A).tocsr()
     rhs = _as_vector(sparse_A.T @ b)
     try:
-        return cast(Vector[np.float64], splu(N).solve(rhs))
+        if perm is None:
+            return cast(Vector[np.float64], splu(N.tocsc()).solve(rhs))
+        permuted = splu(csc_array(N[perm][:, perm]), permc_spec="NATURAL")
+        x = np.empty(N.shape[0], dtype=float64)
+        x[perm] = permuted.solve(rhs[perm])
+        return cast(Vector[np.float64], x)
     except RuntimeError:
-        # Singular normal equations: no damping left to regularise the rigid-body
-        # null space. Fall back to the iterative solve, which handles rank deficiency
-        # by returning the minimum-norm solution.
+        # ``AᵀA`` was singular enough for the factorisation to hit an exactly zero
+        # pivot, which happens on molecules small enough that the rigid-body null space
+        # is a large fraction of the ``3 n_atoms`` solve space. ``lsmr`` handles rank
+        # deficiency directly, returning the minimum-norm solution.
         return lsmr(sparse_A, b, atol=atol, btol=btol, maxiter=_LSTSQ_MAX_ITER)[0]
 
 
@@ -129,6 +164,32 @@ def _as_vector(v: Matrix | Vector) -> Vector[float64]:
     unchanged, it is purely a typing helper.
     """
     return cast(Vector[float64], v)
+
+
+def _fill_reducing_permutation(A: Matrix) -> Vector[np.int32]:
+    """Symmetric permutation of ``AᵀA`` that keeps the LU factorisation sparse.
+
+    ``AᵀA`` couples two atoms iff they share an internal coordinate, so it is the
+    molecular connectivity graph squared: sparse, but with the nonzeros scattered far
+    from the diagonal, because a file's atom numbering has nothing to do with which
+    atoms are close in space. Reverse Cuthill-McKee renumbers them to sit near it --
+    bandwidth 4121 -> 89 on a 1413-atom protein -- and elimination on a narrow band
+    barely fills in.
+
+    Cheaper than the alternatives at equal or better fill: against SuperLU's own COLAMD
+    the factorisation drops from 3.03x to 1.34x fill and 31.5 ms to 14.3 ms on a
+    7454-atom protein, and roughly 10% comes off the whole back-transformation.
+
+    Depends only on the sparsity pattern of ``A``, which is fixed by the primitive set
+    and the connectivity, so it is computed once per back-transformation. A stale or
+    mismatched permutation would only cost fill, never correctness: every permutation
+    is a valid one.
+    """
+    sparse_A = csr_array(A)
+    return cast(
+        Vector[np.int32],
+        reverse_cuthill_mckee((sparse_A.T @ sparse_A).tocsr(), symmetric_mode=True),
+    )
 
 
 def _cached_coord_arrays(
@@ -172,17 +233,25 @@ def _align_and_check(
     :class:`~pandas.DataFrame` that :func:`~chemcoord.xyz_functions.isclose` builds to
     answer a yes/no question, and its atom-label check, which is vacuous here because
     both structures come from the same molecule.
+
+    The superposition is spelled out on the coordinate arrays rather than delegated to
+    :meth:`~chemcoord.Cartesian.align`, which builds *two* frames -- and this function
+    discards one of them, since the centered ``previous`` is only ever handed to
+    :func:`numpy.isclose`. :meth:`~chemcoord.Cartesian.align` must also ``sort_index``
+    and reindex both molecules, because its contract covers differently ordered ones.
+    Here the order is fixed once by the calling loop and preserved by every operation
+    in it, so that work is redundant. Worth 12% of a cyclohexane back-transformation,
+    8% on MIL53 and 2% on a 1413-atom protein; see ``BENCHMARKS.md``.
     """
-    previous_centered, new_aligned = previous.align(new)
-    converged = bool(
-        np.isclose(
-            previous_centered.loc[:, COORDS].values,
-            new_aligned.loc[:, COORDS].values,
-            rtol=rtol,
-            atol=atol,
-        ).all()
-    )
-    return new_aligned, converged
+    pos_previous = previous.loc[:, COORDS].values
+    pos_new = new.loc[:, COORDS].values
+    pos_previous = pos_previous - pos_previous.mean(axis=0)
+    pos_new = pos_new - pos_new.mean(axis=0)
+    pos_new = pos_new @ get_kabsch_rotation(pos_previous, pos_new).T
+    converged = bool(np.isclose(pos_previous, pos_new, rtol=rtol, atol=atol).all())
+    aligned = new.copy()
+    aligned.loc[:, COORDS] = pos_new
+    return aligned, converged
 
 
 def backtransform(
@@ -220,13 +289,14 @@ def _gauss_newton_opt(
 ) -> Cartesian:
     # The 0-based reindexed coordinate arrays depend only on the atom index order
     # and the primitive set, not on the coordinate values, so they are invariant
-    # across the optimization. ``sort_index`` fixes the order that ``align`` (called
-    # every iteration) also produces, keeping the cached arrays valid throughout.
+    # across the optimization. ``sort_index`` fixes that order once; every operation
+    # in the loop preserves it, so the cached arrays stay valid throughout.
     previous = start_guess.sort_index()
     nobending_arr, full_arr = _cached_coord_arrays(previous, q.primitives_idx)
 
     converged = False
     i = 0
+    perm = None
     while not converged:
         if (i := i + 1) > max_iter:
             raise ConvergenceError(
@@ -234,12 +304,14 @@ def _gauss_newton_opt(
             )
 
         B = previous.get_sparse_Wilson_B(q.primitives_idx, coord_arr=nobending_arr)
+        if perm is None:
+            perm = _fill_reducing_permutation(W @ B)
 
         q_current = previous.get_ric(q.primitives_idx, coord_arr=full_arr)
 
         Δq = (q - q_current).minimize_dihedral()
 
-        Δx_flat = _sparse_lstsq(W @ B, _as_vector(W @ Δq.delta_q))
+        Δx_flat = _sparse_lstsq(W @ B, _as_vector(W @ Δq.delta_q), perm)
         Δx = Δx_flat.reshape(len(previous), 3)
 
         new = _linesearch(B, Δq.delta_q, Δx, q, previous, W, ric_coord_arr=full_arr)
@@ -266,13 +338,14 @@ def _levenberg_marquardt_opt(
     """Outer Levenberg-Marquardt loop, stepping with :func:`_line_search_cycle`."""
     # The 0-based reindexed coordinate arrays depend only on the atom index order
     # and the primitive set, not on the coordinate values, so they are invariant
-    # across the optimization. ``sort_index`` fixes the order that ``align`` (called
-    # every iteration) also produces, keeping the cached arrays valid throughout.
+    # across the optimization. ``sort_index`` fixes that order once; every operation
+    # in the loop preserves it, so the cached arrays stay valid throughout.
     previous = start_guess.sort_index()
     nobending_arr, full_arr = _cached_coord_arrays(previous, q.primitives_idx)
 
     converged = False
     i = 0
+    perm = None
 
     λ = start_λ
     while not converged:
@@ -283,6 +356,8 @@ def _levenberg_marquardt_opt(
             )
 
         B = previous.get_sparse_Wilson_B(q.primitives_idx, coord_arr=nobending_arr)
+        if perm is None:
+            perm = _fill_reducing_permutation(W @ B)
 
         q_current = previous.get_ric(q.primitives_idx, coord_arr=full_arr)
 
@@ -298,6 +373,7 @@ def _levenberg_marquardt_opt(
             reduction_factor,
             Δq,
             ric_coord_arr=full_arr,
+            perm=perm,
         )
 
         previous, converged = _align_and_check(previous, new, rtol, atol)
@@ -318,6 +394,7 @@ def _line_search_cycle(
     reduction_factor: float,
     Δq: DeltaRedundantInternalCoordinates,
     ric_coord_arr: Matrix | None = None,
+    perm: Vector[np.int32] | None = None,
 ) -> tuple[Cartesian, float]:
     """Take a single damped Gauss-Newton (Levenberg-Marquardt) step.
 
@@ -350,7 +427,7 @@ def _line_search_cycle(
     λ = start_λ
     for _ in range(_LM_MAX_DAMPING_STEPS):
         lm_mat = sparse_vstack((WB, diags_array(np.sqrt(λ) * damping_diag)))
-        Δx = _sparse_lstsq(lm_mat, lm_vec)[: 3 * len(q.reference)]
+        Δx = _sparse_lstsq(lm_mat, lm_vec, perm)[: 3 * len(q.reference)]
         Δx = Δx.reshape(len(previous), 3)
         try:
             new = _linesearch(
@@ -420,7 +497,7 @@ def _linesearch(
         # Already exactly on target; every alpha is as good as any other.
         return previous + alpha * Δx
     # -∇f·Δx, positive iff Δx points downhill for the weighted residual.
-    descent = float((B.T @ _as_vector(W @ W_Δq)) @ np.asarray(Δx).ravel()) / f
+    descent = (B.T @ _as_vector(W @ W_Δq)) @ np.asarray(Δx).ravel() / f
 
     for _ in range(max_iter):
         new = previous + alpha * Δx

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import IntEnum
+from functools import partial
 from typing import TYPE_CHECKING, NewType, TypeAlias
 
 import numpy as np
@@ -34,8 +35,13 @@ Primitives = NewType("Primitives", SortedSet)
 
 #: Runtime constructor for :data:`Primitives`. Kept separate from ``Primitives``
 #: because a ``NewType``'s ``__call__`` is the identity function and would not
-#: actually build a ``SortedSet``.
-_SetOfPrimitives = SortedSet
+#: actually build a ``SortedSet``. The key groups the coordinates by type -- bonds,
+#: then angles, then dihedrals and bendings -- which makes ``q`` readable in blocks of
+#: like coordinates and the weight matrix piecewise constant. It is free to choose:
+#: the row order of B cancels out of ``BᵀW²B``, so the solve does not see it. It is
+#: the row order of B and of ``q`` follows whatever order the primitives are handed to
+#: :meth:`CartesianBmat.get_ric`, so the two cannot disagree.
+_SetOfPrimitives = partial(SortedSet, key=lambda x: (len(x), x))
 
 
 class BendType(IntEnum):
@@ -61,9 +67,9 @@ class CartesianBmat(CartesianCore):
     ) -> Primitives:
         """Generate set of redundant internal coordinates for the system.
         Stored in a sortedcontainers.SortedSet to maintain order while
-        being able to use Python's union operator. Sorted by the natural
-        ordering of the coordinate tuples, i.e. lexicographically by atom
-        index (which compares shorter, prefix-matching tuples first).
+        being able to use Python's union operator. Sorted by length of
+        coordinate, then lexicographically by atom index, i.e. grouped into
+        bonds, then angles, then dihedrals and bendings.
 
         Args:
             coordinates: default :class:`None`, SortedSet of primitive
@@ -243,19 +249,24 @@ class CartesianBmat(CartesianCore):
             self.copy(),  # type: ignore[arg-type]
         )
 
-    def _reindex_to_0(self, internal_coords_idx: Primitives) -> Primitives:
+    def _reindex_to_0(self, internal_coords_idx: Primitives) -> list[Coordinate]:
         """Return a reindexed version of `primitives` as if `self` was indexed
-        contiguously from 0 to n - 1."""
+        contiguously from 0 to n - 1.
+
+        A list, in the order of ``internal_coords_idx``, rather than a
+        :data:`Primitives`. Collecting it into a ``SortedSet`` would order it by the
+        *reindexed* labels, which is the caller's order only while the rows of ``self``
+        happen to be sorted. The row order of ``q`` and of Wilson's B comes from here
+        while the caller keeps ``internal_coords_idx``, so for any other frame -- such
+        as those :func:`~chemcoord.xyz_functions.interpolate` returns for
+        ``coord="zmat"`` -- every value would be attached to the wrong coordinate.
+        """
         index_to_rownum = {index: row for row, index in enumerate(self.index)}
 
-        return Primitives(
-            _SetOfPrimitives(
-                {
-                    _reindex_to_0_inner(coordinate_idx, index_to_rownum)
-                    for coordinate_idx in internal_coords_idx
-                }
-            )
-        )
+        return [
+            _reindex_to_0_inner(coordinate_idx, index_to_rownum)
+            for coordinate_idx in internal_coords_idx
+        ]
 
     def _to_array_nobending(
         self,
@@ -384,20 +395,12 @@ def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
     if np.isclose(sinu, 0.0) or np.isclose(sinv, 0.0):
         raise ValueError("sinu or sinv is 0")
     else:
-        # Terminal-atom derivatives.
         s_first = cross(normedu, normedw) / (norm(u) * (sinu**2))
         s_last = -cross(normedv, normedw) / (norm(v) * (sinv**2))
-        # The central two atoms share one term, which enters the second atom with a
-        # plus and the third with a minus; their derivatives are otherwise minus the
-        # terminal ones, so that the four rows sum to zero (a rigid translation cannot
-        # change a dihedral). Computed once because holding the two copies in sync by
-        # hand is what went wrong before: the ``normedv`` half used to be subtracted
-        # rather than added, which left both central rows wrong -- and wrong by equal
-        # and opposite amounts, so the rows still summed to zero and the error hid
-        # from that check. See the note in the docstring.
-        shared = ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2))) + (
-            (cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2))
-        )
+        shared = (
+            ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
+            + ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
+        )  # fmt: skip
         return np.stack((s_first, -s_first + shared, -s_last - shared, s_last))
 
 

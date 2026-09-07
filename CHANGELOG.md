@@ -100,13 +100,31 @@
 
     The Armijo threshold in the line search additionally uses the directional
     derivative along the step, `c·α·(BᵀW²Δq)·Δx / ‖WΔq‖`, rather than the gradient norm
-    `2c‖BᵀΔq‖`. The old threshold did not scale with the step, so both sides of the
-    sufficient-decrease test were first order in `α` and `α` cancelled: the test was
-    scale invariant and a badly aligned direction failed it at *every* `α`, until `α`
-    underflowed the comparison and a step of ~1e-13 was accepted by rounding. The outer
-    loop then read the vanishing step as convergence. On a perturbed MIL53 structure
-    this returned a structure 4.2 A from the answer with `‖Δq‖ = 5.2`; it now converges
-    to `‖Δq‖ = 4.6e-06`.
+    `2c‖BᵀΔq‖`. This is the textbook sufficient-decrease condition
+    `f(x + α p) ≤ f(x) + c·α·pᵀ∇f(x)` with the usual `c = 1e-4`: the threshold has to be
+    proportional to the directional derivative `pᵀ∇f(x)` *along the step*. Since
+    `f = ‖W Δq‖` and `∂Δq/∂x = -B`, that derivative is `-∇f·Δx = (BᵀW²Δq)·Δx / ‖WΔq‖`,
+    which is what is now used. The old threshold left `BᵀW²Δq` uncontracted with `Δx`
+    and undivided by `f`, so it did not scale with the step: both sides of the test were
+    first order in `α` and `α` cancelled out of the comparison. Shortening the step then
+    could not rescue a direction that failed it, and the loop merely shrank `α` until
+    rounding let a step of ~1e-13 through, which the outer loop read as convergence.
+
+    In isolation, however, this changes no outcome that could be constructed on the
+    current code. Swapping the threshold back while holding everything else fixed gives
+    identical success counts and residuals on cyclohexane and MIL53, over 10 seeds each,
+    at perturbations from 1% of atoms up to `sigma = 0.25` on every atom, with the direct
+    solver, with LSMR truncated at 2000/200/50 iterations, and with the pre-fix dihedral
+    B matrix. The `alpha` collapse is observable -- at `sigma = 0.2` the old form reaches
+    `alpha = 2.8e-14` after 45 backtracks where the new one stays at 3.1e-02 after at
+    most 5 -- but the same seeds converge either way, and degrading the search direction
+    makes the line search backtrack *less*, not more. So this is a correctness fix to the
+    line search rather than a behavioural one: the recovery of a perturbed MIL53
+    structure from 4.2 A at `‖Δq‖ = 5.2` to `‖Δq‖ = 4.6e-06` belongs to the combination
+    of the dihedral B fix, the direct solver and the weighted merit function, not to the
+    threshold on its own.
+
+    see: https://en.wikipedia.org/wiki/Backtracking_line_search
 
     The committed interpolation reference paths were regenerated accordingly. On
     `default_args_path`, no image ends up with a worse weighted residual and five are
@@ -147,8 +165,44 @@
 
     End to end on 101M (1413 atoms), back-transforming a perturbed structure: previously
     2.9e-05 in 55 s, now **1.8e-13 in 0.2 s**. `lsmr` is kept as a fallback for a singular
-    factorisation; it is not reached in the test suite. See `BENCHMARKS.md`.
+    factorisation, and it is reached: `AᵀA` is singular in ordinary use (the six
+    rigid-body motions, which `opt_alg="gauss"` does not damp), which is harmless
+    because `Aᵀb` lies in the row space of `B` and the system stays consistent -- but on
+    a small enough molecule the factorisation fails outright on an exactly zero pivot.
+    The null space is `6 / 3 n_atoms` of the solve space, decaying as `2 / n_atoms`:
+    half of it for peroxide, 11% for cyclohexane, 0.1% for a 1413-atom protein. See
+    `BENCHMARKS.md`.
 
+
+- The per-iteration superposition in the RIC back-transformation is done on the
+    coordinate arrays instead of through `Cartesian.align`. `align` has to `sort_index`
+    and reindex both molecules, because its contract covers differently ordered ones,
+    and it builds two frames -- one of which the caller discarded, having only ever
+    handed it to `numpy.isclose`. Inside the loop the atom order is fixed once and
+    preserved throughout, so none of that is needed.
+
+    Measured against the previous implementation (interleaved, min of 15 runs):
+    cyclohexane chair -> twist-boat 29.5 ms -> 26.1 ms (-12%), a perturbed MIL53_beta
+    42.3 ms -> 38.9 ms (-8%), a perturbed 101M 208.7 ms -> 205.0 ms (-2%). The share
+    shrinks with system size because the removed cost is per call, not per atom.
+
+    Note this is *not* an argument for making the alignment optional: the Kabsch fit
+    itself is only 0.2-1% of the runtime at every size, so switching it off would save
+    almost nothing, and it doubles as the convergence test. The cost was the frame
+    bookkeeping around it.
+
+- The sparse factorisation in the RIC back-transformation now uses a reverse
+    Cuthill-McKee ordering of `AᵀA` instead of SuperLU's default COLAMD. `AᵀA` is the
+    connectivity graph squared, whose nonzeros sit far from the diagonal because a file's
+    atom numbering is unrelated to spatial proximity; RCM renumbers them next to it
+    (bandwidth 4121 -> 89 on a 1413-atom protein) and elimination on a narrow band barely
+    fills in -- 1.34x against COLAMD's 3.03x on a 7454-atom protein, and 14 ms against
+    32 ms to factorise.
+
+    End to end: 101M 181.6 ms -> 162.9 ms (-10%), 1A8I 1367.9 ms -> 1247.2 ms (-9%),
+    MIL53_beta 32.1 ms -> 30.9 ms (-4%), unchanged on an 18-atom molecule. The
+    permutation depends only on the sparsity pattern, so it is computed once per
+    back-transformation. See `BENCHMARKS.md`.
 
 - Made `Cartesian.get_primitives_idx` considerably faster.
 

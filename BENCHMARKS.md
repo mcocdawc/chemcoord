@@ -423,6 +423,91 @@ control cannot matter more than that while both strategies are handed the same
 15x-truncated direction. It pulls further ahead once the solve is accurate: at cap 2000
 it reaches 1.62e-05 after 60 iterations where `full_step` reaches 1.10e-04.
 
+## 10. Where the rigid-body alignment time actually goes
+
+Profiled to decide whether the superposition should be made optional -- for most
+reactions the caller does not need the result placed in the start guess's frame. It
+should not be: the Kabsch fit is a rounding error, and what costs is the pandas frame
+bookkeeping around it. Share of one `get_cartesian`, with `n_worker = 1` so nothing is
+hidden in joblib subprocesses:
+
+| structure | atoms | `align()` share | of which the Kabsch fit | frame bookkeeping |
+|---|---|---|---|---|
+| cyclohexane_chair | 18 | 19.2% | 0.7% | 18.4% |
+| MIL53_beta | 99 | 12.1% | 0.6% | 11.5% |
+| 101M | 1 413 | 3.8% | 0.2% | 3.5% |
+| 1A8I | 7 454 | 0.5% | 0.0% | 0.5% |
+
+The share falls with system size because the removed cost is per *call*, not per atom.
+So an "alignment off" switch would save under 1% -- and the superposition doubles as
+the convergence test, so switching it off changes what "the structure stopped moving"
+means.
+
+Attacking the bookkeeping instead: `_align_and_check` no longer calls
+`Cartesian.align`. `align` has to `sort_index` and reindex both molecules (its contract
+covers differently ordered ones) and builds two frames, one of which the caller
+discarded, having only ever handed it to `numpy.isclose`. Inside the loop the order is
+fixed once and preserved, so the array-level spelling is equivalent:
+
+| case | before | after | |
+|---|---|---|---|
+| cyclohexane chair -> twist-boat | 29.51 ms | 26.10 ms | **-11.6%** |
+| MIL53_beta, perturbed | 42.28 ms | 38.88 ms | **-8.1%** |
+| 101M, perturbed | 208.71 ms | 204.95 ms | **-1.8%** |
+
+(Interleaved A/B, min of 15 runs -- run in blocks, machine drift moved the baseline by
+2x between runs and produced differences of the wrong sign.) Residuals are equal or
+slightly better: 1.46e-15 -> 1.12e-15 on cyclohexane, 3.45e-09 -> 1.91e-09 on MIL53.
+
+A variant that also skipped the remaining `copy()` by writing into `new` in place
+measured -13.7% / -8.0% / -1.8%, i.e. indistinguishable, so the copy was kept rather
+than aliasing a caller's structure.
+
+## 11. Ordering the normal equations
+
+Two orderings are in play and only one of them matters.
+
+The **primitive** ordering -- the row order of `B` -- reaches nothing. `AᵀA` is
+`sum_k w_k^2 b_k b_k^T`, a sum over rows, so permuting them (with the weights) leaves it
+unchanged: 6.7e-16 on cyclohexane and 3.1e-15 on MIL53 against both the `(len, tuple)`
+grouping and a random permutation. It is chosen for readability, not for the solver.
+
+The **atom** ordering is the column order, so it permutes `AᵀA` symmetrically and decides
+the fill-in. `AᵀA` is the connectivity graph squared: sparse, but with its nonzeros far
+from the diagonal, because a file's atom numbering has nothing to do with spatial
+proximity. Reverse Cuthill-McKee fixes that -- bandwidth 4121 -> 89 on 101M, 21815 -> 125
+on 1A8I -- and it is *not* banded without it (full bandwidth, 296 of 297 on MIL53).
+
+Factorisation of the LM normal equations, `lambda = 1e-5`:
+
+| ordering | MIL53 fill | 101M fill | 1A8I fill | 1A8I factorise |
+|---|---|---|---|---|
+| `NATURAL` (none) | 4.97x | 18.14x | 62.47x | 6617 ms |
+| `COLAMD` (SuperLU default) | 2.55x | 2.19x | 3.03x | 32 ms |
+| `MMD_AT_PLUS_A` | 1.66x | 2.33x | 3.13x | 55 ms |
+| `MMD_ATA` | 1.50x | 1.42x | 1.43x | 40 ms |
+| **RCM + `NATURAL`** | **1.48x** | **1.35x** | **1.34x** | **14 ms** |
+
+Doing nothing is catastrophic and SuperLU's own COLAMD already avoids that; RCM is the
+improvement on top. `MMD_ATA` reaches comparable fill but costs more to compute.
+
+End to end, interleaved and min of 11 runs (5 for 1A8I):
+
+| structure | atoms | COLAMD | RCM | |
+|---|---|---|---|---|
+| cyclohexane_chair | 18 | 13.2 ms | 13.3 ms | +0.5% |
+| MIL53_beta | 99 | 32.1 ms | 30.9 ms | -3.7% |
+| 101M | 1 413 | 181.6 ms | 162.9 ms | **-10.3%** |
+| 1A8I | 7 454 | 1367.9 ms | 1247.2 ms | **-8.8%** |
+
+The permutation depends only on the sparsity pattern, which is fixed by the primitive set
+and the connectivity, so it is computed once per back-transformation.
+
+Deriving it from the atom graph directly (atoms coupled iff they share a primitive, then
+expanded 3x) instead of from the assembled matrix was tried and is worse: equal on MIL53
+and 101M but 1004310 against 802672 `L+U` nonzeros on 1A8I. It also duplicates the
+coupling rule, which `BᵀB` already encodes.
+
 ## Reproducing
 
 The probes used here are not part of the test suite. The finite-difference check in

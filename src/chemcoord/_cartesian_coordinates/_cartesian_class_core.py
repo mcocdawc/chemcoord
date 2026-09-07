@@ -1170,10 +1170,10 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
             dist, idx = tree.query(pos, k=k)
             # dist/idx have shape (n_atoms, k); column 0 is the atom itself.
             candidates = [
-                (float(dist[row_a, col]), row_a, int(idx[row_a, col]))
+                (dist[row_a, col], row_a, idx[row_a, col])
                 for row_a in range(n_atoms)
                 for col in range(1, k)
-                if frag_of[row_a] != frag_of[int(idx[row_a, col])]
+                if frag_of[row_a] != frag_of[idx[row_a, col]]
             ]
             candidates.sort()
             for _, row_a, row_b in candidates:
