@@ -1,4 +1,5 @@
 import os
+from itertools import combinations
 
 import numpy as np
 import pytest
@@ -318,8 +319,15 @@ def test_cut_cuboid():
 def test_get_inertia():
     A = molecule.get_inertia()
     eig, t_mol = A["eigenvectors"], A["transformed_Cartesian"]
+    # ``eigenvectors`` contains the principal axes as columns, i.e. it is the basis of
+    # the principal-axis frame expressed in the old basis. Transforming into that frame
+    # is therefore done with the transpose (compare :meth:`Cartesian.basistransform`).
+    assert np.allclose(eig.T @ eig, np.identity(3))
+    assert np.allclose(
+        eig.T @ A["inertia_tensor"] @ eig, np.diag(A["diag_inertia_tensor"])
+    )
     assert cc.xyz_functions.allclose(
-        eig @ (molecule - molecule.get_barycenter()), t_mol
+        eig.T @ (molecule - molecule.get_barycenter()), t_mol
     )
 
     molecule2 = get_rotation_matrix([1, 1, 1], 72) @ molecule
@@ -426,3 +434,121 @@ def test_align_and_reindex_similar():
 
     m2_backindexed = m2.reindex_similar(m2_shuffled)
     assert cc.xyz_functions.allclose(m2, m2_backindexed)
+
+
+def _mst_length_bruteforce(molecule, bond_dict=None):
+    """Total length of the Euclidean minimum spanning tree over the fragments.
+
+    Reference implementation for :meth:`Cartesian._fragment_connecting_bonds`:
+    the complete graph over all fragment pairs, weighted by the shortest
+    inter-fragment atom distance, run through Kruskal. Quadratic in the number of
+    fragments, which is exactly what the tested method avoids.
+    """
+    fragments = molecule.fragmentate(give_only_index=True, bond_dict=bond_dict)
+    pos = molecule.loc[:, ["x", "y", "z"]].values
+    row_of = {label: row for row, label in enumerate(molecule.index)}
+    rows = [[row_of[label] for label in fragment] for fragment in fragments]
+
+    edges = sorted(
+        (
+            np.linalg.norm(
+                pos[rows[a]][:, None, :] - pos[rows[b]][None, :, :], axis=-1
+            ).min(),
+            a,
+            b,
+        )
+        for a, b in combinations(range(len(rows)), 2)
+    )
+
+    parent = list(range(len(rows)))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    total = 0.0
+    for distance, a, b in edges:
+        root_a, root_b = find(a), find(b)
+        if root_a != root_b:
+            parent[root_a] = root_b
+            total += distance
+    return total
+
+
+@pytest.mark.parametrize(
+    "structure",
+    [
+        # two fragments, the trivial case
+        "MeOH_Furan_start.xyz",
+        # 53 fragments over 56 atoms, i.e. many more fragments than the F - 1
+        # bonds that may be kept
+        "Cd_lattice.xyz",
+    ],
+)
+def test_fragment_connecting_bonds(structure):
+    m = cc.Cartesian.read_xyz(get_complete_path(structure), start_index=1)
+    fragments = m.fragmentate(give_only_index=True)
+    assert len(fragments) > 1
+
+    bonds = m._fragment_connecting_bonds()
+
+    # A spanning tree over the fragments, addressed by the molecule's own labels
+    # (1-based here, not row numbers).
+    assert len(bonds) == len(fragments) - 1
+    assert set(m.index).issuperset(i for bond in bonds for i in bond)
+
+    # Adding them makes the molecule a single connected component.
+    bond_dict = {i: set(connected) for i, connected in m.get_bonds().items()}
+    for i, j in bonds:
+        bond_dict[i].add(j)
+        bond_dict[j].add(i)
+    assert len(m.fragmentate(give_only_index=True, bond_dict=bond_dict)) == 1
+
+    # ...and a *minimum* one. Compared by total length rather than by edge set,
+    # which is not unique when distances tie.
+    pos = m.loc[:, ["x", "y", "z"]]
+    length = sum(np.linalg.norm(pos.loc[i] - pos.loc[j]) for i, j in bonds)
+    assert np.isclose(length, _mst_length_bruteforce(m))
+
+
+def test_fragment_connecting_bonds_single_fragment():
+    assert len(molecule.fragmentate(give_only_index=True)) == 1
+    assert molecule._fragment_connecting_bonds() == []
+
+
+def test_fragment_connecting_bonds_uses_given_bond_dict():
+    # An empty connectivity makes every atom its own fragment, so the result is the
+    # Euclidean MST over all 56 atoms. If the argument were ignored and ``get_bonds``
+    # recomputed instead, ``molecule`` would be a single fragment and the result empty.
+    no_bonds = {i: set() for i in molecule.index}
+
+    bonds = molecule._fragment_connecting_bonds(no_bonds)
+
+    assert len(bonds) == len(molecule) - 1
+    pos = molecule.loc[:, ["x", "y", "z"]]
+    length = sum(np.linalg.norm(pos.loc[i] - pos.loc[j]) for i, j in bonds)
+    assert np.isclose(length, _mst_length_bruteforce(molecule, bond_dict=no_bonds))
+
+
+def test_fragment_connecting_bonds_grows_search_radius():
+    # Two copies of the same molecule, far enough apart that no atom has an atom of
+    # the *other* copy among its nearest neighbours. The initial candidate
+    # neighbourhood (``k = 5``) then yields no inter-fragment edge at all and has to
+    # be grown until the two fragments are spanned.
+    base = cc.Cartesian.read_xyz(get_complete_path("cis_platin.xyz"), start_index=1)
+    far = base + np.array([50.0, 0.0, 0.0])
+    far.index = far.index + len(base)
+    pair = cc.xyz_functions.concat([base, far])
+    assert len(pair.fragmentate(give_only_index=True)) == 2
+
+    bonds = pair._fragment_connecting_bonds()
+
+    # the single bond joins the closest pair of atoms across the two copies
+    assert len(bonds) == 1
+    ((i, j),) = bonds
+    pos = pair.loc[:, ["x", "y", "z"]]
+    assert np.isclose(
+        np.linalg.norm(pos.loc[i] - pos.loc[j]), _mst_length_bruteforce(pair)
+    )

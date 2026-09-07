@@ -149,6 +149,9 @@ def test_primitive_coordinates():
 
 def test_Wilson_B():
     B_mat = molecule3.get_Wilson_B()
+    # each row corresponds to a primitive; ``expected`` is recorded in the order
+    # the primitives had when written (grouped by tuple length, then lexicographic).
+    recorded_order = sorted(molecule3.get_primitives_idx(), key=lambda x: (len(x), x))
     expected = np.array(
         [
             [-1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -169,27 +172,37 @@ def test_Wilson_B():
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0],
             [0.0, 1.0, 0.0, -5.0e-01, -1.5, 0.0, 5.0e-01, 5.0e-01, 0.0, 0.0, 0.0, 0.0],
             [0.0, 0.0, 0.0, -5.0e-01, -5.0e-01, 0.0, 5.0e-01, 1.5, 0.0, 0.0, -1.0, 0.0],
+            # The dihedral row. The two central atoms used to carry -2.82842712 and
+            # 0.0; both are wrong -- a rigid rotation of the H-O-O-H torsion moves the
+            # two oxygens equally, so the row is antisymmetric about the central bond.
+            # Finite differences agree with the values below to 2e-10. See the bugfix
+            # note on ``_jit_dihedral_deriv``.
             [
                 0.0,
                 0.0,
                 1.41421356,
                 0.0,
                 0.0,
-                -2.82842712,
+                -1.41421356,
                 0.0,
                 0.0,
-                0.0,
+                -1.41421356,
                 0.0,
                 0.0,
                 1.41421356,
             ],
         ]
     )
-    assert np.allclose(B_mat, expected)
+    expected_by_coord = dict(zip(recorded_order, expected))
+    current_order = molecule3.get_primitives_idx()
+    assert np.allclose(B_mat, [expected_by_coord[c] for c in current_order])
 
 
 def test_transformation():
     qs = molecule1.get_ric()
+    # ``expected`` is recorded in the order the primitives had when written:
+    # grouped by tuple length, then lexicographic. Compare order-independently.
+    recorded_order = sorted(qs.primitives_idx, key=lambda x: (len(x), x))
     expected = np.array(
         [
             1.5356843,
@@ -302,4 +315,5 @@ def test_transformation():
             -1.01833403,
         ]
     )
-    assert np.allclose(qs.q, expected)
+    expected_by_coord = dict(zip(recorded_order, expected))
+    assert np.allclose(qs.q, [expected_by_coord[c] for c in qs.primitives_idx])

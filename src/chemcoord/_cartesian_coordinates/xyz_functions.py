@@ -634,8 +634,8 @@ def apply_grad_zmat_tensor(
 
 
 def _cart_interpolate(start: Cartesian, end: Cartesian, N: int) -> list[Cartesian]:
-    Delta = (end - start) / (N - 1)
-    return [start + i * Delta for i in range(N)]
+    Δ = (end - start) / (N - 1)
+    return [start + i * Δ for i in range(N)]
 
 
 def _fix_trans_rot(
@@ -698,8 +698,8 @@ def interpolate(
         start: Starting structure.
         end: Ending structure.
         N: Number of structures to interpolate between.
-        coord: Interpolate in Cartesian, Z-matrix,
-            or redundant internal coordinate (RIC) space.
+        coord: Interpolate in Cartesian (``"cart"``), Z-matrix (``"zmat"``), or
+            redundant internal coordinate (RIC) space.
 
     References:
         The Z-matrix interpolation is described in :cite:`weser_automated_2023`,
@@ -722,7 +722,7 @@ def interpolate(
             RIC_interpolate(start, end, N, opt_alg=opt_alg, coord_idx=coord_idx),
         )
     else:
-        assert_never(f"coord must be either 'cart', 'zmat', or 'RIC'; not {coord}")
+        assert_never(coord)
 
 
 def get_reaction_coordinate(path: Sequence[Cartesian]) -> Vector[np.float64]:

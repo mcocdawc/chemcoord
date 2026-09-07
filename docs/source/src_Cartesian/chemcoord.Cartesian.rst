@@ -72,6 +72,7 @@
       ~Cartesian.get_pymatgen_molecule
       ~Cartesian.get_ric
       ~Cartesian.get_shortest_distance
+      ~Cartesian.get_sparse_Wilson_B
       ~Cartesian.get_total_mass
       ~Cartesian.get_without
       ~Cartesian.get_zmat
