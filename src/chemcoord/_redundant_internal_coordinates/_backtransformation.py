@@ -294,7 +294,7 @@ def _line_search_cycle(
     λ = start_λ
     for _ in range(_LM_MAX_DAMPING_STEPS):
         lm_mat = sparse_vstack((WB, diags_array(np.sqrt(λ) * damping_diag)))
-        Δx = _sparse_lstsq(lm_mat, lm_vec, perm)[: 3 * len(q.reference)]
+        Δx = _as_vector(_sparse_lstsq(lm_mat, lm_vec, perm)[: 3 * len(q.reference)])
         try:
             new = _linesearch(
                 B,
