@@ -9,17 +9,8 @@ from chemcoord._cartesian_coordinates.point_group import PointGroupOperations
 
 @contextmanager
 def _tolerate_complex_roundoff():
-    """Silence :class:`numpy.exceptions.ComplexWarning` raised inside pymatgen.
-
-    :class:`pymatgen.symmetry.analyzer.PointGroupAnalyzer` diagonalises the (real
-    symmetric) inertia tensor with :func:`numpy.linalg.eig`, i.e. with the general
-    LAPACK driver. Depending on the BLAS/LAPACK implementation this returns complex
-    arrays whose imaginary parts are pure round-off noise, and pymatgen then warns
-    while casting the principal axes back into its real affine matrices. Discarding
-    those imaginary parts is exactly the right thing to do here, so the warning is
-    noise as well -- but it aborts the symmetry detection for anyone who runs with
-    warnings turned into errors.
-    """
+    """Silence pymatgen's :class:`~numpy.exceptions.ComplexWarning` when it discards
+    round-off imaginary parts from ``eig`` of the real symmetric inertia tensor."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", ComplexWarning)
         yield

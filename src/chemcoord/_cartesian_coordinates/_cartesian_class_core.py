@@ -1106,8 +1106,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         """
         pos1 = self.loc[:, COORDS].values
         pos2 = other.loc[:, COORDS].values
-        # For every atom in ``self`` find the nearest atom in ``other`` via a KD-tree.
-        # This is O((n1 + n2) log n2) and never materialises the dense n1 x n2 matrix.
         dist, j_of_i = KDTree(pos2).query(pos1)
         i = int(dist.argmin())
         j = int(j_of_i[i])
@@ -1116,24 +1114,12 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
     def _fragment_connecting_bonds(
         self, bond_dict: BondDict | None = None
     ) -> list[tuple[AtomIdx, AtomIdx]]:
-        """Minimal set of inter-fragment bonds that makes the molecular graph connected.
+        """The ``F - 1`` bonds of a Euclidean minimum spanning tree over the fragments.
 
-        Computes a Euclidean minimum spanning tree over the fragments (the
-        disconnected components of the bond graph): every returned bond joins the
-        two *closest* atoms of the two fragments it connects, and only ``F - 1``
-        bonds are returned for ``F`` fragments -- just enough to make the whole
-        system a single connected component, without the ``C(F, 2)`` redundant
-        long-range bonds of an all-pairs connection.
-
-        A single global :class:`scipy.spatial.KDTree` supplies the nearest-neighbour
-        candidate edges and a union-find (Kruskal) pass keeps the shortest edges that
-        merge two still-disconnected fragments. Returns an empty list for a
-        single-fragment system.
+        Candidate edges come from a KD-tree, merged by Kruskal with union-find.
 
         Args:
-            bond_dict: default :class:`None`, connectivity used to determine the
-                fragments. Passed straight to :meth:`fragmentate` so ``get_bonds``
-                is not recomputed if the caller already has it.
+            bond_dict: default :class:`None`, connectivity defining the fragments.
         """
         fragments = cast(
             "list[set[AtomIdx]]",
@@ -1163,8 +1149,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
 
         tree = KDTree(pos)
         bonds: list[tuple[AtomIdx, AtomIdx]] = []
-        # Start with a small neighbourhood; grow it only if it fails to span every
-        # fragment. ``k = n_atoms`` is the complete graph and always spans.
+        # Grow the neighbourhood until it spans; ``k = n_atoms`` always does.
         k = min(n_atoms, 5)
         while len(bonds) < n_frag - 1:
             dist, idx = tree.query(pos, k=k)
@@ -1240,8 +1225,6 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
                 ),
                 axis=0,
             )
-            # The inertia tensor is real symmetric, so its spectrum is real by
-            # construction.
             diag_inertia, eig_v = np.linalg.eigh(inertia)
             sorted_index = np.argsort(diag_inertia)
             diag_inertia = diag_inertia[sorted_index]
@@ -1468,12 +1451,7 @@ class CartesianCore(PandasWrapper, GenericCore):  # noqa: PLW1641
         Returns:
             tuple:
         """
-        # Done on the coordinate arrays rather than through Cartesian arithmetic.
-        # The obvious spelling -- ``(self - self.get_centroid()).sort_index()`` and
-        # then ``transf @ m2`` -- is four ``Cartesian.copy()`` calls (each of which
-        # deep-copies the metadata) and eight ``.loc`` gets and sets, for three
-        # subtractions and one 3x3 rotation. Here the frames are built once, at the
-        # end. ``align`` is the dominant cost of the RIC back-transformation loop.
+        # On the arrays: Cartesian arithmetic would deep-copy the frame per operation.
         m1, m2 = self.sort_index(), other.sort_index()
         pos1 = m1.loc[:, COORDS].values
         pos2 = m2.loc[m1.index, COORDS].values

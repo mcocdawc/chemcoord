@@ -199,8 +199,6 @@ class RedundantInternalCoordinates:
         else:
             assert weights is not None
 
-        # W is diagonal, and kept sparse so that ``W @ B`` stays sparse throughout the
-        # weighted least-squares solve (the Wilson B matrix is banded).
         W = diags_array(np.asarray(weights))
 
         new = backtransform(
@@ -494,9 +492,7 @@ def RIC_interpolate(
         )
 
     if schedule == "independent":
-        # A single structure is repeated N times by ``_get_start_guess``, which is not a
-        # path and so cannot say which way round a dihedral travels; keep the shortest
-        # arc for it.
+        # A single repeated structure says nothing about which way a dihedral travels.
         seeds_are_a_path = not isinstance(seeds, Cartesian)
         seeds = _get_start_guess(start, end, N, seeds)
 
@@ -533,9 +529,7 @@ def RIC_interpolate(
             coord_idx = get_primitives_idx(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
-        # The path is built end->start and then reversed, so a per-image ``seeds``
-        # sequence (indexed in the final start->end order) has to be reversed too --
-        # otherwise every image is seeded with its mirror image's guess.
+        # The path is built end->start, so per-image seeds are reversed as well.
         inner_seeds = list(reversed(seeds)) if isinstance(seeds, Sequence) else seeds
         return list(
             reversed(
@@ -600,21 +594,9 @@ def _match_dihedral_branch(
 ) -> DeltaRedundantInternalCoordinates:
     """Put each dihedral of ``Δq`` on the 2π branch that ``seeds`` travels along.
 
-    A dihedral difference is only defined modulo 2π, and ``minimize_dihedral`` resolves
-    it to the shortest arc, independently for each coordinate. That is not always the
-    arc the molecule travels. For two structures close to being mirror images the
-    dihedrals flip sign, and for some of them the shortest arc runs the wrong way round;
-    interpolating along it asks for coordinate sets that no structure realises, so the
-    images stick near whichever endpoint they started from and the path jumps between
-    the two branches somewhere in the middle.
-
-    The seed path is a continuous motion between the same endpoints -- a Z-matrix
-    interpolation unless the caller supplied one -- so the change it accumulates in each
-    dihedral says which arc is meant. It has to be a path to say anything at all, which
-    is why the caller keeps the shortest arc when handed a single structure instead. In
-    that case this would in fact be a no-op -- ``minimize_dihedral`` leaves the shortest
-    arc in ``(-π, π]`` and no multiple of 2π brings such a value nearer to a seed that
-    travels nowhere -- but the guarantee should not rest on that.
+    The shortest arc chosen by ``minimize_dihedral`` can run opposite to the motion,
+    e.g. between near mirror images, which makes the interpolated targets unrealisable.
+    The seed path is a continuous motion, so the change it accumulates picks the arc.
     """
     dihedrals = [i for i, coord in enumerate(coord_idx) if _is_dihedral(coord)]
     if not dihedrals:

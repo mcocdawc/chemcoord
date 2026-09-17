@@ -319,9 +319,7 @@ def test_cut_cuboid():
 def test_get_inertia():
     A = molecule.get_inertia()
     eig, t_mol = A["eigenvectors"], A["transformed_Cartesian"]
-    # ``eigenvectors`` contains the principal axes as columns, i.e. it is the basis of
-    # the principal-axis frame expressed in the old basis. Transforming into that frame
-    # is therefore done with the transpose (compare :meth:`Cartesian.basistransform`).
+    # principal axes are the columns, so transforming into that frame uses the transpose
     assert np.allclose(eig.T @ eig, np.identity(3))
     assert np.allclose(
         eig.T @ A["inertia_tensor"] @ eig, np.diag(A["diag_inertia_tensor"])
@@ -437,13 +435,7 @@ def test_align_and_reindex_similar():
 
 
 def _mst_length_bruteforce(molecule, bond_dict=None):
-    """Total length of the Euclidean minimum spanning tree over the fragments.
-
-    Reference implementation for :meth:`Cartesian._fragment_connecting_bonds`:
-    the complete graph over all fragment pairs, weighted by the shortest
-    inter-fragment atom distance, run through Kruskal. Quadratic in the number of
-    fragments, which is exactly what the tested method avoids.
-    """
+    """Length of the fragment MST, by Kruskal over all fragment pairs."""
     fragments = molecule.fragmentate(give_only_index=True, bond_dict=bond_dict)
     pos = molecule.loc[:, ["x", "y", "z"]].values
     row_of = {label: row for row, label in enumerate(molecule.index)}
@@ -480,11 +472,8 @@ def _mst_length_bruteforce(molecule, bond_dict=None):
 @pytest.mark.parametrize(
     "structure",
     [
-        # two fragments, the trivial case
-        "MeOH_Furan_start.xyz",
-        # 53 fragments over 56 atoms, i.e. many more fragments than the F - 1
-        # bonds that may be kept
-        "Cd_lattice.xyz",
+        "MeOH_Furan_start.xyz",  # two fragments
+        "Cd_lattice.xyz",  # 53 fragments over 56 atoms
     ],
 )
 def test_fragment_connecting_bonds(structure):
@@ -494,20 +483,16 @@ def test_fragment_connecting_bonds(structure):
 
     bonds = m._fragment_connecting_bonds()
 
-    # A spanning tree over the fragments, addressed by the molecule's own labels
-    # (1-based here, not row numbers).
     assert len(bonds) == len(fragments) - 1
     assert set(m.index).issuperset(i for bond in bonds for i in bond)
 
-    # Adding them makes the molecule a single connected component.
     bond_dict = {i: set(connected) for i, connected in m.get_bonds().items()}
     for i, j in bonds:
         bond_dict[i].add(j)
         bond_dict[j].add(i)
     assert len(m.fragmentate(give_only_index=True, bond_dict=bond_dict)) == 1
 
-    # ...and a *minimum* one. Compared by total length rather than by edge set,
-    # which is not unique when distances tie.
+    # by length, since the edge set is not unique under ties
     pos = m.loc[:, ["x", "y", "z"]]
     length = sum(np.linalg.norm(pos.loc[i] - pos.loc[j]) for i, j in bonds)
     assert np.isclose(length, _mst_length_bruteforce(m))
@@ -519,9 +504,7 @@ def test_fragment_connecting_bonds_single_fragment():
 
 
 def test_fragment_connecting_bonds_uses_given_bond_dict():
-    # An empty connectivity makes every atom its own fragment, so the result is the
-    # Euclidean MST over all 56 atoms. If the argument were ignored and ``get_bonds``
-    # recomputed instead, ``molecule`` would be a single fragment and the result empty.
+    # Every atom its own fragment; ignoring the argument would give a single fragment.
     no_bonds = {i: set() for i in molecule.index}
 
     bonds = molecule._fragment_connecting_bonds(no_bonds)
@@ -533,10 +516,7 @@ def test_fragment_connecting_bonds_uses_given_bond_dict():
 
 
 def test_fragment_connecting_bonds_grows_search_radius():
-    # Two copies of the same molecule, far enough apart that no atom has an atom of
-    # the *other* copy among its nearest neighbours. The initial candidate
-    # neighbourhood (``k = 5``) then yields no inter-fragment edge at all and has to
-    # be grown until the two fragments are spanned.
+    # Two copies far apart: the initial k = 5 neighbourhood has no inter-fragment edge.
     base = cc.Cartesian.read_xyz(get_complete_path("cis_platin.xyz"), start_index=1)
     far = base + np.array([50.0, 0.0, 0.0])
     far.index = far.index + len(base)
@@ -545,7 +525,6 @@ def test_fragment_connecting_bonds_grows_search_radius():
 
     bonds = pair._fragment_connecting_bonds()
 
-    # the single bond joins the closest pair of atoms across the two copies
     assert len(bonds) == 1
     ((i, j),) = bonds
     pos = pair.loc[:, ["x", "y", "z"]]

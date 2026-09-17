@@ -57,6 +57,25 @@
     into the eigenvectors and the returned `Cartesian`. Note that the sign convention of
     the returned eigenvectors may differ from before; both are valid principal axes.
 
+- The RIC back-transformation no longer depends on which solution the sparse solver
+    picks out of a singular system. `_sparse_lstsq` solves the normal equations
+    `AᵀA x = Aᵀb`, and `AᵀA` is singular by the six rigid-body motions. Whether that
+    makes SuperLU hit an *exactly* zero pivot and raise -- handing over to the `lsmr`
+    fallback -- is decided at the last bit, so it varies with the scipy build and even
+    between solves of one run. The two branches return different solutions: `lsmr` the
+    minimum-norm one, the factorisation one with an arbitrary rigid-body component.
+
+    That component changes no internal coordinate but does lengthen the step, and the
+    line search scales the whole step by one `alpha`, so it could only keep the
+    displacement sane by shrinking the useful part along with it. On peroxide the step
+    came out 1600x longer than its useful part, the accepted `alpha` fell to a median
+    of 2⁻⁷, and the outer loop exhausted `max_iter` on a four-atom molecule -- on linux,
+    while the same test converged on macOS. The rigid-body component is now projected
+    out of every solved step, which leaves `B Δx` -- the entire linearised model the
+    step was solved from -- untouched. Undamped `opt_alg="gauss"` on planar peroxide,
+    whose `AᵀA` is singular at every iteration rather than only once `λ` has decayed,
+    was stalling for the same reason and now converges; its `xfail` is removed.
+
 - The symmetry detection no longer fails with a `numpy.exceptions.ComplexWarning` when
     warnings are turned into errors. `pymatgen`'s `PointGroupAnalyzer` diagonalises the
     inertia tensor with `numpy.linalg.eig` as well and warns while discarding the

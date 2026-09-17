@@ -94,13 +94,7 @@ class IllegalArgumentCombination(ValueError):
 class ConvergenceError(ValueError):
     """Raised when an iterative solve does not converge.
 
-    Subclasses :class:`ValueError` because that is what the iterative solvers raised
-    before this exception existed.
-
-    May carry the attribute:
-
-    * ``last``: The most recent iterate, so that a fallback solver can resume from it
-      instead of restarting from the original guess.
+    ``last`` is the most recent iterate, if any.
     """
 
     def __init__(self, message: str = "", last: Cartesian | None = None) -> None:
