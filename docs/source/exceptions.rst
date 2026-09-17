@@ -10,3 +10,5 @@ Exceptions
     ~exceptions.UndefinedCoordinateSystem
     ~exceptions.IllegalArgumentCombination
     ~exceptions.PhysicalMeaning
+    ~exceptions.ConvergenceError
+    ~exceptions.LineSearchFailed

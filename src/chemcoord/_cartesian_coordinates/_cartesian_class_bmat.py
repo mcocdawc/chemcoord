@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from enum import IntEnum
 from functools import partial
-from itertools import combinations
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, NewType, TypeAlias
 
 import numpy as np
 from numba import njit, prange
 from numpy import cross, float64, int64
 from numpy.linalg import norm
+from scipy.sparse import csr_array
 
 # had to put these here to avoid circular import
 from sortedcontainers import SortedSet
@@ -27,14 +27,15 @@ if TYPE_CHECKING:
     )
 
 
+#: Nominal type for a set of primitive internal coordinates.
 #: Unfortunately SortedSet is not a generic type, if it was, the primitives
 #: would be declared as
 #: ``SortedSet[tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]``
-Primitives: TypeAlias = SortedSet
+Primitives = NewType("Primitives", SortedSet)
 
-
-# the key prioritizes length, then sorts lexicographically
-SetOfPrimitives = partial(SortedSet, key=lambda x: (len(x), x))
+#: Runtime constructor for :data:`Primitives`, whose ``NewType`` call is the identity.
+#: The key groups the coordinates by type: bonds, angles, dihedrals and bendings.
+_SetOfPrimitives = partial(SortedSet, key=lambda x: (len(x), x))
 
 
 class BendType(IntEnum):
@@ -61,7 +62,8 @@ class CartesianBmat(CartesianCore):
         """Generate set of redundant internal coordinates for the system.
         Stored in a sortedcontainers.SortedSet to maintain order while
         being able to use Python's union operator. Sorted by length of
-        coordinate, then by standard order based on the atoms' indices.
+        coordinate, then lexicographically by atom index, i.e. grouped into
+        bonds, then angles, then dihedrals and bendings.
 
         Args:
             coordinates: default :class:`None`, SortedSet of primitive
@@ -81,14 +83,9 @@ class CartesianBmat(CartesianCore):
             bond_dict = {i_atom: set(connected) for i_atom, connected in bonds.items()}
 
         if connect_fragments:
-            fragments = self.fragmentate(bond_dict=bond_dict)
-            if len(fragments) != 1:
-                for fragment_pair in combinations(fragments, 2):
-                    index1, index2, _ = fragment_pair[0].get_shortest_distance(
-                        fragment_pair[1]
-                    )
-                    bond_dict[index1].add(index2)
-                    bond_dict[index2].add(index1)
+            for index1, index2 in self._fragment_connecting_bonds(bond_dict):
+                bond_dict[index1].add(index2)
+                bond_dict[index2].add(index1)
         return self._get_primitives_single_molecule(bond_dict)
 
     def _get_primitives_single_molecule(
@@ -96,7 +93,7 @@ class CartesianBmat(CartesianCore):
     ) -> Primitives:
         """This function calculated the primitive internal coordinates
         purely based on chemical connectivity and does not connect fragments."""
-        idx_primitive_coords = SetOfPrimitives()
+        idx_primitive_coords = []
 
         if bonds is None:
             bonds = self.get_bonds()
@@ -110,20 +107,21 @@ class CartesianBmat(CartesianCore):
         # TODO early returns (purely for  performance)
         for atom1 in self.index:
             for atom2 in bonds[atom1]:
-                idx_primitive_coords.add(canonicalize(atom1, atom2))
+                idx_primitive_coords.append(canonicalize(atom1, atom2))
                 for atom3 in bonds[atom2] - {atom1}:
-                    idx_primitive_coords.add(canonicalize(atom1, atom2, atom3))
+                    idx_primitive_coords.append(canonicalize(atom1, atom2, atom3))
                     for atom4 in bonds[atom3] - {atom1, atom2}:
-                        idx_primitive_coords.add(
+                        idx_primitive_coords.append(
                             canonicalize(atom1, atom2, atom3, atom4)
                         )
 
-        return idx_primitive_coords
+        return Primitives(_SetOfPrimitives(idx_primitive_coords))
 
     def get_Wilson_B(
         self,
         idx_internal_coords: Primitives | None = None,
         bonds: BondDict | None = None,
+        coord_arr: Matrix[int64] | None = None,
     ) -> Matrix:
         """Generate Wilson's B matrix for the current structure.
 
@@ -132,22 +130,51 @@ class CartesianBmat(CartesianCore):
                 primitive internal coordinates to use in the calculation. If None,
                 calculates using the get_primitive_coords method
             bonds: default :class:`None`, mapping containing bonding information.
+            coord_arr: default :class:`None`, cached ``_to_array_nobending`` result.
 
         Returns:
             Wilson's B matrix
         """
+        return self.get_sparse_Wilson_B(idx_internal_coords, bonds, coord_arr).toarray()
+
+    def get_sparse_Wilson_B(
+        self,
+        idx_internal_coords: Primitives | None = None,
+        bonds: BondDict | None = None,
+        coord_arr: Matrix[int64] | None = None,
+    ) -> csr_array:
+        """Generate Wilson's B matrix as a sparse matrix for the current structure.
+
+        Each row couples at most four atoms, so it has at most twelve nonzero entries.
+
+        Args:
+            idx_internal_coords: default None, SortedSet of
+                primitive internal coordinates to use in the calculation. If None,
+                calculates using the get_primitive_coords method
+            bonds: default :class:`None`, mapping containing bonding information.
+            coord_arr: default :class:`None`, cached ``_to_array_nobending`` result.
+
+        Returns:
+            Wilson's B matrix as a :class:`scipy.sparse.csr_array`
+        """
         if idx_internal_coords is None:
             idx_internal_coords = self.get_primitives_idx(bonds)
 
-        return _jit_get_Wilson_B(
-            self.loc[:, COORDS].values,
-            self._to_array_nobending(idx_internal_coords),
+        position_arr = self.loc[:, COORDS].values
+        if coord_arr is None:
+            coord_arr = self._to_array_nobending(idx_internal_coords)
+        data, row, col = _jit_get_Wilson_B_coo(position_arr, coord_arr)
+        keep = row.ravel() >= 0
+        return csr_array(
+            (data.ravel()[keep], (row.ravel()[keep], col.ravel()[keep])),
+            shape=(len(coord_arr), position_arr.size),
         )
 
     def get_ric(
         self,
         internal_coords_idx: Primitives | None = None,
         bonds: BondDict | None = None,
+        coord_arr: Matrix[int64] | None = None,
     ) -> RedundantInternalCoordinates:
         """Conversion to redundant internal coordinates
 
@@ -156,6 +183,7 @@ class CartesianBmat(CartesianCore):
                 primitive coordinates to convert to. If None, calculates them using the
                 get_primitive_coords method
             bonds: default :class:`None`, mapping containing bonding information.
+            coord_arr: default :class:`None`, cached ``_to_array_full`` result.
 
         Returns:
             Redundant internal coordinate representation of self
@@ -169,9 +197,11 @@ class CartesianBmat(CartesianCore):
         if internal_coords_idx is None:
             internal_coords_idx = self.get_primitives_idx(bonds=bonds)
 
+        if coord_arr is None:
+            coord_arr = self._to_array_full(internal_coords_idx)
         ric_values, exceptions = _jit_x_to_ric(
             self.loc[:, COORDS].values,
-            self._to_array_full(internal_coords_idx),
+            coord_arr,
         )
 
         if np.any(exceptions[:, -1]):
@@ -187,17 +217,19 @@ class CartesianBmat(CartesianCore):
             self.copy(),  # type: ignore[arg-type]
         )
 
-    def _reindex_to_0(self, internal_coords_idx: Primitives) -> Primitives:
+    def _reindex_to_0(self, internal_coords_idx: Primitives) -> list[Coordinate]:
         """Return a reindexed version of `primitives` as if `self` was indexed
-        contiguously from 0 to n - 1."""
+        contiguously from 0 to n - 1.
+
+        A list in the order of ``internal_coords_idx``: sorting by the reindexed labels
+        would misattribute the rows of ``q`` and B for an unsorted frame.
+        """
         index_to_rownum = {index: row for row, index in enumerate(self.index)}
 
-        return SetOfPrimitives(
-            {
-                _reindex_to_0_inner(coordinate_idx, index_to_rownum)
-                for coordinate_idx in internal_coords_idx
-            }
-        )
+        return [
+            _reindex_to_0_inner(coordinate_idx, index_to_rownum)
+            for coordinate_idx in internal_coords_idx
+        ]
 
     def _to_array_nobending(
         self,
@@ -283,8 +315,9 @@ class CartesianBmat(CartesianCore):
                 normedu2 = _jit_normalize(last_three[0] - last_three[1])
                 normedv2 = _jit_normalize(last_three[2] - last_three[1])
 
-                angle1 = np.arccos(normedu1 @ normedv1)
-                angle2 = np.arccos(normedu2 @ normedv2)
+                # Collinear pairs can land a few ulp outside the ``arccos`` domain.
+                angle1 = np.arccos(np.clip(normedu1 @ normedv1, -1.0, 1.0))
+                angle2 = np.arccos(np.clip(normedu2 @ normedv2, -1.0, 1.0))
 
                 if not (tol < angle1 * 180 / np.pi < (180 - tol)):
                     linear_idx.append((index, 1))
@@ -318,22 +351,13 @@ def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
     if np.isclose(sinu, 0.0) or np.isclose(sinv, 0.0):
         raise ValueError("sinu or sinv is 0")
     else:
-        return np.stack(
-            (
-                cross(normedu, normedw) / (norm(u) * (sinu**2)),
-                -cross(normedu, normedw) / (norm(u) * (sinu**2))
-                + (
-                    ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-                    - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-                ),
-                cross(normedv, normedw) / (norm(v) * (sinv**2))
-                - (
-                    ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-                    - ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-                ),
-                -cross(normedv, normedw) / (norm(v) * (sinv**2)),
-            )
-        )
+        s_first = cross(normedu, normedw) / (norm(u) * (sinu**2))
+        s_last = -cross(normedv, normedw) / (norm(v) * (sinv**2))
+        shared = (
+            ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
+            + ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
+        )  # fmt: skip
+        return np.stack((s_first, -s_first + shared, -s_last - shared, s_last))
 
 
 @njit(cache=True, nogil=True)
@@ -422,99 +446,54 @@ def _jit_vw_deriv(positions: Matrix, axes: Matrix) -> Matrix:
 
 
 @njit(parallel=True, cache=True, nogil=True)
-def _jit_get_Wilson_B(
+def _jit_get_Wilson_B_coo(
     position_arr: Matrix[float64],
     internal_coord_arr: Matrix[int64],
-) -> Matrix[float64]:
-    """Jit-compiled Wilson's B matrix generator, sans bending coordinates.
+) -> tuple[Matrix[float64], Matrix[int64], Matrix[int64]]:
+    """Wilson's B matrix as ``(data, row, col)`` arrays of shape ``(n_coords, 12)``.
 
-    procedure from: :cite:`B_matrix`
-
-    Args:
-        position_arr: array of cartesian coordinate locations of the
-            atoms in the Cartesian
-        internal_coord_arr: array of internal coordinates, followed by the
-            length of the coordinate. If the coordinate is not a dihedral, there are
-            unused numbers in the 4th, or 3rd and 4th, places to ensure a
-            rectangular array
-
-    Returns:
-        Wilson's B matrix
+    procedure from: :cite:`B_matrix`. A coordinate couples at most four atoms, so a row
+    has at most twelve nonzeros; unused slots keep ``row == -1``.
     """
+    n_coords = len(internal_coord_arr)
+    data = np.zeros((n_coords, 12), dtype=float64)
+    row = np.full((n_coords, 12), -1, dtype=int64)
+    col = np.zeros((n_coords, 12), dtype=int64)
 
-    # initialize B matrix
-    B_matrix = np.zeros((len(internal_coord_arr), position_arr.size))
-
-    for i in prange(len(internal_coord_arr)):  # type: ignore[attr-defined]
-        # separate cases for distances, angles, and dihedrals
-        # procedure from J. Chem. Phys. 117, 9160 (2002); https://doi.org/10.1063/1.1515483
-
-        # get ith internal coordinate
+    for i in prange(n_coords):  # type: ignore[attr-defined]
         coord = internal_coord_arr[i, :]
-
-        # distances
         if _is_bond_array(coord):
-            # get positions of participating atoms
-            positions = position_arr[coord[:2]]
-
-            # derivatives are just components of unit vector along distance
-            normedu = _jit_normalize(positions[0] - positions[1])
-            # for each cartesian coordinate
-            for j in prange(3):  # type: ignore[attr-defined]
-                B_matrix[i, j + 3 * coord[0]] = normedu[j]
-                B_matrix[i, j + 3 * coord[1]] = -normedu[j]
-
-        # angles
+            normedu = _jit_normalize(position_arr[coord[0]] - position_arr[coord[1]])
+            derivs = np.stack((normedu, -normedu))
+            atoms = coord[:2]
         elif _is_angle_array(coord):
-            # get positions of participating atoms
-            positions = position_arr[coord[:3]]
-
-            angle_derivs = _jit_angle_deriv(positions)
-
-            for j in prange(3):  # type: ignore[attr-defined]
-                B_matrix[i, j + 3 * coord[:3]] = angle_derivs[:3, j]
-
-        # dihedrals
+            derivs = _jit_angle_deriv(position_arr[coord[:3]])
+            atoms = coord[:3]
         elif _is_dihedral_array(coord):
-            # get positions of participating atoms
-            positions = position_arr[coord[:4]]
-
-            dihedral_derivs = _jit_dihedral_deriv(positions)
-
-            for j in prange(3):  # type: ignore[attr-defined]
-                B_matrix[i, j + 3 * coord[:4]] = dihedral_derivs[:4, j]
-
-        elif _is_uw_bending_array(coord):
-            positions = position_arr[coord[:4]]
-
+            derivs = _jit_dihedral_deriv(position_arr[coord[:4]])
+            atoms = coord[:4]
+        else:
             # coord[:4] is a Matrix-typed slice; _jit_get_axes keeps its Vector
             # signature for its other (genuinely 1-D) caller. numba boundary.
             axes = _jit_get_axes(position_arr, coord[:4])  # type: ignore[arg-type]
+            if _is_uw_bending_array(coord):
+                derivs = _jit_uw_deriv(position_arr[coord[:4]], axes)
+            else:
+                derivs = _jit_vw_deriv(position_arr[coord[:4]], axes)
+            atoms = coord[1:4]
+        for a in range(len(atoms)):
+            for j in range(3):
+                row[i, 3 * a + j] = i
+                col[i, 3 * a + j] = j + 3 * atoms[a]
+                data[i, 3 * a + j] = derivs[a, j]
 
-            uw_derivs = _jit_uw_deriv(positions, axes)
-
-            for j in prange(3):  # type: ignore[attr-defined]
-                B_matrix[i, j + 3 * coord[1:4]] = uw_derivs[:, j]
-
-        elif _is_vw_bending_array(coord):
-            positions = position_arr[coord[:4]]
-
-            # coord[:4] is a Matrix-typed slice; _jit_get_axes keeps its Vector
-            # signature for its other (genuinely 1-D) caller. numba boundary.
-            axes = _jit_get_axes(position_arr, coord[:4])  # type: ignore[arg-type]
-
-            vw_derivs = _jit_vw_deriv(positions, axes)
-
-            for j in prange(3):  # type: ignore[attr-defined]
-                B_matrix[i, j + 3 * coord[1:4]] = vw_derivs[:, j]
-
-    return B_matrix
+    return data, row, col
 
 
 # NOTE: no ``parallel=True`` here. This function operates on a single bending
 # coordinate (fixed-size arrays) and has no ``prange`` loop, so parallelisation
 # brings no benefit. More importantly, it is called from within the ``prange``
-# loops of ``_jit_get_Wilson_B`` and ``_jit_x_to_ric``; marking it
+# loops of ``_jit_get_Wilson_B_coo`` and ``_jit_x_to_ric``; marking it
 # ``parallel=True`` would create a nested parallel region, which crashes the
 # (non-threadsafe) ``workqueue`` threading layer numba falls back to when
 # neither TBB nor OpenMP is available.
@@ -632,7 +611,9 @@ def _jit_x_to_ric(
             normedu = _jit_normalize(positions[0] - positions[1])
             normedv = _jit_normalize(positions[2] - positions[1])
 
-            internal_coordinates[i] = np.arccos(normedu @ normedv)
+            # Rounding can push exactly linear angles outside the ``arccos`` domain.
+            cos_angle = float(normedu @ normedv)
+            internal_coordinates[i] = np.arccos(min(max(cos_angle, -1.0), 1.0))
 
         # dihedrals
         elif _is_dihedral_array(coord):
