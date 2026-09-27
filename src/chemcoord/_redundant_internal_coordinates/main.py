@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from functools import partial
-from itertools import combinations
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import contextmanager
 from typing import Final, Literal, Mapping, TypeAlias, cast, overload
 from warnings import warn
 
@@ -10,15 +9,31 @@ import numpy as np
 from attrs import define, field
 from joblib import Parallel, delayed
 from numpy import float64
-from numpy.linalg import lstsq, norm
-from sortedcontainers import SortedSet
+from scipy.sparse import diags_array
 from typing_extensions import Self, assert_never
 
-from chemcoord._cartesian_coordinates._cartesian_class_bmat import BendType
+from chemcoord._cartesian_coordinates._cartesian_class_bmat import (
+    BendType,
+    Primitives,
+)
 from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
+from chemcoord._redundant_internal_coordinates._backtransformation import (
+    backtransform,
+)
 from chemcoord.configuration import settings
-from chemcoord.exceptions import PhysicalMeaning, UndefinedDihedral
-from chemcoord.typing import ArithmeticOther, AtomIdx, BondDict, Matrix, Real, Vector
+from chemcoord.exceptions import (
+    ConvergenceError,
+    PhysicalMeaning,
+    UndefinedDihedral,
+)
+from chemcoord.typing import (
+    ArithmeticOther,
+    AtomIdx,
+    BondDict,
+    Matrix,
+    Real,
+    Vector,
+)
 
 Coordinate: TypeAlias = (
     tuple[AtomIdx, AtomIdx]
@@ -26,14 +41,6 @@ Coordinate: TypeAlias = (
     | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]
     | tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx, BendType]
 )
-
-#: Unfortunately SortedSet is not a generic type, if it was, the primitives
-#: would be declared as
-#: ``SortedSet[tuple[int, int] | tuple[int, int, int] | tuple[int, int, int, int]``
-Primitives: TypeAlias = SortedSet
-
-# the key prioritizes length, then sorts lexicographically
-SetOfPrimitives = partial(SortedSet, key=lambda x: (len(x), x))
 
 
 @define(frozen=True)
@@ -73,6 +80,12 @@ class RedundantInternalCoordinates:
 
     coord_to_idx: Final[Mapping[Coordinate, int]] = field(init=False)
 
+    #: The coordinates set inside a :meth:`prioritize_manual_changes` block and their
+    #: weight, or :class:`None` outside of such a block.
+    _priority: tuple[set[Coordinate], float] | None = field(
+        init=False, default=None, eq=False, repr=False
+    )
+
     @coord_to_idx.default
     def _get_coord_to_idx(self) -> Mapping[Coordinate, int]:
         return dict(zip(self.primitives_idx, range(len(self.primitives_idx))))
@@ -83,6 +96,38 @@ class RedundantInternalCoordinates:
             self.primitives_idx.copy(),
             self.reference.copy(),
         )
+
+    @contextmanager
+    def prioritize_manual_changes(self, weight: float = 100.0) -> Iterator[Self]:
+        """Weight the coordinates set within the block more strongly.
+
+        Every coordinate assigned via ``q[...] = ...`` inside the block is passed as
+        ``prioritized`` with ``weight`` to each :meth:`get_cartesian` call inside the
+        block, so the change is enforced and the rest of the molecule adjusts.
+
+        .. code-block:: python
+
+            q = molecule.get_ric()
+            with q.prioritize_manual_changes():
+                q[(0, 1, 2, 3)] = 0.0
+                new = q.get_cartesian()
+
+        Only assignments inside the block count. Copies of ``self`` made inside the
+        block, e.g. by :meth:`copy` or arithmetic, are not tracked.
+
+        Args:
+            weight: default 100, weight of the set coordinates.
+
+        Raises:
+            RuntimeError: If blocks are nested.
+        """
+        if self._priority is not None:
+            raise RuntimeError("prioritize_manual_changes() blocks cannot be nested.")
+        object.__setattr__(self, "_priority", (set(), weight))
+        try:
+            yield self
+        finally:
+            object.__setattr__(self, "_priority", None)
 
     def __sub__(self, other: Self) -> DeltaRedundantInternalCoordinates:
         if self.primitives_idx != other.primitives_idx:
@@ -134,162 +179,13 @@ class RedundantInternalCoordinates:
         # checking if key is one coord, or multiple
         if isinstance(key[0], int):
             self.q[self.coord_to_idx[_correct_order(key)]] = value  # type: ignore[index,arg-type]
+            keys: Sequence[Coordinate] = [key]  # type: ignore[list-item]
         else:
             assert not isinstance(value, int)
             self.q[[self.coord_to_idx[_correct_order(coord)] for coord in key]] = value  # type: ignore[arg-type]
-
-    def _lambda_cycle(
-        self,
-        previous: Cartesian,
-        B: Matrix,
-        W: Matrix,
-        start_lam: float,
-        nu: float,
-        reduction_factor: float,
-        Δq: DeltaRedundantInternalCoordinates,
-    ) -> tuple[Cartesian, float]:
-        """This gets the best choice of lambda for a Levenberg-Marquardt optimization
-        step.
-
-        see: https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm"""
-
-        good_lam = False
-
-        D = np.diag(B.T @ W @ W @ B) * np.eye(len(B[0]))
-
-        lm_mat = np.vstack((W @ B, np.sqrt(start_lam) * D))
-        lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
-
-        Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
-        Δx = Δx.reshape(len(previous), 3)
-        new = previous + Δx
-        new_Δq = (
-            self - new.get_ric(internal_coords_idx=self.primitives_idx)
-        ).minimize_dihedral()
-        if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
-            lam = start_lam
-            good_lam = True
-        else:
-            lam = start_lam / reduction_factor
-
-        if not good_lam:
-            lm_mat = np.vstack((W @ B, np.sqrt(lam) * D))
-            lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
-
-            Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
-            Δx = Δx.reshape(len(previous), 3)
-            new = previous + Δx
-            new_Δq = (
-                self - new.get_ric(internal_coords_idx=self.primitives_idx)
-            ).minimize_dihedral()
-            if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
-                good_lam = True
-            else:
-                lam *= nu**2
-                while not good_lam:
-                    lm_mat = np.vstack((W @ B, np.sqrt(lam) * D))
-                    lm_vec = np.hstack((W @ Δq.delta_q, np.zeros(len(B[0]))))
-
-                    Δx = lstsq(lm_mat, lm_vec, rcond=-1)[0][: 3 * len(self.reference)]
-                    Δx = Δx.reshape(len(previous), 3)
-                    new = previous + Δx
-                    new_Δq = (
-                        self - new.get_ric(internal_coords_idx=self.primitives_idx)
-                    ).minimize_dihedral()
-                    if norm(new_Δq.delta_q) <= norm(Δq.delta_q):
-                        good_lam = True
-                    else:
-                        lam *= nu
-
-        return new, lam
-
-    def _gauss_newton_opt(
-        self, start_guess: Cartesian, max_iter: int, W: Matrix, rtol: float, atol: float
-    ) -> Cartesian:
-        from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
-            allclose,
-        )
-
-        previous = start_guess
-
-        converged = False
-        i = 0
-        while not converged:
-            if (i := i + 1) > max_iter:
-                raise ValueError(f"Not converged after {max_iter} iterations.")
-
-            B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
-
-            q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
-
-            Δq = (self - q_current).minimize_dihedral()
-
-            Δx = lstsq(W @ B, W @ Δq.delta_q, rcond=-1)[0]
-            Δx = Δx.reshape(len(previous), 3)
-
-            new = _linesearch(B, Δq.delta_q, Δx, self, previous)
-
-            converged = allclose(
-                new,
-                previous,
-                rtol=rtol,
-                atol=atol,
-                align=True,
-            )
-            previous = previous.align(new)[1]
-
-        if i > 100:
-            warn(f"The transformation to cartesian coordinates took {i} iterations.")
-
-        return new
-
-    def _levenberg_marquardt_opt(
-        self,
-        start_guess: Cartesian,
-        max_iter: int,
-        W: Matrix,
-        rtol: float,
-        atol: float,
-        start_lam: float = 1e-5,
-        nu: float = 1.5,
-        reduction_factor: float = 10,
-    ) -> Cartesian:
-        from chemcoord._cartesian_coordinates.xyz_functions import (  # noqa: PLC0415
-            allclose,
-        )
-
-        previous = start_guess
-
-        converged = False
-        i = 0
-
-        lam = start_lam
-        while not converged:
-            assert previous is not None
-            if (i := i + 1) > max_iter:
-                raise ValueError(f"Not converged after {max_iter} iterations.")
-
-            B = previous.get_Wilson_B(idx_internal_coords=self.primitives_idx)
-
-            q_current = previous.get_ric(internal_coords_idx=self.primitives_idx)
-
-            Δq = (self - q_current).minimize_dihedral()
-
-            new, lam = self._lambda_cycle(previous, B, W, lam, nu, reduction_factor, Δq)
-
-            converged = allclose(
-                new,
-                previous,
-                rtol=rtol,
-                atol=atol,
-                align=True,
-            )
-            previous = previous.align(new)[1]
-
-        if i > 100:
-            warn(f"The transformation to cartesian coordinates took {i} iterations.")
-
-        return new
+            keys = key  # type: ignore[assignment]
+        if self._priority is not None:
+            self._priority[0].update(_correct_order(coord) for coord in keys)
 
     def get_cartesian(
         self,
@@ -301,6 +197,8 @@ class RedundantInternalCoordinates:
         opt_alg: Literal["LM", "gauss"] = "LM",
         weights: Vector[np.floating] | Sequence[float] | None = None,
         default_weights: DefaultWeights | Mapping[str, float] | None = None,
+        prioritized: Iterable[Coordinate] = (),
+        priority_weight: float | None = None,
     ) -> Cartesian:
         """Finds the closest physical structure to self. Uses an iterative algorithm
         with Wilson's B matrix to converge to said structure.
@@ -319,10 +217,29 @@ class RedundantInternalCoordinates:
                 coordinate will be more likely to change linearly. Using values far
                 above 1 can cause instability
             default_weights: default
-                {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
+                {"bond": 1.0, "angle": 0.1, "dihedral": 0.05, "bending": 0.01},
                 the weights which each type of coordinate default to
+            prioritized: default (), coordinates whose weight is set to
+                ``priority_weight``, on top of ``weights`` or ``default_weights``.
+                Use it to enforce values set for these coordinates while the rest of
+                the molecule adjusts. The deviation from the set values decreases
+                inversely with the weight. Inside a
+                :meth:`prioritize_manual_changes` block, the coordinates set in the
+                block are added.
+            priority_weight: default :class:`None`, the weight of ``prioritized``.
+                If :class:`None`, the weight of the enclosing
+                :meth:`prioritize_manual_changes` block, or else 100, is used.
+                Weights of about 1e4 and above slow down or prevent convergence.
         Returns:
             Closest physical structure to self, aligned to start_guess
+
+        Raises:
+            KeyError: If a coordinate in ``prioritized`` is not in
+                ``self.primitives_idx``.
+
+        Raises:
+            ~chemcoord.exceptions.ConvergenceError: If the back-transformation does not
+                converge within ``max_iter`` iterations.
         """
 
         if start_guess is None:
@@ -349,16 +266,46 @@ class RedundantInternalCoordinates:
         else:
             assert weights is not None
 
-        W = np.diag(weights)  # type: ignore[arg-type]
+        weights = self._apply_priority(weights, prioritized, priority_weight)
+        W = diags_array(weights)
 
-        if opt_alg == "LM":
-            new = self._levenberg_marquardt_opt(start_guess, max_iter, W, rtol, atol)
-        elif opt_alg == "gauss":
-            new = self._gauss_newton_opt(start_guess, max_iter, W, rtol, atol)
-        else:
-            assert_never(opt_alg)
-
+        new = backtransform(
+            self,
+            start_guess,
+            W,
+            max_iter=max_iter,
+            rtol=rtol,
+            atol=atol,
+            opt_alg=opt_alg,
+        )
         return start_guess.align(new)[1] + start_guess.get_centroid()
+
+    def _apply_priority(
+        self,
+        weights: Vector[np.floating] | Sequence[float],
+        prioritized: Iterable[Coordinate],
+        priority_weight: float | None,
+    ) -> Vector[np.float64]:
+        """``weights`` with ``prioritized``, and the coordinates set in an enclosing
+        :meth:`prioritize_manual_changes` block, set to the priority weight."""
+        coords = {_correct_order(coord) for coord in prioritized}
+        block_weight = None
+        if self._priority is not None:
+            coords |= self._priority[0]
+            block_weight = self._priority[1]
+        result = np.array(weights, dtype=np.float64)
+        if not coords:
+            return result
+        if priority_weight is None:
+            priority_weight = 100.0 if block_weight is None else block_weight
+        for coord in coords:
+            try:
+                result[self.coord_to_idx[coord]] = priority_weight
+            except KeyError:
+                raise KeyError(
+                    f"{coord} is not one of the primitive internal coordinates."
+                ) from None
+        return result
 
     def minimize_dihedral(self) -> Self:
         """Reduces dihedral coordinates to the shorter angle, i.e., an angle of 3 pi / 2
@@ -516,38 +463,7 @@ def get_primitives_idx(
         start_and_end.add(ordered_lin + (BendType.UW,))
         start_and_end.add(ordered_lin + (BendType.VW,))
         start_and_end.discard(linearity[0])
-    return start_and_end
-
-
-def _linesearch(
-    B: Matrix,
-    Δq: Vector,
-    Δx: Vector,
-    current: RedundantInternalCoordinates,
-    previous: Cartesian,
-    alpha: float = 1.0,
-    c: float = 1e-4,
-    tau: float = 0.5,
-    max_iter: int = 100,
-) -> Cartesian:
-    # NOTE: alpha is a backtracking-line-search scalar
-    # see: https://en.wikipedia.org/wiki/Backtracking_line_search
-    too_far = True
-    t = c * 2 * norm(B.T @ Δq)
-
-    backstep = 0
-    while too_far:
-        backstep += 1
-        new = previous + alpha * Δx
-        q_new = new.get_ric(internal_coords_idx=current.primitives_idx)
-        if norm(Δq) < alpha * t + norm((current - q_new).minimize_dihedral().delta_q):
-            alpha *= tau
-        else:
-            too_far = False
-        if backstep > max_iter:
-            raise ValueError(f"Line search not terminated after {max_iter} iterations")
-
-    return new
+    return Primitives(start_and_end)
 
 
 def _get_start_guess(
@@ -583,16 +499,8 @@ def _find_joint_bond_dict(
         k: bonds_1.get(k, set()) | bonds_2.get(k, set())
         for k in (bonds_1.keys() | bonds_2.keys())
     }
-    start_fragments = start.fragmentate()
-    end_fragments = end.fragmentate()
-    if len(start_fragments) != 1:
-        for fragment_pair in combinations(start_fragments, 2):
-            index1, index2, _ = fragment_pair[0].get_shortest_distance(fragment_pair[1])
-            bonds[index1].add(index2)
-            bonds[index2].add(index1)
-    if len(end_fragments) != 1:
-        for fragment_pair in combinations(end_fragments, 2):
-            index1, index2, _ = fragment_pair[0].get_shortest_distance(fragment_pair[1])
+    for molecule in (start, end):
+        for index1, index2 in molecule._fragment_connecting_bonds():
             bonds[index1].add(index2)
             bonds[index2].add(index1)
     return bonds
@@ -653,7 +561,7 @@ def RIC_interpolate(
             will be more likely to change linearly. Using values far above 1 can cause
             instability
         default_weights: default
-            {"length" : 1.0, "angle" : 0.1, "dihedral" : 0.05, "bending" : 0.01},
+            {"bond": 1.0, "angle": 0.1, "dihedral": 0.05, "bending": 0.01},
             the weights which each type of coordinate default to
 
     Returns:
@@ -679,6 +587,8 @@ def RIC_interpolate(
         )
 
     if schedule == "independent":
+        # A single repeated structure says nothing about which way a dihedral travels.
+        seeds_are_a_path = not isinstance(seeds, Cartesian)
         seeds = _get_start_guess(start, end, N, seeds)
 
         if coord_idx is None:
@@ -686,7 +596,9 @@ def RIC_interpolate(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
 
-        return _RIC_interpolate_indpdt(start, end, N, coord_idx, to_cart, seeds)
+        return _RIC_interpolate_indpdt(
+            start, end, N, coord_idx, to_cart, seeds, seeds_are_a_path
+        )
 
     elif schedule == "from_both":
         return _RIC_interpolate_from_both(
@@ -712,9 +624,13 @@ def RIC_interpolate(
             coord_idx = get_primitives_idx(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
+        # The path is built end->start, so per-image seeds are reversed as well.
+        inner_seeds = list(reversed(seeds)) if isinstance(seeds, Sequence) else seeds
         return list(
             reversed(
-                _RIC_interpolate_from_start(end, start, N, coord_idx, to_cart, seeds)
+                _RIC_interpolate_from_start(
+                    end, start, N, coord_idx, to_cart, inner_seeds
+                )
             )
         )
 
@@ -751,7 +667,7 @@ def RIC_interpolate(
         for mode in strategies:
             try:
                 return run_interpolate(mode)
-            except (ValueError, UndefinedDihedral):
+            except (ConvergenceError, UndefinedDihedral):
                 if mode != "from_end":
                     warn(f"{mode} scheduling failed; attempting next strategy")
         else:  # noqa: PLW0120
@@ -766,6 +682,197 @@ RIC_ToCartesian: TypeAlias = Callable[
 ]
 
 
+def _wrap(angle: Vector[float64]) -> Vector[float64]:
+    return np.mod(angle + np.pi, 2 * np.pi) - np.pi
+
+
+def _dihedral_angles(
+    p0: Matrix[float64], p1: Matrix[float64], p2: Matrix[float64], p3: Matrix[float64]
+) -> Vector[float64]:
+    """Dihedral angles of the rows of ``p0``, ..., ``p3`` in the convention of
+    :meth:`~chemcoord.Cartesian.get_ric`."""
+    axis = p2 - p1
+    axis /= np.linalg.norm(axis, axis=1)[:, None]
+    v = p0 - p1
+    v -= np.sum(v * axis, axis=1)[:, None] * axis
+    w = p3 - p2
+    w -= np.sum(w * axis, axis=1)[:, None] * axis
+    return np.arctan2(np.sum(np.cross(axis, v) * w, axis=1), np.sum(v * w, axis=1))
+
+
+def _positions(molecule: Cartesian, atoms: Sequence[AtomIdx]) -> Matrix[float64]:
+    xyz = np.asarray(molecule.loc[:, ["x", "y", "z"]], dtype=float)
+    row = {atom: i for i, atom in enumerate(molecule.index)}
+    return xyz[[row[atom] for atom in atoms]]
+
+
+def _bond_angles(
+    molecule: Cartesian,
+    first: Sequence[AtomIdx],
+    vertex: Sequence[AtomIdx],
+    last: Sequence[AtomIdx],
+) -> Vector[float64]:
+    v, w = (
+        _positions(molecule, atoms) - _positions(molecule, vertex)
+        for atoms in (first, last)
+    )
+    cos = np.sum(v * w, axis=1) / (
+        np.linalg.norm(v, axis=1) * np.linalg.norm(w, axis=1)
+    )
+    return np.arccos(np.clip(cos, -1.0, 1.0))
+
+
+def _dihedral_offsets(
+    molecule: Cartesian,
+    members: Sequence[tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]],
+    references: Sequence[tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]],
+) -> tuple[Vector[float64], Vector[float64]]:
+    """The two contributions to ``τ(member) - τ(reference)`` of dihedrals about the
+    same central bond ``b -> c``.
+
+    They are the angles, viewed along the central bond, between the terminal atoms on
+    ``b`` and between the terminal atoms on ``c``. Each is fixed up to its sign by the
+    bond angles at that atom, so a rotation about the central bond leaves it unchanged.
+    """
+    a, b, c, d = (_positions(molecule, [m[k] for m in members]) for k in range(4))
+    a_ref = _positions(molecule, [r[0] for r in references])
+    d_ref = _positions(molecule, [r[3] for r in references])
+    # A point attached to the other atom of the bond, pointing in the same direction
+    # as the reference's terminal atom, has a dihedral of zero with it.
+    on_b = _dihedral_angles(a, b, c, c + (a_ref - b))
+    on_c = _dihedral_angles(b + (d_ref - c), b, c, d)
+    return on_b, on_c
+
+
+def _consistent_dihedral_branch(
+    Δq: DeltaRedundantInternalCoordinates,
+    start: Cartesian,
+    end: Cartesian,
+    preferred: Mapping[Coordinate, float] | None = None,
+    off_axis: float = np.radians(20),
+) -> DeltaRedundantInternalCoordinates:
+    """Put the dihedrals of ``Δq`` on 2π branches that a motion of the atoms realises.
+
+    ``minimize_dihedral`` takes the shortest arc of every dihedral independently. For
+    dihedrals about the same central bond this can ask for rotations in opposite
+    directions, e.g. between near mirror images, which no structure realises.
+    Their differences are angles between bonds at the central atoms (see
+    :func:`_dihedral_offsets`), whose changes are unambiguous. So within a group only a
+    common number of turns is free. It is chosen closest to ``preferred``, e.g. the
+    change along a seed path, or else as the smallest total rotation of the group.
+
+    The angle between two bonds viewed along the central bond is only well defined if
+    neither bond is close to collinear with it. Dihedrals with a terminal atom within
+    ``off_axis`` of the axis, in start or end, are therefore not coupled to the others
+    and keep their own branch. Rings, which couple dihedrals about different bonds, are
+    not treated.
+    """
+    oriented: dict[int, tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]] = {}
+    for i, coord in enumerate(Δq.primitives_idx):
+        if _is_dihedral(coord):
+            a, b, c, d = coord  # type: ignore[misc]
+            # τ(a, b, c, d) = τ(d, c, b, a), so orient every member along min -> max.
+            oriented[i] = (a, b, c, d) if b < c else (d, c, b, a)
+    if not oriented:
+        return Δq
+
+    well_defined = np.ones(len(oriented), dtype=bool)
+    for molecule in (start, end):
+        for first, second in ((0, 1), (3, 2)):
+            angles = _bond_angles(
+                molecule,
+                [dihedral[first] for dihedral in oriented.values()],
+                [dihedral[second] for dihedral in oriented.values()],
+                [dihedral[3 - second] for dihedral in oriented.values()],
+            )
+            well_defined &= (off_axis < angles) & (angles < np.pi - off_axis)
+
+    groups: dict[tuple[AtomIdx, ...], list[int]] = {}
+    for (i, dihedral), coupled in zip(oriented.items(), well_defined):
+        groups.setdefault(dihedral[1:3] if coupled else dihedral, []).append(i)
+
+    members = [i for group in groups.values() for i in group]
+    reference = {i: group[0] for group in groups.values() for i in group}
+    changes = [
+        _wrap(after - before)
+        for before, after in zip(
+            _dihedral_offsets(
+                start,
+                [oriented[i] for i in members],
+                [oriented[reference[i]] for i in members],
+            ),
+            _dihedral_offsets(
+                end,
+                [oriented[i] for i in members],
+                [oriented[reference[i]] for i in members],
+            ),
+        )
+    ]
+    relative = dict(zip(members, changes[0] + changes[1]))
+
+    shortest = Δq.minimize_dihedral().delta_q
+    new = Δq.copy()
+    for group in groups.values():
+        r = group[0]
+        wanted = (
+            None
+            if preferred is None
+            else np.array(
+                [preferred.get(Δq.primitives_idx[i], np.nan) for i in group]  # type: ignore[arg-type]
+            )
+        )
+        centre = (
+            0
+            if wanted is None or np.isnan(wanted[0])
+            else round((wanted[0] - shortest[r]) / (2 * np.pi))
+        )
+        best, best_cost = None, np.inf
+        for turns in (centre, centre - 1, centre + 1):
+            Δτ_r = shortest[r] + 2 * np.pi * turns
+            Δτ = np.array(
+                [
+                    shortest[i]
+                    + 2
+                    * np.pi
+                    * round((Δτ_r + relative[i] - shortest[i]) / (2 * np.pi))
+                    for i in group
+                ]
+            )
+            cost = (
+                np.sum(np.abs(Δτ)) if wanted is None else np.nansum(np.abs(Δτ - wanted))
+            )
+            if cost < best_cost - 1e-12:
+                best, best_cost = Δτ, cost
+        new.delta_q[group] = best
+    return new
+
+
+def _seed_path_change(
+    coord_idx: Primitives, seeds: Sequence[Cartesian]
+) -> dict[Coordinate, float] | None:
+    """The change of every dihedral accumulated along the continuous seed path."""
+    dihedrals = [coord for coord in coord_idx if _is_dihedral(coord)]
+    try:
+        trajectory = np.array(
+            [seed.get_ric(coord_idx)[dihedrals] for seed in seeds]  # type: ignore[arg-type]
+        )
+    except UndefinedDihedral:
+        # e.g. the cartesian fallback of the seeds passes through a linear geometry
+        return None
+    travelled = np.unwrap(trajectory, axis=0)[-1] - trajectory[0]
+    return dict(zip(dihedrals, travelled))
+
+
+def _as_preference(
+    Δq: DeltaRedundantInternalCoordinates,
+) -> dict[Coordinate, float]:
+    return {
+        coord: value
+        for coord, value in zip(Δq.primitives_idx, Δq.delta_q)
+        if _is_dihedral(coord)
+    }
+
+
 def _RIC_interpolate_indpdt(
     start: Cartesian,
     end: Cartesian,
@@ -773,9 +880,15 @@ def _RIC_interpolate_indpdt(
     coord_idx: Primitives,
     to_cart: RIC_ToCartesian,
     seeds: Sequence[Cartesian],
+    seeds_are_a_path: bool,
 ) -> list[Cartesian]:
     q1, q2 = start.get_ric(coord_idx), end.get_ric(coord_idx)
-    Δq = (q2 - q1).minimize_dihedral()
+    Δq = _consistent_dihedral_branch(
+        (q2 - q1).minimize_dihedral(),
+        start,
+        end,
+        _seed_path_change(coord_idx, seeds) if seeds_are_a_path else None,
+    )
     Qs = [q1 + i * Δq / (N - 1) for i in range(N)]
 
     return Parallel(n_jobs=settings.defaults.n_worker)(
@@ -795,9 +908,14 @@ def _RIC_interpolate_from_start(
     q2: Final = end.get_ric(coord_idx)
 
     path = [start]
+    # The rest of the previous step's change, so the branch is not re-decided per image.
+    remaining: dict[Coordinate, float] | None = None
     for i in range(1, N - 1):
         q1 = path[i - 1].get_ric(coord_idx)
-        Δq = (q2 - q1).minimize_dihedral()
+        Δq = _consistent_dihedral_branch(
+            (q2 - q1).minimize_dihedral(), path[i - 1], end, remaining
+        )
+        remaining = _as_preference(Δq * ((N - i - 1) / (N - i)))
 
         if seeds is None:
             seed = path[-1]
@@ -831,6 +949,7 @@ def _RIC_interpolate_from_both(
     is_even: Final = (N + 1) % 2
     last_iter: Final = (N - 3) // 2
 
+    remaining: dict[Coordinate, float] | None = None
     for i in range((N - 1) // 2):
         n_to_add = N - 2 * (i + 1)
         x1, x2 = from_start[-1], from_end[-1]
@@ -840,7 +959,10 @@ def _RIC_interpolate_from_both(
         )
 
         q1, q2 = x1.get_ric(coord_idx), x2.get_ric(coord_idx)
-        Δq = (q2 - q1).minimize_dihedral()
+        Δq = _consistent_dihedral_branch(
+            (q2 - q1).minimize_dihedral(), x1, x2, remaining
+        )
+        remaining = _as_preference(Δq * ((n_to_add - 1) / (n_to_add + 1)))
 
         if seeds is None:
             start_seed = from_start[-1]
