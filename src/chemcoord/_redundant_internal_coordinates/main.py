@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import contextmanager
 from typing import Final, Literal, Mapping, TypeAlias, cast, overload
 from warnings import warn
 
@@ -79,6 +80,12 @@ class RedundantInternalCoordinates:
 
     coord_to_idx: Final[Mapping[Coordinate, int]] = field(init=False)
 
+    #: The coordinates set inside a :meth:`prioritize_manual_changes` block and their
+    #: weight, or :class:`None` outside of such a block.
+    _priority: tuple[set[Coordinate], float] | None = field(
+        init=False, default=None, eq=False, repr=False
+    )
+
     @coord_to_idx.default
     def _get_coord_to_idx(self) -> Mapping[Coordinate, int]:
         return dict(zip(self.primitives_idx, range(len(self.primitives_idx))))
@@ -89,6 +96,38 @@ class RedundantInternalCoordinates:
             self.primitives_idx.copy(),
             self.reference.copy(),
         )
+
+    @contextmanager
+    def prioritize_manual_changes(self, weight: float = 100.0) -> Iterator[Self]:
+        """Weight the coordinates set within the block more strongly.
+
+        Every coordinate assigned via ``q[...] = ...`` inside the block is passed as
+        ``prioritized`` with ``weight`` to each :meth:`get_cartesian` call inside the
+        block, so the change is enforced and the rest of the molecule adjusts.
+
+        .. code-block:: python
+
+            q = molecule.get_ric()
+            with q.prioritize_manual_changes():
+                q[(0, 1, 2, 3)] = 0.0
+                new = q.get_cartesian()
+
+        Only assignments inside the block count. Copies of ``self`` made inside the
+        block, e.g. by :meth:`copy` or arithmetic, are not tracked.
+
+        Args:
+            weight: default 100, weight of the set coordinates.
+
+        Raises:
+            RuntimeError: If blocks are nested.
+        """
+        if self._priority is not None:
+            raise RuntimeError("prioritize_manual_changes() blocks cannot be nested.")
+        object.__setattr__(self, "_priority", (set(), weight))
+        try:
+            yield self
+        finally:
+            object.__setattr__(self, "_priority", None)
 
     def __sub__(self, other: Self) -> DeltaRedundantInternalCoordinates:
         if self.primitives_idx != other.primitives_idx:
@@ -140,9 +179,13 @@ class RedundantInternalCoordinates:
         # checking if key is one coord, or multiple
         if isinstance(key[0], int):
             self.q[self.coord_to_idx[_correct_order(key)]] = value  # type: ignore[index,arg-type]
+            keys: Sequence[Coordinate] = [key]  # type: ignore[list-item]
         else:
             assert not isinstance(value, int)
             self.q[[self.coord_to_idx[_correct_order(coord)] for coord in key]] = value  # type: ignore[arg-type]
+            keys = key  # type: ignore[assignment]
+        if self._priority is not None:
+            self._priority[0].update(_correct_order(coord) for coord in keys)
 
     def get_cartesian(
         self,
@@ -154,6 +197,8 @@ class RedundantInternalCoordinates:
         opt_alg: Literal["LM", "gauss"] = "LM",
         weights: Vector[np.floating] | Sequence[float] | None = None,
         default_weights: DefaultWeights | Mapping[str, float] | None = None,
+        prioritized: Iterable[Coordinate] = (),
+        priority_weight: float | None = None,
     ) -> Cartesian:
         """Finds the closest physical structure to self. Uses an iterative algorithm
         with Wilson's B matrix to converge to said structure.
@@ -174,8 +219,23 @@ class RedundantInternalCoordinates:
             default_weights: default
                 {"bond": 1.0, "angle": 0.1, "dihedral": 0.05, "bending": 0.01},
                 the weights which each type of coordinate default to
+            prioritized: default (), coordinates whose weight is set to
+                ``priority_weight``, on top of ``weights`` or ``default_weights``.
+                Use it to enforce values set for these coordinates while the rest of
+                the molecule adjusts. The deviation from the set values decreases
+                inversely with the weight. Inside a
+                :meth:`prioritize_manual_changes` block, the coordinates set in the
+                block are added.
+            priority_weight: default :class:`None`, the weight of ``prioritized``.
+                If :class:`None`, the weight of the enclosing
+                :meth:`prioritize_manual_changes` block, or else 100, is used.
+                Weights of about 1e4 and above slow down or prevent convergence.
         Returns:
             Closest physical structure to self, aligned to start_guess
+
+        Raises:
+            KeyError: If a coordinate in ``prioritized`` is not in
+                ``self.primitives_idx``.
 
         Raises:
             ~chemcoord.exceptions.ConvergenceError: If the back-transformation does not
@@ -206,7 +266,8 @@ class RedundantInternalCoordinates:
         else:
             assert weights is not None
 
-        W = diags_array(np.asarray(weights))
+        weights = self._apply_priority(weights, prioritized, priority_weight)
+        W = diags_array(weights)
 
         new = backtransform(
             self,
@@ -218,6 +279,33 @@ class RedundantInternalCoordinates:
             opt_alg=opt_alg,
         )
         return start_guess.align(new)[1] + start_guess.get_centroid()
+
+    def _apply_priority(
+        self,
+        weights: Vector[np.floating] | Sequence[float],
+        prioritized: Iterable[Coordinate],
+        priority_weight: float | None,
+    ) -> Vector[np.float64]:
+        """``weights`` with ``prioritized``, and the coordinates set in an enclosing
+        :meth:`prioritize_manual_changes` block, set to the priority weight."""
+        coords = {_correct_order(coord) for coord in prioritized}
+        block_weight = None
+        if self._priority is not None:
+            coords |= self._priority[0]
+            block_weight = self._priority[1]
+        result = np.array(weights, dtype=np.float64)
+        if not coords:
+            return result
+        if priority_weight is None:
+            priority_weight = 100.0 if block_weight is None else block_weight
+        for coord in coords:
+            try:
+                result[self.coord_to_idx[coord]] = priority_weight
+            except KeyError:
+                raise KeyError(
+                    f"{coord} is not one of the primitive internal coordinates."
+                ) from None
+        return result
 
     def minimize_dihedral(self) -> Self:
         """Reduces dihedral coordinates to the shorter angle, i.e., an angle of 3 pi / 2

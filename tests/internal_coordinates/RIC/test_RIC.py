@@ -389,3 +389,85 @@ def test_interpolate_between_rotamers():
     for i, image in enumerate(path[:-1]):
         target = q1 + i * Δq / (N - 1)
         assert weighted_residual(target, image, idx, weights) <= ROUND_TRIP_RESIDUAL
+
+
+RING_DIHEDRAL = (0, 1, 2, 3)
+
+
+def _flattened_ring(get_cartesian):
+    """The chair with one ring dihedral set to 0, which the ring cannot follow alone."""
+    idx = get_primitives_idx(molecule1, molecule1)
+    q = molecule1.get_ric(idx)
+    return idx, q, get_cartesian(q)
+
+
+def _ring_dihedral_error(structure, idx):
+    return np.degrees(abs(structure.get_ric(idx)[RING_DIHEDRAL]))
+
+
+def test_prioritized_enforces_the_set_value():
+    def flatten(q, **kwargs):
+        q[RING_DIHEDRAL] = 0.0
+        return q.get_cartesian(max_iter=500, **kwargs)
+
+    idx, _, default = _flattened_ring(flatten)
+    _, _, prioritized = _flattened_ring(
+        lambda q: flatten(q, prioritized=[RING_DIHEDRAL[::-1]])
+    )
+    assert _ring_dihedral_error(default, idx) > 0.1
+    assert _ring_dihedral_error(prioritized, idx) < 1e-3
+
+
+def test_prioritized_is_a_weight_override():
+    idx = get_primitives_idx(molecule1, molecule1)
+    q = molecule1.get_ric(idx)
+    q[RING_DIHEDRAL] = 0.0
+    weights = weight_vector(idx)
+    weights[q.coord_to_idx[RING_DIHEDRAL]] = 30.0
+
+    by_weights = q.get_cartesian(max_iter=500, weights=weights)
+    by_priority = q.get_cartesian(
+        max_iter=500, prioritized=[RING_DIHEDRAL], priority_weight=30.0
+    )
+    assert allclose(by_weights, by_priority, atol=1e-10)
+
+
+def test_prioritized_unknown_coordinate():
+    q = molecule1.get_ric()
+    with pytest.raises(KeyError, match="not one of the primitive"):
+        q.get_cartesian(prioritized=[(0, 9)])
+
+
+def test_prioritize_manual_changes():
+    idx = get_primitives_idx(molecule1, molecule1)
+    q = molecule1.get_ric(idx)
+    q[(0, 1)] = q[(0, 1)]  # set before the block: must not count
+
+    with q.prioritize_manual_changes(weight=50.0):
+        q[RING_DIHEDRAL] = 0.0
+        untracked = q.copy()
+        in_block = q.get_cartesian(max_iter=500)
+        assert q._priority == ({RING_DIHEDRAL}, 50.0)
+
+    explicit = q.get_cartesian(
+        max_iter=500, prioritized=[RING_DIHEDRAL], priority_weight=50.0
+    )
+    assert allclose(in_block, explicit, atol=1e-10)
+    assert untracked._priority is None
+    assert q._priority is None
+    assert _ring_dihedral_error(q.get_cartesian(max_iter=500), idx) > 0.1
+
+
+def test_prioritize_manual_changes_is_reset_and_not_nested():
+    q = molecule1.get_ric()
+    with pytest.raises(RuntimeError, match="nested"):
+        with q.prioritize_manual_changes():
+            with q.prioritize_manual_changes():
+                pass
+    assert q._priority is None
+
+    with pytest.raises(ZeroDivisionError):
+        with q.prioritize_manual_changes():
+            q[RING_DIHEDRAL] = 0.0
+            1 / 0
+    assert q._priority is None

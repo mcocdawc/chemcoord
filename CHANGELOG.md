@@ -84,6 +84,24 @@
 
 ## New features
 
+- Internal coordinates can now be set to a value of choice while the rest of the
+    molecule adjusts. `RedundantInternalCoordinates.get_cartesian` accepts
+    `prioritized`, the coordinates whose weight in the least-squares problem is raised
+    to `priority_weight` (default 100):
+
+    ```python
+    q = molecule.get_ric()
+    q[(0, 1, 2, 3)] = 0.0
+    new = q.get_cartesian(prioritized=[(0, 1, 2, 3)])
+    ```
+
+    Inside a `with q.prioritize_manual_changes(weight=100):` block, every coordinate
+    assigned via `q[...] = ...` is prioritized automatically in each `get_cartesian`
+    call of the block. For chair cyclohexane, setting one ring dihedral from 58 to 0
+    degrees meets the target to 1e-4 degrees at weight 100, where the default weights
+    miss it by 50 degrees. The deviation decreases inversely with the weight; weights of
+    about 1e4 and above slow down or prevent convergence.
+
 - Added a sparse back-transformation from redundant internal coordinates. Wilson's
     B matrix is banded -- every internal coordinate couples at most four atoms -- so it
     is now available in compressed sparse row form via the new
