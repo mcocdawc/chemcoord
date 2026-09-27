@@ -25,7 +25,14 @@ from chemcoord.exceptions import (
     PhysicalMeaning,
     UndefinedDihedral,
 )
-from chemcoord.typing import ArithmeticOther, AtomIdx, BondDict, Real, Vector
+from chemcoord.typing import (
+    ArithmeticOther,
+    AtomIdx,
+    BondDict,
+    Matrix,
+    Real,
+    Vector,
+)
 
 Coordinate: TypeAlias = (
     tuple[AtomIdx, AtomIdx]
@@ -587,29 +594,195 @@ RIC_ToCartesian: TypeAlias = Callable[
 ]
 
 
-def _match_dihedral_branch(
-    Δq: DeltaRedundantInternalCoordinates,
-    coord_idx: Primitives,
-    seeds: Sequence[Cartesian],
-) -> DeltaRedundantInternalCoordinates:
-    """Put each dihedral of ``Δq`` on the 2π branch that ``seeds`` travels along.
+def _wrap(angle: Vector[float64]) -> Vector[float64]:
+    return np.mod(angle + np.pi, 2 * np.pi) - np.pi
 
-    The shortest arc chosen by ``minimize_dihedral`` can run opposite to the motion,
-    e.g. between near mirror images, which makes the interpolated targets unrealisable.
-    The seed path is a continuous motion, so the change it accumulates picks the arc.
+
+def _dihedral_angles(
+    p0: Matrix[float64], p1: Matrix[float64], p2: Matrix[float64], p3: Matrix[float64]
+) -> Vector[float64]:
+    """Dihedral angles of the rows of ``p0``, ..., ``p3`` in the convention of
+    :meth:`~chemcoord.Cartesian.get_ric`."""
+    axis = p2 - p1
+    axis /= np.linalg.norm(axis, axis=1)[:, None]
+    v = p0 - p1
+    v -= np.sum(v * axis, axis=1)[:, None] * axis
+    w = p3 - p2
+    w -= np.sum(w * axis, axis=1)[:, None] * axis
+    return np.arctan2(np.sum(np.cross(axis, v) * w, axis=1), np.sum(v * w, axis=1))
+
+
+def _positions(molecule: Cartesian, atoms: Sequence[AtomIdx]) -> Matrix[float64]:
+    xyz = np.asarray(molecule.loc[:, ["x", "y", "z"]], dtype=float)
+    row = {atom: i for i, atom in enumerate(molecule.index)}
+    return xyz[[row[atom] for atom in atoms]]
+
+
+def _bond_angles(
+    molecule: Cartesian,
+    first: Sequence[AtomIdx],
+    vertex: Sequence[AtomIdx],
+    last: Sequence[AtomIdx],
+) -> Vector[float64]:
+    v, w = (
+        _positions(molecule, atoms) - _positions(molecule, vertex)
+        for atoms in (first, last)
+    )
+    cos = np.sum(v * w, axis=1) / (
+        np.linalg.norm(v, axis=1) * np.linalg.norm(w, axis=1)
+    )
+    return np.arccos(np.clip(cos, -1.0, 1.0))
+
+
+def _dihedral_offsets(
+    molecule: Cartesian,
+    members: Sequence[tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]],
+    references: Sequence[tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]],
+) -> tuple[Vector[float64], Vector[float64]]:
+    """The two contributions to ``τ(member) - τ(reference)`` of dihedrals about the
+    same central bond ``b -> c``.
+
+    They are the angles, viewed along the central bond, between the terminal atoms on
+    ``b`` and between the terminal atoms on ``c``. Each is fixed up to its sign by the
+    bond angles at that atom, so a rotation about the central bond leaves it unchanged.
     """
-    dihedrals = [i for i, coord in enumerate(coord_idx) if _is_dihedral(coord)]
-    if not dihedrals:
+    a, b, c, d = (_positions(molecule, [m[k] for m in members]) for k in range(4))
+    a_ref = _positions(molecule, [r[0] for r in references])
+    d_ref = _positions(molecule, [r[3] for r in references])
+    # A point attached to the other atom of the bond, pointing in the same direction
+    # as the reference's terminal atom, has a dihedral of zero with it.
+    on_b = _dihedral_angles(a, b, c, c + (a_ref - b))
+    on_c = _dihedral_angles(b + (d_ref - c), b, c, d)
+    return on_b, on_c
+
+
+def _consistent_dihedral_branch(
+    Δq: DeltaRedundantInternalCoordinates,
+    start: Cartesian,
+    end: Cartesian,
+    preferred: Mapping[Coordinate, float] | None = None,
+    off_axis: float = np.radians(20),
+) -> DeltaRedundantInternalCoordinates:
+    """Put the dihedrals of ``Δq`` on 2π branches that a motion of the atoms realises.
+
+    ``minimize_dihedral`` takes the shortest arc of every dihedral independently. For
+    dihedrals about the same central bond this can ask for rotations in opposite
+    directions, e.g. between near mirror images, which no structure realises.
+    Their differences are angles between bonds at the central atoms (see
+    :func:`_dihedral_offsets`), whose changes are unambiguous. So within a group only a
+    common number of turns is free. It is chosen closest to ``preferred``, e.g. the
+    change along a seed path, or else as the smallest total rotation of the group.
+
+    The angle between two bonds viewed along the central bond is only well defined if
+    neither bond is close to collinear with it. Dihedrals with a terminal atom within
+    ``off_axis`` of the axis, in start or end, are therefore not coupled to the others
+    and keep their own branch. Rings, which couple dihedrals about different bonds, are
+    not treated.
+    """
+    oriented: dict[int, tuple[AtomIdx, AtomIdx, AtomIdx, AtomIdx]] = {}
+    for i, coord in enumerate(Δq.primitives_idx):
+        if _is_dihedral(coord):
+            a, b, c, d = coord  # type: ignore[misc]
+            # τ(a, b, c, d) = τ(d, c, b, a), so orient every member along min -> max.
+            oriented[i] = (a, b, c, d) if b < c else (d, c, b, a)
+    if not oriented:
         return Δq
 
-    trajectory = np.array([seed.get_ric(coord_idx).q for seed in seeds])[:, dihedrals]
-    travelled = np.unwrap(trajectory, axis=0)[-1] - trajectory[0]
-    shortest = Δq.delta_q[dihedrals]
+    well_defined = np.ones(len(oriented), dtype=bool)
+    for molecule in (start, end):
+        for first, second in ((0, 1), (3, 2)):
+            angles = _bond_angles(
+                molecule,
+                [dihedral[first] for dihedral in oriented.values()],
+                [dihedral[second] for dihedral in oriented.values()],
+                [dihedral[3 - second] for dihedral in oriented.values()],
+            )
+            well_defined &= (off_axis < angles) & (angles < np.pi - off_axis)
 
-    Δq.delta_q[dihedrals] = shortest + 2 * np.pi * np.round(
-        (travelled - shortest) / (2 * np.pi)
-    )
-    return Δq
+    groups: dict[tuple[AtomIdx, ...], list[int]] = {}
+    for (i, dihedral), coupled in zip(oriented.items(), well_defined):
+        groups.setdefault(dihedral[1:3] if coupled else dihedral, []).append(i)
+
+    members = [i for group in groups.values() for i in group]
+    reference = {i: group[0] for group in groups.values() for i in group}
+    changes = [
+        _wrap(after - before)
+        for before, after in zip(
+            _dihedral_offsets(
+                start,
+                [oriented[i] for i in members],
+                [oriented[reference[i]] for i in members],
+            ),
+            _dihedral_offsets(
+                end,
+                [oriented[i] for i in members],
+                [oriented[reference[i]] for i in members],
+            ),
+        )
+    ]
+    relative = dict(zip(members, changes[0] + changes[1]))
+
+    shortest = Δq.minimize_dihedral().delta_q
+    new = Δq.copy()
+    for group in groups.values():
+        r = group[0]
+        wanted = (
+            None
+            if preferred is None
+            else np.array(
+                [preferred.get(Δq.primitives_idx[i], np.nan) for i in group]  # type: ignore[arg-type]
+            )
+        )
+        centre = (
+            0
+            if wanted is None or np.isnan(wanted[0])
+            else round((wanted[0] - shortest[r]) / (2 * np.pi))
+        )
+        best, best_cost = None, np.inf
+        for turns in (centre, centre - 1, centre + 1):
+            Δτ_r = shortest[r] + 2 * np.pi * turns
+            Δτ = np.array(
+                [
+                    shortest[i]
+                    + 2
+                    * np.pi
+                    * round((Δτ_r + relative[i] - shortest[i]) / (2 * np.pi))
+                    for i in group
+                ]
+            )
+            cost = (
+                np.sum(np.abs(Δτ)) if wanted is None else np.nansum(np.abs(Δτ - wanted))
+            )
+            if cost < best_cost - 1e-12:
+                best, best_cost = Δτ, cost
+        new.delta_q[group] = best
+    return new
+
+
+def _seed_path_change(
+    coord_idx: Primitives, seeds: Sequence[Cartesian]
+) -> dict[Coordinate, float] | None:
+    """The change of every dihedral accumulated along the continuous seed path."""
+    dihedrals = [coord for coord in coord_idx if _is_dihedral(coord)]
+    try:
+        trajectory = np.array(
+            [seed.get_ric(coord_idx)[dihedrals] for seed in seeds]  # type: ignore[arg-type]
+        )
+    except UndefinedDihedral:
+        # e.g. the cartesian fallback of the seeds passes through a linear geometry
+        return None
+    travelled = np.unwrap(trajectory, axis=0)[-1] - trajectory[0]
+    return dict(zip(dihedrals, travelled))
+
+
+def _as_preference(
+    Δq: DeltaRedundantInternalCoordinates,
+) -> dict[Coordinate, float]:
+    return {
+        coord: value
+        for coord, value in zip(Δq.primitives_idx, Δq.delta_q)
+        if _is_dihedral(coord)
+    }
 
 
 def _RIC_interpolate_indpdt(
@@ -622,9 +795,12 @@ def _RIC_interpolate_indpdt(
     seeds_are_a_path: bool,
 ) -> list[Cartesian]:
     q1, q2 = start.get_ric(coord_idx), end.get_ric(coord_idx)
-    Δq = (q2 - q1).minimize_dihedral()
-    if seeds_are_a_path:
-        Δq = _match_dihedral_branch(Δq, coord_idx, seeds)
+    Δq = _consistent_dihedral_branch(
+        (q2 - q1).minimize_dihedral(),
+        start,
+        end,
+        _seed_path_change(coord_idx, seeds) if seeds_are_a_path else None,
+    )
     Qs = [q1 + i * Δq / (N - 1) for i in range(N)]
 
     return Parallel(n_jobs=settings.defaults.n_worker)(
@@ -644,9 +820,14 @@ def _RIC_interpolate_from_start(
     q2: Final = end.get_ric(coord_idx)
 
     path = [start]
+    # The rest of the previous step's change, so the branch is not re-decided per image.
+    remaining: dict[Coordinate, float] | None = None
     for i in range(1, N - 1):
         q1 = path[i - 1].get_ric(coord_idx)
-        Δq = (q2 - q1).minimize_dihedral()
+        Δq = _consistent_dihedral_branch(
+            (q2 - q1).minimize_dihedral(), path[i - 1], end, remaining
+        )
+        remaining = _as_preference(Δq * ((N - i - 1) / (N - i)))
 
         if seeds is None:
             seed = path[-1]
@@ -680,6 +861,7 @@ def _RIC_interpolate_from_both(
     is_even: Final = (N + 1) % 2
     last_iter: Final = (N - 3) // 2
 
+    remaining: dict[Coordinate, float] | None = None
     for i in range((N - 1) // 2):
         n_to_add = N - 2 * (i + 1)
         x1, x2 = from_start[-1], from_end[-1]
@@ -689,7 +871,10 @@ def _RIC_interpolate_from_both(
         )
 
         q1, q2 = x1.get_ric(coord_idx), x2.get_ric(coord_idx)
-        Δq = (q2 - q1).minimize_dihedral()
+        Δq = _consistent_dihedral_branch(
+            (q2 - q1).minimize_dihedral(), x1, x2, remaining
+        )
+        remaining = _as_preference(Δq * ((n_to_add - 1) / (n_to_add + 1)))
 
         if seeds is None:
             start_seed = from_start[-1]

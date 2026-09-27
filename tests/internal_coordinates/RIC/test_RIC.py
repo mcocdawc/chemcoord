@@ -7,6 +7,7 @@ from chemcoord import Cartesian
 from chemcoord._redundant_internal_coordinates.main import (
     DefaultWeights,
     RIC_interpolate,
+    _consistent_dihedral_branch,
     get_primitives_idx,
 )
 from chemcoord.typing import AtomIdx
@@ -340,13 +341,16 @@ def test_get_ric_on_a_zmat_interpolated_frame():
     )
 
 
-def test_interpolate_between_near_mirror_images():
+@pytest.mark.parametrize(
+    "schedule", ["independent", "from_start", "from_end", "from_both"]
+)
+def test_interpolate_between_near_mirror_images(schedule):
     """The path between near mirror images, whose dihedrals flip sign, must not jump."""
     start = Cartesian.read_xyz(get_complete_path("MeOH_Furan_start.xyz"))
     end = Cartesian.read_xyz(get_complete_path("MeOH_Furan_end.xyz"))
     N = 11
 
-    path = RIC_interpolate(start, end, N, schedule="independent")
+    path = RIC_interpolate(start, end, N, schedule=schedule)
 
     steps = [
         np.linalg.norm(
@@ -357,3 +361,31 @@ def test_interpolate_between_near_mirror_images():
     ]
     assert max(steps) <= 2 * np.median(steps)
     assert allclose(path[-1], end, align=True, atol=1e-3)
+
+
+def test_interpolate_between_rotamers():
+    """Dihedrals about one bond must turn together, so rotamer changes stay realisable.
+
+    The end structure is myoglobin with 16 side chains turned by 180 degrees about
+    single bonds, so every intermediate target is an exactly realisable structure.
+    Taking the shortest arc for each dihedral independently breaks that for groups
+    whose members get opposite signs, and the images then miss their targets.
+    """
+    start = Cartesian.read_xyz(get_complete_path("101M_protein.xyz"))
+    end = Cartesian.read_xyz(get_complete_path("101M_protein_rotamers.xyz"))
+    N = 5
+
+    idx = get_primitives_idx(start, end)
+    q1 = start.get_ric(idx)
+    shortest = (end.get_ric(idx) - q1).minimize_dihedral()
+    Δq = _consistent_dihedral_branch(shortest, start, end)
+    # The fixture has to contain a group the shortest arcs get wrong.
+    assert not np.allclose(shortest.delta_q, Δq.delta_q)
+
+    # A single seed carries no information about the direction of rotation.
+    path = RIC_interpolate(start, end, N, schedule="independent", seeds=start)
+
+    weights = weight_vector(idx)
+    for i, image in enumerate(path[:-1]):
+        target = q1 + i * Δq / (N - 1)
+        assert weighted_residual(target, image, idx, weights) <= ROUND_TRIP_RESIDUAL
