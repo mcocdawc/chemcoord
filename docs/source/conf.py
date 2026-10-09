@@ -79,6 +79,7 @@ intersphinx_mapping = {
     "pymatgen": ("https://pymatgen.org/", None),
     "python": ("https://docs.python.org/3", None),
     "pyscf": ("https://pyscf.org/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "sortedset": ("https://grantjenks.com/docs/sortedcontainers/", None),
 }
 
