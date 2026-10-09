@@ -852,12 +852,15 @@ def _seed_path_change(
 ) -> dict[Coordinate, float] | None:
     """The change of every dihedral accumulated along the continuous seed path."""
     dihedrals = [coord for coord in coord_idx if _is_dihedral(coord)]
-    try:
-        trajectory = np.array(
-            [seed.get_ric(coord_idx)[dihedrals] for seed in seeds]  # type: ignore[arg-type]
-        )
-    except UndefinedDihedral:
-        # e.g. the cartesian fallback of the seeds passes through a linear geometry
+    if len(dihedrals) > 0:
+        try:
+            trajectory = np.array(
+                [seed.get_ric(coord_idx)[dihedrals] for seed in seeds]  # type: ignore[arg-type]
+            )
+        except UndefinedDihedral:
+            # e.g. the cartesian fallback of the seeds passes through a linear geometry
+            return None
+    else:
         return None
     travelled = np.unwrap(trajectory, axis=0)[-1] - trajectory[0]
     return dict(zip(dihedrals, travelled))
