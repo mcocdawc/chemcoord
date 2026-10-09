@@ -163,7 +163,14 @@ class CartesianBmat(CartesianCore):
         position_arr = self.loc[:, COORDS].values
         if coord_arr is None:
             coord_arr = self._to_array_nobending(idx_internal_coords)
-        data, row, col = _jit_get_Wilson_B_coo(position_arr, coord_arr)
+        try:
+            data, row, col = _jit_get_Wilson_B_coo(position_arr, coord_arr)
+        except ValueError as e:
+            if str(e) == "sinu or sinv is 0":
+                # a bit inefficient to run this whole thing, but this raises an
+                # exception anyways so it should be alright
+                _, bad_dihedrals = _jit_x_to_ric(position_arr, coord_arr)
+                raise UndefinedDihedral(bad_dihedrals)
         keep = row.ravel() >= 0
         return csr_array(
             (data.ravel()[keep], (row.ravel()[keep], col.ravel()[keep])),
