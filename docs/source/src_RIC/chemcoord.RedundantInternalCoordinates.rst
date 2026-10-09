@@ -21,6 +21,7 @@ chemcoord.RedundantInternalCoordinates
 
       ~RedundantInternalCoordinates.get_cartesian
       ~RedundantInternalCoordinates.minimize_dihedral
+      ~RedundantInternalCoordinates.prioritize_manual_changes
 
    .. rubric:: Attributes
 
