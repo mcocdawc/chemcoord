@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 from functools import partial
-from typing import TYPE_CHECKING, NewType, TypeAlias
+from typing import TYPE_CHECKING, Final, NewType, TypeAlias
 
 import numpy as np
 from numba import njit, prange
@@ -18,7 +18,13 @@ from chemcoord._cartesian_coordinates._cart_transformation import (
 )
 from chemcoord._cartesian_coordinates._cartesian_class_core import CartesianCore
 from chemcoord._cartesian_coordinates._cartesian_class_pandas_wrapper import COORDS
-from chemcoord.exceptions import UndefinedDihedral
+from chemcoord.exceptions import (
+    ERR_CODE_OK,
+    CoincidingAtoms,
+    ERR_CODE_CoincidingAtoms,
+    ERR_CODE_UndefinedDihedral,
+    UndefinedDihedral,
+)
 from chemcoord.typing import AtomIdx, BondDict, Matrix, Vector
 
 if TYPE_CHECKING:
@@ -163,14 +169,8 @@ class CartesianBmat(CartesianCore):
         position_arr = self.loc[:, COORDS].values
         if coord_arr is None:
             coord_arr = self._to_array_nobending(idx_internal_coords)
-        try:
-            data, row, col = _jit_get_Wilson_B_coo(position_arr, coord_arr)
-        except ValueError as e:
-            if str(e) == "sinu or sinv is 0":
-                # a bit inefficient to run this whole thing, but this raises an
-                # exception anyways so it should be alright
-                _, bad_dihedrals = _jit_x_to_ric(position_arr, coord_arr)
-                raise UndefinedDihedral(bad_dihedrals)
+        data, row, col, err_codes = _jit_get_Wilson_B_coo(position_arr, coord_arr)
+        _raise_for_err_codes(idx_internal_coords, err_codes)
         keep = row.ravel() >= 0
         return csr_array(
             (data.ravel()[keep], (row.ravel()[keep], col.ravel()[keep])),
@@ -206,17 +206,11 @@ class CartesianBmat(CartesianCore):
 
         if coord_arr is None:
             coord_arr = self._to_array_full(internal_coords_idx)
-        ric_values, exceptions = _jit_x_to_ric(
+        ric_values, err_codes = _jit_x_to_ric(
             self.loc[:, COORDS].values,
             coord_arr,
         )
-
-        if np.any(exceptions[:, -1]):
-            exception_list = []
-            for coordinate in exceptions:
-                if coordinate[-1] != 0:
-                    exception_list.append(tuple(coordinate[:-1]))
-            raise UndefinedDihedral(exception_list)
+        _raise_for_err_codes(internal_coords_idx, err_codes)
 
         return RedundantInternalCoordinates(
             ric_values,
@@ -310,32 +304,69 @@ class CartesianBmat(CartesianCore):
                 linearity is in the first 3 atoms and 2 otherwise
         """
         linear_idx = []
-        for i, index in enumerate(coord_idx.copy()):
+        for index in coord_idx:
             if len(index) == 4:
-                first_three = self.loc[index[:-1], COORDS].values
-                last_three = self.loc[index[1:], COORDS].values
-
-                # vectors making up the angle
-                normedu1 = _jit_normalize(first_three[0] - first_three[1])
-                normedv1 = _jit_normalize(first_three[2] - first_three[1])
-
-                normedu2 = _jit_normalize(last_three[0] - last_three[1])
-                normedv2 = _jit_normalize(last_three[2] - last_three[1])
-
-                # Collinear pairs can land a few ulp outside the ``arccos`` domain.
-                angle1 = np.arccos(np.clip(normedu1 @ normedv1, -1.0, 1.0))
-                angle2 = np.arccos(np.clip(normedu2 @ normedv2, -1.0, 1.0))
-
-                if not (tol < angle1 * 180 / np.pi < (180 - tol)):
+                positions = self.loc[list(index), COORDS].values
+                if _jit_is_collinear(positions[:3], tol):
                     linear_idx.append((index, 1))
-                if not (tol < angle2 * 180 / np.pi < (180 - tol)):
+                if _jit_is_collinear(positions[1:], tol):
                     linear_idx.append((index, 2))
         return linear_idx
 
 
+#: A dihedral is undefined if one of its two bond angles is within this many
+#: degrees of 0 or 180 degrees. Not to be confused with the larger ``tol`` of
+#: :meth:`~CartesianBmat.linearities`, which decides where bending coordinates
+#: replace dihedrals while they are still well defined.
+_UNDEFINED_DIHEDRAL_TOL: Final = 0.25
+
+#: Two consecutive atoms of an internal coordinate closer than this (in Angstrom)
+#: coincide. This guards the normalisation of the bond vectors and is no chemical
+#: criterion.
+_COINCIDENCE_TOL: Final = 1e-4
+
+
+@njit(cache=True, nogil=True)
+def _jit_is_collinear(positions: Matrix, tol: float) -> bool:
+    """Whether the angle of the three ``positions``, with the vertex in the middle,
+    is within ``tol`` degrees of 0 or 180 degrees."""
+    u = _jit_normalize(positions[0] - positions[1])
+    v = _jit_normalize(positions[2] - positions[1])
+    angle = np.degrees(np.arccos(u @ v))
+    # For collinear atoms, rounding can push ``u @ v`` outside the domain of
+    # ``arccos``, giving NaN. Then the comparison is False, i.e. collinear.
+    return not (tol < angle < 180 - tol)
+
+
+@njit(cache=True, nogil=True)
+def _jit_coordinate_err_code(positions: Matrix, is_dihedral: bool) -> int:
+    """Error code for the internal coordinate of the atom chain ``positions``.
+
+    This is the single criterion used by both :func:`_jit_x_to_ric` and
+    :func:`_jit_get_Wilson_B_coo`, so that a structure accepted by
+    :meth:`~CartesianBmat.get_ric` also has a well-defined B matrix.
+    """
+    for k in range(len(positions) - 1):
+        if norm(positions[k + 1] - positions[k]) <= _COINCIDENCE_TOL:
+            return ERR_CODE_CoincidingAtoms
+    if is_dihedral and (
+        _jit_is_collinear(positions[:3], _UNDEFINED_DIHEDRAL_TOL)
+        or _jit_is_collinear(positions[1:], _UNDEFINED_DIHEDRAL_TOL)
+    ):
+        return ERR_CODE_UndefinedDihedral
+    return ERR_CODE_OK
+
+
 @njit(cache=True, nogil=True)
 def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
-    """Calculates Cartesian derivatives of a dihedral angle given 4 atom positions"""
+    """Calculates Cartesian derivatives of a dihedral angle given 4 atom positions
+
+    The dihedral has to be defined, see :func:`_jit_coordinate_err_code`.
+    This function does not raise, because it is called from within the
+    ``prange`` loop of :func:`_jit_get_Wilson_B_coo`, where exceptions are not
+    propagated reliably by numba.
+    https://github.com/numba/numba/issues/9673
+    """
 
     # vectors making up dihedral
     u = positions[0] - positions[1]
@@ -354,17 +385,13 @@ def _jit_dihedral_deriv(positions: Matrix) -> Matrix:
     # note this could be 0 if undefined dihedral
     sinv = np.sqrt(1 - (normedv @ normedw) ** 2)
 
-    # catching cases where certain dihedrals are undefined
-    if np.isclose(sinu, 0.0) or np.isclose(sinv, 0.0):
-        raise ValueError("sinu or sinv is 0")
-    else:
-        s_first = cross(normedu, normedw) / (norm(u) * (sinu**2))
-        s_last = -cross(normedv, normedw) / (norm(v) * (sinv**2))
-        shared = (
-            ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
-            + ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
-        )  # fmt: skip
-        return np.stack((s_first, -s_first + shared, -s_last - shared, s_last))
+    s_first = cross(normedu, normedw) / (norm(u) * (sinu**2))
+    s_last = -cross(normedv, normedw) / (norm(v) * (sinv**2))
+    shared = (
+        ((cross(normedu, normedw) * cosu) / (norm(w) * (sinu**2)))
+        + ((cross(normedv, normedw) * cosv) / (norm(w) * (sinv**2)))
+    )  # fmt: skip
+    return np.stack((s_first, -s_first + shared, -s_last - shared, s_last))
 
 
 @njit(cache=True, nogil=True)
@@ -456,45 +483,75 @@ def _jit_vw_deriv(positions: Matrix, axes: Matrix) -> Matrix:
 def _jit_get_Wilson_B_coo(
     position_arr: Matrix[float64],
     internal_coord_arr: Matrix[int64],
-) -> tuple[Matrix[float64], Matrix[int64], Matrix[int64]]:
-    """Wilson's B matrix as ``(data, row, col)`` arrays of shape ``(n_coords, 12)``.
+) -> tuple[Matrix[float64], Matrix[int64], Matrix[int64], Vector[int64]]:
+    """Wilson's B matrix as ``(data, row, col)`` arrays of shape ``(n_coords, 12)``,
+    and an array of error codes of shape ``(n_coords,)``.
 
     procedure from: :cite:`B_matrix`. A coordinate couples at most four atoms, so a row
     has at most twelve nonzeros; unused slots keep ``row == -1``.
+
+    ``err_codes[i]`` is the :func:`_jit_coordinate_err_code` of the i-th coordinate.
+    If it is not :data:`~chemcoord.exceptions.ERR_CODE_OK`, the row is NaN and the
+    caller has to raise, see :func:`_raise_for_err_codes`.
+    Nothing is raised in here: numba does not reliably propagate exceptions out of
+    ``prange`` loops; depending on the threading layer and the kernel they become a
+    ``SystemError`` or are silently swallowed
+    (https://github.com/numba/numba/issues/9673).
     """
     n_coords = len(internal_coord_arr)
     data = np.zeros((n_coords, 12), dtype=float64)
     row = np.full((n_coords, 12), -1, dtype=int64)
     col = np.zeros((n_coords, 12), dtype=int64)
+    err_codes = np.full(n_coords, ERR_CODE_OK, dtype=int64)
 
     for i in prange(n_coords):  # type: ignore[attr-defined]
         coord = internal_coord_arr[i, :]
         if _is_bond_array(coord):
-            normedu = _jit_normalize(position_arr[coord[0]] - position_arr[coord[1]])
-            derivs = np.stack((normedu, -normedu))
             atoms = coord[:2]
-        elif _is_angle_array(coord):
-            derivs = _jit_angle_deriv(position_arr[coord[:3]])
-            atoms = coord[:3]
-        elif _is_dihedral_array(coord):
-            derivs = _jit_dihedral_deriv(position_arr[coord[:4]])
-            atoms = coord[:4]
-        else:
-            # coord[:4] is a Matrix-typed slice; _jit_get_axes keeps its Vector
-            # signature for its other (genuinely 1-D) caller. numba boundary.
-            axes = _jit_get_axes(position_arr, coord[:4])  # type: ignore[arg-type]
-            if _is_uw_bending_array(coord):
-                derivs = _jit_uw_deriv(position_arr[coord[:4]], axes)
+            err = _jit_coordinate_err_code(position_arr[atoms], False)
+            if err == ERR_CODE_OK:
+                normedu = _jit_normalize(
+                    position_arr[atoms[0]] - position_arr[atoms[1]]
+                )
+                derivs = np.stack((normedu, -normedu))
             else:
-                derivs = _jit_vw_deriv(position_arr[coord[:4]], axes)
+                derivs = np.full((2, 3), np.nan)
+        elif _is_angle_array(coord):
+            atoms = coord[:3]
+            err = _jit_coordinate_err_code(position_arr[atoms], False)
+            if err == ERR_CODE_OK:
+                derivs = _jit_angle_deriv(position_arr[atoms])
+            else:
+                derivs = np.full((3, 3), np.nan)
+        elif _is_dihedral_array(coord):
+            atoms = coord[:4]
+            err = _jit_coordinate_err_code(position_arr[atoms], True)
+            if err == ERR_CODE_OK:
+                derivs = _jit_dihedral_deriv(position_arr[atoms])
+            else:
+                derivs = np.full((4, 3), np.nan)
+        else:
+            # The derivatives refer to the last three of the four atoms.
             atoms = coord[1:4]
+            err = _jit_coordinate_err_code(position_arr[coord[:4]], False)
+            if err == ERR_CODE_OK:
+                # coord[:4] is a Matrix-typed slice; _jit_get_axes keeps its Vector
+                # signature for its other (genuinely 1-D) caller. numba boundary.
+                axes = _jit_get_axes(position_arr, coord[:4])  # type: ignore[arg-type]
+                if _is_uw_bending_array(coord):
+                    derivs = _jit_uw_deriv(position_arr[coord[:4]], axes)
+                else:
+                    derivs = _jit_vw_deriv(position_arr[coord[:4]], axes)
+            else:
+                derivs = np.full((3, 3), np.nan)
+        err_codes[i] = err
         for a in range(len(atoms)):
             for j in range(3):
                 row[i, 3 * a + j] = i
                 col[i, 3 * a + j] = j + 3 * atoms[a]
                 data[i, 3 * a + j] = derivs[a, j]
 
-    return data, row, col
+    return data, row, col, err_codes
 
 
 # NOTE: no ``parallel=True`` here. This function operates on a single bending
@@ -575,7 +632,7 @@ def _jit_x_to_plane_coords_nonlinear(
 @njit(parallel=True, cache=True, nogil=True)
 def _jit_x_to_ric(
     cart_positions: Matrix[float64], internal_coords_idx: Matrix[int64]
-) -> tuple[Vector[float64], Matrix[int64]]:
+) -> tuple[Vector[float64], Vector[int64]]:
     """Jit-compiled conversion between cartesian coordinates and internal coordinates
 
     .. note:: This function implicitly assumes that `internal_coords_idx`
@@ -590,19 +647,36 @@ def _jit_x_to_ric(
             rectangular array
 
     Returns:
-        Array of internal coordinate values
+        Array of internal coordinate values, and the array of their error codes, see
+        :func:`_jit_coordinate_err_code`. Values with an error code other than
+        :data:`~chemcoord.exceptions.ERR_CODE_OK` are NaN. As in
+        :func:`_jit_get_Wilson_B_coo`, nothing is raised inside the ``prange`` loop;
+        the caller has to check the error codes, see :func:`_raise_for_err_codes`.
     """
     internal_coordinates = np.empty(len(internal_coords_idx))
-    bad_coordinates = np.zeros((len(internal_coords_idx), 5), dtype=int64)
+    err_codes = np.full(len(internal_coords_idx), ERR_CODE_OK, dtype=int64)
 
     for i in prange(len(internal_coords_idx)):  # type: ignore[attr-defined]
         # get ith internal coordinate
         coord = internal_coords_idx[i]
 
-        # separate cases for distances, angles, and dihedrals
+        if _is_bond_array(coord):
+            n_atoms = 2
+        elif _is_angle_array(coord):
+            n_atoms = 3
+        else:
+            # dihedrals, and bendings, whose chain h-i-j-k spans four atoms
+            n_atoms = 4
+        err = _jit_coordinate_err_code(
+            cart_positions[coord[:n_atoms]], _is_dihedral_array(coord)
+        )
+        err_codes[i] = err
+
+        if err != ERR_CODE_OK:
+            internal_coordinates[i] = np.nan
 
         # distances
-        if _is_bond_array(coord):
+        elif _is_bond_array(coord):
             # get positions of participating atoms
             positions = cart_positions[coord[:2]]
 
@@ -632,17 +706,9 @@ def _jit_x_to_ric(
             normedw = _jit_normalize(positions[2] - positions[1])
             normedv = _jit_normalize(positions[3] - positions[2])
 
-            uw = normedu @ normedw
-            wv = normedw @ normedv
-
             x = cross(cross(normedu, normedw), cross(normedw, normedv)) @ normedw
             y = cross(normedu, normedw) @ cross(normedw, normedv)
-
-            if not np.isclose(uw, 1.0) and not np.isclose(wv, 1.0):
-                internal_coordinates[i] = np.arctan2(x, y)
-            else:
-                bad_coordinates[i, :-1] = coord[:-1]
-                bad_coordinates[i, -1] = True
+            internal_coordinates[i] = np.arctan2(x, y)
 
         elif _is_uw_bending_array(coord):
             internal_coordinates[i] = _jit_x_to_plane_coords_nonlinear(
@@ -653,7 +719,37 @@ def _jit_x_to_ric(
                 cart_positions, coord[:4]
             )[1]
 
-    return internal_coordinates, bad_coordinates
+    return internal_coordinates, err_codes
+
+
+def _raise_for_err_codes(
+    internal_coords_idx: Primitives, err_codes: Vector[int64]
+) -> None:
+    """Raise the exception belonging to the error codes of the jitted kernels.
+
+    The coordinates are reported with the index of the molecule, i.e. as they
+    appear in ``internal_coords_idx``. Coinciding atoms take precedence, because
+    they make every coordinate they are part of meaningless.
+
+    Raises:
+        ~chemcoord.exceptions.CoincidingAtoms: for
+            :data:`~chemcoord.exceptions.ERR_CODE_CoincidingAtoms`.
+        ~chemcoord.exceptions.UndefinedDihedral: for
+            :data:`~chemcoord.exceptions.ERR_CODE_UndefinedDihedral`.
+        RuntimeError: for any other error code, which would be a bug.
+    """
+    if (err_codes == ERR_CODE_OK).all():
+        return
+
+    def affected(code: int) -> list[Coordinate]:
+        return [internal_coords_idx[i] for i in np.flatnonzero(err_codes == code)]
+
+    if coinciding := affected(ERR_CODE_CoincidingAtoms):
+        raise CoincidingAtoms(coinciding)
+    if undefined := affected(ERR_CODE_UndefinedDihedral):
+        raise UndefinedDihedral(undefined)
+    # Not an ``assert``: an error code without exception is a bug in chemcoord.
+    raise RuntimeError(f"Unknown error codes {set(err_codes.tolist())}")
 
 
 def _reindex_to_0_inner(

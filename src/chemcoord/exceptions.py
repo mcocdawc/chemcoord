@@ -107,6 +107,9 @@ class LineSearchFailed(ConvergenceError):
     """Raised when a backtracking line search does not terminate."""
 
 
+ERR_CODE_UndefinedDihedral = 203
+
+
 class UndefinedDihedral(UndefinedCoordinateSystem):
     """Raised when a linearity occurs such that the related dihedral is ill-defined"""
 
@@ -115,6 +118,22 @@ class UndefinedDihedral(UndefinedCoordinateSystem):
 
     def __str__(self):
         return f"Indices {list(self.bad_idxs)} contain linearities"
+
+
+ERR_CODE_CoincidingAtoms = 204
+
+
+class CoincidingAtoms(PhysicalMeaning):
+    """Raised when bonded atoms of an internal coordinate sit on top of each other.
+
+    ``bad_idxs`` are the internal coordinates that are affected.
+    """
+
+    def __init__(self, bad_idxs):
+        self.bad_idxs = bad_idxs
+
+    def __str__(self):
+        return f"Indices {list(self.bad_idxs)} contain coinciding atoms"
 
 
 class SingleUndefinedDihedral(UndefinedCoordinateSystem):

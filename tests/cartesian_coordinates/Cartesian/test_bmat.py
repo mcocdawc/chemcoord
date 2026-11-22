@@ -1,9 +1,23 @@
 import os
 
 import numpy as np
+import pandas as pd
+import pytest
 from sortedcontainers import SortedSet
 
 from chemcoord import Cartesian
+from chemcoord._cartesian_coordinates._cartesian_class_bmat import (
+    _jit_get_Wilson_B_coo,
+    _jit_x_to_ric,
+    _SetOfPrimitives,
+)
+from chemcoord.exceptions import (
+    ERR_CODE_OK,
+    CoincidingAtoms,
+    ERR_CODE_CoincidingAtoms,
+    ERR_CODE_UndefinedDihedral,
+    UndefinedDihedral,
+)
 
 
 def get_script_path():
@@ -305,3 +319,110 @@ def test_transformation():
         ]
     )
     assert np.allclose(qs.q, expected)
+
+
+def _four_atoms(angle_012: float) -> Cartesian:
+    """Four atoms with a bond angle ``angle_012`` (degrees) for atoms 10-11-12.
+
+    The non-contiguous index checks that the offending coordinate is reported in the
+    index of the molecule.
+    """
+    th = np.radians(180 - angle_012)
+    xyz = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.4, 0.0, 0.0],
+            [1.4 + 1.4 * np.cos(th), 1.4 * np.sin(th), 0.0],
+            [3.3, 1.0, 0.5],
+        ]
+    )
+    return Cartesian(
+        pd.DataFrame(
+            {"atom": list("CCCH"), "x": xyz[:, 0], "y": xyz[:, 1], "z": xyz[:, 2]},
+            index=[10, 11, 12, 13],
+        )
+    )
+
+
+_FOUR_ATOM_PRIMITIVES = _SetOfPrimitives(
+    [(10, 11), (11, 12), (12, 13), (10, 11, 12), (11, 12, 13), (10, 11, 12, 13)]
+)
+
+
+@pytest.mark.parametrize("angle", [180.0, 179.9, 0.0, 0.1])
+def test_undefined_dihedral_raised_consistently(angle):
+    """Both B matrix and ``get_ric`` raise ``UndefinedDihedral`` for (anti)collinear
+    atoms, and they agree on the threshold."""
+    molecule = _four_atoms(angle)
+    for method in (molecule.get_sparse_Wilson_B, molecule.get_ric):
+        with pytest.raises(UndefinedDihedral) as excinfo:
+            method(_FOUR_ATOM_PRIMITIVES)
+        assert excinfo.value.bad_idxs == [(10, 11, 12, 13)]
+
+
+@pytest.mark.parametrize("angle", [179.5, 0.5])
+def test_nearly_collinear_dihedral_is_defined(angle):
+    molecule = _four_atoms(angle)
+    assert np.isfinite(molecule.get_Wilson_B(_FOUR_ATOM_PRIMITIVES)).all()
+    assert np.isfinite(molecule.get_ric(_FOUR_ATOM_PRIMITIVES).q).all()
+
+
+def test_kernels_return_err_codes_instead_of_raising():
+    """The parallel kernels must not raise: numba does not reliably propagate
+    exceptions out of ``prange`` loops (https://github.com/numba/numba/issues/9673)."""
+    molecule = _four_atoms(180.0)
+    positions = molecule.loc[:, ["x", "y", "z"]].values
+    expected = [ERR_CODE_OK] * 5 + [ERR_CODE_UndefinedDihedral]
+
+    data, row, _, err_codes = _jit_get_Wilson_B_coo(
+        positions, molecule._to_array_nobending(_FOUR_ATOM_PRIMITIVES)
+    )
+    assert err_codes.tolist() == expected
+    assert np.isnan(data[5]).all()
+    assert np.isfinite(data[:5][row[:5] >= 0]).all()
+
+    q, err_codes = _jit_x_to_ric(
+        positions, molecule._to_array_full(_FOUR_ATOM_PRIMITIVES)
+    )
+    assert err_codes.tolist() == expected
+    assert np.isnan(q[5]) and np.isfinite(q[:5]).all()
+
+
+def _coinciding_atoms() -> Cartesian:
+    """Like :func:`_four_atoms`, but atom 13 sits on top of atom 12."""
+    molecule = _four_atoms(110.0)
+    molecule.loc[13, ["x", "y", "z"]] = molecule.loc[12, ["x", "y", "z"]].values
+    return molecule
+
+
+def test_coinciding_atoms_raised_consistently():
+    """Every coordinate that contains the coinciding bonded atoms 12 and 13 is
+    reported, by both B matrix and ``get_ric``, and coinciding atoms take precedence
+    over undefined dihedrals."""
+    molecule = _coinciding_atoms()
+    expected = [(12, 13), (11, 12, 13), (10, 11, 12, 13)]
+    for method in (molecule.get_sparse_Wilson_B, molecule.get_ric):
+        with pytest.raises(CoincidingAtoms) as excinfo:
+            method(_FOUR_ATOM_PRIMITIVES)
+        assert excinfo.value.bad_idxs == expected
+
+
+def test_kernels_flag_coinciding_atoms():
+    molecule = _coinciding_atoms()
+    positions = molecule.loc[:, ["x", "y", "z"]].values
+    expected = [ERR_CODE_OK] * 2 + [ERR_CODE_CoincidingAtoms]
+    expected += [ERR_CODE_OK] + [ERR_CODE_CoincidingAtoms] * 2
+
+    data, row, _, err_codes = _jit_get_Wilson_B_coo(
+        positions, molecule._to_array_nobending(_FOUR_ATOM_PRIMITIVES)
+    )
+    assert err_codes.tolist() == expected
+    is_bad = np.array(expected) != ERR_CODE_OK
+    assert np.isnan(data[is_bad][row[is_bad] >= 0]).all()
+    assert np.isfinite(data[~is_bad][row[~is_bad] >= 0]).all()
+
+    q, err_codes = _jit_x_to_ric(
+        positions, molecule._to_array_full(_FOUR_ATOM_PRIMITIVES)
+    )
+    assert err_codes.tolist() == expected
+    assert np.isnan(q[is_bad]).all() and np.isfinite(q[~is_bad]).all()
