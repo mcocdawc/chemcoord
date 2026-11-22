@@ -383,7 +383,11 @@ def test_interpolate_between_rotamers():
     assert not np.allclose(shortest.delta_q, Δq.delta_q)
 
     # A single seed carries no information about the direction of rotation.
-    path = RIC_interpolate(start, end, N, schedule="independent", seeds=start)
+    # Turning all 16 side chains at once runs them through their neighbours
+    # (heavy atoms down to 0.5 A apart in images 1 and 2), which the check for
+    # bonds present in neither start nor end has to report.
+    with pytest.warns(UserWarning, match="present in neither start nor end"):
+        path = RIC_interpolate(start, end, N, schedule="independent", seeds=start)
 
     weights = weight_vector(idx)
     for i, image in enumerate(path[:-1]):

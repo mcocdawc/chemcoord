@@ -567,6 +567,11 @@ def RIC_interpolate(
     Returns:
         The generated path as list of :class:`~chemcoord.Cartesian`.
 
+    Warns:
+        UserWarning: If an image forms a bond that is present in neither ``start``
+            nor ``end`` (or not in ``bond_dict``, if given). Such paths can be
+            qualitatively wrong, and another ``schedule`` might do better.
+
     References:
         The algorithm is described in :cite:`whelpley_efficient_2026`.
         If you use this function, please cite it.
@@ -586,6 +591,7 @@ def RIC_interpolate(
             opt_alg=opt_alg,
         )
 
+    path: list[Cartesian]
     if schedule == "independent":
         # A single repeated structure says nothing about which way a dihedral travels.
         seeds_are_a_path = not isinstance(seeds, Cartesian)
@@ -596,12 +602,12 @@ def RIC_interpolate(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
 
-        return _RIC_interpolate_indpdt(
+        path = _RIC_interpolate_indpdt(
             start, end, N, coord_idx, to_cart, seeds, seeds_are_a_path
         )
 
     elif schedule == "from_both":
-        return _RIC_interpolate_from_both(
+        path = _RIC_interpolate_from_both(
             start,
             end,
             N,
@@ -616,7 +622,7 @@ def RIC_interpolate(
             coord_idx = get_primitives_idx(
                 start, end, bonds=bond_dict, linearity_thrshld=linearity_thrshld
             )
-        return _RIC_interpolate_from_start(start, end, N, coord_idx, to_cart, seeds)
+        path = _RIC_interpolate_from_start(start, end, N, coord_idx, to_cart, seeds)
 
     elif schedule == "from_end":
         # from_end is simply from_start but end and start are swapped.
@@ -626,7 +632,7 @@ def RIC_interpolate(
             )
         # The path is built end->start, so per-image seeds are reversed as well.
         inner_seeds = list(reversed(seeds)) if isinstance(seeds, Sequence) else seeds
-        return list(
+        path = list(
             reversed(
                 _RIC_interpolate_from_start(
                     end, start, N, coord_idx, to_cart, inner_seeds
@@ -635,6 +641,7 @@ def RIC_interpolate(
         )
 
     elif schedule == "automatic":
+        # Every schedule tried below checks its own path for new bonds.
         AutoSchedules: TypeAlias = Literal[
             "independent", "from_both", "from_start", "from_end"
         ]
@@ -675,6 +682,50 @@ def RIC_interpolate(
 
     else:
         assert_never(schedule)
+
+    new_bonds = _connectivity_changed(
+        path, _find_joint_bond_dict(start, end) if bond_dict is None else bond_dict
+    )
+    if new_bonds:
+        warn(
+            f"The {schedule} schedule produced a path that forms bonds which are "
+            "present in neither start nor end, {image: {(atom, atom), ...}}: "
+            f"{new_bonds}. The path might be qualitatively wrong, e.g. atoms "
+            "passing through each other; consider another schedule."
+        )
+    return path
+
+
+def _connectivity_changed(
+    path: Sequence[Cartesian], bond_dict: BondDict
+) -> dict[int, set[tuple[AtomIdx, AtomIdx]]]:
+    """Bonds that the images of ``path`` form, but that are not in ``bond_dict``.
+
+    ``bond_dict`` is the connectivity shared by start and end, i.e. the union of
+    their bonds. Bonds of ``bond_dict`` that an image lacks are not reported:
+    breaking bonds is what reactions do, while a bond that neither start nor end
+    has indicates a wrong path.
+
+    Args:
+        path: the images, e.g. from :func:`RIC_interpolate`.
+        bond_dict: the allowed bonds.
+
+    Returns:
+        For every image that forms new bonds, its position in ``path`` mapped to
+        the new bonds as ``(i, j)`` with ``i < j``.
+        Empty if no image forms a new bond.
+    """
+    new_bonds = {}
+    for k, image in enumerate(path):
+        formed = {
+            (i, j)
+            for i, bonded in image.get_bonds().items()
+            for j in bonded
+            if i < j and j not in bond_dict.get(i, set())
+        }
+        if formed:
+            new_bonds[k] = formed
+    return new_bonds
 
 
 RIC_ToCartesian: TypeAlias = Callable[
