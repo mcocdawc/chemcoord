@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from chemcoord._cartesian_coordinates.cartesian_class_main import Cartesian
+
 # Errorcodes are there for the jit_functions
 ERR_CODE_OK = 0
 
@@ -84,6 +91,25 @@ class IllegalArgumentCombination(ValueError):
     pass
 
 
+class ConvergenceError(ValueError):
+    """Raised when an iterative solve does not converge.
+
+    ``last`` is the most recent iterate, if any.
+    """
+
+    def __init__(self, message: str = "", last: Cartesian | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.last = last
+
+
+class LineSearchFailed(ConvergenceError):
+    """Raised when a backtracking line search does not terminate."""
+
+
+ERR_CODE_UndefinedDihedral = 203
+
+
 class UndefinedDihedral(UndefinedCoordinateSystem):
     """Raised when a linearity occurs such that the related dihedral is ill-defined"""
 
@@ -92,6 +118,22 @@ class UndefinedDihedral(UndefinedCoordinateSystem):
 
     def __str__(self):
         return f"Indices {list(self.bad_idxs)} contain linearities"
+
+
+ERR_CODE_CoincidingAtoms = 204
+
+
+class CoincidingAtoms(PhysicalMeaning):
+    """Raised when bonded atoms of an internal coordinate sit on top of each other.
+
+    ``bad_idxs`` are the internal coordinates that are affected.
+    """
+
+    def __init__(self, bad_idxs):
+        self.bad_idxs = bad_idxs
+
+    def __str__(self):
+        return f"Indices {list(self.bad_idxs)} contain coinciding atoms"
 
 
 class SingleUndefinedDihedral(UndefinedCoordinateSystem):

@@ -8,5 +8,9 @@ Exceptions
 
     ~exceptions.InvalidReference
     ~exceptions.UndefinedCoordinateSystem
+    ~exceptions.UndefinedDihedral
+    ~exceptions.CoincidingAtoms
     ~exceptions.IllegalArgumentCombination
     ~exceptions.PhysicalMeaning
+    ~exceptions.ConvergenceError
+    ~exceptions.LineSearchFailed
